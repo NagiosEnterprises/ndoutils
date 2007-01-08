@@ -1,0 +1,71 @@
+=================
+NDO Utils History
+=================
+
+Note:  Consider this addon to be experimental/beta/alpha/potentially-hazardous-to-your-health.
+       Memory leaks and segfaults are to be expected until the code stabilizes, so beware of
+       using it in production environments.   - Ethan
+
+
+1.4b1 - 01/07/2007
+------------------
+- Added ability to drop privileges (see the ndo2db_user and ndb2db_group config file options)
+- Unprocessed event data is now stored in the buffer_file file before the NDMOMOD module
+  shuts down.  On startup, the module will read the contents of this file and send the
+  contents to the NDO2DB daemon for processing.
+- Better detection of MySQL libraries (default path)
+- Removed 'should_be_drawn' field from hostextinfo table
+- Merged extended info definitions with host/service definitions
+- Added new fields from Nagios 3.x, updated to latest Nagios 3.x include files
+- Added stub routines for adaptive contact data
+- Fixed several memory leaks
+- Documentation on database structures
+
+
+
+1.3.1 - 02/25/2006
+------------------
+- Fixes segfaults with empty log entries and missing db prefix
+- Synchronized version numbers of all utilities to 1.3.1
+- New update-version script
+
+
+
+1.3 - 02/12/2006
+----------------
+- Removed 'ndo_' prefix from default database structure
+- Updated config.sub and config.guess to latest versions from CVS
+- Configure script fixes
+- Added missing 'address' field to hosts table
+- Different version of NDOMOD and NDO2DB are now created for Nagios 2.x and Nagios 3.x
+- Memory leak fixes
+- Misc bug fixes
+
+
+
+1.2 - 01/10/2006
+----------------
+- Changed most protocol strings to integers for better efficiency
+- Added check for client/server protocol version
+- Added support for TCP sockets
+- Added INETD support to NDO2DB daemon
+- Fixed bug with processing of contact notification methods
+- Fixed bug with processing of live log data
+- Changes to MySQL table structures
+- Added some initial documentation (PDF)
+
+
+
+1.1 - 12/27/2005
+----------------
+- Changes to MySQL table structures
+- Added support for both original and retained object configurations
+- Added checks for Nagios object structure compatability
+- Changed syslog() message types from LOG_DAEMON to LOG_USER
+- Updated Nagios 2.0 include files
+
+
+
+1.0 - 12/23/2005
+----------------
+- First public release for comments

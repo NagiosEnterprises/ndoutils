@@ -1,0 +1,16 @@
+----------------
+NDO REQUIREMENTS
+----------------
+
+Because the NDOMOD event broker module traverses internal object structures in
+the Nagios daemon, it is highly sensitive to code and structure changes that
+occur throughout the Nagios development process.  Therefore, it is very important
+that you are using a version of the NDO utilities that matches your current
+Nagios installation.
+
+This version of the NDO utilities requires that you:
+
+1. are either running Nagios 2.0rc2 or a later version of Nagios 2.x.
+
+2. compiled the Nagios daemon with event broker support (enabled by default).
+

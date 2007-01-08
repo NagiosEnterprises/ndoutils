@@ -1,0 +1,40 @@
+--------
+NDO TODO
+--------
+
+Updated: 12/27/2005
+
+There are still a number of things that need to be worked on with
+this project they include.
+
+1.  Change fields of type VARCHAR(255) to BLOBs.  VARCHAR fields were
+    easier for me to debug things as I was developing this addon, but
+    several text fields can be longer than 255 chars.  Nagios 3.0
+    will allow multi-line plugin output, so this is especially important
+    for future compatability.
+
+2.  Creation of a data dictionary to clearly explain each field
+    present in all the tables.  Also, define different possible values
+    (constants) for each numeric field.  This will aid in the quick
+    development of a new web interface based off the data.
+
+3.  Creation of a SOCKSPLIT utility.  The NDO module will only write
+    output to a single UNIX domain or TCP socket (this has been done to
+    minimize the potential overhead within the Nagios daemon).  Since
+    it might be useful to have output from the NDO module written to
+    multiple databases (this would require multiple instances of the
+    NDO2DB daemon to be running), there needs to be a way to replicate
+    the output of the NDO module to more than one output socket. 
+     The SOCKSPLIT utility will create a single UNIX domain socket and
+    listen for an incoming connection request.  Upon a client connecting,
+    any output from the client will be sent to multiple (destination)
+    UNIX domain sockets.  An NDO2DB daemon can be listening on the other
+    end of each destination socket.  The SOCKSPLIT utility will 
+    incorporate some method of buffering data if one or more destination
+    sockets are closed for a period of time.  This should make things
+    resistant to situations where, for instance, NDO2DB daemons are
+    unavailable because they are being restarted.
+
+4.  Testing, testing, testing!  This addon has not been testing extensively
+    and likely contains a number of bugs.  However, its a good start, so
+    send me your comments and patches! 

@@ -1,0 +1,26 @@
+###############################
+# Makefile for NDO
+#
+# Last Modified: 05-19-2005
+###############################
+
+
+# Source code directories
+SRC_BASE=./src/
+SRC_INCLUDE=./include/
+
+all:
+	cd $(SRC_BASE); $(MAKE) ; cd ..
+
+clean:
+	cd $(SRC_BASE); $(MAKE) $@ ; cd ..
+	rm -f core
+	rm -f *~ */*~ include/nagios-*/*~
+
+distclean: clean
+	cd $(SRC_BASE); $(MAKE) $@ ; cd ..
+	rm -f config.log config.status config.cache $(SRC_INCLUDE)/config.h
+	rm -f Makefile
+
+devclean: distclean
+

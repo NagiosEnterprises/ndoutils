@@ -1,0 +1,172 @@
+----------
+NDO README
+----------
+
+
+***************
+!! IMPORTANT !!
+***************
+This code is still an alpha/beta quality, so expect problems if you intend to use
+it.  Make sure that you aren't using it with your only production installation of
+Nagios, or it could take down the Nagios process if the NDOMOD module segfaults.
+Nagios could segfault silently and you might never know that Nagios crashed...
+
+
+
+****************
+ABOUT THIS ADDON
+****************
+
+The NDOUTILS (Nagios Data Output Utils) addon allows you to move status and event 
+information from Nagios to a database for later retrieval and processing.
+
+This addon consists of several parts.  Here are the most interesting ones...
+
+1.  The NDOMOD event broker module.  This module is intended to be loaded
+    by the Nagios process at runtime.  Its only role is to dump all events and
+    data from Nagios to a TCP socket or a regular file or Unix domain socket on 
+    the local filesystem somewhere.  If you want realtime transfer of data to MySQL,
+    dump the data to a TCP or Unix domain socket.  If you want delayed transfer of
+    data into MySQL (i.e. you need to transfer the data to another host first),
+    dump the data to a regular file.
+
+2.  The NDO2DB daemon.  This standalone daemon reads input (that was produced
+    by the NDOMOD broker module) from a TCP or Unix domain socket, parses that 
+    data, and then dumps it into one or more MySQL databases.  The daemon is 
+    capable of handling multiple client connections simultaneously, so you can 
+    have multiple instances of the NDOMOD module writing to the same TCP or Unix
+    domain socket at the same time.
+
+3.  The FILE2SOCK utility.  This simple utility reads data from a standard file
+    and dumps it to either a TCP or a Unix domain socket.  This is useful if you 
+    are having the NDOMOD module write to a standard file that you later want to 
+    send to the NDO2DB daemon.  If the module and the daemon are running on 
+    different machines, you can periodically use SSH to transfer the file from the 
+    monitoring machine to the machine running the NDO2DB daemon, and then use the 
+    FILE2SOCK utility to send the contents of that file to the TCP socket or Unix
+    domain socket that the NDO2DB daemon is reading.
+
+4.  The LOG2NDO utility.  This utility is used for importing historical log
+    archives from NetSaint and Nagios and sending them to the NDO2DB daemon. 
+    It takes a single log file as its input and can output data to either a
+    TCP socket, a Unix domain socket or standard output.
+
+
+
+
+**********************
+COMPILING INSTRUCTIONS
+**********************
+
+Use the following commands to compile the NDO broker module, NDO2DB daemon, and
+additional utilities:
+
+	./configure
+	make
+
+If the configure script is unable to locate your MySQL or PostgreSQL development
+libraries, you may need to help it out by using the --with-mysql-lib or
+--with-pgsql-lib options.  Here's an example:
+
+	./configure --with-mysql-lib=/usr/lib/mysql
+
+
+
+*****************************
+INITIALIZING THE SQL DATABASE
+*****************************
+
+Before you start using the NDO utilities, you should create the database where
+you will be storing all Nagios-related information.
+
+NOTE:  As of 02/12/2006, only MySQL databases are supported.  PostgreSQL support
+       will likely be added in the future.
+
+
+1.  Create a database for storing the data (e.g. 'nagios')
+
+2.  Run the appropriate SQL script in the db/ subdirectory of the NDO distribution
+    to create the necessary tables in the database.
+
+3.  Create a username/password that has at least the following privileges for
+    the database:
+
+	SELECT, INSERT, UPDATE, DELETE
+
+4.  Make sure the database name, prefix, and username/password you just created
+    and setup match the variable specified in the NDO2DB config file (see below).
+
+
+
+***********************************
+INSTALLING THE NDOMOD BROKER MODULE
+***********************************
+
+NOTE:
+There are two different versions of the NDOMOD module that 
+get compiled, so make sure you use the module that matches the
+version of Nagios you are running, and adjust the directions given
+below to fit the name of the module version you're using.  
+
+	ndomod-2x.o = NDOMOD module for Nagios 2.x
+	ndomod-3x.o = NDOMOD module for Nagios 3.x (unstable)
+
+
+1.  Copy the compiled NDOMOD module to your Nagios installation:
+
+	cp src/ndomod-2x.o /usr/local/nagios/bin/ndomod.o
+
+    The command above assumes that you are using Nagios 2.x, and thus
+    are installing the 2.x version of the NDOMOD module.
+
+2.  Copy the sample NDOMOD config file to your Nagios installation
+    after modifying it to suit your needs:
+
+	cp config/ndomod.cfg /usr/local/nagios/etc
+
+
+3.  Add a line similiar to the following to the *main* Nagios config 
+    file (usually /usr/local/nagios/etc/nagios.cfg):
+      
+	broker_module=/usr/local/nagios/bin/ndomod.o config_file=/usr/local/nagios/etc/ndomod.cfg
+
+    The config directive above will cause Nagios to load the NDOMOD
+    event broker the next time it starts.  Of course, this requres that
+    you compiled Nagios with support for the event broker in the first
+    place. :-)
+
+
+
+
+****************************
+INSTALLING THE NDO2DB DAEMON
+****************************
+
+NOTE:
+There are two different versions of the NDO2DB daemon that 
+get compiled, so make sure you use the daemon that matches the
+version of Nagios you are running, and adjust the directions given
+below to fit the name of the daemon you're using.  
+
+	ndo2db-2x.o = NDO2DB daemon for Nagios 2.x
+	ndo2db-3x.o = NDO2DB daemon for Nagios 3.x (unstable)
+
+
+1.  Copy the compiled NDO2DB daemon to your Nagios installation:
+
+	cp src/ndo2db-2x /usr/local/nagios/bin/ndo2db
+
+    The command above assumes that you are using Nagios 2.x, and thus
+    are installing the 2.x version of the NDO2DB daemon.
+
+2.  Copy the sample NDO2DB config file to your Nagios installation
+    after modifying it to suit your needs (pay attention to the DB
+    config settings).
+
+	cp config/ndo2db.cfg /usr/local/nagios/etc
+
+3.  Start the daemon running!  An init script will be developed soon...
+
+	/usr/local/nagios/bin/ndo2db -c /usr/local/nagios/etc/ndo2db.cfg
+
+

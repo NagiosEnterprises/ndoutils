@@ -1,0 +1,96 @@
+###############################
+# Makefile for NDO
+#
+# Last Modified: 12-21-2006
+###############################
+
+
+# Source code directories
+SRC_INCLUDE=../include
+
+CC=@CC@
+
+CFLAGS=@CFLAGS@ @DEFS@ 
+
+# We don't like ANSI because ANSI doesn't like us! phhht!
+#CFLAGS=-g -Wall -ansi -pedantic -DHAVE_CONFIG_H
+
+# Compiler flags for use with Valgrind
+CFLAGS=-O0 -g -DHAVE_CONFIG_H
+
+MOD_CFLAGS=@MOD_CFLAGS@
+LDFLAGS=@LDFLAGS@
+MOD_LDFLAGS=@MOD_LDFLAGS@
+LIBS=@LIBS@
+SOCKETLIBS=@SOCKETLIBS@
+DBCFLAGS=@DBCFLAGS@
+DBLDFLAGS=@DBLDFLAGS@
+DBLIBS=@DBLIBS@
+MATHLIBS=-lm
+OTHERLIBS=@OTHERLIBS@
+
+COMMON_INC=$(SRC_INCLUDE)/config.h $(SRC_INCLUDE)/common.h $(SRC_INCLUDE)/io.h $(SRC_INCLUDE)/protoapi.h $(SRC_INCLUDE)/utils.h
+COMMON_SRC=io.c utils.c
+COMMON_OBJS=io.o utils.o
+
+NDO_INC=$(SRC_INCLUDE)/ndo2db.h $(SRC_INCLUDE)/db.h
+NDO_SRC=db.c
+NDO_OBJS=db.o
+
+CP=@CP@
+
+
+all: file2sock log2ndo ndo2db ndomod sockdebug
+
+file2sock: file2sock.c $(COMMON_INC) $(COMMON_OBJS)
+	$(CC) $(CFLAGS) -o $@ file2sock.c $(COMMON_OBJS) $(LDFLAGS) $(LIBS) $(MATHLIBS) $(SOCKETLIBS) $(OTHERLIBS)
+
+log2ndo: log2ndo.c $(COMMON_INC) $(COMMON_OBJS)
+	$(CC) $(CFLAGS) -o $@ log2ndo.c $(COMMON_OBJS) $(LDFLAGS) $(LIBS) $(MATHLIBS) $(SOCKETLIBS) $(OTHERLIBS)
+
+ndo2db:
+	$(MAKE) ndo2db-2x
+	$(MAKE) ndo2db-3x
+
+ndo2db-2x: ndo2db.c $(NDO_INC) $(NDO_OBJS) $(COMMON_INC) $(COMMON_OBJS) dbhandlers-2x.o
+	$(CC) $(CFLAGS) $(DBCFLAGS) -D BUILD_NAGIOS_2X -o ndo2db-2x ndo2db.c dbhandlers-2x.o $(COMMON_OBJS) $(NDO_OBJS) $(LDFLAGS) $(DBLDFLAGS) $(LIBS) $(SOCKETLIBS) $(DBLIBS) $(OTHERLIBS)
+
+ndo2db-3x: ndo2db.c $(NDO_INC) $(NDO_OBJS) $(COMMON_INC) $(COMMON_OBJS) dbhandlers-3x.o
+	$(CC) $(CFLAGS) $(DBCFLAGS) -D BUILD_NAGIOS_3X -o ndo2db-3x ndo2db.c dbhandlers-3x.o $(COMMON_OBJS) $(NDO_OBJS) $(LDFLAGS) $(DBLDFLAGS) $(LIBS) $(SOCKETLIBS) $(DBLIBS) $(OTHERLIBS)
+
+ndomod: 
+	$(MAKE) ndomod-2x.o
+	$(MAKE) ndomod-3x.o
+
+ndomod-2x.o: ndomod.c $(COMMON_INC) $(COMMON_OBJS)
+	$(CC) $(MOD_CFLAGS) $(CFLAGS) -D BUILD_NAGIOS_2X -o ndomod-2x.o ndomod.c $(COMMON_OBJS) $(MOD_LDFLAGS) $(LDFLAGS) $(LIBS) $(SOCKETLIBS) $(OTHERLIBS)
+
+ndomod-3x.o: ndomod.c $(COMMON_INC) $(COMMON_OBJS)
+	$(CC) $(MOD_CFLAGS) $(CFLAGS) -D BUILD_NAGIOS_3X -o ndomod-3x.o ndomod.c $(COMMON_OBJS) $(MOD_LDFLAGS) $(LDFLAGS) $(LIBS) $(SOCKETLIBS) $(OTHERLIBS)
+
+sockdebug: sockdebug.c $(COMMON_INC) $(COMMON_OBJS)
+	$(CC) $(CFLAGS) -o $@ sockdebug.c $(COMMON_OBJS) $(LDFLAGS) $(LIBS) $(MATHLIBS) $(SOCKETLIBS) $(OTHERLIBS)
+
+io.o: io.c $(SRC_INCLUDE)/io.h
+	$(CC) $(CFLAGS) -c -o $@ io.c
+
+utils.o: utils.c $(SRC_INCLUDE)/utils.h
+	$(CC) $(CFLAGS) -c -o $@ utils.c
+
+db.o: db.c $(SRC_INCLUDE)/db.h
+	$(CC) $(CFLAGS) -c -o $@ db.c
+
+dbhandlers-2x.o: dbhandlers.c $(SRC_INCLUDE)/dbhandlers.h
+	$(CC) $(CFLAGS) -D BUILD_NAGIOS_2X -c -o $@ dbhandlers.c
+
+dbhandlers-3x.o: dbhandlers.c $(SRC_INCLUDE)/dbhandlers.h
+	$(CC) $(CFLAGS) -D BUILD_NAGIOS_3X -c -o $@ dbhandlers.c
+
+clean:
+	rm -f core file2sock log2ndo ndo2db-2x ndo2db-3x sockdebug *.o
+	rm -f *~ */*~
+
+distclean: clean
+	rm -f Makefile
+
+devclean: distclean

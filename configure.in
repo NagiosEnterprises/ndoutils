@@ -1,0 +1,332 @@
+dnl Process this -*-m4-*- file with autoconf to produce a configure script.
+
+dnl Disable caching
+define([AC_CACHE_LOAD],)
+define([AC_CACHE_SAVE],)
+
+AC_INIT(src/ndo2db.c)
+AC_CONFIG_HEADER(include/config.h)
+AC_PREFIX_DEFAULT(/usr/local/nagios)
+
+PKG_NAME=ndoutils
+PKG_VERSION="1.4b1"
+PKG_HOME_URL="http://www.nagios.org/"
+PKG_REL_DATE="01-07-2007"
+
+dnl Figure out how to invoke "install" and what install options to use.
+AC_PROG_INSTALL
+AC_SUBST(INSTALL)
+
+dnl What OS are we running?
+AC_CANONICAL_HOST
+
+dnl Checks for programs.
+AC_PROG_CC
+AC_PROG_MAKE_SET
+
+dnl Checks for header files.
+AC_HEADER_STDC
+AC_HEADER_TIME
+AC_HEADER_SYS_WAIT
+AC_CHECK_HEADERS(arpa/inet.h ctype.h dirent.h dlfcn.h errno.h fcntl.h float.h getopt.h grp.h inttypes.h limits.h ltdl.h math.h netdb.h netinet/in.h pthread.h pwd.h regex.h signal.h socket.h stdint.h string.h strings.h sys/ipc.h sys/mman.h sys/msg.h sys/poll.h sys/resource.h sys/sendfile.h sys/socket.h sys/stat.h sys/time.h sys/timeb.h sys/types.h sys/un.h sys/wait.h syslog.h tcpd.h unistd.h values.h)
+
+dnl Checks for typedefs, structures, and compiler characteristics.
+AC_C_CONST
+AC_STRUCT_TM
+AC_TYPE_MODE_T
+AC_TYPE_PID_T
+AC_TYPE_SIZE_T
+AC_TYPE_SIGNAL
+AC_TYPE_GETGROUPS
+
+dnl Check lengths for later tests of u_int32_t and int32_t
+AC_CHECK_SIZEOF(int)
+AC_CHECK_SIZEOF(short)
+AC_CHECK_SIZEOF(long)
+
+dnl Define u_int32_t if we don't have it already (Solaris, etc.)
+AC_CHECK_TYPE(uint32_t,unsigned int)
+AC_CHECK_TYPE(u_int32_t,unsigned int)
+if test "$ac_cv_type_u_int32_t" = no ; then
+	if test "$ac_cv_type_u_int32_t" = yes ; then
+		AC_DEFINE(U_INT32_T_IS_UINT32_T)
+	else
+		if test "$ac_cv_sizeof_int" = 4 ; then
+			AC_DEFINE(U_INT32_T_IS_UINT)
+		else
+			if test "$ac_cv_sizeof_long" = 4 ; then
+				AC_DEFINE(U_INT32_T_IS_ULONG)
+			else
+				if test "$ac_cv_sizeof_short" = 4 ; then
+					AC_DEFINE(U_INT32_T_IS_USHORT)
+				fi
+			fi
+		fi
+	fi
+fi
+
+dnl Define int32_t if we don't have it already
+AC_CHECK_TYPE(int32_t,int)
+if test "$ac_cv_type_int32_t" = no ; then
+	if test "$ac_cv_sizeof_int" = 4 ; then
+		AC_DEFINE(INT32_T_IS_UINT)
+	else
+		if test "$ac_cv_sizeof_long" = 4 ; then
+			AC_DEFINE(INT32_T_IS_ULONG)
+		else
+			if test "$ac_cv_sizeof_short" = 4 ; then
+				AC_DEFINE(INT32_T_IS_USHORT)
+			fi
+		fi
+	fi
+fi
+
+
+dnl Check for getopt_long (Solaris)
+AC_CHECK_FUNCS([getopt_long],,AC_CHECK_LIB([iberty],[getopt_long],OTHERLIBS="$OTHERLIBS -liberty"))
+AC_SUBST(OTHERLIBS)
+
+dnl Checks for library functions.
+AC_CHECK_LIB(nsl,main,SOCKETLIBS="$SOCKETLIBS -lnsl")
+AC_CHECK_LIB(socket,socket,SOCKETLIBS="$SOCKETLIBS -lsocket")
+AC_SUBST(SOCKETLIBS)
+AC_CHECK_LIB(wrap,main,[
+	LIBWRAPLIBS="$LIBWRAPLIBS -lwrap"
+	AC_DEFINE(HAVE_LIBWRAP)
+	])
+AC_SUBST(LIBWRAPLIBS)
+AC_CHECK_FUNCS(strdup strstr strtoul initgroups)
+
+AC_MSG_CHECKING(for type of socket size)
+AC_TRY_COMPILE([#include <stdlib.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+],
+[int a = send(1, (const void *)0, (size_t *) 0, (int *) 0);],
+[AC_DEFINE(SOCKET_SIZE_TYPE, size_t) AC_MSG_RESULT(size_t)],
+[AC_DEFINE(SOCKET_SIZE_TYPE, int) AC_MSG_RESULT(int)])
+
+dnl Stolen from Python code: loewis@users.sourceforge.net
+dnl AC_CHECK_TYPE(socklen_t,int,
+dnl	AC_DEFINE(socklen_t,int,
+dnl	Define to `int' if <sys/socket.h> does not define.),[
+dnl	#ifdef HAVE_SYS_TYPES_H
+dnl	#include <sys/types.h>
+dnl	#endif
+dnl	#ifdef HAVE_SYS_SOCKET_H
+dnl	#include <sys/socket.h>
+dnl	#endif
+dnl	])
+
+
+
+
+dnl - Modified version from www.erlang.org
+dnl - Some 12/15/05 mods made after reading http://xaxxon.slackworks.com/phuku/dl.html
+AC_MSG_CHECKING(for linker flags for loadable modules)
+case $host_os in
+	solaris2*|sysv4*)
+		MOD_LDFLAGS="-G"
+	;;
+	aix4*|aix5*)
+		#MOD_LDFLAGS="-G -bnoentry -bexpall"
+		MOD_LDFLAGS="-G -bM:SRE -bnoentry -bexpall"
+	;;
+	freebsd2*)
+		# Non-ELF GNU linker
+		MOD_LDFLAGS="-Bshareable"
+	;;
+	darwin*)
+		# Mach-O linker, a shared lib and a loadable
+		# object file is not the same thing.
+		MOD_LDFLAGS="-bundle -flat_namespace -undefined suppress"
+		MOD_CFLAGS="$MOD_CFLAGS -fno-common"
+	;;
+	linux*)
+		# assume GNU linker and ELF
+		MOD_LDFLAGS="-shared"
+		MOD_CFLAGS="-fPIC"
+	;;
+	*)
+		# assume GNU linker and ELF
+		MOD_LDFLAGS="-shared"
+	;;
+esac
+AC_MSG_RESULT([$MOD_LDFLAGS])
+AC_SUBST(MOD_CFLAGS)
+AC_SUBST(MOD_LDFLAGS)
+
+
+dnl DB support options
+USE_MYSQL=yes
+USE_PGSQL=yes
+AC_ARG_ENABLE(mysql,--enable-mysql enables MySQL database support)
+AS_IF([test x$enable_mysql = xno], [USE_MYSQL=no])
+AC_ARG_ENABLE(pgsql,--enable-pgsql enables PostgreSQL database support)
+AS_IF([test x$enable_pgsql = xno], [USE_PGSQL=no])
+
+dnl Optional MySQL library and include paths
+AC_ARG_WITH(mysql-lib,--with-mysql-lib=DIR sets location of the MySQL client library,[
+	DBLDFLAGS="-L${withval}"
+	LD_RUN_PATH="${withval}${LD_RUN_PATH:+:}${LD_RUN_PATH}"
+	])
+if test "x$withval" != "xno" ; then
+	dnl If no library path specified, add default (RedHat) path for good measure
+      	DBLDFLAGS="$LDFLAGS -L/usr/lib/mysql"
+fi
+AC_ARG_WITH(mysql-inc,--with-mysql-inc=DIR sets location of the MySQL client include files,[
+	DBCFLAGS="${DBCFLAGS} -I${withval}"
+	])
+
+dnl Optional PostgreSQL library and include paths
+AC_ARG_WITH(pgsql-lib,--with-pgsql-lib=DIR sets location of the PostgreSQL client library,[
+	DBLDFLAGS="-L${withval}"
+	LD_RUN_PATH="${withval}${LD_RUN_PATH:+:}${LD_RUN_PATH}"
+	])
+AC_ARG_WITH(pgsql-inc,--with-pgsql-inc=DIR sets location of the PostgreSQL client include files,[
+	DBCFLAGS="${DBCFLAGS} -I${withval}"
+	])
+
+save_LDFLAGS="$LDFLAGS"
+LDFLAGS="${LDFLAGS} ${DBLDFLAGS}"
+
+dnl Are we using any MySQL routines?
+if test $USE_MYSQL = yes; then
+
+	AC_CHECK_LIB(mysqlclient,mysql_store_result,MYSQLLIBFOUND=yes,MYSQLLIBFOUND=no)
+
+	dnl Did we find the MySQL libraries?
+	if test x$MYSQLLIBFOUND = xno; then
+		echo ""
+		echo ""
+		echo "*** MySQL library could not be located... **************************"
+		echo ""
+		echo "You chose to compile NDBXT with MySQL support, but I was unable to"
+		echo "locate the MySQL library on your system.  If the library is"
+		echo "installed,  use the --with-mysql-lib argument to specify the"
+		echo "location of the MySQL library."
+		echo ""
+		echo "NOTE: After you install the necessary libraries on your system:"
+		echo "      1. Make sure /etc/ld.so.conf has an entry for the directory in"
+		echo "         which the MySQL libraries are installed."
+		echo "      2. Run 'ldconfig' to update the run-time linker options."
+		echo "      3. Run 'make devclean' in the NDBXT distribution to clean out"
+		echo "         any old references to your previous compile."
+		echo "      4. Rerun the configure script."
+		echo ""
+		echo "TIP: Try the following...."
+		echo ""
+		echo "         ./configure --with-mysql-lib=/usr/lib/mysql"
+		echo ""
+		echo "********************************************************************"
+		echo ""
+		echo ""
+
+		USE_MYSQL=no
+	fi
+
+	AC_CHECK_HEADER(mysql/mysql.h,MYSQLINCFOUND=yes,MYSQLINCFOUND=no)
+
+	dnl Did we find the MySQL header files?
+	if test x$MYSQLINCFOUND = xno; then
+		echo ""
+		echo ""
+		echo "*** MySQL include file could not be located... **********************"
+		echo ""
+		echo "You chose to compile NDBXT with MySQL support, but I was unable to"
+		echo "locate <mysql/mysql.h> on your system.  If the include file is"
+		echo "installed, use the --with-mysql-inc argument to specify the location"
+		echo "of the MySQL include file."
+		echo ""
+		echo "********************************************************************"
+		echo ""
+		echo ""
+
+		USE_MYSQL=no
+
+	fi
+
+	dnl We found the MySQL lib!
+	if test x$USE_MYSQL = xyes; then
+		echo "MySQL library and include file(s) were found!"
+		AC_DEFINE_UNQUOTED(USE_MYSQL)
+		DBLIBS="$DBLIBS -lmysqlclient"
+	fi
+fi	
+
+dnl Are we using any PostgreSQL routines?
+if test $USE_PGSQL = yes; then
+
+	AC_CHECK_LIB(pq,PQconnectdb,PGSQLLIBFOUND=yes,PGSQLLIBFOUND=no)
+
+	dnl Did we find the PostgreSQL libraries?
+	if test x$PGSQLLIBFOUND = xno; then
+		echo ""
+		echo ""
+		echo "*** PostgreSQL library could not be located... *********************"
+		echo ""
+		echo "You chose to compile NDBXT with PostgreSQL support, but I was"
+		echo "unable to locate the PostgreSQL library on your system.  If the"
+		echo "library is installed,  use the --with-pgsql-lib argument to specify"
+		echo "the location of the PostgreSQL library."
+		echo ""
+		echo "NOTE: After you install the necessary libraries on your system:"
+		echo "      1. Make sure /etc/ld.so.conf has an entry for the directory in"
+		echo "         which the PostgreSQL libraries are installed."
+		echo "      2. Run 'ldconfig' to update the run-time linker options."
+		echo "      3. Run 'make devclean' in the NDBXT distribution to clean out"
+		echo "         any old references to your previous compile."
+		echo "      4. Rerun the configure script."
+		echo ""
+		echo "********************************************************************"
+		echo ""
+		echo ""
+	fi
+
+	AC_CHECK_HEADER(libpq-fe.h,PGSQLINCFOUND=yes,PGSQLINCFOUND=no)
+
+	dnl Did we find the PostgreSQL header files?
+	if test x$PGSQLINCFOUND = xno; then
+		echo ""
+		echo ""
+		echo "*** PostgreSQL include file could not be located... ****************"
+		echo ""
+		echo "You chose to compile NDBXT with PostgreSQL support, but I was unable"
+		echo "to locate <libpq-fe.h> on your system.  If the include file is"
+		echo "installed, use the --with-pgsql-inc argument to specify the location"
+		echo "of the PostgreSQL include file."
+		echo ""
+		echo "********************************************************************"
+		echo ""
+		echo ""
+
+		USE_PGSQL=no
+
+	fi
+
+	dnl We found the PostgreSQL lib!
+	if test x$USE_PGSQL = xyes; then
+		echo "PostgreSQL library and include file(s) were found!"
+		AC_DEFINE_UNQUOTED(USE_PGSQL)
+		DBLIBS="$DBLIBS -lpq"
+	fi
+fi	
+
+AC_SUBST(DBCFLAGS)
+AC_SUBST(DBLDFLAGS)
+AC_SUBST(DBLIBS)
+
+LDFLAGS="$save_LDFLAGS"
+
+
+AC_OUTPUT(Makefile src/Makefile)
+
+dnl Review options
+echo ""
+echo ""
+AC_MSG_RESULT([*** $PKG_NAME $PKG_VERSION $PKG_REL_DATE ***])
+
+echo ""
+echo ""
+echo "Type 'make' to compile the NDO utilities."
+echo ""
