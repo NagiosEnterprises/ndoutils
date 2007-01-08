@@ -5,7 +5,7 @@
  * Copyright (c) 2005-2007 Ethan Galstad
  *
  * First Written: 05-19-2005
- * Last Modified: 01-07-2007
+ * Last Modified: 01-08-2007
  *
  *****************************************************************************/
 
@@ -1380,10 +1380,12 @@ int ndomod_broker_data(int event_type, void *data){
 			break;
 
 		case EVENT_SCHEDULED_DOWNTIME:
-			temp_downtime=(scheduled_downtime *)eventdata->event_data;
+			temp_downtime=find_downtime(ANY_DOWNTIME,(unsigned long)eventdata->event_data);
 
-			es[0]=ndo_escape_buffer(temp_downtime->host_name);
-			es[1]=ndo_escape_buffer(temp_downtime->service_description);
+			if(temp_downtime!=NULL){
+				es[0]=ndo_escape_buffer(temp_downtime->host_name);
+				es[1]=ndo_escape_buffer(temp_downtime->service_description);
+				}
 
 			snprintf(temp_buffer,sizeof(temp_buffer)-1
 				 ,"\n%d:\n%d=%d\n%d=%d\n%d=%d\n%d=%ld.%ld\n%d=%d\n%d=%d\n%d=%lu\n%d=%s\n%d=%s\n%d\n\n"
