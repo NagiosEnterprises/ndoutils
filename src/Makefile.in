@@ -1,7 +1,7 @@
 ###############################
 # Makefile for NDO
 #
-# Last Modified: 12-21-2006
+# Last Modified: 01-08-2007
 ###############################
 
 
@@ -72,10 +72,10 @@ sockdebug: sockdebug.c $(COMMON_INC) $(COMMON_OBJS)
 	$(CC) $(CFLAGS) -o $@ sockdebug.c $(COMMON_OBJS) $(LDFLAGS) $(LIBS) $(MATHLIBS) $(SOCKETLIBS) $(OTHERLIBS)
 
 io.o: io.c $(SRC_INCLUDE)/io.h
-	$(CC) $(CFLAGS) -c -o $@ io.c
+	$(CC) $(MOD_CFLAGS) $(CFLAGS) -c -o $@ io.c
 
 utils.o: utils.c $(SRC_INCLUDE)/utils.h
-	$(CC) $(CFLAGS) -c -o $@ utils.c
+	$(CC) $(MOD_CFLAGS) $(CFLAGS) -c -o $@ utils.c
 
 db.o: db.c $(SRC_INCLUDE)/db.h
 	$(CC) $(CFLAGS) -c -o $@ db.c

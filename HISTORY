@@ -7,6 +7,12 @@ Note:  Consider this addon to be experimental/beta/alpha/potentially-hazardous-t
        using it in production environments.   - Ethan
 
 
+1.4b2 - ??/??/2007
+------------------
+- Makefile fixes for compiling ndomod event broker module
+
+
+
 1.4b1 - 01/07/2007
 ------------------
 - Added ability to drop privileges (see the ndo2db_user and ndb2db_group config file options)
