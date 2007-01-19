@@ -1,12 +1,18 @@
 Here you'll find scripts to create the necessary database tables
 for MySQL and PostgreSQL servers.
 
+Note: The queries/ subdirectory contains different SQL queries
+      for fetching data from the DB tables.
+
 =================================================================
 
-mysql.sql		Scripts for creating the necessary tables
- 			in MySQL.
+mysql.sql		  Scripts for creating the necessary tables
+ 			  in MySQL.
 
-mysql-upgrade-1.3.sql   Scripts for updating MySQL tables from
-			those included in the 1.3 release.
+mysql-upgrade-1.4b1.sql   Scripts for updating MySQL tables from
+                          the 1.4b1 release.
+
+mysql-upgrade-1.3.sql     Scripts for updating MySQL tables from
+		  	  those included in the 1.3 release.
 
 

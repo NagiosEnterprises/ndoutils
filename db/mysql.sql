@@ -3,7 +3,7 @@
 -- http://www.phpmyadmin.net
 -- 
 -- Host: localhost
--- Generation Time: Jan 06, 2007 at 05:19 PM
+-- Generation Time: Jan 19, 2007 at 02:28 PM
 -- Server version: 4.1.20
 -- PHP Version: 5.0.4
 -- 
@@ -465,7 +465,7 @@ CREATE TABLE `nagios_host_contacts` (
   `host_id` int(11) NOT NULL default '0',
   `contact_object_id` int(11) NOT NULL default '0',
   PRIMARY KEY  (`host_contact_id`),
-  UNIQUE KEY `instance_id` (`instance_id`)
+  UNIQUE KEY `instance_id` (`instance_id`,`host_id`,`contact_object_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=ascii;
 
 -- --------------------------------------------------------
@@ -551,7 +551,7 @@ CREATE TABLE `nagios_hostescalation_contacts` (
   `hostescalation_id` int(11) NOT NULL default '0',
   `contact_object_id` int(11) NOT NULL default '0',
   PRIMARY KEY  (`hostescalation_contact_id`),
-  UNIQUE KEY `instance_id` (`instance_id`)
+  UNIQUE KEY `instance_id` (`instance_id`,`hostescalation_id`,`contact_object_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=ascii;
 
 -- --------------------------------------------------------
@@ -914,7 +914,7 @@ CREATE TABLE `nagios_service_contacts` (
   `service_id` int(11) NOT NULL default '0',
   `contact_object_id` int(11) NOT NULL default '0',
   PRIMARY KEY  (`service_contact_id`),
-  UNIQUE KEY `instance_id` (`instance_id`)
+  UNIQUE KEY `instance_id` (`instance_id`,`service_id`,`contact_object_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=ascii;
 
 -- --------------------------------------------------------
@@ -985,7 +985,7 @@ CREATE TABLE `nagios_serviceescalation_contacts` (
   `serviceescalation_id` int(11) NOT NULL default '0',
   `contact_object_id` int(11) NOT NULL default '0',
   PRIMARY KEY  (`serviceescalation_contact_id`),
-  UNIQUE KEY `instance_id` (`instance_id`)
+  UNIQUE KEY `instance_id` (`instance_id`,`serviceescalation_id`,`contact_object_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=ascii;
 
 -- --------------------------------------------------------
@@ -1052,6 +1052,7 @@ CREATE TABLE `nagios_services` (
   `service_id` int(11) NOT NULL auto_increment,
   `instance_id` smallint(6) NOT NULL default '0',
   `config_type` smallint(6) NOT NULL default '0',
+  `host_object_id` int(11) NOT NULL default '0',
   `service_object_id` int(11) NOT NULL default '0',
   `display_name` varchar(64) NOT NULL default '',
   `check_command_object_id` int(11) NOT NULL default '0',

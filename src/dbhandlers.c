@@ -3515,37 +3515,6 @@ int ndo2db_handle_hostdefinition(ndo2db_idi *idi){
 		free(buf1);
 	        }
 
-#ifdef OLDSTUFF
-	/* save contact groups to db */
-	mbuf=idi->mbuf[NDO2DB_MBUF_CONTACTGROUP];
-	for(x=0;x<mbuf.used_lines;x++){
-
-		if(mbuf.buffer[x]==NULL)
-			continue;
-
-		/* get the object id of the member */
-		result=ndo2db_get_object_id_with_insert(idi,NDO2DB_OBJECTTYPE_CONTACTGROUP,mbuf.buffer[x],NULL,&member_id);
-
-		if(asprintf(&buf,"instance_id='%d', host_id='%lu', contactgroup_object_id='%lu'"
-			    ,idi->dbinfo.instance_id
-			    ,host_id
-			    ,member_id
-			   )==-1)
-			buf=NULL;
-	
-		if(asprintf(&buf1,"INSERT INTO %s SET %s ON DUPLICATE KEY UPDATE %s"
-			    ,ndo2db_db_tablenames[NDO2DB_DBTABLE_HOSTCONTACTGROUPS]
-			    ,buf
-			    ,buf
-			   )==-1)
-			buf1=NULL;
-
-		result=ndo2db_db_query(idi,buf1);
-		free(buf);
-		free(buf1);
-	        }
-#endif
-
 	/* save contacts to db */
 	mbuf=idi->mbuf[NDO2DB_MBUF_CONTACT];
 	for(x=0;x<mbuf.used_lines;x++){
@@ -3720,6 +3689,7 @@ int ndo2db_handle_servicedefinition(ndo2db_idi *idi){
 	int type,flags,attr;
 	struct timeval tstamp;
 	unsigned long object_id=0L;
+	unsigned long host_id=0L;
 	unsigned long check_timeperiod_id=0L;
 	unsigned long notification_timeperiod_id=0L;
 	unsigned long check_command_id=0L;
@@ -3840,17 +3810,19 @@ int ndo2db_handle_servicedefinition(ndo2db_idi *idi){
 	es[7]=ndo2db_db_escape_string(idi,idi->buffered_input[NDO_DATA_ICONIMAGEALT]);
 	es[8]=ndo2db_db_escape_string(idi,idi->buffered_input[NDO_DATA_DISPLAYNAME]);
 
-	/* get the object id */
+	/* get the object ids */
 	result=ndo2db_get_object_id_with_insert(idi,NDO2DB_OBJECTTYPE_SERVICE,idi->buffered_input[NDO_DATA_HOSTNAME],idi->buffered_input[NDO_DATA_SERVICEDESCRIPTION],&object_id);
+	result=ndo2db_get_object_id_with_insert(idi,NDO2DB_OBJECTTYPE_HOST,idi->buffered_input[NDO_DATA_HOSTNAME],NULL,&host_id);
 
 	/* get the timeperiod ids */
 	result=ndo2db_get_object_id_with_insert(idi,NDO2DB_OBJECTTYPE_TIMEPERIOD,idi->buffered_input[NDO_DATA_SERVICECHECKPERIOD],NULL,&check_timeperiod_id);
 	result=ndo2db_get_object_id_with_insert(idi,NDO2DB_OBJECTTYPE_TIMEPERIOD,idi->buffered_input[NDO_DATA_SERVICENOTIFICATIONPERIOD],NULL,&notification_timeperiod_id);
 
 	/* add definition to db */
-	if(asprintf(&buf,"instance_id='%lu', config_type='%d', service_object_id='%lu', display_name='%s', check_command_object_id='%lu', check_command_args='%s', eventhandler_command_object_id='%lu', eventhandler_command_args='%s', check_timeperiod_object_id='%lu', notification_timeperiod_object_id='%lu', failure_prediction_options='%s', check_interval='%lf', retry_interval='%lf', max_check_attempts='%d', first_notification_delay='%lf', notification_interval='%lf', notify_on_warning='%d', notify_on_unknown='%d', notify_on_critical='%d', notify_on_recovery='%d', notify_on_flapping='%d', notify_on_downtime='%d', stalk_on_ok='%d', stalk_on_warning='%d', stalk_on_unknown='%d', stalk_on_critical='%d', is_volatile='%d', flap_detection_enabled='%d', flap_detection_on_ok='%d', flap_detection_on_warning='%d', flap_detection_on_unknown='%d', flap_detection_on_critical='%d', low_flap_threshold='%lf', high_flap_threshold='%lf', process_performance_data='%d', freshness_checks_enabled='%d', freshness_threshold='%d', passive_checks_enabled='%d', event_handler_enabled='%d', active_checks_enabled='%d', retain_status_information='%d', retain_nonstatus_information='%d', notifications_enabled='%d', obsess_over_service='%d', failure_prediction_enabled='%d', notes='%s', notes_url='%s', action_url='%s', icon_image='%s', icon_image_alt='%s'"
+	if(asprintf(&buf,"instance_id='%lu', config_type='%d', host_object_id='%lu', service_object_id='%lu', display_name='%s', check_command_object_id='%lu', check_command_args='%s', eventhandler_command_object_id='%lu', eventhandler_command_args='%s', check_timeperiod_object_id='%lu', notification_timeperiod_object_id='%lu', failure_prediction_options='%s', check_interval='%lf', retry_interval='%lf', max_check_attempts='%d', first_notification_delay='%lf', notification_interval='%lf', notify_on_warning='%d', notify_on_unknown='%d', notify_on_critical='%d', notify_on_recovery='%d', notify_on_flapping='%d', notify_on_downtime='%d', stalk_on_ok='%d', stalk_on_warning='%d', stalk_on_unknown='%d', stalk_on_critical='%d', is_volatile='%d', flap_detection_enabled='%d', flap_detection_on_ok='%d', flap_detection_on_warning='%d', flap_detection_on_unknown='%d', flap_detection_on_critical='%d', low_flap_threshold='%lf', high_flap_threshold='%lf', process_performance_data='%d', freshness_checks_enabled='%d', freshness_threshold='%d', passive_checks_enabled='%d', event_handler_enabled='%d', active_checks_enabled='%d', retain_status_information='%d', retain_nonstatus_information='%d', notifications_enabled='%d', obsess_over_service='%d', failure_prediction_enabled='%d', notes='%s', notes_url='%s', action_url='%s', icon_image='%s', icon_image_alt='%s'"
 		    ,idi->dbinfo.instance_id
 		    ,idi->current_object_config_type
+		    ,host_id
 		    ,object_id
 		    ,(es[8]==NULL)?"":es[8]
 		    ,check_command_id
@@ -3925,37 +3897,6 @@ int ndo2db_handle_servicedefinition(ndo2db_idi *idi){
 
 	for(x=0;x<9;x++)
 		free(es[x]);
-
-#ifdef OLDSTUFF
-	/* save contact groups to db */
-	mbuf=idi->mbuf[NDO2DB_MBUF_CONTACTGROUP];
-	for(x=0;x<mbuf.used_lines;x++){
-
-		if(mbuf.buffer[x]==NULL)
-			continue;
-
-		/* get the object id of the member */
-		result=ndo2db_get_object_id_with_insert(idi,NDO2DB_OBJECTTYPE_CONTACTGROUP,mbuf.buffer[x],NULL,&member_id);
-
-		if(asprintf(&buf,"instance_id='%d', service_id='%lu', contactgroup_object_id='%lu'"
-			    ,idi->dbinfo.instance_id
-			    ,service_id
-			    ,member_id
-			   )==-1)
-			buf=NULL;
-	
-		if(asprintf(&buf1,"INSERT INTO %s SET %s ON DUPLICATE KEY UPDATE %s"
-			    ,ndo2db_db_tablenames[NDO2DB_DBTABLE_SERVICECONTACTGROUPS]
-			    ,buf
-			    ,buf
-			   )==-1)
-			buf1=NULL;
-
-		result=ndo2db_db_query(idi,buf1);
-		free(buf);
-		free(buf1);
-	        }
-#endif
 
 	/* save contacts to db */
 	mbuf=idi->mbuf[NDO2DB_MBUF_CONTACT];
@@ -4349,37 +4290,6 @@ int ndo2db_handle_hostescalationdefinition(ndo2db_idi *idi){
 	free(buf);
 	free(buf1);
 
-#ifdef OLDSTUFF
-	/* save contact groups to db */
-	mbuf=idi->mbuf[NDO2DB_MBUF_CONTACTGROUP];
-	for(x=0;x<mbuf.used_lines;x++){
-
-		if(mbuf.buffer[x]==NULL)
-			continue;
-
-		/* get the object id of the member */
-		result=ndo2db_get_object_id_with_insert(idi,NDO2DB_OBJECTTYPE_CONTACTGROUP,mbuf.buffer[x],NULL,&member_id);
-
-		if(asprintf(&buf,"instance_id='%d', hostescalation_id='%lu', contactgroup_object_id='%lu'"
-			    ,idi->dbinfo.instance_id
-			    ,escalation_id
-			    ,member_id
-			   )==-1)
-			buf=NULL;
-	
-		if(asprintf(&buf1,"INSERT INTO %s SET %s ON DUPLICATE KEY UPDATE %s"
-			    ,ndo2db_db_tablenames[NDO2DB_DBTABLE_HOSTESCALATIONCONTACTGROUPS]
-			    ,buf
-			    ,buf
-			   )==-1)
-			buf1=NULL;
-
-		result=ndo2db_db_query(idi,buf1);
-		free(buf);
-		free(buf1);
-	        }
-#endif
-
 	/* save contacts to db */
 	mbuf=idi->mbuf[NDO2DB_MBUF_CONTACT];
 	for(x=0;x<mbuf.used_lines;x++){
@@ -4494,37 +4404,6 @@ int ndo2db_handle_serviceescalationdefinition(ndo2db_idi *idi){
 	        }
 	free(buf);
 	free(buf1);
-
-#ifdef OLDSTUFF
-	/* save contact groups to db */
-	mbuf=idi->mbuf[NDO2DB_MBUF_CONTACTGROUP];
-	for(x=0;x<mbuf.used_lines;x++){
-
-		if(mbuf.buffer[x]==NULL)
-			continue;
-
-		/* get the object id of the member */
-		result=ndo2db_get_object_id_with_insert(idi,NDO2DB_OBJECTTYPE_CONTACTGROUP,mbuf.buffer[x],NULL,&member_id);
-
-		if(asprintf(&buf,"instance_id='%d', serviceescalation_id='%lu', contactgroup_object_id='%lu'"
-			    ,idi->dbinfo.instance_id
-			    ,escalation_id
-			    ,member_id
-			   )==-1)
-			buf=NULL;
-	
-		if(asprintf(&buf1,"INSERT INTO %s SET %s ON DUPLICATE KEY UPDATE %s"
-			    ,ndo2db_db_tablenames[NDO2DB_DBTABLE_SERVICEESCALATIONCONTACTGROUPS]
-			    ,buf
-			    ,buf
-			   )==-1)
-			buf1=NULL;
-
-		result=ndo2db_db_query(idi,buf1);
-		free(buf);
-		free(buf1);
-	        }
-#endif
 
 	/* save contacts to db */
 	mbuf=idi->mbuf[NDO2DB_MBUF_CONTACT];

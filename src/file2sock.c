@@ -5,7 +5,7 @@
  * License: GPL v2
  *
  * First Written: 05-13-2005
- * Last Modified: 01-07-2007
+ * Last Modified: 01-19-2007
  *
  **************************************************************/
 
@@ -13,9 +13,9 @@
 #include "../include/common.h"
 #include "../include/io.h"
 
-#define FILE2SOCK_VERSION "1.4b1"
+#define FILE2SOCK_VERSION "1.4b2"
 #define FILE2SOCK_NAME "FILE2SOCK"
-#define FILE2SOCK_DATE "01-07-2007"
+#define FILE2SOCK_DATE "01-19-2007"
 
 
 int process_arguments(int,char **);
