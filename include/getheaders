@@ -1,0 +1,18 @@
+#!/bin/sh
+
+#################################################################################
+# Used by Ethan to grab the latest copy of Nagios include files
+#
+# NOTES:
+#    - configure scripts must be run on Nagios CVS repos before this can be done
+#    - config.h files are emptied, so it won't interefere with the local config.h
+#      generated for this project
+#################################################################################
+
+# Get Nagios 3.x headers
+cp --reply=yes ~/code/cvs/nagios/include/*.h nagios-3x
+echo "/* empty */" > nagios-3x/config.h
+
+# Get Nagios 2.x headers
+cp --reply=yes ~/code/cvs/nagios-2x/nagios/include/*.h nagios-2x
+echo "/* empty */" > nagios-2x/config.h

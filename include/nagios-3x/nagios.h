@@ -2,7 +2,7 @@
  *
  * Nagios Main Header File
  * Written By: Ethan Galstad (nagios@nagios.org)
- * Last Modified: 01-08-2007
+ * Last Modified: 02-09-2007
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -35,7 +35,7 @@ extern "C" {
 
 #define MAX_COMMAND_ARGUMENTS			32	/* maximum number of $ARGx$ macros */
 
-#define MAX_PLUGIN_OUTPUT_LENGTH                2048    /* max length of plugin output (including perf data) */
+#define MAX_PLUGIN_OUTPUT_LENGTH                4096    /* max length of plugin output (including perf data) */
 
 
 
@@ -45,7 +45,7 @@ extern "C" {
 
 #define MAX_USER_MACROS				256	/* maximum number of $USERx$ macros */
 
-#define MACRO_X_COUNT				110	/* size of macro_x[] array */
+#define MACRO_X_COUNT				116	/* size of macro_x[] array */
 
 #define MACRO_HOSTNAME				0
 #define MACRO_HOSTALIAS				1
@@ -157,6 +157,12 @@ extern "C" {
 #define MACRO_LASTHOSTEVENTID                   107
 #define MACRO_SERVICEEVENTID                    108
 #define MACRO_LASTSERVICEEVENTID                109
+#define MACRO_HOSTGROUPNAMES                    110
+#define MACRO_SERVICEGROUPNAMES                 111
+#define MACRO_HOSTACKAUTHORNAME                 112
+#define MACRO_HOSTACKAUTHORALIAS                113
+#define MACRO_SERVICEACKAUTHORNAME              114
+#define MACRO_SERVICEACKAUTHORALIAS             115
 
 
 
@@ -211,6 +217,7 @@ extern "C" {
 #define DEFAULT_CHECK_SERVICE_FRESHNESS         		1       /* check service result freshness */
 #define DEFAULT_CHECK_HOST_FRESHNESS            		0       /* don't check host result freshness */
 #define DEFAULT_AUTO_RESCHEDULE_CHECKS          		0       /* don't auto-reschedule host and service checks */
+#define DEFAULT_TRANSLATE_PASSIVE_HOST_CHECKS                   0       /* should we translate DOWN/UNREACHABLE passive host checks? */
 
 #define DEFAULT_LOW_SERVICE_FLAP_THRESHOLD			20.0	/* low threshold for detection of service flapping */
 #define DEFAULT_HIGH_SERVICE_FLAP_THRESHOLD			30.0	/* high threshold for detection of service flapping */
@@ -447,6 +454,8 @@ typedef struct check_result_struct{
 	char *host_name;                                /* host name */
 	char *service_description;                      /* service description */
 	int check_type;					/* was this an active or passive service check? */
+	int scheduled_check;                            /* was this a scheduled or an on-demand check? */
+	int reschedule_check;                           /* should we reschedule the next check */
 	char *output_file;                              /* what file is the output stored in? */
 	FILE *output_file_fp;
 	int output_file_fd;
@@ -531,6 +540,28 @@ typedef struct dbuf_struct{
 	unsigned long chunk_size;
         }dbuf;
 
+
+#define ACTIVE_SCHEDULED_SERVICE_CHECK_STATS 0
+#define ACTIVE_ONDEMAND_SERVICE_CHECK_STATS  1
+#define PASSIVE_SERVICE_CHECK_STATS          2
+#define ACTIVE_SCHEDULED_HOST_CHECK_STATS    3
+#define ACTIVE_ONDEMAND_HOST_CHECK_STATS     4
+#define PASSIVE_HOST_CHECK_STATS             5
+#define ACTIVE_CACHED_HOST_CHECK_STATS       6
+#define ACTIVE_CACHED_SERVICE_CHECK_STATS    7
+#define EXTERNAL_COMMAND_STATS               8
+#define MAX_CHECK_STATS_TYPES                9
+
+#define CHECK_STATS_BUCKETS                  15
+
+/* used for tracking host and service check statistics */
+typedef struct check_stats_struct{
+	int current_bucket;
+	int bucket[CHECK_STATS_BUCKETS];
+	int overflow_bucket;
+	int minute_stats[3];
+	time_t last_update;
+        }check_stats;
 
 
 /******************* THREAD STUFF ********************/
@@ -865,13 +896,13 @@ int handle_host_state(host *);               			/* top level host state handler 
 int check_host_check_viability_3x(host *,int,int *,time_t *);
 int adjust_host_check_attempt_3x(host *);
 int determine_host_reachability(host *);
-int process_host_check_result_3x(host *,int,char *,int,int,unsigned long);
+int process_host_check_result_3x(host *,int,char *,int,int,int,unsigned long);
 
 int perform_on_demand_host_check_3x(host *,int *,int,int,unsigned long);
 int run_sync_host_check_3x(host *,int *,int,int,unsigned long);
 int execute_sync_host_check_3x(host *);
 int run_scheduled_host_check_3x(host *,int,double);
-int run_async_host_check_3x(host *,int,double,int,int *,time_t *);
+int run_async_host_check_3x(host *,int,double,int,int,int *,time_t *);
 int handle_async_host_check_result_3x(host *,check_result *);
 
 
@@ -887,8 +918,14 @@ int reap_check_results(void);
 /***** SERVICE CHECK FUNCTIONS *****/
 int check_service_check_viability_3x(service *,int,int *,time_t *);
 int run_scheduled_service_check(service *,int,double);
-int run_async_service_check(service *,int,double,int,int *,time_t *);
+int run_async_service_check(service *,int,double,int,int,int *,time_t *);
 int handle_async_service_check_result(service *,check_result *);
+
+
+/***** CHECK STATISTICS FUNCTIONS *****/
+int init_check_stats(void);
+int update_check_stats(int,time_t);
+int generate_check_stats(void);
 
 
 

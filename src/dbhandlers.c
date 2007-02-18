@@ -3,7 +3,7 @@
  *
  * Copyright (c) 2005-2007 Ethan Galstad 
  *
- * Last Modified: 01-06-2007
+ * Last Modified: 02-18-2007
  *
  **************************************************************/
 
@@ -3309,7 +3309,7 @@ int ndo2db_handle_hostdefinition(ndo2db_idi *idi){
 	unsigned long host_id=0L;
 	unsigned long member_id=0L;
 	int result=NDO_OK;
-	char *es[12];
+	char *es[13];
 	int x=0;
 	char *buf=NULL;
 	char *buf1=NULL;
@@ -3393,6 +3393,7 @@ int ndo2db_handle_hostdefinition(ndo2db_idi *idi){
 	es[9]=ndo2db_db_escape_string(idi,idi->buffered_input[NDO_DATA_VRMLIMAGE]);
 	es[10]=ndo2db_db_escape_string(idi,idi->buffered_input[NDO_DATA_STATUSMAPIMAGE]);
 	es[11]=ndo2db_db_escape_string(idi,idi->buffered_input[NDO_DATA_DISPLAYNAME]);
+	es[12]=ndo2db_db_escape_string(idi,idi->buffered_input[NDO_DATA_HOSTALIAS]);
 
 	/* get the object id */
 	result=ndo2db_get_object_id_with_insert(idi,NDO2DB_OBJECTTYPE_HOST,idi->buffered_input[NDO_DATA_HOSTNAME],NULL,&object_id);
@@ -3402,10 +3403,11 @@ int ndo2db_handle_hostdefinition(ndo2db_idi *idi){
 	result=ndo2db_get_object_id_with_insert(idi,NDO2DB_OBJECTTYPE_TIMEPERIOD,idi->buffered_input[NDO_DATA_HOSTNOTIFICATIONPERIOD],NULL,&notification_timeperiod_id);
 
 	/* add definition to db */
-	if(asprintf(&buf,"instance_id='%lu', config_type='%d', host_object_id='%lu', display_name='%s', address='%s', check_command_object_id='%lu', check_command_args='%s', eventhandler_command_object_id='%lu', eventhandler_command_args='%s', check_timeperiod_object_id='%lu', notification_timeperiod_object_id='%lu', failure_prediction_options='%s', check_interval='%lf', retry_interval='%lf', max_check_attempts='%d', first_notification_delay='%lf', notification_interval='%lf', notify_on_down='%d', notify_on_unreachable='%d', notify_on_recovery='%d', notify_on_flapping='%d', notify_on_downtime='%d', stalk_on_up='%d', stalk_on_down='%d', stalk_on_unreachable='%d', flap_detection_enabled='%d', flap_detection_on_up='%d', flap_detection_on_down='%d', flap_detection_on_unreachable='%d', low_flap_threshold='%lf', high_flap_threshold='%lf', process_performance_data='%d', freshness_checks_enabled='%d', freshness_threshold='%d', passive_checks_enabled='%d', event_handler_enabled='%d', active_checks_enabled='%d', retain_status_information='%d', retain_nonstatus_information='%d', notifications_enabled='%d', obsess_over_host='%d', failure_prediction_enabled='%d', notes='%s', notes_url='%s', action_url='%s', icon_image='%s', icon_image_alt='%s', vrml_image='%s', statusmap_image='%s', have_2d_coords='%d', x_2d='%d', y_2d='%d', have_3d_coords='%d', x_3d='%lf', y_3d='%lf', z_3d='%lf'"
+	if(asprintf(&buf,"instance_id='%lu', config_type='%d', host_object_id='%lu', alias='%s', display_name='%s', address='%s', check_command_object_id='%lu', check_command_args='%s', eventhandler_command_object_id='%lu', eventhandler_command_args='%s', check_timeperiod_object_id='%lu', notification_timeperiod_object_id='%lu', failure_prediction_options='%s', check_interval='%lf', retry_interval='%lf', max_check_attempts='%d', first_notification_delay='%lf', notification_interval='%lf', notify_on_down='%d', notify_on_unreachable='%d', notify_on_recovery='%d', notify_on_flapping='%d', notify_on_downtime='%d', stalk_on_up='%d', stalk_on_down='%d', stalk_on_unreachable='%d', flap_detection_enabled='%d', flap_detection_on_up='%d', flap_detection_on_down='%d', flap_detection_on_unreachable='%d', low_flap_threshold='%lf', high_flap_threshold='%lf', process_performance_data='%d', freshness_checks_enabled='%d', freshness_threshold='%d', passive_checks_enabled='%d', event_handler_enabled='%d', active_checks_enabled='%d', retain_status_information='%d', retain_nonstatus_information='%d', notifications_enabled='%d', obsess_over_host='%d', failure_prediction_enabled='%d', notes='%s', notes_url='%s', action_url='%s', icon_image='%s', icon_image_alt='%s', vrml_image='%s', statusmap_image='%s', have_2d_coords='%d', x_2d='%d', y_2d='%d', have_3d_coords='%d', x_3d='%lf', y_3d='%lf', z_3d='%lf'"
 		    ,idi->dbinfo.instance_id
 		    ,idi->current_object_config_type
 		    ,object_id
+		    ,(es[12]==NULL)?"":es[12]
 		    ,(es[11]==NULL)?"":es[11]
 		    ,(es[0]==NULL)?"":es[0]
 		    ,check_command_id
@@ -3483,7 +3485,7 @@ int ndo2db_handle_hostdefinition(ndo2db_idi *idi){
 	free(buf);
 	free(buf1);
 
-	for(x=0;x<12;x++)
+	for(x=0;x<13;x++)
 		free(es[x]);
 
 	/* save parent hosts to db */
