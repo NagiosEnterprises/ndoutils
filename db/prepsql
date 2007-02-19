@@ -1,0 +1,6 @@
+#!/bin/sh
+# Strip charset from db dump, so it defaults to user's 
+# Suggested by Ton Voon/Altinity
+
+perl -pi -e 's/DEFAULT CHARSET=ascii //' mysql.sql
+perl -pi -e 's/ DEFAULT CHARSET=ascii//' mysql.sql

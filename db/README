@@ -1,18 +1,19 @@
-Here you'll find scripts to create the necessary database tables
-for MySQL and PostgreSQL servers.
+================
+DATABASE SCRIPTS
+================
 
-Note: The queries/ subdirectory contains different SQL queries
-      for fetching data from the DB tables.
+Here you'll find scripts to create the necessary database tables for MySQL and PostgreSQL servers.
+The queries/ subdirectory contains some example SQL queries for fetching data from the DB tables.
 
-=================================================================
 
-mysql.sql		  Scripts for creating the necessary tables
- 			  in MySQL.
+File Name		Description
+---------------------	-------------------------------------------------------------------------
+mysql.sql		Use this when you install the NDOUtils addon for the first time.  It will
+			create all the necessary tables for you.
 
-mysql-upgrade-1.4b1.sql   Scripts for updating MySQL tables from
-                          the 1.4b1 release.
+upgradedb		Script that automates the DB upgrade process.  Use this when upgrading!
 
-mysql-upgrade-1.3.sql     Scripts for updating MySQL tables from
-		  	  those included in the 1.3 release.
+mysql-upgrade-*.sql	Raw SQL scripts for upgrading from a previous release. Please use the upgradedb
+			script (above) to upgrade your DB structure, rather than these scripts directly.
 
 

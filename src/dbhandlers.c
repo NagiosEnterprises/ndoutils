@@ -450,7 +450,7 @@ int ndo2db_set_all_objects_as_inactive(ndo2db_idi *idi){
 	char *buf=NULL;
 
 	/* mark all objects as being inactive */
-	if(asprintf(&buf,"UPDATE %s SET is_active='1' WHERE instance_id='%lu'"
+	if(asprintf(&buf,"UPDATE %s SET is_active='0' WHERE instance_id='%lu'"
 		    ,ndo2db_db_tablenames[NDO2DB_DBTABLE_OBJECTS]
 		    ,idi->dbinfo.instance_id
 		   )==-1)
@@ -641,7 +641,7 @@ int ndo2db_handle_processdata(ndo2db_idi *idi){
 	/* MORE PROCESSING.... */
 
 	/* if process is starting up, clearstatus data, event queue, etc. */
-	if(type==NEBTYPE_PROCESS_PRELAUNCH && tstamp.tv_sec>idi->dbinfo.latest_realtime_data_time){
+	if(type==NEBTYPE_PROCESS_PRELAUNCH && tstamp.tv_sec>=idi->dbinfo.latest_realtime_data_time){
 
 		/* clear realtime data */
 		ndo2db_db_clear_table(idi,ndo2db_db_tablenames[NDO2DB_DBTABLE_PROGRAMSTATUS]);
@@ -702,7 +702,7 @@ int ndo2db_handle_processdata(ndo2db_idi *idi){
 	        }
 
 	/* if process is shutting down or restarting, update process status data */
-	if((type==NEBTYPE_PROCESS_SHUTDOWN || type==NEBTYPE_PROCESS_RESTART) && tstamp.tv_sec>idi->dbinfo.latest_realtime_data_time){
+	if((type==NEBTYPE_PROCESS_SHUTDOWN || type==NEBTYPE_PROCESS_RESTART) && tstamp.tv_sec>=idi->dbinfo.latest_realtime_data_time){
 
 		if(asprintf(&buf,"UPDATE %s SET program_end_time=%s, is_currently_running='0' WHERE instance_id='%lu'"
 			    ,ndo2db_db_tablenames[NDO2DB_DBTABLE_PROGRAMSTATUS]
@@ -1737,7 +1737,7 @@ int ndo2db_handle_commentdata(ndo2db_idi *idi){
 	        }
 
 	/* ADD CURRENT COMMENTS */
-	if((type==NEBTYPE_COMMENT_ADD || type==NEBTYPE_COMMENT_LOAD) && tstamp.tv_sec>idi->dbinfo.latest_realtime_data_time){
+	if((type==NEBTYPE_COMMENT_ADD || type==NEBTYPE_COMMENT_LOAD) && tstamp.tv_sec>=idi->dbinfo.latest_realtime_data_time){
 
 		/* save entry to db */
 		if(asprintf(&buf,"instance_id='%lu', comment_type='%d', entry_type='%d', object_id='%lu', comment_time=%s, internal_comment_id='%lu', author_name='%s', comment_data='%s', is_persistent='%d', comment_source='%d', expires='%d', expiration_time=%s"
@@ -1771,7 +1771,7 @@ int ndo2db_handle_commentdata(ndo2db_idi *idi){
 	        }
 
 	/* REMOVE CURRENT COMMENTS */
-	if(type==NEBTYPE_COMMENT_DELETE  && tstamp.tv_sec>idi->dbinfo.latest_realtime_data_time){
+	if(type==NEBTYPE_COMMENT_DELETE  && tstamp.tv_sec>=idi->dbinfo.latest_realtime_data_time){
 
 		/* clear entry from db */
 		if(asprintf(&buf,"DELETE FROM %s WHERE instance_id='%lu' AND comment_time=%s AND internal_comment_id='%lu'"
@@ -1927,7 +1927,7 @@ int ndo2db_handle_downtimedata(ndo2db_idi *idi){
 	/* CURRENT DOWNTIME */
 
 	/* save a record of scheduled downtime that gets added (or gets loaded and wasn't previously recorded).... */
-	if((type==NEBTYPE_DOWNTIME_ADD || type==NEBTYPE_DOWNTIME_LOAD) && tstamp.tv_sec>idi->dbinfo.latest_realtime_data_time){
+	if((type==NEBTYPE_DOWNTIME_ADD || type==NEBTYPE_DOWNTIME_LOAD) && tstamp.tv_sec>=idi->dbinfo.latest_realtime_data_time){
 
 		/* save entry to db */
 		if(asprintf(&buf,"instance_id='%lu', downtime_type='%d', object_id='%lu', entry_time=%s, author_name='%s', comment_data='%s', internal_downtime_id='%lu', triggered_by_id='%lu', is_fixed='%d', duration='%lu', scheduled_start_time=%s, scheduled_end_time=%s"
@@ -1959,7 +1959,7 @@ int ndo2db_handle_downtimedata(ndo2db_idi *idi){
 	        }
 
 	/* save a record of scheduled downtime that starts */
-	if(type==NEBTYPE_DOWNTIME_START && tstamp.tv_sec>idi->dbinfo.latest_realtime_data_time){
+	if(type==NEBTYPE_DOWNTIME_START && tstamp.tv_sec>=idi->dbinfo.latest_realtime_data_time){
 
 		/* save entry to db */
 		if(asprintf(&buf,"UPDATE %s SET actual_start_time=%s, actual_start_time_usec='%lu', was_started='%d' WHERE instance_id='%lu' AND downtime_type='%d' AND object_id='%lu' AND entry_time=%s AND scheduled_start_time=%s AND scheduled_end_time=%s"
@@ -1981,7 +1981,7 @@ int ndo2db_handle_downtimedata(ndo2db_idi *idi){
 	        }
 
 	/* remove completed or deleted downtime */
-	if((type==NEBTYPE_DOWNTIME_STOP || type==NEBTYPE_DOWNTIME_DELETE) && tstamp.tv_sec>idi->dbinfo.latest_realtime_data_time){
+	if((type==NEBTYPE_DOWNTIME_STOP || type==NEBTYPE_DOWNTIME_DELETE) && tstamp.tv_sec>=idi->dbinfo.latest_realtime_data_time){
 
 		/* save entry to db */
 		if(asprintf(&buf,"DELETE FROM %s WHERE instance_id='%lu' AND downtime_type='%d' AND object_id='%lu' AND entry_time=%s AND scheduled_start_time=%s AND scheduled_end_time=%s"
@@ -3089,7 +3089,7 @@ int ndo2db_handle_configfilevariables(ndo2db_idi *idi, int configfile_type){
 	es[0]=ndo2db_db_escape_string(idi,idi->buffered_input[NDO_DATA_CONFIGFILENAME]);
 
 	/* add config file to db */
-	if(asprintf(&buf,"instance_id=' %lu', configfile_type='%d', configfile_path='%s'"
+	if(asprintf(&buf,"instance_id='%lu', configfile_type='%d', configfile_path='%s'"
 		    ,idi->dbinfo.instance_id
 		    ,configfile_type
 		    ,es[0]
@@ -3133,7 +3133,7 @@ int ndo2db_handle_configfilevariables(ndo2db_idi *idi, int configfile_type){
 		es[1]=ndo2db_db_escape_string(idi,varname);
 		es[2]=ndo2db_db_escape_string(idi,varvalue);
 
-		if(asprintf(&buf,"instance_id=' %lu', configfile_id='%lu', varname='%s', varvalue='%s'"
+		if(asprintf(&buf,"instance_id='%lu', configfile_id='%lu', varname='%s', varvalue='%s'"
 			    ,idi->dbinfo.instance_id
 			    ,configfile_id
 			    ,es[1]
@@ -3206,7 +3206,7 @@ int ndo2db_handle_runtimevariables(ndo2db_idi *idi){
 		es[0]=ndo2db_db_escape_string(idi,varname);
 		es[1]=ndo2db_db_escape_string(idi,varvalue);
 
-		if(asprintf(&buf,"instance_id=' %lu', varname='%s', varvalue='%s'"
+		if(asprintf(&buf,"instance_id='%lu', varname='%s', varvalue='%s'"
 			    ,idi->dbinfo.instance_id
 			    ,es[0]
 			    ,es[1]
@@ -3398,11 +3398,14 @@ int ndo2db_handle_hostdefinition(ndo2db_idi *idi){
 	/* get the object id */
 	result=ndo2db_get_object_id_with_insert(idi,NDO2DB_OBJECTTYPE_HOST,idi->buffered_input[NDO_DATA_HOSTNAME],NULL,&object_id);
 
+	/* flag the object as being active */
+	ndo2db_set_object_as_active(idi,NDO2DB_OBJECTTYPE_HOST,object_id);
+
 	/* get the timeperiod ids */
 	result=ndo2db_get_object_id_with_insert(idi,NDO2DB_OBJECTTYPE_TIMEPERIOD,idi->buffered_input[NDO_DATA_HOSTCHECKPERIOD],NULL,&check_timeperiod_id);
 	result=ndo2db_get_object_id_with_insert(idi,NDO2DB_OBJECTTYPE_TIMEPERIOD,idi->buffered_input[NDO_DATA_HOSTNOTIFICATIONPERIOD],NULL,&notification_timeperiod_id);
 
-	/* add definition to db */
+ 	/* add definition to db */
 	if(asprintf(&buf,"instance_id='%lu', config_type='%d', host_object_id='%lu', alias='%s', display_name='%s', address='%s', check_command_object_id='%lu', check_command_args='%s', eventhandler_command_object_id='%lu', eventhandler_command_args='%s', check_timeperiod_object_id='%lu', notification_timeperiod_object_id='%lu', failure_prediction_options='%s', check_interval='%lf', retry_interval='%lf', max_check_attempts='%d', first_notification_delay='%lf', notification_interval='%lf', notify_on_down='%d', notify_on_unreachable='%d', notify_on_recovery='%d', notify_on_flapping='%d', notify_on_downtime='%d', stalk_on_up='%d', stalk_on_down='%d', stalk_on_unreachable='%d', flap_detection_enabled='%d', flap_detection_on_up='%d', flap_detection_on_down='%d', flap_detection_on_unreachable='%d', low_flap_threshold='%lf', high_flap_threshold='%lf', process_performance_data='%d', freshness_checks_enabled='%d', freshness_threshold='%d', passive_checks_enabled='%d', event_handler_enabled='%d', active_checks_enabled='%d', retain_status_information='%d', retain_nonstatus_information='%d', notifications_enabled='%d', obsess_over_host='%d', failure_prediction_enabled='%d', notes='%s', notes_url='%s', action_url='%s', icon_image='%s', icon_image_alt='%s', vrml_image='%s', statusmap_image='%s', have_2d_coords='%d', x_2d='%d', y_2d='%d', have_3d_coords='%d', x_3d='%lf', y_3d='%lf', z_3d='%lf'"
 		    ,idi->dbinfo.instance_id
 		    ,idi->current_object_config_type
@@ -3623,7 +3626,7 @@ int ndo2db_handle_hostgroupdefinition(ndo2db_idi *idi){
 	ndo2db_set_object_as_active(idi,NDO2DB_OBJECTTYPE_HOSTGROUP,object_id);
 
 	/* add definition to db */
-	if(asprintf(&buf,"instance_id=' %lu', config_type='%d', hostgroup_object_id='%lu', alias='%s'"
+	if(asprintf(&buf,"instance_id='%lu', config_type='%d', hostgroup_object_id='%lu', alias='%s'"
 		    ,idi->dbinfo.instance_id
 		    ,idi->current_object_config_type
 		    ,object_id
@@ -3815,6 +3818,9 @@ int ndo2db_handle_servicedefinition(ndo2db_idi *idi){
 	/* get the object ids */
 	result=ndo2db_get_object_id_with_insert(idi,NDO2DB_OBJECTTYPE_SERVICE,idi->buffered_input[NDO_DATA_HOSTNAME],idi->buffered_input[NDO_DATA_SERVICEDESCRIPTION],&object_id);
 	result=ndo2db_get_object_id_with_insert(idi,NDO2DB_OBJECTTYPE_HOST,idi->buffered_input[NDO_DATA_HOSTNAME],NULL,&host_id);
+
+	/* flag the object as being active */
+	ndo2db_set_object_as_active(idi,NDO2DB_OBJECTTYPE_SERVICE,object_id);
 
 	/* get the timeperiod ids */
 	result=ndo2db_get_object_id_with_insert(idi,NDO2DB_OBJECTTYPE_TIMEPERIOD,idi->buffered_input[NDO_DATA_SERVICECHECKPERIOD],NULL,&check_timeperiod_id);
@@ -4008,7 +4014,7 @@ int ndo2db_handle_servicegroupdefinition(ndo2db_idi *idi){
 	ndo2db_set_object_as_active(idi,NDO2DB_OBJECTTYPE_SERVICEGROUP,object_id);
 
 	/* add definition to db */
-	if(asprintf(&buf,"instance_id=' %lu', config_type='%d', servicegroup_object_id='%lu', alias='%s'"
+	if(asprintf(&buf,"instance_id='%lu', config_type='%d', servicegroup_object_id='%lu', alias='%s'"
 		    ,idi->dbinfo.instance_id
 		    ,idi->current_object_config_type
 		    ,object_id
@@ -4469,7 +4475,7 @@ int ndo2db_handle_commanddefinition(ndo2db_idi *idi){
 	ndo2db_set_object_as_active(idi,NDO2DB_OBJECTTYPE_COMMAND,object_id);
 
 	/* add definition to db */
-	if(asprintf(&buf,"instance_id=' %lu', object_id='%lu', config_type='%d', command_line='%s'"
+	if(asprintf(&buf,"instance_id='%lu', object_id='%lu', config_type='%d', command_line='%s'"
 		    ,idi->dbinfo.instance_id
 		    ,object_id
 		    ,idi->current_object_config_type
@@ -4532,7 +4538,7 @@ int ndo2db_handle_timeperiodefinition(ndo2db_idi *idi){
 	ndo2db_set_object_as_active(idi,NDO2DB_OBJECTTYPE_TIMEPERIOD,object_id);
 
 	/* add definition to db */
-	if(asprintf(&buf,"instance_id=' %lu', config_type='%d', timeperiod_object_id='%lu', alias='%s'"
+	if(asprintf(&buf,"instance_id='%lu', config_type='%d', timeperiod_object_id='%lu', alias='%s'"
 		    ,idi->dbinfo.instance_id
 		    ,idi->current_object_config_type
 		    ,object_id
@@ -4932,7 +4938,7 @@ int ndo2db_handle_contactgroupdefinition(ndo2db_idi *idi){
 	ndo2db_set_object_as_active(idi,NDO2DB_OBJECTTYPE_CONTACTGROUP,object_id);
 
 	/* add definition to db */
-	if(asprintf(&buf,"instance_id=' %lu', config_type='%d', contactgroup_object_id='%lu', alias='%s'"
+	if(asprintf(&buf,"instance_id='%lu', config_type='%d', contactgroup_object_id='%lu', alias='%s'"
 		    ,idi->dbinfo.instance_id
 		    ,idi->current_object_config_type
 		    ,object_id

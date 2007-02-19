@@ -4,11 +4,11 @@
  * Copyright (c) 2005-2007 Ethan Galstad 
  *
  * First Written: 05-19-2005
- * Last Modified: 01-19-2007
+ * Last Modified: 02-18-2007
  *
  **************************************************************/
 
-#define DEBUG_MEMORY 1
+/*#define DEBUG_MEMORY 1*/
 
 #ifdef DEBUG_MEMORY
 #include <mcheck.h>
@@ -24,9 +24,9 @@
 #include "../include/db.h"
 #include "../include/dbhandlers.h"
 
-#define NDO2DB_VERSION "1.4b2"
+#define NDO2DB_VERSION "1.4b3"
 #define NDO2DB_NAME "NDO2DB"
-#define NDO2DB_DATE "01-19-2007"
+#define NDO2DB_DATE "02-18-2007"
 
 
 extern int errno;
@@ -50,7 +50,7 @@ extern char *ndo2db_db_tablenames[NDO2DB_MAX_DBTABLES];
 
 
 
-/*#define DEBUG_NDO2DB 1*/                          /* don't daemonize */
+#define DEBUG_NDO2DB 1                         /* don't daemonize */
 /*#define DEBUG_NDO2DB_EXIT_AFTER_CONNECTION 1*/    /* exit after first client disconnects */
 /*#define DEBUG_NDO2DB2 1*/
 /*#define NDO2DB_DEBUG_MBUF 1*/
@@ -557,12 +557,16 @@ int ndo2db_daemonize(void){
 
         /* close existing stdin, stdout, stderr */
 	close(0);
-	/*close(1);*/
+#ifndef DEBUG_NDO2DB
+	close(1);
+#endif
 	close(2);
 
 	/* re-open stdin, stdout, stderr with known values */
 	open("/dev/null",O_RDONLY);
-	/*open("/dev/null",O_WRONLY);*/
+#ifndef DEBUG_NDO2DB
+	open("/dev/null",O_WRONLY);
+#endif
 	open("/dev/null",O_WRONLY);
 
 	return NDO_OK;
@@ -1056,6 +1060,7 @@ int ndo2db_handle_client_input(ndo2db_idi *idi, char *buf){
 				break;
 			case NDO_API_ENDCONFIGDUMP:
 				idi->current_input_data=NDO2DB_INPUT_DATA_CONFIGDUMPEND;
+				break;
 
 			/* archived data */
 			case NDO_API_LOGENTRY:

@@ -11,6 +11,11 @@ Note:  Consider this addon to be experimental/beta/alpha/potentially-hazardous-t
 1.4b3 - 02/??/2007
 ------------------
 - Added missing 'alias' field to hosts table
+- Fixed problems with marking old, non-existant objects as inactive
+- Fixed bug where host and service objects were not being marked active
+- Fixed minor SQL errors
+- Added DB upgrade script (Ton Voon/Altinity)
+- Updated to latest Nagios 3.x include files
 
 
 

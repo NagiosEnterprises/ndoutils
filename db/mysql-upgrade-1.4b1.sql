@@ -31,3 +31,7 @@ ALTER TABLE `nagios_serviceescalation_contacts` ADD UNIQUE (
 );
 
 ALTER TABLE `nagios_services` ADD `host_object_id` INT NOT NULL AFTER `config_type` ;
+
+-- Start of mods from 1.4b3
+
+ALTER TABLE `nagios_hosts` ADD `alias` VARCHAR( 64 ) NOT NULL AFTER `host_object_id` ;

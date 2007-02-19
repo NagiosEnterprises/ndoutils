@@ -9,9 +9,9 @@ AC_CONFIG_HEADER(include/config.h)
 AC_PREFIX_DEFAULT(/usr/local/nagios)
 
 PKG_NAME=ndoutils
-PKG_VERSION="1.4b2"
+PKG_VERSION="1.4b3"
 PKG_HOME_URL="http://www.nagios.org/"
-PKG_REL_DATE="01-19-2007"
+PKG_REL_DATE="02-18-2007"
 
 dnl Figure out how to invoke "install" and what install options to use.
 AC_PROG_INSTALL
@@ -189,10 +189,16 @@ AC_ARG_WITH(pgsql-inc,--with-pgsql-inc=DIR sets location of the PostgreSQL clien
 
 save_LDFLAGS="$LDFLAGS"
 LDFLAGS="${LDFLAGS} ${DBLDFLAGS}"
+save_CPPFLAGS="$CPPFLAGS"
+CPPFLAGS="${DBCFLAGS}"
+save_CFLAGS="$CFLAGS"
+CFLAGS="${DBCFLAGS}"
 
 dnl Are we using any MySQL routines?
 if test $USE_MYSQL = yes; then
 
+	dnl check compress lib for Mac OSX as well...
+	AC_CHECK_LIB(z,compress)
 	AC_CHECK_LIB(mysqlclient,mysql_store_result,MYSQLLIBFOUND=yes,MYSQLLIBFOUND=no)
 
 	dnl Did we find the MySQL libraries?
@@ -317,6 +323,8 @@ AC_SUBST(DBLDFLAGS)
 AC_SUBST(DBLIBS)
 
 LDFLAGS="$save_LDFLAGS"
+CPPFLAGS="$save_CPPFLAGS"
+CFLAGS="$save_CFLAGS"
 
 
 AC_OUTPUT(Makefile src/Makefile)

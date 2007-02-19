@@ -259,13 +259,13 @@ ALTER TABLE `nagios_statehistory` CHANGE `current_attempt` `current_check_attemp
 
 
 
-ALTER TABLE `nagios_contactstatus` ENGINE=MyISAM DEFAULT CHARSET=ascii COMMENT='Contact status'; # was ENGINE=MyISAM DEFAULT CHARSET=latin1 COMMENT='Contact status'
+ALTER TABLE `nagios_contactstatus` ENGINE=MyISAM COMMENT='Contact status'; # was ENGINE=MyISAM DEFAULT CHARSET=latin1 COMMENT='Contact status'
 ALTER TABLE `nagios_customvariables` DROP INDEX `object_id`; # was INDEX (`object_id`)
-ALTER TABLE `nagios_customvariables` ENGINE=MyISAM DEFAULT CHARSET=ascii COMMENT='Custom variables'; # was ENGINE=MyISAM DEFAULT CHARSET=latin1 COMMENT='Custom variables'
+ALTER TABLE `nagios_customvariables` ENGINE=MyISAM COMMENT='Custom variables'; # was ENGINE=MyISAM DEFAULT CHARSET=latin1 COMMENT='Custom variables'
 ALTER TABLE `nagios_customvariablestatus` DROP INDEX `object_id_2`; # was INDEX (`object_id`)
 ALTER TABLE `nagios_customvariablestatus` ADD INDEX `object_id_2` (`object_id`,`varname`);
 ALTER TABLE `nagios_customvariablestatus` DROP INDEX `object_id`; # was INDEX (`object_id`,`varname`)
-ALTER TABLE `nagios_customvariablestatus` ENGINE=MyISAM DEFAULT CHARSET=ascii COMMENT='Custom variable status information'; # was ENGINE=MyISAM DEFAULT CHARSET=latin1 COMMENT='Custom variable status information'
+ALTER TABLE `nagios_customvariablestatus` ENGINE=MyISAM COMMENT='Custom variable status information'; # was ENGINE=MyISAM DEFAULT CHARSET=latin1 COMMENT='Custom variable status information'
 ALTER TABLE `nagios_host_contacts` ENGINE=MyISAM DEFAULT CHARSET=ascii; # was ENGINE=MyISAM DEFAULT CHARSET=latin1
 ALTER TABLE `nagios_hostescalation_contacts` ENGINE=MyISAM DEFAULT CHARSET=ascii; # was ENGINE=MyISAM DEFAULT CHARSET=latin1
 ALTER TABLE `nagios_service_contacts` ENGINE=MyISAM DEFAULT CHARSET=ascii; # was ENGINE=MyISAM DEFAULT CHARSET=latin1
@@ -278,3 +278,6 @@ ALTER TABLE `nagios_customvariablestatus` CHANGE `varname` `varname` VARCHAR( 25
 CHANGE `varvalue` `varvalue` VARCHAR( 255 ) CHARACTER SET ascii COLLATE ascii_general_ci NOT NULL ;
 
 
+-- Start of mods from 1.4b3
+
+ALTER TABLE `nagios_hosts` ADD `alias` VARCHAR( 64 ) NOT NULL AFTER `host_object_id` ;
