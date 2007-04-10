@@ -1294,7 +1294,7 @@ ac_compiler_gnu=$ac_cv_c_compiler_gnu
 PKG_NAME=ndoutils
 PKG_VERSION="1.4b3"
 PKG_HOME_URL="http://www.nagios.org/"
-PKG_REL_DATE="02-18-2007"
+PKG_REL_DATE="04-10-2007"
 
 ac_aux_dir=
 for ac_dir in $srcdir $srcdir/.. $srcdir/../..; do
@@ -5898,7 +5898,7 @@ if test "${with_mysql_lib+set}" = set; then
 	LD_RUN_PATH="${withval}${LD_RUN_PATH:+:}${LD_RUN_PATH}"
 
 fi;
-if test "x$withval" != "xno" ; then
+if test "$withval" = "" ; then
 	      	DBLDFLAGS="$LDFLAGS -L/usr/lib/mysql"
 fi
 

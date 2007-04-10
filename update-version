@@ -13,7 +13,7 @@ fi
 CURRENTVERSION=1.4b3
 
 # Last date
-LASTDATE=02-18-2007
+LASTDATE=04-10-2007
 
 if [ "x$1" = "x" ]
 then
@@ -57,6 +57,7 @@ perl -i -p -e "s/SOCKDEBUG_VERSION \"[0-9].*\"/SOCKDEBUG_VERSION \"$newversion\"
 perl -i -p -e "s/SOCKDEBUG_DATE \"[0-9].*\"/SOCKDEBUG_DATE \"$SHORTDATE\"/;" src/sockdebug.c
 perl -i -p -e "s/Last Modified: [0-9].*/Last Modified: $SHORTDATE/;" src/sockdebug.c
 
+perl -i -p -e "s/$thisversion=\"[0-9].*\";/$thisversion=\"$newversion\";/;" db/installdb
 perl -i -p -e "s/$thisversion=\"[0-9].*\";/$thisversion=\"$newversion\";/;" db/upgradedb
 
 # Update version number and release date in configure script and configure.in

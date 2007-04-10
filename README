@@ -85,13 +85,16 @@ NOTE:  As of 02/12/2006, only MySQL databases are supported.  PostgreSQL support
 
 1.  Create a database for storing the data (e.g. 'nagios')
 
-2.  Run the appropriate SQL script in the db/ subdirectory of the NDO distribution
-    to create the necessary tables in the database.
-
-3.  Create a username/password that has at least the following privileges for
+2.  Create a username/password that has at least the following privileges for
     the database:
 
 	SELECT, INSERT, UPDATE, DELETE
+
+3.  Run the DB installation script in the db/ subdirectory of the NDO distribution
+    to create the necessary tables in the database.
+
+	cd db
+	./installdb
 
 4.  Make sure the database name, prefix, and username/password you just created
     and setup match the variable specified in the NDO2DB config file (see below).
@@ -149,7 +152,7 @@ version of Nagios you are running, and adjust the directions given
 below to fit the name of the daemon you're using.  
 
 	ndo2db-2x.o = NDO2DB daemon for Nagios 2.x
-	ndo2db-3x.o = NDO2DB daemon for Nagios 3.x (unstable)
+	ndo2db-3x.o = NDO2DB daemon for Nagios 3.x
 
 
 1.  Copy the compiled NDO2DB daemon to your Nagios installation:

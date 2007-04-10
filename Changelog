@@ -8,14 +8,15 @@ Note:  Consider this addon to be experimental/beta/alpha/potentially-hazardous-t
 
 
 
-1.4b3 - 02/??/2007
+1.4b3 - 04/10/2007
 ------------------
+NOTE: ** Requires Nagios 2.7 or higher, or Nagios 3.0a3
 - Added missing 'alias' field to hosts table
 - Fixed problems with marking old, non-existant objects as inactive
 - Fixed bug where host and service objects were not being marked active
 - Fixed minor SQL errors
-- Added DB upgrade script (Ton Voon/Altinity)
-- Updated to latest Nagios 3.x include files
+- Added DB upgrade and installation script (Ton Voon/Altinity)
+- Updated to latest Nagios 3.x include files (3.0a3)
 
 
 

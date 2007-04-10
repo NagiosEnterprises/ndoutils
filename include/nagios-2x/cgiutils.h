@@ -2,8 +2,8 @@
 /************************************************************************
  *
  * CGIUTILS.H - Header file for common CGI functions
- * Copyright (c) 1999-2005  Ethan Galstad (nagios@nagios.org)
- * Last Modified: 11-25-2005
+ * Copyright (c) 1999-2007  Ethan Galstad (nagios@nagios.org)
+ * Last Modified: 04-10-2007
  *
  * License:
  *
@@ -31,10 +31,14 @@
 extern "C" {
 #endif
 
-/* #undef USE_STATUSMAP */		/* should we compile and use the statusmap CGI? */
-/* #undef USE_STATUSWRL */ 		/* should we compile and use the statuswrl CGI? */
-/* #undef USE_TRENDS */		/* should we compile and use the trends CGI? */
-/* #undef USE_HISTOGRAM */            /* should we compile and use the histogram CGI? */
+/* should we compile and use the statusmap CGI? */
+#define USE_STATUSMAP 1
+/* should we compile and use the statuswrl CGI? */
+#define USE_STATUSWRL 1
+/* should we compile and use the trends CGI? */
+#define USE_TRENDS 1
+/* should we compile and use the histogram CGI? */
+#define USE_HISTOGRAM 1
 
 
 /**************************** CGI REFRESH RATE ******************************/
@@ -467,6 +471,7 @@ char * my_strsep (char **, const char *);
 
 char * url_encode(char *);		        		/* encodes a string in proper URL format */
 char * html_encode(char *);					/* encodes a string in HTML format (for what the user sees) */
+char * strip_plugin_html(char *);                               /* strips dangerous HTML from plugin output */
 
 void get_time_breakdown(unsigned long,int *,int *,int *,int *);	/* given total seconds, get days, hours, minutes, seconds */
 
