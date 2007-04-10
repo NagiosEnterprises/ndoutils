@@ -5,7 +5,7 @@
  * License: GPL v2
  *
  * First Written: 05-13-2005
- * Last Modified: 02-18-2007
+ * Last Modified: 04-10-2007
  *
  **************************************************************/
 
@@ -15,7 +15,7 @@
 
 #define FILE2SOCK_VERSION "1.4b3"
 #define FILE2SOCK_NAME "FILE2SOCK"
-#define FILE2SOCK_DATE "02-18-2007"
+#define FILE2SOCK_DATE "04-10-2007"
 
 
 int process_arguments(int,char **);

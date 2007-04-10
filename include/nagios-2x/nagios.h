@@ -2,7 +2,7 @@
  *
  * Nagios Main Header File
  * Written By: Ethan Galstad (nagios@nagios.org)
- * Last Modified: 01-02-2006
+ * Last Modified: 01-08-2007
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -193,7 +193,7 @@ extern "C" {
 
 #define DEFAULT_AGGRESSIVE_HOST_CHECKING	0	/* don't use "aggressive" host checking */
 #define DEFAULT_CHECK_EXTERNAL_COMMANDS		0 	/* don't check for external commands */
-#define DEFAULT_CHECK_ORPHANED_SERVICES		0	/* don't check for orphaned services */
+#define DEFAULT_CHECK_ORPHANED_SERVICES		1	/* don't check for orphaned services */
 #define DEFAULT_ENABLE_FLAP_DETECTION           0       /* don't enable flap detection */
 #define DEFAULT_PROCESS_PERFORMANCE_DATA        0       /* don't process performance data */
 #define DEFAULT_CHECK_SERVICE_FRESHNESS         1       /* check service result freshness */
@@ -441,25 +441,13 @@ typedef struct passive_check_result_struct{
 	}passive_check_result;
 
 
-/* SCHEDULED_DOWNTIME_ENTRY structure */
-typedef struct scheduled_downtime_entry_struct{
-	int type;
-	void *object;
-	time_t start_time;
-	time_t end_time;
-	int is_in_effect;
-	int fixed;
-	unsigned long duration;
-	int comment_id;
-	}scheduled_downtime_entry;
-
-
 /* CIRCULAR_BUFFER structure - used by worker threads */
 typedef struct circular_buffer_struct{
 	void            **buffer;
 	int             tail;
 	int             head;
 	int             items;
+	int		high;		/* highest number of items that has ever been stored in buffer */
 	unsigned long   overflow;
 	pthread_mutex_t buffer_lock;
         }circular_buffer;
@@ -479,8 +467,8 @@ typedef struct mmapfile_struct{
 
 
 /* slots in circular buffers */
-#define COMMAND_BUFFER_SLOTS              1024
-#define SERVICE_BUFFER_SLOTS		  1024
+#define DEFAULT_EXTERNAL_COMMAND_BUFFER_SLOTS   4096
+#define DEFAULT_CHECK_RESULT_BUFFER_SLOTS	4096
 
 /* worker threads */
 #define TOTAL_WORKER_THREADS              2

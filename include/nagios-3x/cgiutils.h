@@ -2,8 +2,8 @@
 /************************************************************************
  *
  * CGIUTILS.H - Header file for common CGI functions
- * Copyright (c) 1999-2006  Ethan Galstad (nagios@nagios.org)
- * Last Modified: 11-16-2006
+ * Copyright (c) 1999-2007  Ethan Galstad (nagios@nagios.org)
+ * Last Modified: 04-10-2007
  *
  * License:
  *
@@ -470,6 +470,7 @@ int my_free(void **);                                   	/* my wrapper for free(
 
 char * url_encode(char *);		        		/* encodes a string in proper URL format */
 char * html_encode(char *);					/* encodes a string in HTML format (for what the user sees) */
+char * strip_plugin_html(char *);                               /* strips HTML from plugin output */
 char * newline2br(char *);					/* changes newline characters to <BR> tags for web viewing */
 
 void get_time_breakdown(unsigned long,int *,int *,int *,int *);	/* given total seconds, get days, hours, minutes, seconds */
@@ -480,6 +481,8 @@ int determine_archive_to_use_from_time(time_t);
 
 void print_extra_host_url(char *,char *);
 void print_extra_service_url(char *,char *,char *);
+void print_extra_hostgroup_url(char *,char *);
+void print_extra_servicegroup_url(char *,char *);
 
 void display_info_table(char *,int,authdata *);
 void display_nav_table(char *,int);

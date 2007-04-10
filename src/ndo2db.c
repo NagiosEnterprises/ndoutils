@@ -4,7 +4,7 @@
  * Copyright (c) 2005-2007 Ethan Galstad 
  *
  * First Written: 05-19-2005
- * Last Modified: 02-18-2007
+ * Last Modified: 04-10-2007
  *
  **************************************************************/
 
@@ -26,7 +26,7 @@
 
 #define NDO2DB_VERSION "1.4b3"
 #define NDO2DB_NAME "NDO2DB"
-#define NDO2DB_DATE "02-18-2007"
+#define NDO2DB_DATE "04-10-2007"
 
 
 extern int errno;
@@ -50,7 +50,7 @@ extern char *ndo2db_db_tablenames[NDO2DB_MAX_DBTABLES];
 
 
 
-#define DEBUG_NDO2DB 1                         /* don't daemonize */
+/*#define DEBUG_NDO2DB 1*/                         /* don't daemonize */
 /*#define DEBUG_NDO2DB_EXIT_AFTER_CONNECTION 1*/    /* exit after first client disconnects */
 /*#define DEBUG_NDO2DB2 1*/
 /*#define NDO2DB_DEBUG_MBUF 1*/

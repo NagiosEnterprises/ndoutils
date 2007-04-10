@@ -54,13 +54,13 @@ if ($@) {
 # Get current database version
 my $version;
 my $thisversion="1.4b3";
-my $lastversion="1.4b3";
-my $legacyversion="1.4b3";
+my $lastversion="1.4b2";
+my $legacyversion="1.4b2";
 
 $version = $dbh->selectrow_array("SELECT version FROM nagios_dbversion WHERE name='ndoutils'");
 if ($version eq "") {
 	# Assume last release
-	print "*** Assuming most version $legacyversion of nodutils installed",$/;
+	print "*** Assuming version $legacyversion of nodutils installed",$/;
 	$dbh->do("INSERT nagios_dbversion SET name='ndoutils', version='$legacyversion';");
 	$version = $legacyversion
 };
