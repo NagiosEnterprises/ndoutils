@@ -8,6 +8,12 @@ Note:  Consider this addon to be experimental/beta/alpha/potentially-hazardous-t
 
 
 
+1.4b4 - ??/??/2007
+-----------------
+- Added note about needing 'event_broker_options=-1' in Nagios config file
+
+
+
 1.4b3 - 04/10/2007
 ------------------
 NOTE: ** Requires Nagios 2.7 or higher, or Nagios 3.0a3

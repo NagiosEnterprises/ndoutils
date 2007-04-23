@@ -139,6 +139,15 @@ below to fit the name of the module version you're using.
     place. :-)
 
 
+4.  Make sure you have a line similar to the following in the *main* Nagios
+    config file (usually /usr/local/nagios/etc/nagios.cfg):
+
+	event_broker_options=-1
+
+    That directive will cause the Nagios daemon to send data to the NDOMOD
+    module.  Without that option, NDOMOD won't get any information.
+
+
 
 
 ****************************
