@@ -2,7 +2,7 @@
  *
  * Nagios Main Header File
  * Written By: Ethan Galstad (nagios@nagios.org)
- * Last Modified: 04-01-2007
+ * Last Modified: 05-22-2007
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -183,6 +183,7 @@ extern "C" {
 #define DEFAULT_COMMAND_CHECK_INTERVAL				-1	/* interval to check for external commands (default = as often as possible) */
 #define DEFAULT_CHECK_REAPER_INTERVAL				10	/* interval in seconds to reap host and service check results */
 #define DEFAULT_MAX_REAPER_TIME                 		30      /* maximum number of seconds to spend reaping service checks before we break out for a while */
+#define DEFAULT_MAX_CHECK_RESULT_AGE				3600    /* maximum number of seconds that a check result file is considered to be valid */
 #define DEFAULT_MAX_PARALLEL_SERVICE_CHECKS 			0	/* maximum number of service checks we can have running at any given time (0=unlimited) */
 #define DEFAULT_RETENTION_UPDATE_INTERVAL			60	/* minutes between auto-save of retention data */
 #define DEFAULT_RETENTION_SCHEDULING_HORIZON    		900     /* max seconds between program restarts that we will preserve scheduling information */
@@ -208,6 +209,10 @@ extern "C" {
 #define DEFAULT_LOG_EXTERNAL_COMMANDS				1	/* log external commands */
 #define DEFAULT_LOG_PASSIVE_CHECKS				1	/* log passive service checks */
 
+#define DEFAULT_DEBUG_LEVEL                                     0       /* don't log any debugging information */
+#define DEFAULT_DEBUG_VERBOSITY                                 1
+#define DEFAULT_MAX_DEBUG_FILE_SIZE                             1000000 /* max size of debug log */
+
 #define DEFAULT_AGGRESSIVE_HOST_CHECKING			0	/* don't use "aggressive" host checking */
 #define DEFAULT_CHECK_EXTERNAL_COMMANDS				1 	/* check for external commands */
 #define DEFAULT_CHECK_ORPHANED_SERVICES				1	/* check for orphaned services */
@@ -218,6 +223,7 @@ extern "C" {
 #define DEFAULT_CHECK_HOST_FRESHNESS            		0       /* don't check host result freshness */
 #define DEFAULT_AUTO_RESCHEDULE_CHECKS          		0       /* don't auto-reschedule host and service checks */
 #define DEFAULT_TRANSLATE_PASSIVE_HOST_CHECKS                   0       /* should we translate DOWN/UNREACHABLE passive host checks? */
+#define DEFAULT_PASSIVE_HOST_CHECKS_SOFT                        0       /* passive host checks are treated as HARD by default */
 
 #define DEFAULT_LOW_SERVICE_FLAP_THRESHOLD			20.0	/* low threshold for detection of service flapping */
 #define DEFAULT_HIGH_SERVICE_FLAP_THRESHOLD			30.0	/* high threshold for detection of service flapping */
@@ -233,8 +239,6 @@ extern "C" {
 #define DEFAULT_ENABLE_PREDICTIVE_SERVICE_DEPENDENCY_CHECKS	1	/* should we use predictive service dependency checks? */
 
 #define DEFAULT_USE_LARGE_INSTALLATION_TWEAKS                   0       /* don't use tweaks for large Nagios installations */
-
-#define DEFAULT_USE_OLD_HOST_CHECK_LOGIC			0	/* use new (Nagios 3.x) host check logic */
 
 #define DEFAULT_ENABLE_EMBEDDED_PERL                            1       /* enable embedded Perl interpreter (if compiled in) */
 #define DEFAULT_USE_EMBEDDED_PERL_IMPLICITLY                    1       /* by default, embedded Perl is used for Perl plugins that don't explicitly disable it */
@@ -273,6 +277,33 @@ extern "C" {
 #define NSLOG_HOST_NOTIFICATION		524288
 #define NSLOG_SERVICE_NOTIFICATION	1048576
 
+
+/***************** DEBUGGING LEVELS *******************/
+
+#define DEBUGL_ALL                      -1
+#define DEBUGL_NONE                     0
+#define DEBUGL_FUNCTIONS                1
+#define DEBUGL_CONFIG			2
+#define DEBUGL_PROCESS                  4
+#define DEBUGL_STATUSDATA               4
+#define DEBUGL_RETENTIONDATA            4
+#define DEBUGL_EVENTS                   8
+#define DEBUGL_CHECKS                   16
+#define DEBUGL_IPC                      16
+#define DEBUGL_FLAPPING                 16
+#define DEBUGL_EVENTHANDLERS            16
+#define DEBUGL_PERFDATA                 16
+#define DEBUGL_NOTIFICATIONS            32
+#define DEBUGL_EVENTBROKER              64
+#define DEBUGL_EXTERNALCOMMANDS         128
+#define DEBUGL_COMMANDS                 256
+#define DEBUGL_DOWNTIME                 512
+#define DEBUGL_COMMENTS                 1024
+#define DEBUGL_MACROS                   2048
+
+#define DEBUGV_BASIC                    0
+#define DEBUGV_MORE			1
+#define DEBUGV_MOST                     2
 
 
 /******************** HOST STATUS *********************/
@@ -465,6 +496,8 @@ typedef struct check_result_struct{
 	int early_timeout;                              /* did the service check timeout? */
 	int exited_ok;					/* did the plugin check return okay? */
 	int return_code;				/* plugin return code */
+	char *output;	                                /* plugin output */
+	struct check_result_struct *next;
 	}check_result;
 
 
@@ -541,17 +574,6 @@ typedef struct dbuf_struct{
         }dbuf;
 
 
-#define ACTIVE_SCHEDULED_SERVICE_CHECK_STATS 0
-#define ACTIVE_ONDEMAND_SERVICE_CHECK_STATS  1
-#define PASSIVE_SERVICE_CHECK_STATS          2
-#define ACTIVE_SCHEDULED_HOST_CHECK_STATS    3
-#define ACTIVE_ONDEMAND_HOST_CHECK_STATS     4
-#define PASSIVE_HOST_CHECK_STATS             5
-#define ACTIVE_CACHED_HOST_CHECK_STATS       6
-#define ACTIVE_CACHED_SERVICE_CHECK_STATS    7
-#define EXTERNAL_COMMAND_STATS               8
-#define MAX_CHECK_STATS_TYPES                9
-
 #define CHECK_STATS_BUCKETS                  15
 
 /* used for tracking host and service check statistics */
@@ -568,13 +590,11 @@ typedef struct check_stats_struct{
 
 /* slots in circular buffers */
 #define DEFAULT_EXTERNAL_COMMAND_BUFFER_SLOTS     4096
-#define DEFAULT_CHECK_RESULT_BUFFER_SLOTS	  4096
 
 /* worker threads */
-#define TOTAL_WORKER_THREADS              2
+#define TOTAL_WORKER_THREADS              1
 
 #define COMMAND_WORKER_THREAD		  0
-#define CHECK_RESULT_WORKER_THREAD 	  1
 
 
 
@@ -599,13 +619,14 @@ void display_scheduling_info(void);				/* displays service check scheduling info
 
 
 /**** IPC Functions ****/
-int write_check_result(check_result *);                 	/* writes a host/service check result to the message pipe */
-int read_check_result(check_result *);                  	/* reads a host/service check result from the message pipe */
-int handle_check_result_input1(check_result *,dbuf *);
-int handle_check_result_input2(check_result *,char *);
-int buffer_check_result(check_result *);                	/* buffers a host/service check result in circular buffer */
+int move_check_result_to_queue(char *);
+int process_check_result_queue(char *);
+int process_check_result_file(char *);
+int add_check_result_to_list(check_result *);
+check_result *read_check_result(void);                  	/* reads a host/service check result from the list in memory */
+int free_check_result_list(void);
+int init_check_result(check_result *);
 int free_check_result(check_result *);                  	/* frees memory associated with a host/service check result */
-int read_check_output_from_file(char *,char **,char **,char **,int);
 int parse_check_output(char *,char **,char **,char **,int,int);
 int open_command_file(void);					/* creates the external command file as a named pipe (FIFO) and opens it for reading */
 int close_command_file(void);					/* closes and deletes the external command file (FIFO) */
@@ -696,6 +717,9 @@ int log_host_states(int,time_t *);	                /* logs initial/current host 
 int log_service_states(int,time_t *);                   /* logs initial/current service states */
 int rotate_log_file(time_t);			     	/* rotates the main log file */
 int write_log_file_info(time_t *); 			/* records log file/version info */
+int open_debug_log(void);
+int log_debug_info(int,int,const char *,...);
+int close_debug_log(void);
 
 
 /**** Cleanup Functions ****/
@@ -722,11 +746,14 @@ char *my_strsep(char **,const char *);		     	/* Solaris doesn't have strsep(), 
 int my_free(void **);                                   /* my wrapper for free() */
 char *get_url_encoded_string(char *);			/* URL encode a string */
 int compare_strings(char *,char *);                     /* compares two strings for equality */
+char *escape_newlines(char *);
 int contains_illegal_object_chars(char *);		/* tests whether or not an object name (host, service, etc.) contains illegal characters */
 int my_rename(char *,char *);                           /* renames a file - works across filesystems */
 int get_raw_command_line(command *,char *,char *,int,int);    	/* given a raw command line, determine the actual command to run */
-int get_raw_command_line2(command *,char *,char **,int);      	/* given a raw command line, determine the actual command to run */
-int check_time_against_period(time_t,timeperiod *);		/* check to see if a specific time is covered by a time period */
+int check_time_against_period(time_t,timeperiod *);	/* check to see if a specific time is covered by a time period */
+int is_daterange_single_day(daterange *);
+time_t calculate_time_from_weekday_of_month(int,int,int,int);	/* calculates midnight time of specific (3rd, last, etc.) weekday of a particular month */
+time_t calculate_time_from_day_of_month(int,int,int);	/* calculates midnight time of specific (1st, last, etc.) day of a particular month */
 void get_next_valid_time(time_t, time_t *,timeperiod *);	/* get the next valid time in a time period */
 void get_datetime_string(time_t *,char *,int,int);	/* get a date/time string for use in output */
 time_t get_next_log_rotation_time(void);	     	/* determine the next time to schedule a log rotation */
@@ -885,16 +912,12 @@ int set_macro_environment_var(char *,char *,int);
 
 
 /***** HOST CHECK FUNCTIONS FOR 2.X *****/
-int verify_route_to_host(host *,int);                	   	/* on-demand check of whether a host is up, down, or unreachable */
-int run_scheduled_host_check(host *);				/* runs a scheduled host check */
-int check_host(host *,int,int);                      	   	/* checks if a host is up or down */
-int run_host_check(host *,int);                 		/* runs a host check */
 int handle_host_state(host *);               			/* top level host state handler */
 
 
 /***** NEW HOST CHECK FUNCTIONS FOR 3.X *****/
 int check_host_check_viability_3x(host *,int,int *,time_t *);
-int adjust_host_check_attempt_3x(host *);
+int adjust_host_check_attempt_3x(host *,int);
 int determine_host_reachability(host *);
 int process_host_check_result_3x(host *,int,char *,int,int,int,unsigned long);
 

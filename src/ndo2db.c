@@ -4,7 +4,7 @@
  * Copyright (c) 2005-2007 Ethan Galstad 
  *
  * First Written: 05-19-2005
- * Last Modified: 04-10-2007
+ * Last Modified: 06-19-2007
  *
  **************************************************************/
 
@@ -24,9 +24,9 @@
 #include "../include/db.h"
 #include "../include/dbhandlers.h"
 
-#define NDO2DB_VERSION "1.4b3"
+#define NDO2DB_VERSION "1.4b4"
 #define NDO2DB_NAME "NDO2DB"
-#define NDO2DB_DATE "04-10-2007"
+#define NDO2DB_DATE "06-19-2007"
 
 
 extern int errno;

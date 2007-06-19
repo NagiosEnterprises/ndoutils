@@ -2,7 +2,7 @@
  *
  * Nagios Locations Header File
  * Written By: Ethan Galstad (nagios@nagios.org)
- * Last Modified: 02-23-2006
+ * Last Modified: 04-30-2007
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -20,9 +20,11 @@
 
 #define DEFAULT_TEMP_FILE			"/usr/local/nagios/var/tempfile"
 #define DEFAULT_TEMP_PATH                       "/tmp"
+#define DEFAULT_CHECK_RESULT_PATH		"/usr/local/nagios/var/spool/checkresults"
 #define DEFAULT_STATUS_FILE			"/usr/local/nagios/var/status.dat"
 #define DEFAULT_LOG_FILE			"/usr/local/nagios/var/nagios.log"
 #define DEFAULT_LOG_ARCHIVE_PATH		"/usr/local/nagios/var/archives/"
+#define DEFAULT_DEBUG_FILE                      "/usr/local/nagios/var/nagios.debug"
 #define DEFAULT_COMMENT_FILE			"/usr/local/nagios/var/comments.dat"
 #define DEFAULT_DOWNTIME_FILE			"/usr/local/nagios/var/downtime.dat"
 #define DEFAULT_RETENTION_FILE			"/usr/local/nagios/var/retention.dat"

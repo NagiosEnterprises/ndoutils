@@ -3,7 +3,7 @@
  *
  * CGIUTILS.H - Header file for common CGI functions
  * Copyright (c) 1999-2007  Ethan Galstad (nagios@nagios.org)
- * Last Modified: 04-10-2007
+ * Last Modified: 05-30-2007
  *
  * License:
  *
@@ -458,6 +458,7 @@ int hashfunc(const char *name1, const char *name2, int hashslots);
 int compare_hashdata2(const char *,const char *,const char *,const char *);
 
 void strip(char *);                                		/* strips newlines, carriage returns, and spaces from end of buffer */
+char *unescape_newlines(char *);
 void sanitize_plugin_output(char *);                            /* strips HTML and bad characters from plugin output */
 
 void get_time_string(time_t *,char *,int,int);			/* gets a date/time string */
@@ -469,9 +470,7 @@ char * my_strsep (char **, const char *);
 int my_free(void **);                                   	/* my wrapper for free() */
 
 char * url_encode(char *);		        		/* encodes a string in proper URL format */
-char * html_encode(char *);					/* encodes a string in HTML format (for what the user sees) */
-char * strip_plugin_html(char *);                               /* strips HTML from plugin output */
-char * newline2br(char *);					/* changes newline characters to <BR> tags for web viewing */
+char * html_encode(char *,int);					/* encodes a string in HTML format (for what the user sees) */
 
 void get_time_breakdown(unsigned long,int *,int *,int *,int *);	/* given total seconds, get days, hours, minutes, seconds */
 

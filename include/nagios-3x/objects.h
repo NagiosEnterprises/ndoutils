@@ -3,7 +3,7 @@
  * OBJECTS.H - Header file for object addition/search functions
  *
  * Copyright (c) 1999-2007 Ethan Galstad (nagios@nagios.org)
- * Last Modified: 04-02-2007
+ * Last Modified: 06-10-2007
  *
  * License:
  *
@@ -37,7 +37,7 @@
 
 /*************** CURRENT OBJECT REVISION **************/
 
-#define CURRENT_OBJECT_STRUCTURE_VERSION        301     /* increment when changes are made to data structures... */
+#define CURRENT_OBJECT_STRUCTURE_VERSION        303     /* increment when changes are made to data structures... */
 	                                                /* Nagios 3 starts at 300, Nagios 4 at 400, etc. */
 
 
@@ -46,7 +46,6 @@
 
 #define MAX_STATE_HISTORY_ENTRIES		21	/* max number of old states to keep track of for flap detection */
 #define MAX_CONTACT_ADDRESSES                   6       /* max number of custom addresses a contact can have */
-
 
 
 /***************** CHAINED HASH LIMITS ****************/
@@ -79,6 +78,7 @@ typedef struct objectlist_struct{
 	struct objectlist_struct *next;
         }objectlist;
 
+
 /* TIMERANGE structure */
 typedef struct timerange_struct{
 	unsigned long range_start;
@@ -87,11 +87,31 @@ typedef struct timerange_struct{
         }timerange;
 
 
+/* DATERANGE structure */
+typedef struct daterange_struct{
+	int type;
+	int syear;          /* start year */
+	int smon;           /* start month */
+	int smday;          /* start day of month (may 3rd, last day in feb) */
+	int swday;          /* start day of week (thursday) */
+	int swday_offset;   /* start weekday offset (3rd thursday, last monday in jan) */
+	int eyear;
+	int emon;
+	int emday;
+	int ewday;
+	int ewday_offset;
+	int skip_interval;
+	timerange *times;
+	struct daterange_struct *next;
+	}daterange;
+
+
 /* TIMEPERIOD structure */
 typedef struct timeperiod_struct{
 	char    *name;
 	char    *alias;
 	timerange *days[7];
+	daterange *exceptions[DATERANGE_TYPES];
 	struct 	timeperiod_struct *next;
 	struct 	timeperiod_struct *nexthash;
 	}timeperiod;
@@ -249,6 +269,7 @@ struct host_struct{
 	char    *address;
         hostsmember *parent_hosts;
 	char    *host_check_command;
+	int     initial_state;
 	double  check_interval;
 	double  retry_interval;
 	int     max_attempts;
@@ -393,6 +414,7 @@ struct service_struct{
 	char    *display_name;
         char    *service_check_command;
 	char    *event_handler;
+	int     initial_state;
 	double	check_interval;
 	double  retry_interval;
 	int	max_attempts;
@@ -640,13 +662,15 @@ contact *add_contact(char *,char *,char *,char *,char **,char *,char *,int,int,i
 commandsmember *add_service_notification_command_to_contact(contact *,char *);				/* adds a service notification command to a contact definition */
 commandsmember *add_host_notification_command_to_contact(contact *,char *);				/* adds a host notification command to a contact definition */
 customvariablesmember *add_custom_variable_to_contact(contact *,char *,char *);                         /* adds a custom variable to a service definition */
- host *add_host(char *,char *,char *,char *,char *,double,double,int,int,int,int,int,int,double,double,char *,int,char *,int,int,char *,int,int,double,double,int,int,int,int,int,int,int,int,char *,int,int,char *,char *,char *,char *,char *,char *,char *,int,int,int,double,double,double,int,int,int,int,int);	/* adds a host definition */
+host *add_host(char *,char *,char *,char *,char *,int,double,double,int,int,int,int,int,int,double,double,char *,int,char *,int,int,char *,int,int,double,double,int,int,int,int,int,int,int,int,char *,int,int,char *,char *,char *,char *,char *,char *,char *,int,int,int,double,double,double,int,int,int,int,int);	/* adds a host definition */
 hostsmember *add_parent_host_to_host(host *,char *);							/* adds a parent host to a host definition */
 contactgroupsmember *add_contactgroup_to_host(host *,char *);					        /* adds a contactgroup to a host definition */
 contactsmember *add_contact_to_host(host *,char *);                                                     /* adds a contact to a host definition */
 customvariablesmember *add_custom_variable_to_host(host *,char *,char *);                               /* adds a custom variable to a host definition */
 timeperiod *add_timeperiod(char *,char *);								/* adds a timeperiod definition */
 timerange *add_timerange_to_timeperiod(timeperiod *,int,unsigned long,unsigned long);			/* adds a timerange to a timeperiod definition */
+daterange *add_exception_to_timeperiod(timeperiod *,int,int,int,int,int,int,int,int,int,int,int,int);
+timerange *add_timerange_to_daterange(daterange *,unsigned long,unsigned long);
 hostgroup *add_hostgroup(char *,char *,char *,char *,char *);						/* adds a hostgroup definition */
 hostgroupmember *add_host_to_hostgroup(hostgroup *, char *);						/* adds a host to a hostgroup definition */
 servicegroup *add_servicegroup(char *,char *,char *,char *,char *);                                     /* adds a servicegroup definition */
@@ -654,7 +678,7 @@ servicegroupmember *add_service_to_servicegroup(servicegroup *,char *,char *);  
 contactgroup *add_contactgroup(char *,char *);								/* adds a contactgroup definition */
 contactgroupmember *add_contact_to_contactgroup(contactgroup *,char *);					/* adds a contact to a contact group definition */
 command *add_command(char *,char *);									/* adds a command definition */
-service *add_service(char *,char *,char *,char *,int,int,int,double,double,double,double,char *,int,int,int,int,int,int,int,int,char *,int,char *,int,int,double,double,int,int,int,int,int,int,int,int,int,int,char *,int,int,char *,char *,char *,char *,char *,int,int,int);	/* adds a service definition */
+service *add_service(char *,char *,char *,char *,int,int,int,int,double,double,double,double,char *,int,int,int,int,int,int,int,int,char *,int,char *,int,int,double,double,int,int,int,int,int,int,int,int,int,int,char *,int,int,char *,char *,char *,char *,char *,int,int,int);	/* adds a service definition */
 contactgroupsmember *add_contactgroup_to_service(service *,char *);					/* adds a contact group to a service definition */
 contactsmember *add_contact_to_service(service *,char *);                                               /* adds a contact to a host definition */
 serviceescalation *add_serviceescalation(char *,char *,int,int,double,char *,int,int,int,int);          /* adds a service escalation definition */

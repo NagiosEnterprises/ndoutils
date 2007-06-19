@@ -4,15 +4,15 @@
  * Copyright (c) 2005-2007 Ethan Galstad 
  *
  * First Written: 05-13-2005
- * Last Modified: 04-10-2007
+ * Last Modified: 06-19-2007
  *
  **************************************************************/
 
 #include "../include/config.h"
 
-#define SOCKDEBUG_VERSION "1.4b3"
+#define SOCKDEBUG_VERSION "1.4b4"
 #define SOCKDEBUG_NAME "SOCKDEBUG"
-#define SOCKDEBUG_DATE "04-10-2007"
+#define SOCKDEBUG_DATE "06-19-2007"
 
 
 int cleanup_socket(int,char *);
