@@ -14,7 +14,7 @@ my $usage = "upgradedb -u user -p password -h hostname -d database";
 # LICENCE:
 #	GNU GPLv2
 #
-# Last Updated: 02/18/2007
+# Last Updated: 08/02/2007
 #
 
 
@@ -53,13 +53,13 @@ if ($@) {
 
 # Get current database version
 my $version;
-my $thisversion="1.4b4";
-my $lastversion="1.4b4";
-my $legacyversion="1.4b4";
+my $thisversion="1.4b5";
+my $lastversion="1.4b5";
+my $legacyversion="1.4b5";
 
 $version = $dbh->selectrow_array("SELECT version FROM nagios_dbversion WHERE name='ndoutils'");
 if ($version eq "") {
-	# Assume last release
+	# Assume last legacy release (didn't have version table)
 	print "*** Assuming version $legacyversion of nodutils installed",$/;
 	$dbh->do("INSERT nagios_dbversion SET name='ndoutils', version='$legacyversion';");
 	$version = $legacyversion

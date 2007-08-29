@@ -8,6 +8,17 @@ Note:  Consider this addon to be experimental/beta/alpha/potentially-hazardous-t
 
 
 
+1.4b5 - 08/29/2007
+-----------------
+NOTE: ** Requires Nagios 2.7 or higher, or Nagios 3.0b2
+- Reintroduced contactgroup associations with host, service, and escalation definitions
+- Adjustments for data structure changes made in Nagios 3.0b2
+- Fix for missing math libraries during compilation (Dominic Settele)
+- Changed MySQL db table types from MyISAM to InnoDB
+- Updated to latest Nagios 3.x include files (3.0b2)
+
+
+
 1.4b4 - 06/19/2007
 -----------------
 NOTE: ** Requires Nagios 2.7 or higher, or Nagios 3.0a5

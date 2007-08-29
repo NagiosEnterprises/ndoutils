@@ -3,7 +3,7 @@
 -- http://www.phpmyadmin.net
 -- 
 -- Host: localhost
--- Generation Time: Feb 18, 2007 at 10:44 PM
+-- Generation Time: Aug 29, 2007 at 09:08 AM
 -- Server version: 4.1.20
 -- PHP Version: 5.0.4
 -- 
@@ -30,7 +30,7 @@ CREATE TABLE `nagios_acknowledgements` (
   `persistent_comment` smallint(6) NOT NULL default '0',
   `notify_contacts` smallint(6) NOT NULL default '0',
   PRIMARY KEY  (`acknowledgement_id`)
-) ENGINE=MyISAM COMMENT='Current and historical host and service acknowledgements';
+) ENGINE=InnoDB COMMENT='Current and historical host and service acknowledgements';
 
 -- --------------------------------------------------------
 
@@ -46,7 +46,7 @@ CREATE TABLE `nagios_commands` (
   `command_line` varchar(255) NOT NULL default '',
   PRIMARY KEY  (`command_id`),
   UNIQUE KEY `instance_id` (`instance_id`,`object_id`,`config_type`)
-) ENGINE=MyISAM COMMENT='Command definitions';
+) ENGINE=InnoDB COMMENT='Command definitions';
 
 -- --------------------------------------------------------
 
@@ -74,7 +74,7 @@ CREATE TABLE `nagios_commenthistory` (
   `deletion_time_usec` int(11) NOT NULL default '0',
   PRIMARY KEY  (`commenthistory_id`),
   UNIQUE KEY `instance_id` (`instance_id`,`comment_time`,`internal_comment_id`)
-) ENGINE=MyISAM COMMENT='Historical host and service comments';
+) ENGINE=InnoDB COMMENT='Historical host and service comments';
 
 -- --------------------------------------------------------
 
@@ -100,7 +100,7 @@ CREATE TABLE `nagios_comments` (
   `expiration_time` datetime NOT NULL default '0000-00-00 00:00:00',
   PRIMARY KEY  (`comment_id`),
   UNIQUE KEY `instance_id` (`instance_id`,`comment_time`,`internal_comment_id`)
-) ENGINE=MyISAM;
+) ENGINE=InnoDB;
 
 -- --------------------------------------------------------
 
@@ -115,7 +115,7 @@ CREATE TABLE `nagios_configfiles` (
   `configfile_path` varchar(255) NOT NULL default '',
   PRIMARY KEY  (`configfile_id`),
   UNIQUE KEY `instance_id` (`instance_id`,`configfile_type`,`configfile_path`)
-) ENGINE=MyISAM COMMENT='Configuration files';
+) ENGINE=InnoDB COMMENT='Configuration files';
 
 -- --------------------------------------------------------
 
@@ -131,7 +131,7 @@ CREATE TABLE `nagios_configfilevariables` (
   `varvalue` varchar(255) NOT NULL default '',
   PRIMARY KEY  (`configfilevariable_id`),
   UNIQUE KEY `instance_id` (`instance_id`,`configfile_id`,`varname`)
-) ENGINE=MyISAM COMMENT='Configuration file variables';
+) ENGINE=InnoDB COMMENT='Configuration file variables';
 
 -- --------------------------------------------------------
 
@@ -156,7 +156,7 @@ CREATE TABLE `nagios_conninfo` (
   `lines_processed` int(11) NOT NULL default '0',
   `entries_processed` int(11) NOT NULL default '0',
   PRIMARY KEY  (`conninfo_id`)
-) ENGINE=MyISAM COMMENT='NDO2DB daemon connection information';
+) ENGINE=InnoDB COMMENT='NDO2DB daemon connection information';
 
 -- --------------------------------------------------------
 
@@ -172,7 +172,7 @@ CREATE TABLE `nagios_contact_addresses` (
   `address` varchar(255) NOT NULL default '',
   PRIMARY KEY  (`contact_address_id`),
   UNIQUE KEY `contact_id` (`contact_id`,`address_number`)
-) ENGINE=MyISAM COMMENT='Contact addresses';
+) ENGINE=InnoDB COMMENT='Contact addresses';
 
 -- --------------------------------------------------------
 
@@ -189,7 +189,7 @@ CREATE TABLE `nagios_contact_notificationcommands` (
   `command_args` varchar(255) NOT NULL default '',
   PRIMARY KEY  (`contact_notificationcommand_id`),
   UNIQUE KEY `contact_id` (`contact_id`,`notification_type`,`command_object_id`,`command_args`)
-) ENGINE=MyISAM COMMENT='Contact host and service notification commands';
+) ENGINE=InnoDB COMMENT='Contact host and service notification commands';
 
 -- --------------------------------------------------------
 
@@ -204,7 +204,7 @@ CREATE TABLE `nagios_contactgroup_members` (
   `contact_object_id` int(11) NOT NULL default '0',
   PRIMARY KEY  (`contactgroup_member_id`),
   UNIQUE KEY `instance_id` (`contactgroup_id`,`contact_object_id`)
-) ENGINE=MyISAM COMMENT='Contactgroup members';
+) ENGINE=InnoDB COMMENT='Contactgroup members';
 
 -- --------------------------------------------------------
 
@@ -220,7 +220,7 @@ CREATE TABLE `nagios_contactgroups` (
   `alias` varchar(255) NOT NULL default '',
   PRIMARY KEY  (`contactgroup_id`),
   UNIQUE KEY `instance_id` (`instance_id`,`config_type`,`contactgroup_object_id`)
-) ENGINE=MyISAM COMMENT='Contactgroup definitions';
+) ENGINE=InnoDB COMMENT='Contactgroup definitions';
 
 -- --------------------------------------------------------
 
@@ -240,7 +240,7 @@ CREATE TABLE `nagios_contactnotificationmethods` (
   `command_args` varchar(255) NOT NULL default '',
   PRIMARY KEY  (`contactnotificationmethod_id`),
   UNIQUE KEY `instance_id` (`instance_id`,`contactnotification_id`,`start_time`,`start_time_usec`)
-) ENGINE=MyISAM COMMENT='Historical record of contact notification methods';
+) ENGINE=InnoDB COMMENT='Historical record of contact notification methods';
 
 -- --------------------------------------------------------
 
@@ -259,7 +259,7 @@ CREATE TABLE `nagios_contactnotifications` (
   `end_time_usec` int(11) NOT NULL default '0',
   PRIMARY KEY  (`contactnotification_id`),
   UNIQUE KEY `instance_id` (`instance_id`,`contact_object_id`,`start_time`,`start_time_usec`)
-) ENGINE=MyISAM COMMENT='Historical record of contact notifications';
+) ENGINE=InnoDB COMMENT='Historical record of contact notifications';
 
 -- --------------------------------------------------------
 
@@ -293,7 +293,7 @@ CREATE TABLE `nagios_contacts` (
   `notify_host_downtime` smallint(6) NOT NULL default '0',
   PRIMARY KEY  (`contact_id`),
   UNIQUE KEY `instance_id` (`instance_id`,`config_type`,`contact_object_id`)
-) ENGINE=MyISAM COMMENT='Contact definitions';
+) ENGINE=InnoDB COMMENT='Contact definitions';
 
 -- --------------------------------------------------------
 
@@ -315,7 +315,7 @@ CREATE TABLE `nagios_contactstatus` (
   `modified_service_attributes` int(11) NOT NULL default '0',
   PRIMARY KEY  (`contactstatus_id`),
   UNIQUE KEY `contact_object_id` (`contact_object_id`)
-) ENGINE=MyISAM COMMENT='Contact status';
+) ENGINE=InnoDB COMMENT='Contact status';
 
 -- --------------------------------------------------------
 
@@ -334,7 +334,7 @@ CREATE TABLE `nagios_customvariables` (
   PRIMARY KEY  (`customvariable_id`),
   UNIQUE KEY `object_id_2` (`object_id`,`config_type`,`varname`),
   KEY `varname` (`varname`)
-) ENGINE=MyISAM COMMENT='Custom variables';
+) ENGINE=InnoDB COMMENT='Custom variables';
 
 -- --------------------------------------------------------
 
@@ -353,7 +353,7 @@ CREATE TABLE `nagios_customvariablestatus` (
   PRIMARY KEY  (`customvariablestatus_id`),
   UNIQUE KEY `object_id_2` (`object_id`,`varname`),
   KEY `varname` (`varname`)
-) ENGINE=MyISAM COMMENT='Custom variable status information';
+) ENGINE=InnoDB COMMENT='Custom variable status information';
 
 -- --------------------------------------------------------
 
@@ -364,7 +364,7 @@ CREATE TABLE `nagios_customvariablestatus` (
 CREATE TABLE `nagios_dbversion` (
   `name` varchar(10) NOT NULL default '',
   `version` varchar(10) NOT NULL default ''
-) ENGINE=MyISAM;
+) ENGINE=InnoDB;
 
 -- --------------------------------------------------------
 
@@ -394,7 +394,7 @@ CREATE TABLE `nagios_downtimehistory` (
   `was_cancelled` smallint(6) NOT NULL default '0',
   PRIMARY KEY  (`downtimehistory_id`),
   UNIQUE KEY `instance_id` (`instance_id`,`object_id`,`entry_time`,`internal_downtime_id`)
-) ENGINE=MyISAM COMMENT='Historical scheduled host and service downtime';
+) ENGINE=InnoDB COMMENT='Historical scheduled host and service downtime';
 
 -- --------------------------------------------------------
 
@@ -423,7 +423,7 @@ CREATE TABLE `nagios_eventhandlers` (
   `output` varchar(255) NOT NULL default '',
   PRIMARY KEY  (`eventhandler_id`),
   UNIQUE KEY `instance_id` (`instance_id`,`object_id`,`start_time`,`start_time_usec`)
-) ENGINE=MyISAM COMMENT='Historical host and service event handlers';
+) ENGINE=InnoDB COMMENT='Historical host and service event handlers';
 
 -- --------------------------------------------------------
 
@@ -439,7 +439,7 @@ CREATE TABLE `nagios_externalcommands` (
   `command_name` varchar(128) NOT NULL default '',
   `command_args` varchar(255) NOT NULL default '',
   PRIMARY KEY  (`externalcommand_id`)
-) ENGINE=MyISAM COMMENT='Historical record of processed external commands';
+) ENGINE=InnoDB COMMENT='Historical record of processed external commands';
 
 -- --------------------------------------------------------
 
@@ -462,7 +462,22 @@ CREATE TABLE `nagios_flappinghistory` (
   `comment_time` datetime NOT NULL default '0000-00-00 00:00:00',
   `internal_comment_id` int(11) NOT NULL default '0',
   PRIMARY KEY  (`flappinghistory_id`)
-) ENGINE=MyISAM COMMENT='Current and historical record of host and service flapping';
+) ENGINE=InnoDB COMMENT='Current and historical record of host and service flapping';
+
+-- --------------------------------------------------------
+
+-- 
+-- Table structure for table `nagios_host_contactgroups`
+-- 
+
+CREATE TABLE `nagios_host_contactgroups` (
+  `host_contactgroup_id` int(11) NOT NULL auto_increment,
+  `instance_id` smallint(6) NOT NULL default '0',
+  `host_id` int(11) NOT NULL default '0',
+  `contactgroup_object_id` int(11) NOT NULL default '0',
+  PRIMARY KEY  (`host_contactgroup_id`),
+  UNIQUE KEY `instance_id` (`host_id`,`contactgroup_object_id`)
+) ENGINE=InnoDB COMMENT='Host contact groups';
 
 -- --------------------------------------------------------
 
@@ -477,7 +492,7 @@ CREATE TABLE `nagios_host_contacts` (
   `contact_object_id` int(11) NOT NULL default '0',
   PRIMARY KEY  (`host_contact_id`),
   UNIQUE KEY `instance_id` (`instance_id`,`host_id`,`contact_object_id`)
-) ENGINE=MyISAM;
+) ENGINE=InnoDB;
 
 -- --------------------------------------------------------
 
@@ -492,7 +507,7 @@ CREATE TABLE `nagios_host_parenthosts` (
   `parent_host_object_id` int(11) NOT NULL default '0',
   PRIMARY KEY  (`host_parenthost_id`),
   UNIQUE KEY `instance_id` (`host_id`,`parent_host_object_id`)
-) ENGINE=MyISAM COMMENT='Parent hosts';
+) ENGINE=InnoDB COMMENT='Parent hosts';
 
 -- --------------------------------------------------------
 
@@ -526,7 +541,7 @@ CREATE TABLE `nagios_hostchecks` (
   `perfdata` varchar(255) NOT NULL default '',
   PRIMARY KEY  (`hostcheck_id`),
   UNIQUE KEY `instance_id` (`instance_id`,`host_object_id`,`start_time`,`start_time_usec`)
-) ENGINE=MyISAM COMMENT='Historical host checks';
+) ENGINE=InnoDB COMMENT='Historical host checks';
 
 -- --------------------------------------------------------
 
@@ -548,7 +563,22 @@ CREATE TABLE `nagios_hostdependencies` (
   `fail_on_unreachable` smallint(6) NOT NULL default '0',
   PRIMARY KEY  (`hostdependency_id`),
   UNIQUE KEY `instance_id` (`instance_id`,`config_type`,`host_object_id`,`dependent_host_object_id`,`dependency_type`,`inherits_parent`,`fail_on_up`,`fail_on_down`,`fail_on_unreachable`)
-) ENGINE=MyISAM COMMENT='Host dependency definitions';
+) ENGINE=InnoDB COMMENT='Host dependency definitions';
+
+-- --------------------------------------------------------
+
+-- 
+-- Table structure for table `nagios_hostescalation_contactgroups`
+-- 
+
+CREATE TABLE `nagios_hostescalation_contactgroups` (
+  `hostescalation_contactgroup_id` int(11) NOT NULL auto_increment,
+  `instance_id` smallint(6) NOT NULL default '0',
+  `hostescalation_id` int(11) NOT NULL default '0',
+  `contactgroup_object_id` int(11) NOT NULL default '0',
+  PRIMARY KEY  (`hostescalation_contactgroup_id`),
+  UNIQUE KEY `instance_id` (`hostescalation_id`,`contactgroup_object_id`)
+) ENGINE=InnoDB COMMENT='Host escalation contact groups';
 
 -- --------------------------------------------------------
 
@@ -563,7 +593,7 @@ CREATE TABLE `nagios_hostescalation_contacts` (
   `contact_object_id` int(11) NOT NULL default '0',
   PRIMARY KEY  (`hostescalation_contact_id`),
   UNIQUE KEY `instance_id` (`instance_id`,`hostescalation_id`,`contact_object_id`)
-) ENGINE=MyISAM;
+) ENGINE=InnoDB;
 
 -- --------------------------------------------------------
 
@@ -585,7 +615,7 @@ CREATE TABLE `nagios_hostescalations` (
   `escalate_on_unreachable` smallint(6) NOT NULL default '0',
   PRIMARY KEY  (`hostescalation_id`),
   UNIQUE KEY `instance_id` (`instance_id`,`config_type`,`host_object_id`,`timeperiod_object_id`,`first_notification`,`last_notification`)
-) ENGINE=MyISAM COMMENT='Host escalation definitions';
+) ENGINE=InnoDB COMMENT='Host escalation definitions';
 
 -- --------------------------------------------------------
 
@@ -600,7 +630,7 @@ CREATE TABLE `nagios_hostgroup_members` (
   `host_object_id` int(11) NOT NULL default '0',
   PRIMARY KEY  (`hostgroup_member_id`),
   UNIQUE KEY `instance_id` (`hostgroup_id`,`host_object_id`)
-) ENGINE=MyISAM COMMENT='Hostgroup members';
+) ENGINE=InnoDB COMMENT='Hostgroup members';
 
 -- --------------------------------------------------------
 
@@ -616,7 +646,7 @@ CREATE TABLE `nagios_hostgroups` (
   `alias` varchar(255) NOT NULL default '',
   PRIMARY KEY  (`hostgroup_id`),
   UNIQUE KEY `instance_id` (`instance_id`,`hostgroup_object_id`)
-) ENGINE=MyISAM COMMENT='Hostgroup definitions';
+) ENGINE=InnoDB COMMENT='Hostgroup definitions';
 
 -- --------------------------------------------------------
 
@@ -685,7 +715,7 @@ CREATE TABLE `nagios_hosts` (
   `z_3d` double NOT NULL default '0',
   PRIMARY KEY  (`host_id`),
   UNIQUE KEY `instance_id` (`instance_id`,`config_type`,`host_object_id`)
-) ENGINE=MyISAM COMMENT='Host definitions';
+) ENGINE=InnoDB COMMENT='Host definitions';
 
 -- --------------------------------------------------------
 
@@ -742,7 +772,7 @@ CREATE TABLE `nagios_hoststatus` (
   `check_timeperiod_object_id` int(11) NOT NULL default '0',
   PRIMARY KEY  (`hoststatus_id`),
   UNIQUE KEY `object_id` (`host_object_id`)
-) ENGINE=MyISAM COMMENT='Current host status information';
+) ENGINE=InnoDB COMMENT='Current host status information';
 
 -- --------------------------------------------------------
 
@@ -755,7 +785,7 @@ CREATE TABLE `nagios_instances` (
   `instance_name` varchar(64) NOT NULL default '',
   `instance_description` varchar(128) NOT NULL default '',
   PRIMARY KEY  (`instance_id`)
-) ENGINE=MyISAM COMMENT='Location names of various Nagios installations';
+) ENGINE=InnoDB COMMENT='Location names of various Nagios installations';
 
 -- --------------------------------------------------------
 
@@ -774,7 +804,7 @@ CREATE TABLE `nagios_logentries` (
   `realtime_data` smallint(6) NOT NULL default '0',
   `inferred_data_extracted` smallint(6) NOT NULL default '0',
   PRIMARY KEY  (`logentry_id`)
-) ENGINE=MyISAM COMMENT='Historical record of log entries';
+) ENGINE=InnoDB COMMENT='Historical record of log entries';
 
 -- --------------------------------------------------------
 
@@ -798,7 +828,7 @@ CREATE TABLE `nagios_notifications` (
   `contacts_notified` smallint(6) NOT NULL default '0',
   PRIMARY KEY  (`notification_id`),
   UNIQUE KEY `instance_id` (`instance_id`,`object_id`,`start_time`,`start_time_usec`)
-) ENGINE=MyISAM COMMENT='Historical record of host and service notifications';
+) ENGINE=InnoDB COMMENT='Historical record of host and service notifications';
 
 -- --------------------------------------------------------
 
@@ -815,7 +845,7 @@ CREATE TABLE `nagios_objects` (
   `is_active` smallint(6) NOT NULL default '0',
   PRIMARY KEY  (`object_id`),
   KEY `objecttype_id` (`objecttype_id`,`name1`,`name2`)
-) ENGINE=MyISAM COMMENT='Current and historical objects of all kinds';
+) ENGINE=InnoDB COMMENT='Current and historical objects of all kinds';
 
 -- --------------------------------------------------------
 
@@ -834,7 +864,7 @@ CREATE TABLE `nagios_processevents` (
   `program_version` varchar(20) NOT NULL default '',
   `program_date` varchar(10) NOT NULL default '',
   PRIMARY KEY  (`processevent_id`)
-) ENGINE=MyISAM COMMENT='Historical Nagios process events';
+) ENGINE=InnoDB COMMENT='Historical Nagios process events';
 
 -- --------------------------------------------------------
 
@@ -870,7 +900,7 @@ CREATE TABLE `nagios_programstatus` (
   `global_service_event_handler` varchar(255) NOT NULL default '',
   PRIMARY KEY  (`programstatus_id`),
   UNIQUE KEY `instance_id` (`instance_id`)
-) ENGINE=MyISAM COMMENT='Current program status information';
+) ENGINE=InnoDB COMMENT='Current program status information';
 
 -- --------------------------------------------------------
 
@@ -885,7 +915,7 @@ CREATE TABLE `nagios_runtimevariables` (
   `varvalue` varchar(255) NOT NULL default '',
   PRIMARY KEY  (`runtimevariable_id`),
   UNIQUE KEY `instance_id` (`instance_id`,`varname`)
-) ENGINE=MyISAM COMMENT='Runtime variables from the Nagios daemon';
+) ENGINE=InnoDB COMMENT='Runtime variables from the Nagios daemon';
 
 -- --------------------------------------------------------
 
@@ -912,7 +942,22 @@ CREATE TABLE `nagios_scheduleddowntime` (
   `actual_start_time_usec` int(11) NOT NULL default '0',
   PRIMARY KEY  (`scheduleddowntime_id`),
   UNIQUE KEY `instance_id` (`instance_id`,`object_id`,`entry_time`,`internal_downtime_id`)
-) ENGINE=MyISAM COMMENT='Current scheduled host and service downtime';
+) ENGINE=InnoDB COMMENT='Current scheduled host and service downtime';
+
+-- --------------------------------------------------------
+
+-- 
+-- Table structure for table `nagios_service_contactgroups`
+-- 
+
+CREATE TABLE `nagios_service_contactgroups` (
+  `service_contactgroup_id` int(11) NOT NULL auto_increment,
+  `instance_id` smallint(6) NOT NULL default '0',
+  `service_id` int(11) NOT NULL default '0',
+  `contactgroup_object_id` int(11) NOT NULL default '0',
+  PRIMARY KEY  (`service_contactgroup_id`),
+  UNIQUE KEY `instance_id` (`service_id`,`contactgroup_object_id`)
+) ENGINE=InnoDB COMMENT='Service contact groups';
 
 -- --------------------------------------------------------
 
@@ -927,7 +972,7 @@ CREATE TABLE `nagios_service_contacts` (
   `contact_object_id` int(11) NOT NULL default '0',
   PRIMARY KEY  (`service_contact_id`),
   UNIQUE KEY `instance_id` (`instance_id`,`service_id`,`contact_object_id`)
-) ENGINE=MyISAM;
+) ENGINE=InnoDB;
 
 -- --------------------------------------------------------
 
@@ -960,7 +1005,7 @@ CREATE TABLE `nagios_servicechecks` (
   `perfdata` varchar(255) NOT NULL default '',
   PRIMARY KEY  (`servicecheck_id`),
   UNIQUE KEY `instance_id` (`instance_id`,`service_object_id`,`start_time`,`start_time_usec`)
-) ENGINE=MyISAM COMMENT='Historical service checks';
+) ENGINE=InnoDB COMMENT='Historical service checks';
 
 -- --------------------------------------------------------
 
@@ -983,7 +1028,22 @@ CREATE TABLE `nagios_servicedependencies` (
   `fail_on_critical` smallint(6) NOT NULL default '0',
   PRIMARY KEY  (`servicedependency_id`),
   UNIQUE KEY `instance_id` (`instance_id`,`config_type`,`service_object_id`,`dependent_service_object_id`,`dependency_type`,`inherits_parent`,`fail_on_ok`,`fail_on_warning`,`fail_on_unknown`,`fail_on_critical`)
-) ENGINE=MyISAM COMMENT='Service dependency definitions';
+) ENGINE=InnoDB COMMENT='Service dependency definitions';
+
+-- --------------------------------------------------------
+
+-- 
+-- Table structure for table `nagios_serviceescalation_contactgroups`
+-- 
+
+CREATE TABLE `nagios_serviceescalation_contactgroups` (
+  `serviceescalation_contactgroup_id` int(11) NOT NULL auto_increment,
+  `instance_id` smallint(6) NOT NULL default '0',
+  `serviceescalation_id` int(11) NOT NULL default '0',
+  `contactgroup_object_id` int(11) NOT NULL default '0',
+  PRIMARY KEY  (`serviceescalation_contactgroup_id`),
+  UNIQUE KEY `instance_id` (`serviceescalation_id`,`contactgroup_object_id`)
+) ENGINE=InnoDB COMMENT='Service escalation contact groups';
 
 -- --------------------------------------------------------
 
@@ -998,7 +1058,7 @@ CREATE TABLE `nagios_serviceescalation_contacts` (
   `contact_object_id` int(11) NOT NULL default '0',
   PRIMARY KEY  (`serviceescalation_contact_id`),
   UNIQUE KEY `instance_id` (`instance_id`,`serviceescalation_id`,`contact_object_id`)
-) ENGINE=MyISAM;
+) ENGINE=InnoDB;
 
 -- --------------------------------------------------------
 
@@ -1021,7 +1081,7 @@ CREATE TABLE `nagios_serviceescalations` (
   `escalate_on_critical` smallint(6) NOT NULL default '0',
   PRIMARY KEY  (`serviceescalation_id`),
   UNIQUE KEY `instance_id` (`instance_id`,`config_type`,`service_object_id`,`timeperiod_object_id`,`first_notification`,`last_notification`)
-) ENGINE=MyISAM COMMENT='Service escalation definitions';
+) ENGINE=InnoDB COMMENT='Service escalation definitions';
 
 -- --------------------------------------------------------
 
@@ -1036,7 +1096,7 @@ CREATE TABLE `nagios_servicegroup_members` (
   `service_object_id` int(11) NOT NULL default '0',
   PRIMARY KEY  (`servicegroup_member_id`),
   UNIQUE KEY `instance_id` (`servicegroup_id`,`service_object_id`)
-) ENGINE=MyISAM COMMENT='Servicegroup members';
+) ENGINE=InnoDB COMMENT='Servicegroup members';
 
 -- --------------------------------------------------------
 
@@ -1052,7 +1112,7 @@ CREATE TABLE `nagios_servicegroups` (
   `alias` varchar(255) NOT NULL default '',
   PRIMARY KEY  (`servicegroup_id`),
   UNIQUE KEY `instance_id` (`instance_id`,`config_type`,`servicegroup_object_id`)
-) ENGINE=MyISAM COMMENT='Servicegroup definitions';
+) ENGINE=InnoDB COMMENT='Servicegroup definitions';
 
 -- --------------------------------------------------------
 
@@ -1115,7 +1175,7 @@ CREATE TABLE `nagios_services` (
   `icon_image_alt` varchar(255) NOT NULL default '',
   PRIMARY KEY  (`service_id`),
   UNIQUE KEY `instance_id` (`instance_id`,`config_type`,`service_object_id`)
-) ENGINE=MyISAM COMMENT='Service definitions';
+) ENGINE=InnoDB COMMENT='Service definitions';
 
 -- --------------------------------------------------------
 
@@ -1173,7 +1233,7 @@ CREATE TABLE `nagios_servicestatus` (
   `check_timeperiod_object_id` int(11) NOT NULL default '0',
   PRIMARY KEY  (`servicestatus_id`),
   UNIQUE KEY `object_id` (`service_object_id`)
-) ENGINE=MyISAM COMMENT='Current service status information';
+) ENGINE=InnoDB COMMENT='Current service status information';
 
 -- --------------------------------------------------------
 
@@ -1192,9 +1252,11 @@ CREATE TABLE `nagios_statehistory` (
   `state_type` smallint(6) NOT NULL default '0',
   `current_check_attempt` smallint(6) NOT NULL default '0',
   `max_check_attempts` smallint(6) NOT NULL default '0',
+  `last_state` smallint(6) NOT NULL default '-1',
+  `last_hard_state` smallint(6) NOT NULL default '-1',
   `output` varchar(255) NOT NULL default '',
   PRIMARY KEY  (`statehistory_id`)
-) ENGINE=MyISAM COMMENT='Historical host and service state changes';
+) ENGINE=InnoDB COMMENT='Historical host and service state changes';
 
 -- --------------------------------------------------------
 
@@ -1217,7 +1279,7 @@ CREATE TABLE `nagios_systemcommands` (
   `output` varchar(255) NOT NULL default '',
   PRIMARY KEY  (`systemcommand_id`),
   UNIQUE KEY `instance_id` (`instance_id`,`start_time`,`start_time_usec`)
-) ENGINE=MyISAM COMMENT='Historical system commands that are executed';
+) ENGINE=InnoDB COMMENT='Historical system commands that are executed';
 
 -- --------------------------------------------------------
 
@@ -1235,7 +1297,7 @@ CREATE TABLE `nagios_timedeventqueue` (
   `recurring_event` smallint(6) NOT NULL default '0',
   `object_id` int(11) NOT NULL default '0',
   PRIMARY KEY  (`timedeventqueue_id`)
-) ENGINE=MyISAM COMMENT='Current Nagios event queue';
+) ENGINE=InnoDB COMMENT='Current Nagios event queue';
 
 -- --------------------------------------------------------
 
@@ -1258,7 +1320,7 @@ CREATE TABLE `nagios_timedevents` (
   `deletion_time_usec` int(11) NOT NULL default '0',
   PRIMARY KEY  (`timedevent_id`),
   UNIQUE KEY `instance_id` (`instance_id`,`event_type`,`scheduled_time`,`object_id`)
-) ENGINE=MyISAM COMMENT='Historical events from the Nagios event queue';
+) ENGINE=InnoDB COMMENT='Historical events from the Nagios event queue';
 
 -- --------------------------------------------------------
 
@@ -1275,7 +1337,7 @@ CREATE TABLE `nagios_timeperiod_timeranges` (
   `end_sec` int(11) NOT NULL default '0',
   PRIMARY KEY  (`timeperiod_timerange_id`),
   UNIQUE KEY `instance_id` (`timeperiod_id`,`day`,`start_sec`,`end_sec`)
-) ENGINE=MyISAM COMMENT='Timeperiod definitions';
+) ENGINE=InnoDB COMMENT='Timeperiod definitions';
 
 -- --------------------------------------------------------
 
@@ -1291,4 +1353,4 @@ CREATE TABLE `nagios_timeperiods` (
   `alias` varchar(255) NOT NULL default '',
   PRIMARY KEY  (`timeperiod_id`),
   UNIQUE KEY `instance_id` (`instance_id`,`config_type`,`timeperiod_object_id`)
-) ENGINE=MyISAM COMMENT='Timeperiod definitions';
+) ENGINE=InnoDB COMMENT='Timeperiod definitions';

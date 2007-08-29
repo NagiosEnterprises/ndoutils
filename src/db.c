@@ -86,7 +86,11 @@ char *ndo2db_db_rawtablenames[NDO2DB_MAX_DBTABLES]={
 	"host_contacts",
 	"services",
 	"service_contacts",
-	"customvariables"
+	"customvariables",
+	"host_contactgroups",
+	"service_contactgroups",
+	"hostescalation_contactgroups",
+	"serviceescalation_contactgroups"
         };
 
 

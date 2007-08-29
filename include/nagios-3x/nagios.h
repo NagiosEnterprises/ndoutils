@@ -2,7 +2,7 @@
  *
  * Nagios Main Header File
  * Written By: Ethan Galstad (nagios@nagios.org)
- * Last Modified: 05-22-2007
+ * Last Modified: 08-28-2007
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -45,7 +45,7 @@ extern "C" {
 
 #define MAX_USER_MACROS				256	/* maximum number of $USERx$ macros */
 
-#define MACRO_X_COUNT				116	/* size of macro_x[] array */
+#define MACRO_X_COUNT				132	/* size of macro_x[] array */
 
 #define MACRO_HOSTNAME				0
 #define MACRO_HOSTALIAS				1
@@ -163,7 +163,22 @@ extern "C" {
 #define MACRO_HOSTACKAUTHORALIAS                113
 #define MACRO_SERVICEACKAUTHORNAME              114
 #define MACRO_SERVICEACKAUTHORALIAS             115
-
+#define MACRO_MAXHOSTATTEMPTS			116
+#define MACRO_MAXSERVICEATTEMPTS		117
+#define MACRO_SERVICEISVOLATILE			118
+#define MACRO_TOTALHOSTSERVICES			119
+#define MACRO_TOTALHOSTSERVICESOK		120
+#define MACRO_TOTALHOSTSERVICESWARNING		121
+#define MACRO_TOTALHOSTSERVICESUNKNOWN		122
+#define MACRO_TOTALHOSTSERVICESCRITICAL		123
+#define MACRO_HOSTDOWNTIMEAUTHOR		124
+#define MACRO_HOSTDOWNTIMECOMMENT		125
+#define MACRO_SERVICEDOWNTIMEAUTHOR		126
+#define MACRO_SERVICEDOWNTIMECOMMENT		127
+#define MACRO_HOSTDOWNTIMEAUTHORNAME		128
+#define MACRO_HOSTDOWNTIMEAUTHORALIAS		129
+#define MACRO_SERVICEDOWNTIMEAUTHORNAME		130
+#define MACRO_SERVICEDOWNTIMEAUTHORALIAS	131
 
 
 
@@ -749,7 +764,7 @@ int compare_strings(char *,char *);                     /* compares two strings 
 char *escape_newlines(char *);
 int contains_illegal_object_chars(char *);		/* tests whether or not an object name (host, service, etc.) contains illegal characters */
 int my_rename(char *,char *);                           /* renames a file - works across filesystems */
-int get_raw_command_line(command *,char *,char *,int,int);    	/* given a raw command line, determine the actual command to run */
+int get_raw_command_line(command *,char *,char **,int);    	/* given a raw command line, determine the actual command to run */
 int check_time_against_period(time_t,timeperiod *);	/* check to see if a specific time is covered by a time period */
 int is_daterange_single_day(daterange *);
 time_t calculate_time_from_weekday_of_month(int,int,int,int);	/* calculates midnight time of specific (3rd, last, etc.) weekday of a particular month */
@@ -766,7 +781,7 @@ int dbuf_strcat(dbuf *,char *);
 
 
 /**** Macro Functions ****/
-int process_macros(char *,char *,int,int);             	/* replace macros with their actual values */
+int process_macros(char *,char **,int);             	/* replace macros with their actual values */
 char *clean_macro_chars(char *,int);                    /* cleans macros characters before insertion into output string */
 int grab_service_macros(service *);                  	/* updates the service macro data */
 int grab_host_macros(host *);                        	/* updates the host macro data */

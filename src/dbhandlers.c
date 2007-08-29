@@ -3,7 +3,7 @@
  *
  * Copyright (c) 2005-2007 Ethan Galstad 
  *
- * Last Modified: 02-18-2007
+ * Last Modified: 08-29-2007
  *
  **************************************************************/
 
@@ -2997,6 +2997,8 @@ int ndo2db_handle_statechangedata(ndo2db_idi *idi){
 	int state_type=0;
 	int current_attempt=0;
 	int max_attempts=0;
+	int last_state=-1;
+	int last_hard_state=-1;
 	unsigned long object_id=0L;
 	int result=NDO_OK;
 	char *ts[1];
@@ -3020,6 +3022,8 @@ int ndo2db_handle_statechangedata(ndo2db_idi *idi){
 	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_STATETYPE],&state_type);
 	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_CURRENTCHECKATTEMPT],&current_attempt);
 	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_MAXCHECKATTEMPTS],&max_attempts);
+	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_LASTHARDSTATE],&last_hard_state);
+	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_LASTSTATE],&last_state);
 
 	es[0]=ndo2db_db_escape_string(idi,idi->buffered_input[NDO_DATA_OUTPUT]);
 
@@ -3032,7 +3036,7 @@ int ndo2db_handle_statechangedata(ndo2db_idi *idi){
 		result=ndo2db_get_object_id_with_insert(idi,NDO2DB_OBJECTTYPE_HOST,idi->buffered_input[NDO_DATA_HOST],NULL,&object_id);
 
 	/* save entry to db */
-	if(asprintf(&buf,"INSERT INTO %s SET instance_id='%lu', state_time=%s, state_time_usec='%lu', object_id='%lu', state_change='%d', state='%d', state_type='%d', current_check_attempt='%d', max_check_attempts='%d', output='%s'"
+	if(asprintf(&buf,"INSERT INTO %s SET instance_id='%lu', state_time=%s, state_time_usec='%lu', object_id='%lu', state_change='%d', state='%d', state_type='%d', current_check_attempt='%d', max_check_attempts='%d', last_state='%d', last_hard_state='%d', output='%s'"
 		    ,ndo2db_db_tablenames[NDO2DB_DBTABLE_STATEHISTORY]
 		    ,idi->dbinfo.instance_id
 		    ,ts[0]
@@ -3043,6 +3047,8 @@ int ndo2db_handle_statechangedata(ndo2db_idi *idi){
 		    ,state_type
 		    ,current_attempt
 		    ,max_attempts
+		    ,last_state
+		    ,last_hard_state
 		    ,es[0]
 		   )==-1)
 		buf=NULL;
@@ -3520,6 +3526,35 @@ int ndo2db_handle_hostdefinition(ndo2db_idi *idi){
 		free(buf1);
 	        }
 
+	/* save contact groups to db */
+	mbuf=idi->mbuf[NDO2DB_MBUF_CONTACTGROUP];
+	for(x=0;x<mbuf.used_lines;x++){
+
+		if(mbuf.buffer[x]==NULL)
+			continue;
+
+		/* get the object id of the member */
+		result=ndo2db_get_object_id_with_insert(idi,NDO2DB_OBJECTTYPE_CONTACTGROUP,mbuf.buffer[x],NULL,&member_id);
+
+		if(asprintf(&buf,"instance_id='%d', host_id='%lu', contactgroup_object_id='%lu'"
+			    ,idi->dbinfo.instance_id
+			    ,host_id
+			    ,member_id
+			   )==-1)
+			buf=NULL;
+	
+		if(asprintf(&buf1,"INSERT INTO %s SET %s ON DUPLICATE KEY UPDATE %s"
+			    ,ndo2db_db_tablenames[NDO2DB_DBTABLE_HOSTCONTACTGROUPS]
+			    ,buf
+			    ,buf
+			   )==-1)
+			buf1=NULL;
+
+		result=ndo2db_db_query(idi,buf1);
+		free(buf);
+		free(buf1);
+	        }
+
 	/* save contacts to db */
 	mbuf=idi->mbuf[NDO2DB_MBUF_CONTACT];
 	for(x=0;x<mbuf.used_lines;x++){
@@ -3905,6 +3940,35 @@ int ndo2db_handle_servicedefinition(ndo2db_idi *idi){
 
 	for(x=0;x<9;x++)
 		free(es[x]);
+
+	/* save contact groups to db */
+	mbuf=idi->mbuf[NDO2DB_MBUF_CONTACTGROUP];
+	for(x=0;x<mbuf.used_lines;x++){
+
+		if(mbuf.buffer[x]==NULL)
+			continue;
+
+		/* get the object id of the member */
+		result=ndo2db_get_object_id_with_insert(idi,NDO2DB_OBJECTTYPE_CONTACTGROUP,mbuf.buffer[x],NULL,&member_id);
+
+		if(asprintf(&buf,"instance_id='%d', service_id='%lu', contactgroup_object_id='%lu'"
+			    ,idi->dbinfo.instance_id
+			    ,service_id
+			    ,member_id
+			   )==-1)
+			buf=NULL;
+	
+		if(asprintf(&buf1,"INSERT INTO %s SET %s ON DUPLICATE KEY UPDATE %s"
+			    ,ndo2db_db_tablenames[NDO2DB_DBTABLE_SERVICECONTACTGROUPS]
+			    ,buf
+			    ,buf
+			   )==-1)
+			buf1=NULL;
+
+		result=ndo2db_db_query(idi,buf1);
+		free(buf);
+		free(buf1);
+	        }
 
 	/* save contacts to db */
 	mbuf=idi->mbuf[NDO2DB_MBUF_CONTACT];
@@ -4298,6 +4362,35 @@ int ndo2db_handle_hostescalationdefinition(ndo2db_idi *idi){
 	free(buf);
 	free(buf1);
 
+	/* save contact groups to db */
+	mbuf=idi->mbuf[NDO2DB_MBUF_CONTACTGROUP];
+	for(x=0;x<mbuf.used_lines;x++){
+
+		if(mbuf.buffer[x]==NULL)
+			continue;
+
+		/* get the object id of the member */
+		result=ndo2db_get_object_id_with_insert(idi,NDO2DB_OBJECTTYPE_CONTACTGROUP,mbuf.buffer[x],NULL,&member_id);
+
+		if(asprintf(&buf,"instance_id='%d', hostescalation_id='%lu', contactgroup_object_id='%lu'"
+			    ,idi->dbinfo.instance_id
+			    ,escalation_id
+			    ,member_id
+			   )==-1)
+			buf=NULL;
+	
+		if(asprintf(&buf1,"INSERT INTO %s SET %s ON DUPLICATE KEY UPDATE %s"
+			    ,ndo2db_db_tablenames[NDO2DB_DBTABLE_HOSTESCALATIONCONTACTGROUPS]
+			    ,buf
+			    ,buf
+			   )==-1)
+			buf1=NULL;
+
+		result=ndo2db_db_query(idi,buf1);
+		free(buf);
+		free(buf1);
+	        }
+
 	/* save contacts to db */
 	mbuf=idi->mbuf[NDO2DB_MBUF_CONTACT];
 	for(x=0;x<mbuf.used_lines;x++){
@@ -4412,6 +4505,35 @@ int ndo2db_handle_serviceescalationdefinition(ndo2db_idi *idi){
 	        }
 	free(buf);
 	free(buf1);
+
+	/* save contact groups to db */
+	mbuf=idi->mbuf[NDO2DB_MBUF_CONTACTGROUP];
+	for(x=0;x<mbuf.used_lines;x++){
+
+		if(mbuf.buffer[x]==NULL)
+			continue;
+
+		/* get the object id of the member */
+		result=ndo2db_get_object_id_with_insert(idi,NDO2DB_OBJECTTYPE_CONTACTGROUP,mbuf.buffer[x],NULL,&member_id);
+
+		if(asprintf(&buf,"instance_id='%d', serviceescalation_id='%lu', contactgroup_object_id='%lu'"
+			    ,idi->dbinfo.instance_id
+			    ,escalation_id
+			    ,member_id
+			   )==-1)
+			buf=NULL;
+	
+		if(asprintf(&buf1,"INSERT INTO %s SET %s ON DUPLICATE KEY UPDATE %s"
+			    ,ndo2db_db_tablenames[NDO2DB_DBTABLE_SERVICEESCALATIONCONTACTGROUPS]
+			    ,buf
+			    ,buf
+			   )==-1)
+			buf1=NULL;
+
+		result=ndo2db_db_query(idi,buf1);
+		free(buf);
+		free(buf1);
+	        }
 
 	/* save contacts to db */
 	mbuf=idi->mbuf[NDO2DB_MBUF_CONTACT];

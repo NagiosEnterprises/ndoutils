@@ -3,7 +3,7 @@
  *
  * CGIUTILS.H - Header file for common CGI functions
  * Copyright (c) 1999-2007  Ethan Galstad (nagios@nagios.org)
- * Last Modified: 05-30-2007
+ * Last Modified: 08-28-2007
  *
  * License:
  *
@@ -138,7 +138,7 @@ extern "C" {
 #define DELETE_ICON			"delete.gif"
 #define DELAY_ICON			"delay.gif"
 #define DOWNTIME_ICON			"downtime.gif"
-#define PASSIVE_ICON			"unknown.png"
+#define PASSIVE_ICON			"passiveonly.gif"
 #define RIGHT_ARROW_ICON		"right.gif"
 #define LEFT_ARROW_ICON			"left.gif"
 #define UP_ARROW_ICON			"up.gif"
@@ -185,6 +185,9 @@ extern "C" {
 
 #define CONTEXT_HELP_ICON1		"contexthelp1.gif"
 #define CONTEXT_HELP_ICON2		"contexthelp2.gif"
+
+#define SPLUNK_SMALL_WHITE_ICON		"splunk1.gif"
+#define SPLUNK_SMALL_BLACK_ICON		"splunk2.gif"
 
 
 
@@ -289,6 +292,8 @@ extern "C" {
 #define HOST_PASSIVE_CHECKS_ENABLED	32768
 #define HOST_PASSIVE_CHECK           	65536
 #define HOST_ACTIVE_CHECK            	131072
+#define HOST_HARD_STATE			262144
+#define HOST_SOFT_STATE			524288
 
 
 #define SERVICE_SCHEDULED_DOWNTIME	1
@@ -309,6 +314,8 @@ extern "C" {
 #define SERVICE_PASSIVE_CHECKS_ENABLED	32768
 #define SERVICE_PASSIVE_CHECK           65536
 #define SERVICE_ACTIVE_CHECK            131072
+#define SERVICE_HARD_STATE		262144
+#define SERVICE_SOFT_STATE		524288
 
 
 /****************************** SSI TYPES  ********************************/
@@ -460,6 +467,7 @@ int compare_hashdata2(const char *,const char *,const char *,const char *);
 void strip(char *);                                		/* strips newlines, carriage returns, and spaces from end of buffer */
 char *unescape_newlines(char *);
 void sanitize_plugin_output(char *);                            /* strips HTML and bad characters from plugin output */
+void strip_html_brackets(char *);				/* strips > and < from string */
 
 void get_time_string(time_t *,char *,int,int);			/* gets a date/time string */
 void get_interval_time_string(double,char *,int);		/* gets a time string for an interval of time */
@@ -485,6 +493,11 @@ void print_extra_servicegroup_url(char *,char *);
 
 void display_info_table(char *,int,authdata *);
 void display_nav_table(char *,int);
+
+void display_splunk_host_url(host *);
+void display_splunk_service_url(service *);
+void display_splunk_generic_url(char *,int);
+void strip_splunk_query_terms(char *);
 
 void include_ssi_files(char *,int);                             /* include user-defined SSI footers/headers */
 void include_ssi_file(char *);                                  /* include user-defined SSI footer/header */

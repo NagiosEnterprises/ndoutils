@@ -3,7 +3,7 @@
  *
  * Copyright (c) 2005-2007 Ethan Galstad 
  *
- * Last Modified: 06-19-2007
+ * Last Modified: 08-29-2007
  *
  **************************************************************/
 
@@ -12,9 +12,9 @@
 #include "../include/io.h"
 #include "../include/protoapi.h"
 
-#define LOG2NDO_VERSION "1.4b4"
+#define LOG2NDO_VERSION "1.4b5"
 #define LOG2NDO_NAME "LOG2NDO"
-#define LOG2NDO_DATE "06-19-2007"
+#define LOG2NDO_DATE "08-29-2007"
 
 
 

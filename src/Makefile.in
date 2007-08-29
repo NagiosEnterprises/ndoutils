@@ -1,7 +1,7 @@
 ###############################
 # Makefile for NDO
 #
-# Last Modified: 01-08-2007
+# Last Modified: 08-29-2007
 ###############################
 
 
@@ -53,10 +53,10 @@ ndo2db:
 	$(MAKE) ndo2db-3x
 
 ndo2db-2x: ndo2db.c $(NDO_INC) $(NDO_OBJS) $(COMMON_INC) $(COMMON_OBJS) dbhandlers-2x.o
-	$(CC) $(CFLAGS) $(DBCFLAGS) -D BUILD_NAGIOS_2X -o ndo2db-2x ndo2db.c dbhandlers-2x.o $(COMMON_OBJS) $(NDO_OBJS) $(LDFLAGS) $(DBLDFLAGS) $(LIBS) $(SOCKETLIBS) $(DBLIBS) $(OTHERLIBS)
+	$(CC) $(CFLAGS) $(DBCFLAGS) -D BUILD_NAGIOS_2X -o ndo2db-2x ndo2db.c dbhandlers-2x.o $(COMMON_OBJS) $(NDO_OBJS) $(LDFLAGS) $(DBLDFLAGS) $(LIBS) $(SOCKETLIBS) $(DBLIBS) $(MATHLIBS) $(OTHERLIBS)
 
 ndo2db-3x: ndo2db.c $(NDO_INC) $(NDO_OBJS) $(COMMON_INC) $(COMMON_OBJS) dbhandlers-3x.o
-	$(CC) $(CFLAGS) $(DBCFLAGS) -D BUILD_NAGIOS_3X -o ndo2db-3x ndo2db.c dbhandlers-3x.o $(COMMON_OBJS) $(NDO_OBJS) $(LDFLAGS) $(DBLDFLAGS) $(LIBS) $(SOCKETLIBS) $(DBLIBS) $(OTHERLIBS)
+	$(CC) $(CFLAGS) $(DBCFLAGS) -D BUILD_NAGIOS_3X -o ndo2db-3x ndo2db.c dbhandlers-3x.o $(COMMON_OBJS) $(NDO_OBJS) $(LDFLAGS) $(DBLDFLAGS) $(LIBS) $(SOCKETLIBS) $(DBLIBS) $(MATHLIBS) $(OTHERLIBS)
 
 ndomod: 
 	$(MAKE) ndomod-2x.o

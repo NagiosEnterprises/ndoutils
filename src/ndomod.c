@@ -5,7 +5,7 @@
  * Copyright (c) 2005-2007 Ethan Galstad
  *
  * First Written: 05-19-2005
- * Last Modified: 06-19-2007
+ * Last Modified: 08-29-2007
  *
  *****************************************************************************/
 
@@ -48,9 +48,9 @@
 NEB_API_VERSION(CURRENT_NEB_API_VERSION)
 
 
-#define NDOMOD_VERSION "1.4b4"
+#define NDOMOD_VERSION "1.4b5"
 #define NDOMOD_NAME "NDOMOD"
-#define NDOMOD_DATE "06-19-2007"
+#define NDOMOD_DATE "08-29-2007"
 
 
 void *ndomod_module_handle=NULL;
@@ -567,7 +567,9 @@ int ndomod_goodbye_sink(void){
 /* used to rotate data sink file on a regular basis */
 int ndomod_rotate_sink_file(void *args){
 	char raw_command_line[MAX_COMMAND_BUFFER];
+	char *raw_command_line_3x=NULL;
 	char processed_command_line[MAX_COMMAND_BUFFER];
+	char *processed_command_line_3x=NULL;
 	int early_timeout=FALSE;
 	double exectime;
 
@@ -582,16 +584,19 @@ int ndomod_rotate_sink_file(void *args){
 	/****** ROTATE THE FILE *****/
 
 	/* get the raw command line */
-#ifdef BUILD_NAGIOS_3X
-	get_raw_command_line(find_command(ndomod_sink_rotation_command),ndomod_sink_rotation_command,raw_command_line,sizeof(raw_command_line),STRIP_ILLEGAL_MACRO_CHARS|ESCAPE_MACRO_CHARS);
-#endif
 #ifdef BUILD_NAGIOS_2X
 	get_raw_command_line(ndomod_sink_rotation_command,raw_command_line,sizeof(raw_command_line),STRIP_ILLEGAL_MACRO_CHARS|ESCAPE_MACRO_CHARS);
+#else
+	get_raw_command_line(find_command(ndomod_sink_rotation_command),ndomod_sink_rotation_command,&raw_command_line_3x,STRIP_ILLEGAL_MACRO_CHARS|ESCAPE_MACRO_CHARS);
 #endif
 	strip(raw_command_line);
 
 	/* process any macros in the raw command line */
+#ifdef BUILD_NAGIOS_2X
 	process_macros(raw_command_line,processed_command_line,(int)sizeof(processed_command_line),STRIP_ILLEGAL_MACRO_CHARS|ESCAPE_MACRO_CHARS);
+#else
+	process_macros(raw_command_line,&processed_command_line_3x,STRIP_ILLEGAL_MACRO_CHARS|ESCAPE_MACRO_CHARS);
+#endif
 
 	/* run the command */
 	my_system(processed_command_line,ndomod_sink_rotation_timeout,&early_timeout,&exectime,NULL,0);
@@ -2859,7 +2864,7 @@ int ndomod_broker_data(int event_type, void *data){
 		es[2]=ndo_escape_buffer(schangedata->output);
 
 		snprintf(temp_buffer,sizeof(temp_buffer)-1
-			 ,"\n%d:\n%d=%d\n%d=%d\n%d=%d\n%d=%ld.%ld\n%d=%d\n%d=%s\n%d=%s\n%d=%d\n%d=%d\n%d=%d\n%d=%d\n%d=%d\n%d=%s\n%d\n\n"
+			 ,"\n%d:\n%d=%d\n%d=%d\n%d=%d\n%d=%ld.%ld\n%d=%d\n%d=%s\n%d=%s\n%d=%d\n%d=%d\n%d=%d\n%d=%d\n%d=%d\n%d=%d\n%d=%d\n%d=%s\n%d\n\n"
 			 ,NDO_API_STATECHANGEDATA
 			 ,NDO_DATA_TYPE
 			 ,schangedata->type
@@ -2886,6 +2891,10 @@ int ndomod_broker_data(int event_type, void *data){
 			 ,schangedata->current_attempt
 			 ,NDO_DATA_MAXCHECKATTEMPTS
 			 ,schangedata->max_attempts
+			 ,NDO_DATA_LASTSTATE
+			 ,-1
+			 ,NDO_DATA_LASTHARDSTATE
+			 ,-1
 			 ,NDO_DATA_OUTPUT
 			 ,es[2]
 			 ,NDO_API_ENDDATA
@@ -3022,15 +3031,12 @@ int ndomod_write_object_config(int config_type){
 	contact *temp_contact=NULL;
 	commandsmember *temp_commandsmember=NULL;
 	contactgroup *temp_contactgroup=NULL;
-	contactgroupmember *temp_contactgroupmember=NULL;
 	host *temp_host=NULL;
 	hostsmember *temp_hostsmember=NULL;
 	contactgroupsmember *temp_contactgroupsmember=NULL;
 	hostgroup *temp_hostgroup=NULL;
-	hostgroupmember *temp_hostgroupmember=NULL;
 	service *temp_service=NULL;
 	servicegroup *temp_servicegroup=NULL;
-	servicegroupmember *temp_servicegroupmember=NULL;
 	hostescalation *temp_hostescalation=NULL;
 	serviceescalation *temp_serviceescalation=NULL;
 	hostdependency *temp_hostdependency=NULL;
@@ -3038,6 +3044,9 @@ int ndomod_write_object_config(int config_type){
 #ifdef BUILD_NAGIOS_2X
 	hostextinfo *temp_hostextinfo=NULL;
 	serviceextinfo *temp_serviceextinfo=NULL;
+	contactgroupmember *temp_contactgroupmember=NULL;
+	hostgroupmember *temp_hostgroupmember=NULL;
+	servicegroupmember *temp_servicegroupmember=NULL;
 #endif
 	int have_2d_coords=FALSE;
 	int x_2d=0;
@@ -3063,6 +3072,7 @@ int ndomod_write_object_config(int config_type){
 #ifdef BUILD_NAGIOS_3X
 	customvariablesmember *temp_customvar=NULL;
 	contactsmember *temp_contactsmember=NULL;
+	servicesmember *temp_servicesmember=NULL;
 #endif
 
 
@@ -3082,7 +3092,7 @@ int ndomod_write_object_config(int config_type){
 	for(x=0;x<OBJECTCONFIG_ES_ITEMS;x++)
 		es[x]=NULL;
 
-	/* dump command config */
+	/****** dump command config ******/
 	for(temp_command=command_list;temp_command!=NULL;temp_command=temp_command->next){
 
 		es[0]=ndo_escape_buffer(temp_command->name);
@@ -3112,7 +3122,7 @@ int ndomod_write_object_config(int config_type){
 		es[x]=NULL;
 	        }
 
-	/* dump timeperiod config */
+	/****** dump timeperiod config ******/
 	for(temp_timeperiod=timeperiod_list;temp_timeperiod!=NULL;temp_timeperiod=temp_timeperiod->next){
 
 		es[0]=ndo_escape_buffer(temp_timeperiod->name);
@@ -3167,7 +3177,7 @@ int ndomod_write_object_config(int config_type){
 		es[x]=NULL;
 	        }
 
-	/* dump contact config */
+	/****** dump contact config ******/
 	for(temp_contact=contact_list;temp_contact!=NULL;temp_contact=temp_contact->next){
 
 		es[0]=ndo_escape_buffer(temp_contact->name);
@@ -3340,7 +3350,7 @@ int ndomod_write_object_config(int config_type){
 		es[x]=NULL;
 	        }
 
-	/* dump contactgroup config */
+	/****** dump contactgroup config ******/
 	for(temp_contactgroup=contactgroup_list;temp_contactgroup!=NULL;temp_contactgroup=temp_contactgroup->next){
 
 		es[0]=ndo_escape_buffer(temp_contactgroup->group_name);
@@ -3364,9 +3374,18 @@ int ndomod_write_object_config(int config_type){
 		es[0]=NULL;
 	
 		/* dump members for each contactgroup */
-		for(temp_contactgroupmember=temp_contactgroup->members;temp_contactgroupmember!=NULL;temp_contactgroupmember=temp_contactgroupmember->next){
-				
+#ifdef BUILD_NAGIOS_2X
+		for(temp_contactgroupmember=temp_contactgroup->members;temp_contactgroupmember!=NULL;temp_contactgroupmember=temp_contactgroupmember->next)
+#else
+		for(temp_contactsmember=temp_contactgroup->members;temp_contactsmember!=NULL;temp_contactsmember=temp_contactsmember->next)
+#endif
+			{
+
+#ifdef BUILD_NAGIOS_2X				
 			es[0]=ndo_escape_buffer(temp_contactgroupmember->contact_name);
+#else
+			es[0]=ndo_escape_buffer(temp_contactsmember->contact_name);
+#endif
 
 			snprintf(temp_buffer,sizeof(temp_buffer)-1
 				 ,"%d=%s\n"
@@ -3399,7 +3418,7 @@ int ndomod_write_object_config(int config_type){
 		es[x]=NULL;
 	        }
 
-	/* dump host config */
+	/****** dump host config ******/
 	for(temp_host=host_list;temp_host!=NULL;temp_host=temp_host->next){
 
 		es[0]=ndo_escape_buffer(temp_host->name);
@@ -3614,32 +3633,25 @@ int ndomod_write_object_config(int config_type){
 			es[0]=NULL;
 		        }
 
-		/* dump contacts / contactgroups */
-#ifdef BUILD_NAGIOS_2X
+		/* dump contactgroups */
 		for(temp_contactgroupsmember=temp_host->contact_groups;temp_contactgroupsmember!=NULL;temp_contactgroupsmember=temp_contactgroupsmember->next){
-
-			/* dump each individual contact */
-			temp_contactgroup=find_contactgroup(temp_contactgroupsmember->group_name);
-			if(temp_contactgroup==NULL)
-				continue;
-
-			for(temp_contactgroupmember=temp_contactgroup->members;temp_contactgroupmember!=NULL;temp_contactgroupmember=temp_contactgroupmember->next){
-
-				es[0]=ndo_escape_buffer(temp_contactgroupmember->contact_name);
 				
-				snprintf(temp_buffer,sizeof(temp_buffer)-1
-					 ,"%d=%s\n"
-					 ,NDO_DATA_CONTACT
-					 ,(es[0]==NULL)?"":es[0]
-					);
-				temp_buffer[sizeof(temp_buffer)-1]='\x0';
-				ndo_dbuf_strcat(&dbuf,temp_buffer);
-				
-				free(es[0]);
-				es[0]=NULL;
-				}
+			es[0]=ndo_escape_buffer(temp_contactgroupsmember->group_name);
+
+			snprintf(temp_buffer,sizeof(temp_buffer)-1
+				 ,"%d=%s\n"
+				 ,NDO_DATA_CONTACTGROUP
+				 ,(es[0]==NULL)?"":es[0]
+				);
+			temp_buffer[sizeof(temp_buffer)-1]='\x0';
+			ndo_dbuf_strcat(&dbuf,temp_buffer);
+
+			free(es[0]);
+			es[0]=NULL;
 		        }
-#else
+
+		/* dump individual contacts (not supported in Nagios 2.x) */
+#ifndef BUILD_NAGIOS_2X
 		for(temp_contactsmember=temp_host->contacts;temp_contactsmember!=NULL;temp_contactsmember=temp_contactsmember->next){
 
 			es[0]=ndo_escape_buffer(temp_contactsmember->contact_name);
@@ -3701,7 +3713,7 @@ int ndomod_write_object_config(int config_type){
 		es[x]=NULL;
 	        }
 
-	/* dump hostgroup config */
+	/****** dump hostgroup config ******/
 	for(temp_hostgroup=hostgroup_list;temp_hostgroup!=NULL;temp_hostgroup=temp_hostgroup->next){
 
 		es[0]=ndo_escape_buffer(temp_hostgroup->group_name);
@@ -3725,9 +3737,18 @@ int ndomod_write_object_config(int config_type){
 		es[0]=NULL;
 	
 		/* dump members for each hostgroup */
-		for(temp_hostgroupmember=temp_hostgroup->members;temp_hostgroupmember!=NULL;temp_hostgroupmember=temp_hostgroupmember->next){
-				
+#ifdef BUILD_NAGIOS_2X
+		for(temp_hostgroupmember=temp_hostgroup->members;temp_hostgroupmember!=NULL;temp_hostgroupmember=temp_hostgroupmember->next)
+#else
+		for(temp_hostsmember=temp_hostgroup->members;temp_hostsmember!=NULL;temp_hostsmember=temp_hostsmember->next)
+#endif
+			{
+
+#ifdef BUILD_NAGIOS_2X
 			es[0]=ndo_escape_buffer(temp_hostgroupmember->host_name);
+#else
+			es[0]=ndo_escape_buffer(temp_hostsmember->host_name);
+#endif
 
 			snprintf(temp_buffer,sizeof(temp_buffer)-1
 				 ,"%d=%s\n"
@@ -3760,7 +3781,7 @@ int ndomod_write_object_config(int config_type){
 		es[x]=NULL;
 	        }
 
-	/* dump service config */
+	/****** dump service config ******/
 	for(temp_service=service_list;temp_service!=NULL;temp_service=temp_service->next){
 
 		es[0]=ndo_escape_buffer(temp_service->host_name);
@@ -3917,32 +3938,25 @@ int ndomod_write_object_config(int config_type){
 		free(es[0]);
 		es[0]=NULL;
 
-		/* dump contacts / contactgroups */
-#ifdef BUILD_NAGIOS_2X
+		/* dump contactgroups */
 		for(temp_contactgroupsmember=temp_service->contact_groups;temp_contactgroupsmember!=NULL;temp_contactgroupsmember=temp_contactgroupsmember->next){
-
-			/* dump each individual contact */
-			temp_contactgroup=find_contactgroup(temp_contactgroupsmember->group_name);
-			if(temp_contactgroup==NULL)
-				continue;
-
-			for(temp_contactgroupmember=temp_contactgroup->members;temp_contactgroupmember!=NULL;temp_contactgroupmember=temp_contactgroupmember->next){
-
-				es[0]=ndo_escape_buffer(temp_contactgroupmember->contact_name);
 				
-				snprintf(temp_buffer,sizeof(temp_buffer)-1
-					 ,"%d=%s\n"
-					 ,NDO_DATA_CONTACT
-					 ,(es[0]==NULL)?"":es[0]
-					);
-				temp_buffer[sizeof(temp_buffer)-1]='\x0';
-				ndo_dbuf_strcat(&dbuf,temp_buffer);
-				
-				free(es[0]);
-				es[0]=NULL;
-				}
+			es[0]=ndo_escape_buffer(temp_contactgroupsmember->group_name);
+
+			snprintf(temp_buffer,sizeof(temp_buffer)-1
+				 ,"%d=%s\n"
+				 ,NDO_DATA_CONTACTGROUP
+				 ,(es[0]==NULL)?"":es[0]
+				);
+			temp_buffer[sizeof(temp_buffer)-1]='\x0';
+			ndo_dbuf_strcat(&dbuf,temp_buffer);
+
+			free(es[0]);
+			es[0]=NULL;
 		        }
-#else
+
+		/* dump individual contacts (not supported in Nagios 2.x) */
+#ifndef BUILD_NAGIOS_2X
 		for(temp_contactsmember=temp_service->contacts;temp_contactsmember!=NULL;temp_contactsmember=temp_contactsmember->next){
 
 			es[0]=ndo_escape_buffer(temp_contactsmember->contact_name);
@@ -4003,7 +4017,7 @@ int ndomod_write_object_config(int config_type){
 		es[x]=NULL;
 	        }
 
-	/* dump servicegroup config */
+	/****** dump servicegroup config ******/
 	for(temp_servicegroup=servicegroup_list;temp_servicegroup!=NULL;temp_servicegroup=temp_servicegroup->next){
 
 		es[0]=ndo_escape_buffer(temp_servicegroup->group_name);
@@ -4029,16 +4043,26 @@ int ndomod_write_object_config(int config_type){
 		es[1]=NULL;
 	
 		/* dump members for each servicegroup */
-		for(temp_servicegroupmember=temp_servicegroup->members;temp_servicegroupmember!=NULL;temp_servicegroupmember=temp_servicegroupmember->next){
-				
+#ifdef BUILD_NAGIOS_2X
+		for(temp_servicegroupmember=temp_servicegroup->members;temp_servicegroupmember!=NULL;temp_servicegroupmember=temp_servicegroupmember->next)
+#else
+		for(temp_servicesmember=temp_servicegroup->members;temp_servicesmember!=NULL;temp_servicesmember=temp_servicesmember->next)
+#endif
+			{
+
+#ifdef BUILD_NAGIOS_2X
 			es[0]=ndo_escape_buffer(temp_servicegroupmember->host_name);
 			es[1]=ndo_escape_buffer(temp_servicegroupmember->service_description);
+#else
+			es[0]=ndo_escape_buffer(temp_servicesmember->host_name);
+			es[1]=ndo_escape_buffer(temp_servicesmember->service_description);
+#endif
 
 			snprintf(temp_buffer,sizeof(temp_buffer)-1
 				 ,"%d=%s;%s\n"
 				 ,NDO_DATA_SERVICEGROUPMEMBER
-				 ,temp_servicegroupmember->host_name
-				 ,temp_servicegroupmember->service_description
+				 ,(es[0]==NULL)?"":es[0]
+				 ,(es[1]==NULL)?"":es[1]
 				);
 			temp_buffer[sizeof(temp_buffer)-1]='\x0';
 			ndo_dbuf_strcat(&dbuf,temp_buffer);
@@ -4068,7 +4092,7 @@ int ndomod_write_object_config(int config_type){
 		es[x]=NULL;
 	        }
 
-	/* dump host escalation config */
+	/****** dump host escalation config ******/
 	for(temp_hostescalation=hostescalation_list;temp_hostescalation!=NULL;temp_hostescalation=temp_hostescalation->next){
 
 		es[0]=ndo_escape_buffer(temp_hostescalation->host_name);
@@ -4103,32 +4127,25 @@ int ndomod_write_object_config(int config_type){
 		free(es[0]);
 		es[0]=NULL;
 	
-		/* dump contacts / contactgroups */
-#ifdef BUILD_NAGIOS_2X
+		/* dump contactgroups */
 		for(temp_contactgroupsmember=temp_hostescalation->contact_groups;temp_contactgroupsmember!=NULL;temp_contactgroupsmember=temp_contactgroupsmember->next){
 				
-			/* dump each individual contact */
-			temp_contactgroup=find_contactgroup(temp_contactgroupsmember->group_name);
-			if(temp_contactgroup==NULL)
-				continue;
+			es[0]=ndo_escape_buffer(temp_contactgroupsmember->group_name);
 
-			for(temp_contactgroupmember=temp_contactgroup->members;temp_contactgroupmember!=NULL;temp_contactgroupmember=temp_contactgroupmember->next){
+			snprintf(temp_buffer,sizeof(temp_buffer)-1
+				 ,"%d=%s\n"
+				 ,NDO_DATA_CONTACTGROUP
+				 ,(es[0]==NULL)?"":es[0]
+				);
+			temp_buffer[sizeof(temp_buffer)-1]='\x0';
+			ndo_dbuf_strcat(&dbuf,temp_buffer);
 
-				es[0]=ndo_escape_buffer(temp_contactgroupmember->contact_name);
-				
-				snprintf(temp_buffer,sizeof(temp_buffer)-1
-					 ,"%d=%s\n"
-					 ,NDO_DATA_CONTACT
-					 ,(es[0]==NULL)?"":es[0]
-					);
-				temp_buffer[sizeof(temp_buffer)-1]='\x0';
-				ndo_dbuf_strcat(&dbuf,temp_buffer);
-				
-				free(es[0]);
-				es[0]=NULL;
-				}
+			free(es[0]);
+			es[0]=NULL;
 		        }
-#else
+
+		/* dump individual contacts (not supported in Nagios 2.x) */
+#ifndef BUILD_NAGIOS_2X
 		for(temp_contactsmember=temp_hostescalation->contacts;temp_contactsmember!=NULL;temp_contactsmember=temp_contactsmember->next){
 
 			es[0]=ndo_escape_buffer(temp_contactsmember->contact_name);
@@ -4145,7 +4162,6 @@ int ndomod_write_object_config(int config_type){
 			es[0]=NULL;
 			}
 #endif
-
 
 		snprintf(temp_buffer,sizeof(temp_buffer)-1
 			 ,"%d\n\n"
@@ -4166,7 +4182,7 @@ int ndomod_write_object_config(int config_type){
 		es[x]=NULL;
 	        }
 
-	/* dump service escalation config */
+	/****** dump service escalation config ******/
 	for(temp_serviceescalation=serviceescalation_list;temp_serviceescalation!=NULL;temp_serviceescalation=temp_serviceescalation->next){
 
 		es[0]=ndo_escape_buffer(temp_serviceescalation->host_name);
@@ -4206,32 +4222,25 @@ int ndomod_write_object_config(int config_type){
 		free(es[0]);
 		es[0]=NULL;
 	
-		/* dump contacts / contactgroups */
-#ifdef BUILD_NAGIOS_2X
+		/* dump contactgroups */
 		for(temp_contactgroupsmember=temp_serviceescalation->contact_groups;temp_contactgroupsmember!=NULL;temp_contactgroupsmember=temp_contactgroupsmember->next){
 				
-			/* dump each individual contact */
-			temp_contactgroup=find_contactgroup(temp_contactgroupsmember->group_name);
-			if(temp_contactgroup==NULL)
-				continue;
+			es[0]=ndo_escape_buffer(temp_contactgroupsmember->group_name);
 
-			for(temp_contactgroupmember=temp_contactgroup->members;temp_contactgroupmember!=NULL;temp_contactgroupmember=temp_contactgroupmember->next){
+			snprintf(temp_buffer,sizeof(temp_buffer)-1
+				 ,"%d=%s\n"
+				 ,NDO_DATA_CONTACTGROUP
+				 ,(es[0]==NULL)?"":es[0]
+				);
+			temp_buffer[sizeof(temp_buffer)-1]='\x0';
+			ndo_dbuf_strcat(&dbuf,temp_buffer);
 
-				es[0]=ndo_escape_buffer(temp_contactgroupmember->contact_name);
-				
-				snprintf(temp_buffer,sizeof(temp_buffer)-1
-					 ,"%d=%s\n"
-					 ,NDO_DATA_CONTACT
-					 ,(es[0]==NULL)?"":es[0]
-					);
-				temp_buffer[sizeof(temp_buffer)-1]='\x0';
-				ndo_dbuf_strcat(&dbuf,temp_buffer);
-				
-				free(es[0]);
-				es[0]=NULL;
-				}
+			free(es[0]);
+			es[0]=NULL;
 		        }
-#else
+
+		/* dump individual contacts (not supported in Nagios 2.x) */
+#ifndef BUILD_NAGIOS_2X
 		for(temp_contactsmember=temp_serviceescalation->contacts;temp_contactsmember!=NULL;temp_contactsmember=temp_contactsmember->next){
 
 			es[0]=ndo_escape_buffer(temp_contactsmember->contact_name);
@@ -4268,7 +4277,7 @@ int ndomod_write_object_config(int config_type){
 		es[x]=NULL;
 	        }
 
-	/* dump host dependency config */
+	/****** dump host dependency config ******/
 	for(temp_hostdependency=hostdependency_list;temp_hostdependency!=NULL;temp_hostdependency=temp_hostdependency->next){
 
 		es[0]=ndo_escape_buffer(temp_hostdependency->host_name);
@@ -4326,7 +4335,7 @@ int ndomod_write_object_config(int config_type){
 		es[x]=NULL;
 	        }
 
-	/* dump service dependency config */
+	/****** dump service dependency config ******/
 	for(temp_servicedependency=servicedependency_list;temp_servicedependency!=NULL;temp_servicedependency=temp_servicedependency->next){
 
 		es[0]=ndo_escape_buffer(temp_servicedependency->host_name);

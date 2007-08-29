@@ -1,6 +1,3 @@
-ALTER TABLE `nagios_hosts` ADD `alias` VARCHAR( 64 ) NOT NULL AFTER `host_object_id` ;
-
-
 -- BEGIN 1.4b5 MODS 
 
 --                                                   
