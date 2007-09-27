@@ -13,6 +13,7 @@ Note:  Consider this addon to be experimental/beta/alpha/potentially-hazardous-t
 NOTE: ** Requires Nagios 2.7 or higher, or Nagios 3.0b4
 - Updated to support latest Nagios 3.x code (3.0b4)
 - Added source OpenOffice docs in addition to PDFs
+- Fix for segfault while processing host status/event information
 
 
 

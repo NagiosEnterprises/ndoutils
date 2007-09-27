@@ -2,7 +2,7 @@
  *
  * PROTOAPI.H - NDO Protocol Definition
  * Copyright (c) 2005-2006 Ethan Galstad
- * Last Modified: 08-29-2006
+ * Last Modified: 09-27-2006
  *
  ************************************************************************/
 
@@ -107,7 +107,7 @@
 
 /************** COMMON DATA ATTRIBUTES **************/
 
-#define NDO_MAX_DATA_TYPES                           265
+#define NDO_MAX_DATA_TYPES                           266
 
 #define NDO_DATA_NONE                                0
 
