@@ -8,6 +8,14 @@ Note:  Consider this addon to be experimental/beta/alpha/potentially-hazardous-t
 
 
 
+1.4b6 - 09/27/2007
+-----------------
+NOTE: ** Requires Nagios 2.7 or higher, or Nagios 3.0b4
+- Updated to support latest Nagios 3.x code (3.0b4)
+- Added source OpenOffice docs in addition to PDFs
+
+
+
 1.4b5 - 08/29/2007
 -----------------
 NOTE: ** Requires Nagios 2.7 or higher, or Nagios 3.0b2

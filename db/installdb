@@ -45,7 +45,7 @@ my $dbh = DBI->connect("DBI:mysql:database=$database;host=$hostname",
 		or die "Cannot connect to database";
 
 # Current database version
-my $thisversion="1.4b5";
+my $thisversion="1.4b6";
 
 # Create version table if it doesn't exist
 eval { $dbh->do("SELECT * FROM nagios_dbversion LIMIT 1") };

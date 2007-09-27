@@ -5,7 +5,7 @@
  * Copyright (c) 2005-2007 Ethan Galstad
  *
  * First Written: 05-19-2005
- * Last Modified: 08-29-2007
+ * Last Modified: 09-27-2007
  *
  *****************************************************************************/
 
@@ -42,15 +42,16 @@
 #include "../include/nagios-3x/nagios.h"
 #include "../include/nagios-3x/downtime.h"
 #include "../include/nagios-3x/comments.h"
+#include "../include/nagios-3x/macros.h"
 #endif
 
 /* specify event broker API version (required) */
 NEB_API_VERSION(CURRENT_NEB_API_VERSION)
 
 
-#define NDOMOD_VERSION "1.4b5"
+#define NDOMOD_VERSION "1.4b6"
 #define NDOMOD_NAME "NDOMOD"
-#define NDOMOD_DATE "08-29-2007"
+#define NDOMOD_DATE "09-27-2007"
 
 
 void *ndomod_module_handle=NULL;

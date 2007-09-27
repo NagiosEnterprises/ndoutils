@@ -3,7 +3,7 @@
  *
  * CGIUTILS.H - Header file for common CGI functions
  * Copyright (c) 1999-2007  Ethan Galstad (nagios@nagios.org)
- * Last Modified: 08-28-2007
+ * Last Modified: 09-12-2007
  *
  * License:
  *
@@ -236,6 +236,8 @@ extern "C" {
 #define NOTIFICATION_HOST_ACK		1024
 #define NOTIFICATION_SERVICE_FLAP	2048
 #define NOTIFICATION_HOST_FLAP		4096
+#define NOTIFICATION_SERVICE_CUSTOM     8192
+#define NOTIFICATION_HOST_CUSTOM        16384
 
 
 /********************** HOST AND SERVICE ALERT TYPES **********************/
@@ -468,6 +470,7 @@ void strip(char *);                                		/* strips newlines, carriag
 char *unescape_newlines(char *);
 void sanitize_plugin_output(char *);                            /* strips HTML and bad characters from plugin output */
 void strip_html_brackets(char *);				/* strips > and < from string */
+int process_macros(char *,char **,int);				/* processes macros in a string */
 
 void get_time_string(time_t *,char *,int,int);			/* gets a date/time string */
 void get_interval_time_string(double,char *,int);		/* gets a time string for an interval of time */
@@ -486,8 +489,6 @@ void get_log_archive_to_use(int,char *,int);			/* determines the name of the log
 void determine_log_rotation_times(int);
 int determine_archive_to_use_from_time(time_t);
 
-void print_extra_host_url(char *,char *);
-void print_extra_service_url(char *,char *,char *);
 void print_extra_hostgroup_url(char *,char *);
 void print_extra_servicegroup_url(char *,char *);
 
