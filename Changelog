@@ -8,6 +8,11 @@ Note:  Consider this addon to be experimental/beta/alpha/potentially-hazardous-t
 
 
 
+1.4b7 -??/??/2007
+-----------------
+- Makefile fixes for compilation flags
+
+
 1.4b6 - 09/27/2007
 -----------------
 NOTE: ** Requires Nagios 2.7 or higher, or Nagios 3.0b4
