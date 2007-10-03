@@ -3,7 +3,7 @@
  *
  * Copyright (c) 2005-2007 Ethan Galstad 
  *
- * Last Modified: 08-29-2007
+ * Last Modified: 10-02-2007
  *
  **************************************************************/
 
@@ -1448,7 +1448,7 @@ int ndo2db_handle_servicecheckdata(ndo2db_idi *idi){
 	es[3]=ndo2db_db_escape_string(idi,idi->buffered_input[NDO_DATA_PERFDATA]);
 
 	ts[0]=ndo2db_db_timet_to_sql(idi,start_time.tv_sec);
-	ts[1]=ndo2db_db_timet_to_sql(idi,start_time.tv_sec);
+	ts[1]=ndo2db_db_timet_to_sql(idi,end_time.tv_sec);
 
 	/* get the object id */
 	result=ndo2db_get_object_id_with_insert(idi,NDO2DB_OBJECTTYPE_SERVICE,idi->buffered_input[NDO_DATA_HOST],idi->buffered_input[NDO_DATA_SERVICE],&object_id);

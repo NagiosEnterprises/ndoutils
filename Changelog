@@ -11,6 +11,8 @@ Note:  Consider this addon to be experimental/beta/alpha/potentially-hazardous-t
 1.4b7 -??/??/2007
 -----------------
 - Makefile fixes for compilation flags
+- Fix for bug where service check table always had same start/end time
+
 
 
 1.4b6 - 09/27/2007
