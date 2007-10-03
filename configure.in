@@ -197,9 +197,13 @@ CFLAGS="${DBCFLAGS}"
 dnl Are we using any MySQL routines?
 if test $USE_MYSQL = yes; then
 
+	MYSQLLIBFOUND=no
+
 	dnl check compress lib for Mac OSX as well...
 	AC_CHECK_LIB(z,compress)
-	AC_CHECK_LIB(mysqlclient,mysql_store_result,MYSQLLIBFOUND=yes,MYSQLLIBFOUND=no)
+	dnl AC_CHECK_LIB(mysqlclient,mysql_store_result,MYSQLLIBFOUND=yes,MYSQLLIBFOUND=no)
+	AC_CHECK_LIB(mysqlclient,mysql_store_result,MYSQLLIBFOUND=yes,)
+	AC_CHECK_LIB(mysqlclient,mysql_connect,MYSQLLIBFOUND=yes,)
 
 	dnl Did we find the MySQL libraries?
 	if test x$MYSQLLIBFOUND = xno; then
@@ -327,14 +331,34 @@ CPPFLAGS="$save_CPPFLAGS"
 CFLAGS="$save_CFLAGS"
 
 
-AC_OUTPUT(Makefile src/Makefile)
+dnl Moving this before the Mysql detection options breaks them....
+AC_ARG_WITH(ndo2db_user,--with-ndo2db-user=<user> sets user name to run NDO2DB,ndo2db_user=$withval,ndo2db_user=nagios)
+AC_ARG_WITH(ndo2db_group,--with-ndo2db-group=<group> sets group name to run NDO2DB,ndo2db_group=$withval,ndo2db_group=nagios)
+AC_SUBST(ndo2db_user)
+AC_SUBST(ndo2db_group)
+
+
+
+AC_OUTPUT(Makefile src/Makefile subst)
+
+perl subst init-script.suse
+
 
 dnl Review options
 echo ""
 echo ""
-AC_MSG_RESULT([*** $PKG_NAME $PKG_VERSION $PKG_REL_DATE ***])
+AC_MSG_RESULT([*** Configuration summary for $PKG_NAME $PKG_VERSION $PKG_REL_DATE ***:])
+
+echo ""
+echo " General Options:"
+echo " -------------------------"
+
+AC_MSG_RESULT([ NDO2DB user:    $ndo2db_user])
+AC_MSG_RESULT([ NDO2DB group:   $ndo2db_group])
+
 
 echo ""
 echo ""
-echo "Type 'make' to compile the NDO utilities."
+echo "Review the options above for accuracy.  If they look okay,"
+echo "type 'make' to compile the NDO utilities."
 echo ""

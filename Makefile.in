@@ -1,7 +1,7 @@
 ###############################
 # Makefile for NDO
 #
-# Last Modified: 05-19-2005
+# Last Modified: 10-03-2007
 ###############################
 
 
@@ -21,6 +21,7 @@ distclean: clean
 	cd $(SRC_BASE); $(MAKE) $@ ; cd ..
 	rm -f config.log config.status config.cache $(SRC_INCLUDE)/config.h
 	rm -f Makefile
+	rm -f init-script.suse subst
 
 devclean: distclean
 

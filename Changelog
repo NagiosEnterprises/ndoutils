@@ -12,6 +12,8 @@ Note:  Consider this addon to be experimental/beta/alpha/potentially-hazardous-t
 -----------------
 - Makefile fixes for compilation flags
 - Fix for bug where service check table always had same start/end time
+- Added sample init script for SLES (Bruno Quintais)
+- Added --with-ndo2db-user and --with-ndo2db-group configure script options
 
 
 

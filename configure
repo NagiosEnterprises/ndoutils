@@ -310,7 +310,7 @@ ac_includes_default="\
 # include <unistd.h>
 #endif"
 
-ac_subst_vars='SHELL PATH_SEPARATOR PACKAGE_NAME PACKAGE_TARNAME PACKAGE_VERSION PACKAGE_STRING PACKAGE_BUGREPORT exec_prefix prefix program_transform_name bindir sbindir libexecdir datadir sysconfdir sharedstatedir localstatedir libdir includedir oldincludedir infodir mandir build_alias host_alias target_alias DEFS ECHO_C ECHO_N ECHO_T LIBS INSTALL_PROGRAM INSTALL_SCRIPT INSTALL_DATA INSTALL build build_cpu build_vendor build_os host host_cpu host_vendor host_os CC CFLAGS LDFLAGS CPPFLAGS ac_ct_CC EXEEXT OBJEXT SET_MAKE CPP EGREP OTHERLIBS SOCKETLIBS LIBWRAPLIBS MOD_CFLAGS MOD_LDFLAGS DBCFLAGS DBLDFLAGS DBLIBS LIBOBJS LTLIBOBJS'
+ac_subst_vars='SHELL PATH_SEPARATOR PACKAGE_NAME PACKAGE_TARNAME PACKAGE_VERSION PACKAGE_STRING PACKAGE_BUGREPORT exec_prefix prefix program_transform_name bindir sbindir libexecdir datadir sysconfdir sharedstatedir localstatedir libdir includedir oldincludedir infodir mandir build_alias host_alias target_alias DEFS ECHO_C ECHO_N ECHO_T LIBS INSTALL_PROGRAM INSTALL_SCRIPT INSTALL_DATA INSTALL build build_cpu build_vendor build_os host host_cpu host_vendor host_os CC CFLAGS LDFLAGS CPPFLAGS ac_ct_CC EXEEXT OBJEXT SET_MAKE CPP EGREP OTHERLIBS SOCKETLIBS LIBWRAPLIBS MOD_CFLAGS MOD_LDFLAGS DBCFLAGS DBLDFLAGS DBLIBS ndo2db_user ndo2db_group LIBOBJS LTLIBOBJS'
 ac_subst_files=''
 
 # Initialize some variables set by options.
@@ -855,6 +855,8 @@ Optional Packages:
 --with-mysql-inc=DIR sets location of the MySQL client include files
 --with-pgsql-lib=DIR sets location of the PostgreSQL client library
 --with-pgsql-inc=DIR sets location of the PostgreSQL client include files
+--with-ndo2db-user=<user> sets user name to run NDO2DB
+--with-ndo2db-group=<group> sets group name to run NDO2DB
 
 Some influential environment variables:
   CC          C compiler command
@@ -5937,6 +5939,8 @@ CFLAGS="${DBCFLAGS}"
 
 if test $USE_MYSQL = yes; then
 
+	MYSQLLIBFOUND=no
+
 
 echo "$as_me:$LINENO: checking for compress in -lz" >&5
 echo $ECHO_N "checking for compress in -lz... $ECHO_C" >&6
@@ -6011,7 +6015,7 @@ _ACEOF
 
 fi
 
-	echo "$as_me:$LINENO: checking for mysql_store_result in -lmysqlclient" >&5
+		echo "$as_me:$LINENO: checking for mysql_store_result in -lmysqlclient" >&5
 echo $ECHO_N "checking for mysql_store_result in -lmysqlclient... $ECHO_C" >&6
 if test "${ac_cv_lib_mysqlclient_mysql_store_result+set}" = set; then
   echo $ECHO_N "(cached) $ECHO_C" >&6
@@ -6077,8 +6081,74 @@ echo "$as_me:$LINENO: result: $ac_cv_lib_mysqlclient_mysql_store_result" >&5
 echo "${ECHO_T}$ac_cv_lib_mysqlclient_mysql_store_result" >&6
 if test $ac_cv_lib_mysqlclient_mysql_store_result = yes; then
   MYSQLLIBFOUND=yes
+fi
+
+	echo "$as_me:$LINENO: checking for mysql_connect in -lmysqlclient" >&5
+echo $ECHO_N "checking for mysql_connect in -lmysqlclient... $ECHO_C" >&6
+if test "${ac_cv_lib_mysqlclient_mysql_connect+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
 else
-  MYSQLLIBFOUND=no
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lmysqlclient  $LIBS"
+cat >conftest.$ac_ext <<_ACEOF
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+
+/* Override any gcc2 internal prototype to avoid an error.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+/* We use char because int might match the return type of a gcc2
+   builtin and then its argument prototype would still apply.  */
+char mysql_connect ();
+int
+main ()
+{
+mysql_connect ();
+  ;
+  return 0;
+}
+_ACEOF
+rm -f conftest.$ac_objext conftest$ac_exeext
+if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
+  (eval $ac_link) 2>conftest.er1
+  ac_status=$?
+  grep -v '^ *+' conftest.er1 >conftest.err
+  rm -f conftest.er1
+  cat conftest.err >&5
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } &&
+	 { ac_try='test -z "$ac_c_werror_flag"
+			 || test ! -s conftest.err'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; } &&
+	 { ac_try='test -s conftest$ac_exeext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  ac_cv_lib_mysqlclient_mysql_connect=yes
+else
+  echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+ac_cv_lib_mysqlclient_mysql_connect=no
+fi
+rm -f conftest.err conftest.$ac_objext \
+      conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+echo "$as_me:$LINENO: result: $ac_cv_lib_mysqlclient_mysql_connect" >&5
+echo "${ECHO_T}$ac_cv_lib_mysqlclient_mysql_connect" >&6
+if test $ac_cv_lib_mysqlclient_mysql_connect = yes; then
+  MYSQLLIBFOUND=yes
 fi
 
 
@@ -6562,7 +6632,28 @@ CPPFLAGS="$save_CPPFLAGS"
 CFLAGS="$save_CFLAGS"
 
 
-                    ac_config_files="$ac_config_files Makefile src/Makefile"
+
+# Check whether --with-ndo2db_user or --without-ndo2db_user was given.
+if test "${with_ndo2db_user+set}" = set; then
+  withval="$with_ndo2db_user"
+  ndo2db_user=$withval
+else
+  ndo2db_user=nagios
+fi;
+
+# Check whether --with-ndo2db_group or --without-ndo2db_group was given.
+if test "${with_ndo2db_group+set}" = set; then
+  withval="$with_ndo2db_group"
+  ndo2db_group=$withval
+else
+  ndo2db_group=nagios
+fi;
+
+
+
+
+
+                              ac_config_files="$ac_config_files Makefile src/Makefile subst"
 
 
 test "x$prefix" = xNONE && prefix=$ac_default_prefix
@@ -7037,6 +7128,7 @@ do
   # Handling of arguments.
   "Makefile" ) CONFIG_FILES="$CONFIG_FILES Makefile" ;;
   "src/Makefile" ) CONFIG_FILES="$CONFIG_FILES src/Makefile" ;;
+  "subst" ) CONFIG_FILES="$CONFIG_FILES subst" ;;
   "include/config.h" ) CONFIG_HEADERS="$CONFIG_HEADERS include/config.h" ;;
   *) { { echo "$as_me:$LINENO: error: invalid argument: $ac_config_target" >&5
 echo "$as_me: error: invalid argument: $ac_config_target" >&2;}
@@ -7152,6 +7244,8 @@ s,@MOD_LDFLAGS@,$MOD_LDFLAGS,;t t
 s,@DBCFLAGS@,$DBCFLAGS,;t t
 s,@DBLDFLAGS@,$DBLDFLAGS,;t t
 s,@DBLIBS@,$DBLIBS,;t t
+s,@ndo2db_user@,$ndo2db_user,;t t
+s,@ndo2db_group@,$ndo2db_group,;t t
 s,@LIBOBJS@,$LIBOBJS,;t t
 s,@LTLIBOBJS@,$LTLIBOBJS,;t t
 CEOF
@@ -7646,12 +7740,26 @@ if test "$no_create" != yes; then
 fi
 
 
-echo ""
-echo ""
-echo "$as_me:$LINENO: result: *** $PKG_NAME $PKG_VERSION $PKG_REL_DATE ***" >&5
-echo "${ECHO_T}*** $PKG_NAME $PKG_VERSION $PKG_REL_DATE ***" >&6
+perl subst init-script.suse
+
 
 echo ""
 echo ""
-echo "Type 'make' to compile the NDO utilities."
+echo "$as_me:$LINENO: result: *** Configuration summary for $PKG_NAME $PKG_VERSION $PKG_REL_DATE ***:" >&5
+echo "${ECHO_T}*** Configuration summary for $PKG_NAME $PKG_VERSION $PKG_REL_DATE ***:" >&6
+
+echo ""
+echo " General Options:"
+echo " -------------------------"
+
+echo "$as_me:$LINENO: result:  NDO2DB user:    $ndo2db_user" >&5
+echo "${ECHO_T} NDO2DB user:    $ndo2db_user" >&6
+echo "$as_me:$LINENO: result:  NDO2DB group:   $ndo2db_group" >&5
+echo "${ECHO_T} NDO2DB group:   $ndo2db_group" >&6
+
+
+echo ""
+echo ""
+echo "Review the options above for accuracy.  If they look okay,"
+echo "type 'make' to compile the NDO utilities."
 echo ""
