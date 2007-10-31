@@ -4,7 +4,7 @@
  * Copyright (c) 2005-2007 Ethan Galstad 
  *
  * First Written: 05-19-2005
- * Last Modified: 09-27-2007
+ * Last Modified: 10-31-2007
  *
  **************************************************************/
 
@@ -24,9 +24,9 @@
 #include "../include/db.h"
 #include "../include/dbhandlers.h"
 
-#define NDO2DB_VERSION "1.4b6"
+#define NDO2DB_VERSION "1.4b7"
 #define NDO2DB_NAME "NDO2DB"
-#define NDO2DB_DATE "09-27-2007"
+#define NDO2DB_DATE "10-31-2007"
 
 
 extern int errno;
@@ -46,11 +46,17 @@ int ndo2db_show_help=NDO_FALSE;
 ndo2db_dbconfig ndo2db_db_settings;
 time_t ndo2db_db_last_checkin_time=0L;
 
+char *ndo2db_debug_file=NULL;
+int ndo2db_debug_level=NDO2DB_DEBUGL_NONE;
+int ndo2db_debug_verbosity=NDO2DB_DEBUGV_BASIC;
+FILE *ndo2db_debug_file_fp=NULL;
+unsigned long ndo2db_max_debug_file_size=0L;
+
 extern char *ndo2db_db_tablenames[NDO2DB_MAX_DBTABLES];
 
 
 
-/*#define DEBUG_NDO2DB 1*/                         /* don't daemonize */
+/*#define DEBUG_NDO2DB 1*/                        /* don't daemonize */
 /*#define DEBUG_NDO2DB_EXIT_AFTER_CONNECTION 1*/    /* exit after first client disconnects */
 /*#define DEBUG_NDO2DB2 1*/
 /*#define NDO2DB_DEBUG_MBUF 1*/
@@ -102,6 +108,9 @@ int main(int argc, char **argv){
 		printf("Error processing config file '%s'.\n",ndo2db_config_file);
 		exit(1);
 	        }
+	
+	/* open debug log */
+	ndo2db_open_debug_log();
 
 	/* make sure we're good to go */
 	if(ndo2db_check_init_reqs()!=NDO_OK){
@@ -155,6 +164,9 @@ int main(int argc, char **argv){
 		if(ndo2db_wait_for_connections()==NDO_ERROR)
 			return 1;
 	        }
+
+	/* close debug log */
+	ndo2db_close_debug_log();
 
 	/* free memory */
 	ndo2db_free_program_memory();
@@ -352,6 +364,17 @@ int ndo2db_process_config_var(char *arg){
 	else if(!strcmp(var,"ndo2db_group"))
 		ndo2db_group=strdup(val);
 		
+	else if(!strcmp(var,"debug_file")){
+		if((ndo2db_debug_file=strdup(val))==NULL)
+			return NDO_ERROR;
+	        }
+	else if(!strcmp(var,"debug_level"))
+		ndo2db_debug_level=atoi(val);
+	else if(!strcmp(var,"debug_verbosity"))
+		ndo2db_debug_verbosity=atoi(val);
+	else if(!strcmp(var,"max_debug_file_size"))
+		ndo2db_max_debug_file_size=strtoul(val,NULL,0);
+
 	return NDO_OK;
         }
 
@@ -419,6 +442,10 @@ int ndo2db_free_program_memory(void){
 	if(ndo2db_db_settings.dbprefix){
 		free(ndo2db_db_settings.dbprefix);
 		ndo2db_db_settings.dbprefix=NULL;
+		}
+	if(ndo2db_debug_file){
+		free(ndo2db_debug_file);
+		ndo2db_debug_file=NULL;
 		}
 
 	return NDO_OK;
@@ -763,6 +790,10 @@ int ndo2db_handle_client_connection(int sd){
 
 	/* open syslog facility */
 	/*openlog("ndo2db",0,LOG_DAEMON);*/
+
+	/* re-open debug log */
+	ndo2db_close_debug_log();
+	ndo2db_open_debug_log();
 
 	/* reset signal handling */
 	signal(SIGQUIT,ndo2db_child_sighandler);
@@ -1798,7 +1829,12 @@ int ndo2db_convert_string_to_float(char *buf, float *f){
 	if(buf==NULL)
 		return NDO_ERROR;
 
+#ifdef HAVE_STRTOF
 	*f=strtof(buf,&endptr);
+#else
+	/* Solaris 8 doesn't have strtof() */
+	*f=(float)strtod(buf,&endptr);
+#endif
 
 	if(*f==0 && (endptr==buf || errno==ERANGE))
 		return NDO_ERROR;
@@ -1887,4 +1923,90 @@ int ndo2db_convert_string_to_timeval(char *buf, struct timeval *tv){
 
 	return NDO_OK;
         }
+
+
+
+/****************************************************************************/
+/* LOGGING ROUTINES                                                         */
+/****************************************************************************/
+
+/* opens the debug log for writing */
+int ndo2db_open_debug_log(void){
+
+	/* don't do anything if we're not debugging */
+	if(ndo2db_debug_level==NDO2DB_DEBUGL_NONE)
+		return NDO_OK;
+
+	if((ndo2db_debug_file_fp=fopen(ndo2db_debug_file,"a+"))==NULL)
+		return NDO_ERROR;
+
+	return NDO_OK;
+	}
+
+
+/* closes the debug log */
+int ndo2db_close_debug_log(void){
+
+	if(ndo2db_debug_file_fp!=NULL)
+		fclose(ndo2db_debug_file_fp);
+	
+	ndo2db_debug_file_fp=NULL;
+
+	return NDO_OK;
+	}
+
+
+/* write to the debug log */
+int ndo2db_log_debug_info(int level, int verbosity, const char *fmt, ...){
+	va_list ap;
+	char *temp_path=NULL;
+	struct timeval current_time;
+
+	if(!(ndo2db_debug_level==NDO2DB_DEBUGL_ALL || (level & ndo2db_debug_level)))
+		return NDO_OK;
+
+	if(verbosity>ndo2db_debug_verbosity)
+		return NDO_OK;
+
+	if(ndo2db_debug_file_fp==NULL)
+		return NDO_ERROR;
+
+	/* write the timestamp */
+	gettimeofday(&current_time,NULL);
+	fprintf(ndo2db_debug_file_fp,"[%lu.%06lu] [%03d.%d] [pid=%lu] ",current_time.tv_sec,current_time.tv_usec,level,verbosity,(unsigned long)getpid());
+
+	/* write the data */
+	va_start(ap,fmt);
+	vfprintf(ndo2db_debug_file_fp,fmt,ap);
+	va_end(ap);
+
+	/* flush, so we don't have problems tailing or when fork()ing */
+	fflush(ndo2db_debug_file_fp);
+
+	/* if file has grown beyond max, rotate it */
+	if((unsigned long)ftell(ndo2db_debug_file_fp)>ndo2db_max_debug_file_size && ndo2db_max_debug_file_size>0L){
+
+		/* close the file */
+		ndo2db_close_debug_log();
+		
+		/* rotate the log file */
+		asprintf(&temp_path,"%s.old",ndo2db_debug_file);
+		if(temp_path){
+
+			/* unlink the old debug file */
+			unlink(temp_path);
+
+			/* rotate the debug file */
+			my_rename(ndo2db_debug_file,temp_path);
+
+			/* free memory */
+			my_free(temp_path);
+			}
+
+		/* open a new file */
+		ndo2db_open_debug_log();
+		}
+
+	return NDO_OK;
+	}
 

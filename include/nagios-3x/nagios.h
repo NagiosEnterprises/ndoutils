@@ -2,7 +2,7 @@
  *
  * Nagios Main Header File
  * Written By: Ethan Galstad (nagios@nagios.org)
- * Last Modified: 09-11-2007
+ * Last Modified: 10-19-2007
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -21,6 +21,10 @@
 #ifndef _NAGIOS_H
 #define _NAGIOS_H
 
+#ifndef __GNUC__
+# define __attribute__(x) /* nothing */
+#endif
+
 #include "config.h"
 #include "common.h"
 #include "locations.h"
@@ -33,7 +37,13 @@ extern "C" {
 
 /************* MISC LENGTH/SIZE DEFINITIONS ***********/
 
-#define MAX_PLUGIN_OUTPUT_LENGTH                4096    /* max length of plugin output (including perf data) */
+/* 
+   NOTE: Plugin length is artificially capped at 8k to prevent runaway plugins from returning MBs/GBs of data
+   back to Nagios.  If you increase the 8k cap by modifying this value, make sure you also increase the value
+   of MAX_EXTERNAL_COMMAND_LENGTH in common.h to allow for passive checks results received through the external
+   command file. EG 10/19/07
+*/
+#define MAX_PLUGIN_OUTPUT_LENGTH                8192    /* max length of plugin output (including perf data) */
 
 
 
@@ -112,6 +122,8 @@ extern "C" {
 
 #define DEFAULT_ENABLE_EMBEDDED_PERL                            1       /* enable embedded Perl interpreter (if compiled in) */
 #define DEFAULT_USE_EMBEDDED_PERL_IMPLICITLY                    1       /* by default, embedded Perl is used for Perl plugins that don't explicitly disable it */
+
+#define DEFAULT_ADDITIONAL_FRESHNESS_LATENCY			15	/* seconds to be added to freshness thresholds when automatically calculated by Nagios */
 
 
 
@@ -303,13 +315,6 @@ extern "C" {
 
 
 
-/************** SERVICE CHECK OPTIONS *****************/
-
-#define CHECK_OPTION_NONE		0	/* no check options */
-#define CHECK_OPTION_FORCE_EXECUTION	1	/* force execution of a service check (ignores disabled services, invalid timeperiods) */
-
-
-
 /************ SCHEDULED DOWNTIME TYPES ****************/
 
 #define ACTIVE_DOWNTIME                 0       /* active downtime - currently in effect */
@@ -329,6 +334,7 @@ typedef struct timed_event_struct{
 	void *timing_func;
 	void *event_data;
 	void *event_args;
+	int event_options;
         struct timed_event_struct *next;
         struct timed_event_struct *prev;
         }timed_event;
@@ -347,6 +353,7 @@ typedef struct check_result_struct{
 	char *host_name;                                /* host name */
 	char *service_description;                      /* service description */
 	int check_type;					/* was this an active or passive service check? */
+	int check_options;         
 	int scheduled_check;                            /* was this a scheduled or an on-demand check? */
 	int reschedule_check;                           /* should we reschedule the next check */
 	char *output_file;                              /* what file is the output stored in? */
@@ -495,7 +502,7 @@ int close_command_file(void);					/* closes and deletes the external command fil
 
 
 /**** Monitoring/Event Handler Functions ****/
-int schedule_new_event(int,int,time_t,int,unsigned long,void *,int,void *,void *);	/* schedules a new timed event */
+int schedule_new_event(int,int,time_t,int,unsigned long,void *,int,void *,void *,int);	/* schedules a new timed event */
 void reschedule_event(timed_event *,timed_event **,timed_event **);   		/* reschedules an event */
 void add_event(timed_event *,timed_event **,timed_event **);     		/* adds an event to the execution queue */
 void remove_event(timed_event *,timed_event **,timed_event **);     		/* remove an event from the execution queue */
@@ -506,7 +513,9 @@ int check_host_dependencies(host *,int);                	/* checks host dependen
 void check_for_orphaned_services(void);				/* checks for orphaned services */
 void check_for_orphaned_hosts(void);				/* checks for orphaned hosts */
 void check_service_result_freshness(void);              	/* checks the "freshness" of service check results */
+int is_service_result_fresh(service *,time_t,int);              /* determines if a service's check results are fresh */
 void check_host_result_freshness(void);                 	/* checks the "freshness" of host check results */
+int is_host_result_fresh(host *,time_t,int);                    /* determines if a host's check results are fresh */
 void adjust_check_scheduling(void);		        	/* auto-adjusts scheduling of host and service checks */
 int my_system(char *,int,int *,double *,char **,int);         	/* executes a command via popen(), but also protects against timeouts */
 void compensate_for_system_time_change(unsigned long,unsigned long);	/* attempts to compensate for a change in the system time */
@@ -567,6 +576,8 @@ time_t get_next_service_notification_time(service *,time_t);			/* calculates nex
 
 
 /**** Logging Functions ****/
+void logit(int,int,const char *, ...)
+	__attribute__((__format__(__printf__, 3, 4)));
 int write_to_logs_and_console(char *,unsigned long,int);	/* writes a string to screen and logs */
 int write_to_console(char *);                           /* writes a string to screen */
 int write_to_all_logs(char *,unsigned long);            /* writes a string to main log file and syslog facility */
@@ -580,7 +591,8 @@ int log_service_states(int,time_t *);                   /* logs initial/current 
 int rotate_log_file(time_t);			     	/* rotates the main log file */
 int write_log_file_info(time_t *); 			/* records log file/version info */
 int open_debug_log(void);
-int log_debug_info(int,int,const char *,...);
+int log_debug_info(int,int,const char *,...)
+	__attribute__((__format__(__printf__, 3, 4)));
 int close_debug_log(void);
 
 
@@ -605,7 +617,9 @@ void file_lock_sighandler(int);				/* handles timeouts while waiting for file lo
 void strip(char *);                                  	/* strips whitespace from string */  
 char *my_strtok(char *,char *);                      	/* my replacement for strtok() function (doesn't skip consecutive tokens) */
 char *my_strsep(char **,const char *);		     	/* Solaris doesn't have strsep(), so I took this from the glibc source code */
+#ifdef REMOVED_10182007
 int my_free(void **);                                   /* my wrapper for free() */
+#endif
 int compare_strings(char *,char *);                     /* compares two strings for equality */
 char *escape_newlines(char *);
 int contains_illegal_object_chars(char *);		/* tests whether or not an object name (host, service, etc.) contains illegal characters */
@@ -617,6 +631,7 @@ time_t calculate_time_from_weekday_of_month(int,int,int,int);	/* calculates midn
 time_t calculate_time_from_day_of_month(int,int,int);	/* calculates midnight time of specific (1st, last, etc.) day of a particular month */
 void get_next_valid_time(time_t, time_t *,timeperiod *);	/* get the next valid time in a time period */
 void get_datetime_string(time_t *,char *,int,int);	/* get a date/time string for use in output */
+void get_time_breakdown(unsigned long,int *,int *,int *, int *);
 time_t get_next_log_rotation_time(void);	     	/* determine the next time to schedule a log rotation */
 int init_embedded_perl(char **);			/* initialized embedded perl interpreter */
 int deinit_embedded_perl(void);				/* cleans up embedded perl */
@@ -767,7 +782,7 @@ int handle_async_host_check_result_3x(host *,check_result *);
 
 /***** COMMON HOST CHECK FUNCTIONS FOR 2.X and 3.X *****/
 int perform_on_demand_host_check(host *,int *,int,int,unsigned long);
-int perform_scheduled_host_check(host *,double);
+int perform_scheduled_host_check(host *,int,double);
 
 
 /***** COMMON FUNCTIONS *****/
@@ -785,7 +800,6 @@ int handle_async_service_check_result(service *,check_result *);
 int init_check_stats(void);
 int update_check_stats(int,time_t);
 int generate_check_stats(void);
-
 
 
 #ifdef __cplusplus

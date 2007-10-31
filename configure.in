@@ -9,9 +9,9 @@ AC_CONFIG_HEADER(include/config.h)
 AC_PREFIX_DEFAULT(/usr/local/nagios)
 
 PKG_NAME=ndoutils
-PKG_VERSION="1.4b6"
+PKG_VERSION="1.4b7"
 PKG_HOME_URL="http://www.nagios.org/"
-PKG_REL_DATE="09-27-2007"
+PKG_REL_DATE="10-31-2007"
 
 dnl Figure out how to invoke "install" and what install options to use.
 AC_PROG_INSTALL
@@ -28,7 +28,7 @@ dnl Checks for header files.
 AC_HEADER_STDC
 AC_HEADER_TIME
 AC_HEADER_SYS_WAIT
-AC_CHECK_HEADERS(arpa/inet.h ctype.h dirent.h dlfcn.h errno.h fcntl.h float.h getopt.h grp.h inttypes.h limits.h ltdl.h math.h netdb.h netinet/in.h pthread.h pwd.h regex.h signal.h socket.h stdint.h string.h strings.h sys/ipc.h sys/mman.h sys/msg.h sys/poll.h sys/resource.h sys/sendfile.h sys/socket.h sys/stat.h sys/time.h sys/timeb.h sys/types.h sys/un.h sys/wait.h syslog.h tcpd.h unistd.h values.h)
+AC_CHECK_HEADERS(arpa/inet.h ctype.h dirent.h dlfcn.h errno.h fcntl.h float.h getopt.h grp.h inttypes.h limits.h ltdl.h math.h netdb.h netinet/in.h pthread.h pwd.h regex.h signal.h socket.h stdarg.h stdint.h string.h strings.h sys/ipc.h sys/mman.h sys/msg.h sys/poll.h sys/resource.h sys/sendfile.h sys/socket.h sys/stat.h sys/time.h sys/timeb.h sys/types.h sys/un.h sys/wait.h syslog.h tcpd.h unistd.h values.h)
 
 dnl Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST
@@ -95,7 +95,7 @@ AC_CHECK_LIB(wrap,main,[
 	AC_DEFINE(HAVE_LIBWRAP)
 	])
 AC_SUBST(LIBWRAPLIBS)
-AC_CHECK_FUNCS(strdup strstr strtoul initgroups)
+AC_CHECK_FUNCS(strdup strstr strtoul initgroups strtof)
 
 AC_MSG_CHECKING(for type of socket size)
 AC_TRY_COMPILE([#include <stdlib.h>
@@ -118,7 +118,12 @@ dnl	#include <sys/socket.h>
 dnl	#endif
 dnl	])
 
-
+dnl Check if SUN_LEN exists
+AC_TRY_LINK([
+    #include<sys/types.h>
+    #include<sys/un.h>], 
+    [struct sockaddr_un su; int i = SUN_LEN(&su);],
+    [AC_DEFINE(HAVE_SUN_LEN)], )
 
 
 dnl - Modified version from www.erlang.org

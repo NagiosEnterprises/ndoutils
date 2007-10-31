@@ -3,7 +3,7 @@
  *
  * Copyright (c) 2005-2007 Ethan Galstad 
  *
- * Last Modified: 10-02-2007
+ * Last Modified: 10-31-2007
  *
  **************************************************************/
 
@@ -552,7 +552,8 @@ int ndo2db_handle_logentry(ndo2db_idi *idi){
 	free(buf);
 
 	/*if(duplicate_record==NDO_TRUE && idi->last_logentry_time!=etime){*/
-	if(duplicate_record==NDO_TRUE && strcmp((es[0]==NULL)?"":es[0],idi->dbinfo.last_logentry_data)){
+	/*if(duplicate_record==NDO_TRUE && strcmp((es[0]==NULL)?"":es[0],idi->dbinfo.last_logentry_data)){*/
+	if(duplicate_record==NDO_TRUE){
 #ifdef NDO2DB_DEBUG
 		printf("IGNORING DUPLICATE LOG RECORD!\n");
 #endif
@@ -3082,15 +3083,22 @@ int ndo2db_handle_configfilevariables(ndo2db_idi *idi, int configfile_type){
 	char *varvalue=NULL;
 	ndo2db_mbuf mbuf;
 
+	ndo2db_log_debug_info(NDO2DB_DEBUGL_SQL,0,"HANDLE_CONFIGFILEVARS [1]\n");
+
 	if(idi==NULL)
 		return NDO_ERROR;
 
 	/* convert timestamp, etc */
 	result=ndo2db_convert_standard_data_elements(idi,&type,&flags,&attr,&tstamp);
 
+	ndo2db_log_debug_info(NDO2DB_DEBUGL_SQL,0,"HANDLE_CONFIGFILEVARS [2]\n");
+	ndo2db_log_debug_info(NDO2DB_DEBUGL_SQL,0,"TSTAMP: %lu   LATEST: %lu\n",tstamp.tv_sec,idi->dbinfo.latest_realtime_data_time);
+
 	/* don't store old data */
 	if(tstamp.tv_sec<idi->dbinfo.latest_realtime_data_time)
 		return NDO_OK;
+
+	ndo2db_log_debug_info(NDO2DB_DEBUGL_SQL,0,"HANDLE_CONFIGFILEVARS [3]\n");
 
 	es[0]=ndo2db_db_escape_string(idi,idi->buffered_input[NDO_DATA_CONFIGFILENAME]);
 
@@ -3147,12 +3155,19 @@ int ndo2db_handle_configfilevariables(ndo2db_idi *idi, int configfile_type){
 			   )==-1)
 			buf=NULL;
 	
+		if(asprintf(&buf1,"INSERT INTO %s SET %s"
+			    ,ndo2db_db_tablenames[NDO2DB_DBTABLE_CONFIGFILEVARIABLES]
+			    ,buf
+			   )==-1)
+			buf1=NULL;
+#ifdef REMOVED_10182007
 		if(asprintf(&buf1,"INSERT INTO %s SET %s ON DUPLICATE KEY UPDATE %s"
 			    ,ndo2db_db_tablenames[NDO2DB_DBTABLE_CONFIGFILEVARIABLES]
 			    ,buf
 			    ,buf
 			   )==-1)
 			buf1=NULL;
+#endif
 
 		result=ndo2db_db_query(idi,buf1);
 		free(buf);

@@ -1,8 +1,8 @@
 /************************************************************************
  *
  * NDO2DB.H - NDO2DB Include File
- * Copyright (c) 2005-2006 Ethan Galstad
- * Last Modified: 12-04-2006
+ * Copyright (c) 2005-2007 Ethan Galstad
+ * Last Modified: 10-18-2007
  *
  ************************************************************************/
 
@@ -191,6 +191,22 @@ typedef struct ndo2db_input_data_info_struct{
 #define NDO2DB_CONFIGTYPE_RETAINED                      1
 
 
+
+/***************** debugging levels *******************/
+
+#define NDO2DB_DEBUGL_ALL                      -1
+#define NDO2DB_DEBUGL_NONE                     0
+#define NDO2DB_DEBUGL_PROCESSINFO              1
+#define NDO2DB_DEBUGL_SQL                      2
+
+#define NDO2DB_DEBUGV_BASIC                    0
+#define NDO2DB_DEBUGV_MORE		       1
+#define NDO2DB_DEBUGV_MOST                     2
+
+
+
+
+/***************** functions *******************/
 
 int ndo2db_process_arguments(int,char **);
 

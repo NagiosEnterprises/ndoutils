@@ -2,7 +2,7 @@
  *
  * Nagios Common Header File
  * Written By: Ethan Galstad (nagios@nagios.org)
- * Last Modified: 09-11-2007
+ * Last Modified: 10-22-2007
  *
  * License:
  *
@@ -21,8 +21,8 @@
  ************************************************************************/
 
 
-#define PROGRAM_VERSION "3.0b4"
-#define PROGRAM_MODIFICATION_DATE "09-27-2007"
+#define PROGRAM_VERSION "3.0b5"
+#define PROGRAM_MODIFICATION_DATE "10-08-2007"
 
 /*#define DEBUG_CHECK_IPC 1 */
 /*#define DEBUG_CHECK_IPC2 1*/
@@ -41,6 +41,9 @@
 
 /* Experimental performance tweaks - use with caution */
 #undef USE_MEMORY_PERFORMANCE_TWEAKS
+
+/* my_free has been freed from bondage as a function */
+#define my_free(ptr) { if(ptr) { free(ptr); ptr = NULL; } }
 
 
 
@@ -285,6 +288,17 @@
 #define CMD_SEND_CUSTOM_HOST_NOTIFICATION               159
 #define CMD_SEND_CUSTOM_SVC_NOTIFICATION                160
 
+#define CMD_CHANGE_HOST_NOTIFICATION_TIMEPERIOD         161
+#define CMD_CHANGE_SVC_NOTIFICATION_TIMEPERIOD          162
+#define CMD_CHANGE_CONTACT_HOST_NOTIFICATION_TIMEPERIOD 163
+#define CMD_CHANGE_CONTACT_SVC_NOTIFICATION_TIMEPERIOD  164
+
+#define CMD_CHANGE_HOST_MODATTR                         165
+#define CMD_CHANGE_SVC_MODATTR                          166
+#define CMD_CHANGE_CONTACT_MODATTR                      167
+#define CMD_CHANGE_CONTACT_MODHATTR                     168
+#define CMD_CHANGE_CONTACT_MODSATTR                     169
+
 /* custom command introduced in Nagios 3.x */
 #define CMD_CUSTOM_COMMAND                              999
 
@@ -337,6 +351,15 @@
 
 #define NOTIFICATION_DEPENDENCY		1
 #define EXECUTION_DEPENDENCY		2
+
+
+
+/********************** HOST/SERVICE CHECK OPTIONS ***********************/
+
+#define CHECK_OPTION_NONE		0	/* no check options */
+#define CHECK_OPTION_FORCE_EXECUTION	1	/* force execution of a check (ignores disabled services/hosts, invalid timeperiods) */
+#define CHECK_OPTION_FRESHNESS_CHECK    2       /* this is a freshness check */
+#define CHECK_OPTION_ORPHAN_CHECK       4       /* this is an orphan check */
 
 
 /**************************** PROGRAM MODES ******************************/
@@ -446,8 +469,9 @@
 /************************** MISC DEFINITIONS ****************************/
 
 #define MAX_FILENAME_LENGTH			256	/* max length of path/filename that Nagios will process */
-#define MAX_INPUT_BUFFER			1024	/* size in bytes of max. input buffer (for reading files) */
+#define MAX_INPUT_BUFFER			1024	/* size in bytes of max. input buffer (for reading files, misc stuff) */
 #define MAX_COMMAND_BUFFER                      8192    /* max length of raw or processed command line */
+#define MAX_EXTERNAL_COMMAND_LENGTH             8192    /* max length of an external command */
 
 #define MAX_DATETIME_LENGTH			48
 
@@ -471,5 +495,6 @@
 #define MODATTR_FRESHNESS_CHECKS_ENABLED        8192
 #define MODATTR_CHECK_TIMEPERIOD                16384
 #define MODATTR_CUSTOM_VARIABLE                 32768
+#define MODATTR_NOTIFICATION_TIMEPERIOD         65536
 
 	

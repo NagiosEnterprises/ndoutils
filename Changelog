@@ -8,12 +8,20 @@ Note:  Consider this addon to be experimental/beta/alpha/potentially-hazardous-t
 
 
 
-1.4b7 -??/??/2007
+1.4b7 - 10/31/2007
 -----------------
+NOTE: ** Requires Nagios 2.7 or higher, or Nagios 3.0b6
 - Makefile fixes for compilation flags
 - Fix for bug where service check table always had same start/end time
 - Added sample init script for SLES (Bruno Quintais)
 - Added --with-ndo2db-user and --with-ndo2db-group configure script options
+- Fix for configfilevariables table not holding multiple entries for various variables
+- Changed/added indexes on various DB tables
+- Added some very basic debug file capabilities (not complete yet)
+- Fix for handling (backwards) system time changes
+- Fix for missing SUN_LEN definition and strtof() functions on Solaris 8 (Christian Masopust)
+- Fix for segfault when importing duplicate log file entries (Hendrik Frenzel)
+- Updated to support latest Nagios 3.x code (3.0b6)
 
 
 

@@ -5,7 +5,7 @@
  * Copyright (c) 2005-2007 Ethan Galstad
  *
  * First Written: 05-19-2005
- * Last Modified: 09-27-2007
+ * Last Modified: 10-31-2007
  *
  *****************************************************************************/
 
@@ -49,9 +49,9 @@
 NEB_API_VERSION(CURRENT_NEB_API_VERSION)
 
 
-#define NDOMOD_VERSION "1.4b6"
+#define NDOMOD_VERSION "1.4b7"
 #define NDOMOD_NAME "NDOMOD"
-#define NDOMOD_DATE "09-27-2007"
+#define NDOMOD_DATE "10-31-2007"
 
 
 void *ndomod_module_handle=NULL;
@@ -217,7 +217,11 @@ int ndomod_init(void){
 		/* schedule a file rotation event */
 		else{
 			time(&current_time);
+#ifdef BUILD_NAGIOS_2X
 			schedule_new_event(EVENT_USER_FUNCTION,TRUE,current_time+ndomod_sink_rotation_interval,TRUE,ndomod_sink_rotation_interval,NULL,TRUE,(void *)ndomod_rotate_sink_file,NULL);
+#else
+			schedule_new_event(EVENT_USER_FUNCTION,TRUE,current_time+ndomod_sink_rotation_interval,TRUE,ndomod_sink_rotation_interval,NULL,TRUE,(void *)ndomod_rotate_sink_file,NULL,0);
+#endif
 		        }
 
 	        }
@@ -1150,6 +1154,8 @@ int ndomod_broker_data(int event_type, void *data){
 	nebstruct_adaptive_contact_data *acdata=NULL;
 #endif
 	double retry_interval=0.0;
+	int last_state=-1;
+	int last_hard_state=-1;
 #ifdef BUILD_NAGIOS_3X
 	customvariablesmember *temp_customvar=NULL;
 #endif
@@ -2860,6 +2866,42 @@ int ndomod_broker_data(int event_type, void *data){
 
 		schangedata=(nebstruct_statechange_data *)data;
 
+#ifdef BUILD_NAGIOS_2X
+		/* find host/service and get last state info */
+		if(schangedata->service_description==NULL){
+			if((temp_host=find_host(schangedata->host_name))==NULL){
+				ndo_dbuf_free(&dbuf);
+				return 0;
+				}
+			}
+		else{
+			if((temp_service=find_service(schangedata->host_name,schangedata->service_description))==NULL){
+				ndo_dbuf_free(&dbuf);
+				return 0;
+				}
+			last_state=temp_service->last_state;
+			last_hard_state=temp_service->last_hard_state;
+			}
+#else
+		/* get the last state info */
+		if(schangedata->service_description==NULL){
+			if((temp_host=(host *)schangedata->object_ptr)==NULL){
+				ndo_dbuf_free(&dbuf);
+				return 0;
+				}
+			last_state=temp_host->last_state;
+			last_state=temp_host->last_hard_state;
+			}
+		else{
+			if((temp_service=(service *)schangedata->object_ptr)==NULL){
+				ndo_dbuf_free(&dbuf);
+				return 0;
+				}
+			last_state=temp_service->last_state;
+			last_hard_state=temp_service->last_hard_state;
+			}
+#endif
+
 		es[0]=ndo_escape_buffer(schangedata->host_name);
 		es[1]=ndo_escape_buffer(schangedata->service_description);
 		es[2]=ndo_escape_buffer(schangedata->output);
@@ -2893,9 +2935,9 @@ int ndomod_broker_data(int event_type, void *data){
 			 ,NDO_DATA_MAXCHECKATTEMPTS
 			 ,schangedata->max_attempts
 			 ,NDO_DATA_LASTSTATE
-			 ,-1
+			 ,last_state
 			 ,NDO_DATA_LASTHARDSTATE
-			 ,-1
+			 ,last_hard_state
 			 ,NDO_DATA_OUTPUT
 			 ,es[2]
 			 ,NDO_API_ENDDATA

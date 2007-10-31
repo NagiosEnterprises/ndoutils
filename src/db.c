@@ -1,9 +1,9 @@
 /***************************************************************
  * DB.C - Datatabase routines for NDO2DB daemon
  *
- * Copyright (c) 2005-2006 Ethan Galstad 
+ * Copyright (c) 2005-2007 Ethan Galstad 
  *
- * Last Modified: 02-15-2006
+ * Last Modified: 10-18-2007
  *
  **************************************************************/
 
@@ -284,6 +284,7 @@ int ndo2db_db_hello(ndo2db_idi *idi){
 	char *ts=NULL;
 	int result=NDO_OK;
 	int have_instance=NDO_FALSE;
+	time_t current_time;
 
 	/* make sure we have an instance name */
 	if(idi->instance_name==NULL)
@@ -380,6 +381,12 @@ int ndo2db_db_hello(ndo2db_idi *idi){
 		idi->dbinfo.latest_realtime_data_time=idi->dbinfo.latest_contact_status_time;
 	if(idi->dbinfo.latest_queued_event_time>idi->dbinfo.latest_realtime_data_time)
 		idi->dbinfo.latest_realtime_data_time=idi->dbinfo.latest_queued_event_time;
+
+	/* get current time */
+	/* make sure latest time stamp isn't in the future - this will cause problems if a backwards system time change occurs */
+	time(&current_time);
+	if(idi->dbinfo.latest_realtime_data_time>current_time)
+		idi->dbinfo.latest_realtime_data_time=current_time;
 
 	/* set flags to clean event queue, etc. */
 	idi->dbinfo.clean_event_queue=NDO_TRUE;
@@ -547,6 +554,8 @@ int ndo2db_db_query(ndo2db_idi *idi, char *buf){
 #ifdef DEBUG_NDO2DB_QUERIES
 	printf("%s\n\n",buf);
 #endif
+
+	ndo2db_log_debug_info(NDO2DB_DEBUGL_SQL,0,"%s\n",buf);
 
 	switch(idi->dbinfo.server_type){
 	case NDO2DB_DBSERVER_MYSQL:
