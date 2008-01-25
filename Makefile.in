@@ -10,15 +10,15 @@ SRC_BASE=./src/
 SRC_INCLUDE=./include/
 
 all:
-	cd $(SRC_BASE); $(MAKE) ; cd ..
+	cd $(SRC_BASE) && $(MAKE)
 
 clean:
-	cd $(SRC_BASE); $(MAKE) $@ ; cd ..
+	cd $(SRC_BASE) && $(MAKE) $@
 	rm -f core
 	rm -f *~ */*~ include/nagios-*/*~
 
 distclean: clean
-	cd $(SRC_BASE); $(MAKE) $@ ; cd ..
+	cd $(SRC_BASE) && $(MAKE) $@
 	rm -f config.log config.status config.cache $(SRC_INCLUDE)/config.h
 	rm -f Makefile
 	rm -f init-script.suse subst

@@ -11,6 +11,8 @@ Note:  Consider this addon to be experimental/beta/alpha/potentially-hazardous-t
 ------------------
 NOTE: ** Requires Nagios 2.7 or higher, or Nagios 3.0b6
 - Added additional error messages during failed startup
+- Better MySQL library detection (Ton Voon, Herbert Straub, and Nagios Plugin Team)
+- Removed Postgres options to configure script, as it is not yet supported
 
 
 

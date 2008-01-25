@@ -310,7 +310,7 @@ ac_includes_default="\
 # include <unistd.h>
 #endif"
 
-ac_subst_vars='SHELL PATH_SEPARATOR PACKAGE_NAME PACKAGE_TARNAME PACKAGE_VERSION PACKAGE_STRING PACKAGE_BUGREPORT exec_prefix prefix program_transform_name bindir sbindir libexecdir datadir sysconfdir sharedstatedir localstatedir libdir includedir oldincludedir infodir mandir build_alias host_alias target_alias DEFS ECHO_C ECHO_N ECHO_T LIBS INSTALL_PROGRAM INSTALL_SCRIPT INSTALL_DATA INSTALL build build_cpu build_vendor build_os host host_cpu host_vendor host_os CC CFLAGS LDFLAGS CPPFLAGS ac_ct_CC EXEEXT OBJEXT SET_MAKE CPP EGREP OTHERLIBS SOCKETLIBS LIBWRAPLIBS MOD_CFLAGS MOD_LDFLAGS DBCFLAGS DBLDFLAGS DBLIBS ndo2db_user ndo2db_group LIBOBJS LTLIBOBJS'
+ac_subst_vars='SHELL PATH_SEPARATOR PACKAGE_NAME PACKAGE_TARNAME PACKAGE_VERSION PACKAGE_STRING PACKAGE_BUGREPORT exec_prefix prefix program_transform_name bindir sbindir libexecdir datadir sysconfdir sharedstatedir localstatedir libdir includedir oldincludedir infodir mandir build_alias host_alias target_alias DEFS ECHO_C ECHO_N ECHO_T LIBS INSTALL_PROGRAM INSTALL_SCRIPT INSTALL_DATA INSTALL build build_cpu build_vendor build_os host host_cpu host_vendor host_os CC CFLAGS LDFLAGS CPPFLAGS ac_ct_CC EXEEXT OBJEXT SET_MAKE CPP EGREP OTHERLIBS SOCKETLIBS LIBWRAPLIBS MOD_CFLAGS MOD_LDFLAGS np_mysql_config DBCFLAGS DBLDFLAGS DBLIBS ndo2db_user ndo2db_group LIBOBJS LTLIBOBJS'
 ac_subst_files=''
 
 # Initialize some variables set by options.
@@ -846,15 +846,13 @@ Optional Features:
   --disable-FEATURE       do not include FEATURE (same as --enable-FEATURE=no)
   --enable-FEATURE[=ARG]  include FEATURE [ARG=yes]
 --enable-mysql enables MySQL database support
---enable-pgsql enables PostgreSQL database support
 
 Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
   --without-PACKAGE       do not use PACKAGE (same as --with-PACKAGE=no)
---with-mysql-lib=DIR sets location of the MySQL client library
---with-mysql-inc=DIR sets location of the MySQL client include files
---with-pgsql-lib=DIR sets location of the PostgreSQL client library
---with-pgsql-inc=DIR sets location of the PostgreSQL client include files
+  --with-mysql=DIR        Locates mysql libraries. Expects
+                          DIR/bin/mysql_config. Default to search for
+                          mysql_config in PATH
 --with-ndo2db-user=<user> sets user name to run NDO2DB
 --with-ndo2db-group=<group> sets group name to run NDO2DB
 
@@ -5922,7 +5920,6 @@ echo "${ECHO_T}$MOD_LDFLAGS" >&6
 
 
 USE_MYSQL=yes
-USE_PGSQL=yes
 # Check whether --enable-mysql or --disable-mysql was given.
 if test "${enable_mysql+set}" = set; then
   enableval="$enable_mysql"
@@ -5932,74 +5929,86 @@ if test x$enable_mysql = xno; then
   USE_MYSQL=no
 fi
 
-# Check whether --enable-pgsql or --disable-pgsql was given.
-if test "${enable_pgsql+set}" = set; then
-  enableval="$enable_pgsql"
 
-fi;
-if test x$enable_pgsql = xno; then
-  USE_PGSQL=no
-fi
-
-
-
-# Check whether --with-mysql-lib or --without-mysql-lib was given.
-if test "${with_mysql_lib+set}" = set; then
-  withval="$with_mysql_lib"
-
-	DBLDFLAGS="-L${withval}"
-	LD_RUN_PATH="${withval}${LD_RUN_PATH:+:}${LD_RUN_PATH}"
-
-fi;
-if test "$withval" = "" ; then
-	      	DBLDFLAGS="$LDFLAGS -L/usr/lib/mysql"
-fi
-
-# Check whether --with-mysql-inc or --without-mysql-inc was given.
-if test "${with_mysql_inc+set}" = set; then
-  withval="$with_mysql_inc"
-
-	DBCFLAGS="${DBCFLAGS} -I${withval}"
-
-fi;
-
-
-# Check whether --with-pgsql-lib or --without-pgsql-lib was given.
-if test "${with_pgsql_lib+set}" = set; then
-  withval="$with_pgsql_lib"
-
-	DBLDFLAGS="-L${withval}"
-	LD_RUN_PATH="${withval}${LD_RUN_PATH:+:}${LD_RUN_PATH}"
-
-fi;
-
-# Check whether --with-pgsql-inc or --without-pgsql-inc was given.
-if test "${with_pgsql_inc+set}" = set; then
-  withval="$with_pgsql_inc"
-
-	DBCFLAGS="${DBCFLAGS} -I${withval}"
-
-fi;
-
-save_LDFLAGS="$LDFLAGS"
-LDFLAGS="${LDFLAGS} ${DBLDFLAGS}"
-save_CPPFLAGS="$CPPFLAGS"
-CPPFLAGS="${DBCFLAGS}"
-save_CFLAGS="$CFLAGS"
-CFLAGS="${DBCFLAGS}"
 
 if test $USE_MYSQL = yes; then
 
-	MYSQLLIBFOUND=no
 
+# Check whether --with-mysql or --without-mysql was given.
+if test "${with_mysql+set}" = set; then
+  withval="$with_mysql"
+  with_mysql=$withval
+else
+  with_mysql=yes
+fi;
 
-echo "$as_me:$LINENO: checking for compress in -lz" >&5
-echo $ECHO_N "checking for compress in -lz... $ECHO_C" >&6
-if test "${ac_cv_lib_z_compress+set}" = set; then
+  if test "x$with_mysql" != "xno" ; then
+    if test "x$with_mysql" = "xyes" ; then
+      # Extract the first word of "mysql_config", so it can be a program name with args.
+set dummy mysql_config; ac_word=$2
+echo "$as_me:$LINENO: checking for $ac_word" >&5
+echo $ECHO_N "checking for $ac_word... $ECHO_C" >&6
+if test "${ac_cv_path_np_mysql_config+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  case $np_mysql_config in
+  [\\/]* | ?:[\\/]*)
+  ac_cv_path_np_mysql_config="$np_mysql_config" # Let the user override the test with a path.
+  ;;
+  *)
+  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+  for ac_exec_ext in '' $ac_executable_extensions; do
+  if $as_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
+    ac_cv_path_np_mysql_config="$as_dir/$ac_word$ac_exec_ext"
+    echo "$as_me:$LINENO: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+done
+
+  ;;
+esac
+fi
+np_mysql_config=$ac_cv_path_np_mysql_config
+
+if test -n "$np_mysql_config"; then
+  echo "$as_me:$LINENO: result: $np_mysql_config" >&5
+echo "${ECHO_T}$np_mysql_config" >&6
+else
+  echo "$as_me:$LINENO: result: no" >&5
+echo "${ECHO_T}no" >&6
+fi
+
+    else
+      if test -x $with_mysql/bin/mysql_config ; then
+        np_mysql_config="$with_mysql/bin/mysql_config"
+      fi
+    fi
+    if test -z "$np_mysql_config"; then
+      with_mysql="no"
+    else
+      np_mysql_include="`$np_mysql_config --include`"
+      # Mysql 3 does not support --include. --cflags should be sufficient
+      if test $? -ne 0; then
+        np_mysql_include="-I$with_mysql/include"	# Guessed location
+      fi
+      np_mysql_libs="`$np_mysql_config --libs`"
+      np_mysql_cflags="`$np_mysql_config --cflags`"
+
+            _savedcppflags="$CPPFLAGS"
+      CPPFLAGS="$CPPFLAGS $np_mysql_include"
+
+                  echo "$as_me:$LINENO: checking for mysql_init in -lmysqlclient" >&5
+echo $ECHO_N "checking for mysql_init in -lmysqlclient... $ECHO_C" >&6
+if test "${ac_cv_lib_mysqlclient_mysql_init+set}" = set; then
   echo $ECHO_N "(cached) $ECHO_C" >&6
 else
   ac_check_lib_save_LIBS=$LIBS
-LIBS="-lz  $LIBS"
+LIBS="-lmysqlclient $np_mysql_libs $LIBS"
 cat >conftest.$ac_ext <<_ACEOF
 /* confdefs.h.  */
 _ACEOF
@@ -6013,11 +6022,11 @@ extern "C"
 #endif
 /* We use char because int might match the return type of a gcc2
    builtin and then its argument prototype would still apply.  */
-char compress ();
+char mysql_init ();
 int
 main ()
 {
-compress ();
+mysql_init ();
   ;
   return 0;
 }
@@ -6044,175 +6053,48 @@ if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
   ac_status=$?
   echo "$as_me:$LINENO: \$? = $ac_status" >&5
   (exit $ac_status); }; }; then
-  ac_cv_lib_z_compress=yes
+  ac_cv_lib_mysqlclient_mysql_init=yes
 else
   echo "$as_me: failed program was:" >&5
 sed 's/^/| /' conftest.$ac_ext >&5
 
-ac_cv_lib_z_compress=no
+ac_cv_lib_mysqlclient_mysql_init=no
 fi
 rm -f conftest.err conftest.$ac_objext \
       conftest$ac_exeext conftest.$ac_ext
 LIBS=$ac_check_lib_save_LIBS
 fi
-echo "$as_me:$LINENO: result: $ac_cv_lib_z_compress" >&5
-echo "${ECHO_T}$ac_cv_lib_z_compress" >&6
-if test $ac_cv_lib_z_compress = yes; then
-  cat >>confdefs.h <<_ACEOF
-#define HAVE_LIBZ 1
+echo "$as_me:$LINENO: result: $ac_cv_lib_mysqlclient_mysql_init" >&5
+echo "${ECHO_T}$ac_cv_lib_mysqlclient_mysql_init" >&6
+if test $ac_cv_lib_mysqlclient_mysql_init = yes; then
+
+        with_mysql=$np_mysql_config
+
+cat >>confdefs.h <<\_ACEOF
+#define HAVE_MYSQLCLIENT 1
 _ACEOF
 
-  LIBS="-lz $LIBS"
 
-fi
-
-		echo "$as_me:$LINENO: checking for mysql_store_result in -lmysqlclient" >&5
-echo $ECHO_N "checking for mysql_store_result in -lmysqlclient... $ECHO_C" >&6
-if test "${ac_cv_lib_mysqlclient_mysql_store_result+set}" = set; then
-  echo $ECHO_N "(cached) $ECHO_C" >&6
 else
-  ac_check_lib_save_LIBS=$LIBS
-LIBS="-lmysqlclient  $LIBS"
-cat >conftest.$ac_ext <<_ACEOF
-/* confdefs.h.  */
-_ACEOF
-cat confdefs.h >>conftest.$ac_ext
-cat >>conftest.$ac_ext <<_ACEOF
-/* end confdefs.h.  */
-
-/* Override any gcc2 internal prototype to avoid an error.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-/* We use char because int might match the return type of a gcc2
-   builtin and then its argument prototype would still apply.  */
-char mysql_store_result ();
-int
-main ()
-{
-mysql_store_result ();
-  ;
-  return 0;
-}
-_ACEOF
-rm -f conftest.$ac_objext conftest$ac_exeext
-if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
-  (eval $ac_link) 2>conftest.er1
-  ac_status=$?
-  grep -v '^ *+' conftest.er1 >conftest.err
-  rm -f conftest.er1
-  cat conftest.err >&5
-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); } &&
-	 { ac_try='test -z "$ac_c_werror_flag"
-			 || test ! -s conftest.err'
-  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
-  (eval $ac_try) 2>&5
-  ac_status=$?
-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); }; } &&
-	 { ac_try='test -s conftest$ac_exeext'
-  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
-  (eval $ac_try) 2>&5
-  ac_status=$?
-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); }; }; then
-  ac_cv_lib_mysqlclient_mysql_store_result=yes
-else
-  echo "$as_me: failed program was:" >&5
-sed 's/^/| /' conftest.$ac_ext >&5
-
-ac_cv_lib_mysqlclient_mysql_store_result=no
-fi
-rm -f conftest.err conftest.$ac_objext \
-      conftest$ac_exeext conftest.$ac_ext
-LIBS=$ac_check_lib_save_LIBS
-fi
-echo "$as_me:$LINENO: result: $ac_cv_lib_mysqlclient_mysql_store_result" >&5
-echo "${ECHO_T}$ac_cv_lib_mysqlclient_mysql_store_result" >&6
-if test $ac_cv_lib_mysqlclient_mysql_store_result = yes; then
-  MYSQLLIBFOUND=yes
+  with_mysql=no
 fi
 
-	echo "$as_me:$LINENO: checking for mysql_connect in -lmysqlclient" >&5
-echo $ECHO_N "checking for mysql_connect in -lmysqlclient... $ECHO_C" >&6
-if test "${ac_cv_lib_mysqlclient_mysql_connect+set}" = set; then
-  echo $ECHO_N "(cached) $ECHO_C" >&6
-else
-  ac_check_lib_save_LIBS=$LIBS
-LIBS="-lmysqlclient  $LIBS"
-cat >conftest.$ac_ext <<_ACEOF
-/* confdefs.h.  */
-_ACEOF
-cat confdefs.h >>conftest.$ac_ext
-cat >>conftest.$ac_ext <<_ACEOF
-/* end confdefs.h.  */
+      CPPFLAGS=$_savedcppflags
 
-/* Override any gcc2 internal prototype to avoid an error.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-/* We use char because int might match the return type of a gcc2
-   builtin and then its argument prototype would still apply.  */
-char mysql_connect ();
-int
-main ()
-{
-mysql_connect ();
-  ;
-  return 0;
-}
-_ACEOF
-rm -f conftest.$ac_objext conftest$ac_exeext
-if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
-  (eval $ac_link) 2>conftest.er1
-  ac_status=$?
-  grep -v '^ *+' conftest.er1 >conftest.err
-  rm -f conftest.er1
-  cat conftest.err >&5
-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); } &&
-	 { ac_try='test -z "$ac_c_werror_flag"
-			 || test ! -s conftest.err'
-  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
-  (eval $ac_try) 2>&5
-  ac_status=$?
-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); }; } &&
-	 { ac_try='test -s conftest$ac_exeext'
-  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
-  (eval $ac_try) 2>&5
-  ac_status=$?
-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); }; }; then
-  ac_cv_lib_mysqlclient_mysql_connect=yes
-else
-  echo "$as_me: failed program was:" >&5
-sed 's/^/| /' conftest.$ac_ext >&5
+    fi
+  fi
 
-ac_cv_lib_mysqlclient_mysql_connect=no
-fi
-rm -f conftest.err conftest.$ac_objext \
-      conftest$ac_exeext conftest.$ac_ext
-LIBS=$ac_check_lib_save_LIBS
-fi
-echo "$as_me:$LINENO: result: $ac_cv_lib_mysqlclient_mysql_connect" >&5
-echo "${ECHO_T}$ac_cv_lib_mysqlclient_mysql_connect" >&6
-if test $ac_cv_lib_mysqlclient_mysql_connect = yes; then
-  MYSQLLIBFOUND=yes
-fi
-
-
-		if test x$MYSQLLIBFOUND = xno; then
+	if test $with_mysql = "no" ; then
 		echo ""
 		echo ""
 		echo "*** MySQL library could not be located... **************************"
 		echo ""
-		echo "You chose to compile NDBXT with MySQL support, but I was unable to"
+		echo "You chose to compile NDOutils with MySQL support, but I was unable to"
 		echo "locate the MySQL library on your system.  If the library is"
 		echo "installed,  use the --with-mysql-lib argument to specify the"
 		echo "location of the MySQL library."
-		echo ""
+		echo "installed, use the --with-mysql=DIR argument to specify the"
+		echo "location of the MySQL library, We assume mysql_config is in DIR/dir"
 		echo "NOTE: After you install the necessary libraries on your system:"
 		echo "      1. Make sure /etc/ld.so.conf has an entry for the directory in"
 		echo "         which the MySQL libraries are installed."
@@ -6222,457 +6104,32 @@ fi
 		echo "      4. Rerun the configure script."
 		echo ""
 		echo "TIP: Try the following...."
-		echo ""
-		echo "         ./configure --with-mysql-lib=/usr/lib/mysql"
-		echo ""
-		echo "********************************************************************"
-		echo ""
-		echo ""
-
-		USE_MYSQL=no
-	fi
-
-	if test "${ac_cv_header_mysql_mysql_h+set}" = set; then
-  echo "$as_me:$LINENO: checking for mysql/mysql.h" >&5
-echo $ECHO_N "checking for mysql/mysql.h... $ECHO_C" >&6
-if test "${ac_cv_header_mysql_mysql_h+set}" = set; then
-  echo $ECHO_N "(cached) $ECHO_C" >&6
-fi
-echo "$as_me:$LINENO: result: $ac_cv_header_mysql_mysql_h" >&5
-echo "${ECHO_T}$ac_cv_header_mysql_mysql_h" >&6
-else
-  # Is the header compilable?
-echo "$as_me:$LINENO: checking mysql/mysql.h usability" >&5
-echo $ECHO_N "checking mysql/mysql.h usability... $ECHO_C" >&6
-cat >conftest.$ac_ext <<_ACEOF
-/* confdefs.h.  */
-_ACEOF
-cat confdefs.h >>conftest.$ac_ext
-cat >>conftest.$ac_ext <<_ACEOF
-/* end confdefs.h.  */
-$ac_includes_default
-#include <mysql/mysql.h>
-_ACEOF
-rm -f conftest.$ac_objext
-if { (eval echo "$as_me:$LINENO: \"$ac_compile\"") >&5
-  (eval $ac_compile) 2>conftest.er1
-  ac_status=$?
-  grep -v '^ *+' conftest.er1 >conftest.err
-  rm -f conftest.er1
-  cat conftest.err >&5
-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); } &&
-	 { ac_try='test -z "$ac_c_werror_flag"
-			 || test ! -s conftest.err'
-  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
-  (eval $ac_try) 2>&5
-  ac_status=$?
-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); }; } &&
-	 { ac_try='test -s conftest.$ac_objext'
-  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
-  (eval $ac_try) 2>&5
-  ac_status=$?
-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); }; }; then
-  ac_header_compiler=yes
-else
-  echo "$as_me: failed program was:" >&5
-sed 's/^/| /' conftest.$ac_ext >&5
-
-ac_header_compiler=no
-fi
-rm -f conftest.err conftest.$ac_objext conftest.$ac_ext
-echo "$as_me:$LINENO: result: $ac_header_compiler" >&5
-echo "${ECHO_T}$ac_header_compiler" >&6
-
-# Is the header present?
-echo "$as_me:$LINENO: checking mysql/mysql.h presence" >&5
-echo $ECHO_N "checking mysql/mysql.h presence... $ECHO_C" >&6
-cat >conftest.$ac_ext <<_ACEOF
-/* confdefs.h.  */
-_ACEOF
-cat confdefs.h >>conftest.$ac_ext
-cat >>conftest.$ac_ext <<_ACEOF
-/* end confdefs.h.  */
-#include <mysql/mysql.h>
-_ACEOF
-if { (eval echo "$as_me:$LINENO: \"$ac_cpp conftest.$ac_ext\"") >&5
-  (eval $ac_cpp conftest.$ac_ext) 2>conftest.er1
-  ac_status=$?
-  grep -v '^ *+' conftest.er1 >conftest.err
-  rm -f conftest.er1
-  cat conftest.err >&5
-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); } >/dev/null; then
-  if test -s conftest.err; then
-    ac_cpp_err=$ac_c_preproc_warn_flag
-    ac_cpp_err=$ac_cpp_err$ac_c_werror_flag
-  else
-    ac_cpp_err=
-  fi
-else
-  ac_cpp_err=yes
-fi
-if test -z "$ac_cpp_err"; then
-  ac_header_preproc=yes
-else
-  echo "$as_me: failed program was:" >&5
-sed 's/^/| /' conftest.$ac_ext >&5
-
-  ac_header_preproc=no
-fi
-rm -f conftest.err conftest.$ac_ext
-echo "$as_me:$LINENO: result: $ac_header_preproc" >&5
-echo "${ECHO_T}$ac_header_preproc" >&6
-
-# So?  What about this header?
-case $ac_header_compiler:$ac_header_preproc:$ac_c_preproc_warn_flag in
-  yes:no: )
-    { echo "$as_me:$LINENO: WARNING: mysql/mysql.h: accepted by the compiler, rejected by the preprocessor!" >&5
-echo "$as_me: WARNING: mysql/mysql.h: accepted by the compiler, rejected by the preprocessor!" >&2;}
-    { echo "$as_me:$LINENO: WARNING: mysql/mysql.h: proceeding with the compiler's result" >&5
-echo "$as_me: WARNING: mysql/mysql.h: proceeding with the compiler's result" >&2;}
-    ac_header_preproc=yes
-    ;;
-  no:yes:* )
-    { echo "$as_me:$LINENO: WARNING: mysql/mysql.h: present but cannot be compiled" >&5
-echo "$as_me: WARNING: mysql/mysql.h: present but cannot be compiled" >&2;}
-    { echo "$as_me:$LINENO: WARNING: mysql/mysql.h:     check for missing prerequisite headers?" >&5
-echo "$as_me: WARNING: mysql/mysql.h:     check for missing prerequisite headers?" >&2;}
-    { echo "$as_me:$LINENO: WARNING: mysql/mysql.h: see the Autoconf documentation" >&5
-echo "$as_me: WARNING: mysql/mysql.h: see the Autoconf documentation" >&2;}
-    { echo "$as_me:$LINENO: WARNING: mysql/mysql.h:     section \"Present But Cannot Be Compiled\"" >&5
-echo "$as_me: WARNING: mysql/mysql.h:     section \"Present But Cannot Be Compiled\"" >&2;}
-    { echo "$as_me:$LINENO: WARNING: mysql/mysql.h: proceeding with the preprocessor's result" >&5
-echo "$as_me: WARNING: mysql/mysql.h: proceeding with the preprocessor's result" >&2;}
-    { echo "$as_me:$LINENO: WARNING: mysql/mysql.h: in the future, the compiler will take precedence" >&5
-echo "$as_me: WARNING: mysql/mysql.h: in the future, the compiler will take precedence" >&2;}
-    (
-      cat <<\_ASBOX
-## ------------------------------------------ ##
-## Report this to the AC_PACKAGE_NAME lists.  ##
-## ------------------------------------------ ##
-_ASBOX
-    ) |
-      sed "s/^/$as_me: WARNING:     /" >&2
-    ;;
-esac
-echo "$as_me:$LINENO: checking for mysql/mysql.h" >&5
-echo $ECHO_N "checking for mysql/mysql.h... $ECHO_C" >&6
-if test "${ac_cv_header_mysql_mysql_h+set}" = set; then
-  echo $ECHO_N "(cached) $ECHO_C" >&6
-else
-  ac_cv_header_mysql_mysql_h=$ac_header_preproc
-fi
-echo "$as_me:$LINENO: result: $ac_cv_header_mysql_mysql_h" >&5
-echo "${ECHO_T}$ac_cv_header_mysql_mysql_h" >&6
-
-fi
-if test $ac_cv_header_mysql_mysql_h = yes; then
-  MYSQLINCFOUND=yes
-else
-  MYSQLINCFOUND=no
-fi
-
-
-
-		if test x$MYSQLINCFOUND = xno; then
-		echo ""
-		echo ""
-		echo "*** MySQL include file could not be located... **********************"
-		echo ""
-		echo "You chose to compile NDBXT with MySQL support, but I was unable to"
-		echo "locate <mysql/mysql.h> on your system.  If the include file is"
-		echo "installed, use the --with-mysql-inc argument to specify the location"
-		echo "of the MySQL include file."
+		echo "      ./configure --with-mysql=/usr/lib/mysql"
 		echo ""
 		echo "********************************************************************"
 		echo ""
 		echo ""
 
 		USE_MYSQL=no
-
-	fi
-
-		if test x$USE_MYSQL = xyes; then
+	else
 		echo "MySQL library and include file(s) were found!"
 		cat >>confdefs.h <<_ACEOF
 #define USE_MYSQL 1
 _ACEOF
 
-		DBLIBS="$DBLIBS -lmysqlclient"
+		DBLIBS="$DBLIBS $np_mysql_libs"
+		CFLAGS="$CFLAGS $np_mysql_include"
 	fi
 fi
 
-if test $USE_PGSQL = yes; then
 
-	echo "$as_me:$LINENO: checking for PQconnectdb in -lpq" >&5
-echo $ECHO_N "checking for PQconnectdb in -lpq... $ECHO_C" >&6
-if test "${ac_cv_lib_pq_PQconnectdb+set}" = set; then
-  echo $ECHO_N "(cached) $ECHO_C" >&6
-else
-  ac_check_lib_save_LIBS=$LIBS
-LIBS="-lpq  $LIBS"
-cat >conftest.$ac_ext <<_ACEOF
-/* confdefs.h.  */
-_ACEOF
-cat confdefs.h >>conftest.$ac_ext
-cat >>conftest.$ac_ext <<_ACEOF
-/* end confdefs.h.  */
+save_LDFLAGS="$LDFLAGS"
+LDFLAGS="${LDFLAGS} ${DBLDFLAGS}"
+save_CPPFLAGS="$CPPFLAGS"
+CPPFLAGS="${DBCFLAGS}"
+save_CFLAGS="$CFLAGS"
+CFLAGS="${DBCFLAGS}"
 
-/* Override any gcc2 internal prototype to avoid an error.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-/* We use char because int might match the return type of a gcc2
-   builtin and then its argument prototype would still apply.  */
-char PQconnectdb ();
-int
-main ()
-{
-PQconnectdb ();
-  ;
-  return 0;
-}
-_ACEOF
-rm -f conftest.$ac_objext conftest$ac_exeext
-if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
-  (eval $ac_link) 2>conftest.er1
-  ac_status=$?
-  grep -v '^ *+' conftest.er1 >conftest.err
-  rm -f conftest.er1
-  cat conftest.err >&5
-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); } &&
-	 { ac_try='test -z "$ac_c_werror_flag"
-			 || test ! -s conftest.err'
-  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
-  (eval $ac_try) 2>&5
-  ac_status=$?
-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); }; } &&
-	 { ac_try='test -s conftest$ac_exeext'
-  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
-  (eval $ac_try) 2>&5
-  ac_status=$?
-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); }; }; then
-  ac_cv_lib_pq_PQconnectdb=yes
-else
-  echo "$as_me: failed program was:" >&5
-sed 's/^/| /' conftest.$ac_ext >&5
-
-ac_cv_lib_pq_PQconnectdb=no
-fi
-rm -f conftest.err conftest.$ac_objext \
-      conftest$ac_exeext conftest.$ac_ext
-LIBS=$ac_check_lib_save_LIBS
-fi
-echo "$as_me:$LINENO: result: $ac_cv_lib_pq_PQconnectdb" >&5
-echo "${ECHO_T}$ac_cv_lib_pq_PQconnectdb" >&6
-if test $ac_cv_lib_pq_PQconnectdb = yes; then
-  PGSQLLIBFOUND=yes
-else
-  PGSQLLIBFOUND=no
-fi
-
-
-		if test x$PGSQLLIBFOUND = xno; then
-		echo ""
-		echo ""
-		echo "*** PostgreSQL library could not be located... *********************"
-		echo ""
-		echo "You chose to compile NDBXT with PostgreSQL support, but I was"
-		echo "unable to locate the PostgreSQL library on your system.  If the"
-		echo "library is installed,  use the --with-pgsql-lib argument to specify"
-		echo "the location of the PostgreSQL library."
-		echo ""
-		echo "NOTE: After you install the necessary libraries on your system:"
-		echo "      1. Make sure /etc/ld.so.conf has an entry for the directory in"
-		echo "         which the PostgreSQL libraries are installed."
-		echo "      2. Run 'ldconfig' to update the run-time linker options."
-		echo "      3. Run 'make devclean' in the NDBXT distribution to clean out"
-		echo "         any old references to your previous compile."
-		echo "      4. Rerun the configure script."
-		echo ""
-		echo "********************************************************************"
-		echo ""
-		echo ""
-	fi
-
-	if test "${ac_cv_header_libpq_fe_h+set}" = set; then
-  echo "$as_me:$LINENO: checking for libpq-fe.h" >&5
-echo $ECHO_N "checking for libpq-fe.h... $ECHO_C" >&6
-if test "${ac_cv_header_libpq_fe_h+set}" = set; then
-  echo $ECHO_N "(cached) $ECHO_C" >&6
-fi
-echo "$as_me:$LINENO: result: $ac_cv_header_libpq_fe_h" >&5
-echo "${ECHO_T}$ac_cv_header_libpq_fe_h" >&6
-else
-  # Is the header compilable?
-echo "$as_me:$LINENO: checking libpq-fe.h usability" >&5
-echo $ECHO_N "checking libpq-fe.h usability... $ECHO_C" >&6
-cat >conftest.$ac_ext <<_ACEOF
-/* confdefs.h.  */
-_ACEOF
-cat confdefs.h >>conftest.$ac_ext
-cat >>conftest.$ac_ext <<_ACEOF
-/* end confdefs.h.  */
-$ac_includes_default
-#include <libpq-fe.h>
-_ACEOF
-rm -f conftest.$ac_objext
-if { (eval echo "$as_me:$LINENO: \"$ac_compile\"") >&5
-  (eval $ac_compile) 2>conftest.er1
-  ac_status=$?
-  grep -v '^ *+' conftest.er1 >conftest.err
-  rm -f conftest.er1
-  cat conftest.err >&5
-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); } &&
-	 { ac_try='test -z "$ac_c_werror_flag"
-			 || test ! -s conftest.err'
-  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
-  (eval $ac_try) 2>&5
-  ac_status=$?
-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); }; } &&
-	 { ac_try='test -s conftest.$ac_objext'
-  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
-  (eval $ac_try) 2>&5
-  ac_status=$?
-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); }; }; then
-  ac_header_compiler=yes
-else
-  echo "$as_me: failed program was:" >&5
-sed 's/^/| /' conftest.$ac_ext >&5
-
-ac_header_compiler=no
-fi
-rm -f conftest.err conftest.$ac_objext conftest.$ac_ext
-echo "$as_me:$LINENO: result: $ac_header_compiler" >&5
-echo "${ECHO_T}$ac_header_compiler" >&6
-
-# Is the header present?
-echo "$as_me:$LINENO: checking libpq-fe.h presence" >&5
-echo $ECHO_N "checking libpq-fe.h presence... $ECHO_C" >&6
-cat >conftest.$ac_ext <<_ACEOF
-/* confdefs.h.  */
-_ACEOF
-cat confdefs.h >>conftest.$ac_ext
-cat >>conftest.$ac_ext <<_ACEOF
-/* end confdefs.h.  */
-#include <libpq-fe.h>
-_ACEOF
-if { (eval echo "$as_me:$LINENO: \"$ac_cpp conftest.$ac_ext\"") >&5
-  (eval $ac_cpp conftest.$ac_ext) 2>conftest.er1
-  ac_status=$?
-  grep -v '^ *+' conftest.er1 >conftest.err
-  rm -f conftest.er1
-  cat conftest.err >&5
-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); } >/dev/null; then
-  if test -s conftest.err; then
-    ac_cpp_err=$ac_c_preproc_warn_flag
-    ac_cpp_err=$ac_cpp_err$ac_c_werror_flag
-  else
-    ac_cpp_err=
-  fi
-else
-  ac_cpp_err=yes
-fi
-if test -z "$ac_cpp_err"; then
-  ac_header_preproc=yes
-else
-  echo "$as_me: failed program was:" >&5
-sed 's/^/| /' conftest.$ac_ext >&5
-
-  ac_header_preproc=no
-fi
-rm -f conftest.err conftest.$ac_ext
-echo "$as_me:$LINENO: result: $ac_header_preproc" >&5
-echo "${ECHO_T}$ac_header_preproc" >&6
-
-# So?  What about this header?
-case $ac_header_compiler:$ac_header_preproc:$ac_c_preproc_warn_flag in
-  yes:no: )
-    { echo "$as_me:$LINENO: WARNING: libpq-fe.h: accepted by the compiler, rejected by the preprocessor!" >&5
-echo "$as_me: WARNING: libpq-fe.h: accepted by the compiler, rejected by the preprocessor!" >&2;}
-    { echo "$as_me:$LINENO: WARNING: libpq-fe.h: proceeding with the compiler's result" >&5
-echo "$as_me: WARNING: libpq-fe.h: proceeding with the compiler's result" >&2;}
-    ac_header_preproc=yes
-    ;;
-  no:yes:* )
-    { echo "$as_me:$LINENO: WARNING: libpq-fe.h: present but cannot be compiled" >&5
-echo "$as_me: WARNING: libpq-fe.h: present but cannot be compiled" >&2;}
-    { echo "$as_me:$LINENO: WARNING: libpq-fe.h:     check for missing prerequisite headers?" >&5
-echo "$as_me: WARNING: libpq-fe.h:     check for missing prerequisite headers?" >&2;}
-    { echo "$as_me:$LINENO: WARNING: libpq-fe.h: see the Autoconf documentation" >&5
-echo "$as_me: WARNING: libpq-fe.h: see the Autoconf documentation" >&2;}
-    { echo "$as_me:$LINENO: WARNING: libpq-fe.h:     section \"Present But Cannot Be Compiled\"" >&5
-echo "$as_me: WARNING: libpq-fe.h:     section \"Present But Cannot Be Compiled\"" >&2;}
-    { echo "$as_me:$LINENO: WARNING: libpq-fe.h: proceeding with the preprocessor's result" >&5
-echo "$as_me: WARNING: libpq-fe.h: proceeding with the preprocessor's result" >&2;}
-    { echo "$as_me:$LINENO: WARNING: libpq-fe.h: in the future, the compiler will take precedence" >&5
-echo "$as_me: WARNING: libpq-fe.h: in the future, the compiler will take precedence" >&2;}
-    (
-      cat <<\_ASBOX
-## ------------------------------------------ ##
-## Report this to the AC_PACKAGE_NAME lists.  ##
-## ------------------------------------------ ##
-_ASBOX
-    ) |
-      sed "s/^/$as_me: WARNING:     /" >&2
-    ;;
-esac
-echo "$as_me:$LINENO: checking for libpq-fe.h" >&5
-echo $ECHO_N "checking for libpq-fe.h... $ECHO_C" >&6
-if test "${ac_cv_header_libpq_fe_h+set}" = set; then
-  echo $ECHO_N "(cached) $ECHO_C" >&6
-else
-  ac_cv_header_libpq_fe_h=$ac_header_preproc
-fi
-echo "$as_me:$LINENO: result: $ac_cv_header_libpq_fe_h" >&5
-echo "${ECHO_T}$ac_cv_header_libpq_fe_h" >&6
-
-fi
-if test $ac_cv_header_libpq_fe_h = yes; then
-  PGSQLINCFOUND=yes
-else
-  PGSQLINCFOUND=no
-fi
-
-
-
-		if test x$PGSQLINCFOUND = xno; then
-		echo ""
-		echo ""
-		echo "*** PostgreSQL include file could not be located... ****************"
-		echo ""
-		echo "You chose to compile NDBXT with PostgreSQL support, but I was unable"
-		echo "to locate <libpq-fe.h> on your system.  If the include file is"
-		echo "installed, use the --with-pgsql-inc argument to specify the location"
-		echo "of the PostgreSQL include file."
-		echo ""
-		echo "********************************************************************"
-		echo ""
-		echo ""
-
-		USE_PGSQL=no
-
-	fi
-
-		if test x$USE_PGSQL = xyes; then
-		echo "PostgreSQL library and include file(s) were found!"
-		cat >>confdefs.h <<_ACEOF
-#define USE_PGSQL 1
-_ACEOF
-
-		DBLIBS="$DBLIBS -lpq"
-	fi
-fi
 
 
 
@@ -7292,6 +6749,7 @@ s,@SOCKETLIBS@,$SOCKETLIBS,;t t
 s,@LIBWRAPLIBS@,$LIBWRAPLIBS,;t t
 s,@MOD_CFLAGS@,$MOD_CFLAGS,;t t
 s,@MOD_LDFLAGS@,$MOD_LDFLAGS,;t t
+s,@np_mysql_config@,$np_mysql_config,;t t
 s,@DBCFLAGS@,$DBCFLAGS,;t t
 s,@DBLDFLAGS@,$DBLDFLAGS,;t t
 s,@DBLIBS@,$DBLIBS,;t t
