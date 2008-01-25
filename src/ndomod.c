@@ -118,7 +118,7 @@ int nebmodule_init(int flags, char *args, void *handle){
 	ndomod_module_handle=handle;
 
 	/* log module info to the Nagios log file */
-	snprintf(temp_buffer,sizeof(temp_buffer)-1,"ndomod: %s %s (%s) Copyright (c) 2005-2007 Ethan Galstad (nagios@nagios.org)",NDOMOD_NAME,NDOMOD_VERSION,NDOMOD_DATE);
+	snprintf(temp_buffer,sizeof(temp_buffer)-1,"ndomod: %s %s (%s) Copyright (c) 2005-2008 Ethan Galstad (nagios@nagios.org)",NDOMOD_NAME,NDOMOD_VERSION,NDOMOD_DATE);
 	temp_buffer[sizeof(temp_buffer)-1]='\x0';
 	ndomod_write_to_logs(temp_buffer,NSLOG_INFO_MESSAGE);
 
@@ -127,12 +127,16 @@ int nebmodule_init(int flags, char *args, void *handle){
 		return -1;
 
 	/* process arguments */
-	if(ndomod_process_module_args(args)==NDO_ERROR)
+	if(ndomod_process_module_args(args)==NDO_ERROR){
+		ndomod_write_to_logs("ndomod: An error occurred while attempting to process module arguments.",NSLOG_INFO_MESSAGE);
 		return -1;
+		}
 
 	/* do some initialization stuff... */
-	if(ndomod_init()==NDO_ERROR)
+	if(ndomod_init()==NDO_ERROR){
+		ndomod_write_to_logs("ndomod: An error occurred while attempting to initialize.",NSLOG_INFO_MESSAGE);
 		return -1;
+		}
 
 	return 0;
         }
@@ -373,6 +377,10 @@ int ndomod_process_config_var(char *arg){
 	/* skip incomplete var/val pairs */
 	if(var==NULL || val==NULL)
 		return NDO_OK;
+
+	/* strip var/val */
+	ndomod_strip(var);
+	ndomod_strip(val);
 
 	/* process the variable... */
 

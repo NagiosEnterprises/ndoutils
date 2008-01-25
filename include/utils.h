@@ -1,8 +1,8 @@
 /************************************************************************
  *
  * UTILS.H - NDO utilities header file
- * Copyright (c) 2005-2007 Ethan Galstad
- * Last Modified: 10-29-2007
+ * Copyright (c) 2005-2008 Ethan Galstad
+ * Last Modified: 01-25-2008
  *
  ************************************************************************/
 
@@ -25,7 +25,8 @@ int ndo_dbuf_init(ndo_dbuf *,int);
 int ndo_dbuf_free(ndo_dbuf *);
 int ndo_dbuf_strcat(ndo_dbuf *,char *);
 
-
 int my_rename(char *,char *);
+
+void ndomod_strip(char *);
 
 #endif

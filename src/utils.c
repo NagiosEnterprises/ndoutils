@@ -1,8 +1,8 @@
 /***************************************************************
  * UTILS.C - NDO Utils
  *
- * Copyright (c) 2005-2007 Ethan Galstad 
- * First Written: 10-29-2007
+ * Copyright (c) 2005-2008 Ethan Galstad 
+ * First Written: 01-25-2008
  *
  *
  **************************************************************/
@@ -152,3 +152,50 @@ int my_rename(char *source, char *dest){
 
 	return rename_result;
         }
+
+
+
+
+/******************************************************************/
+/************************ STRING FUNCTIONS ************************/
+/******************************************************************/
+
+/* strip newline, carriage return, and tab characters from beginning and end of a string */
+void ndomod_strip(char *buffer){
+	register int x=0;
+	register int y=0;
+	register int z=0;
+
+	if(buffer==NULL || buffer[0]=='\x0')
+		return;
+
+	/* strip end of string */
+	y=(int)strlen(buffer);
+	for(x=y-1;x>=0;x--){
+		if(buffer[x]==' ' || buffer[x]=='\n' || buffer[x]=='\r' || buffer[x]=='\t' || buffer[x]==13)
+			buffer[x]='\x0';
+		else
+			break;
+	        }
+	/* save last position for later... */
+	z=x;
+
+	/* strip beginning of string (by shifting) */
+	for(x=0;;x++){
+		if(buffer[x]==' ' || buffer[x]=='\n' || buffer[x]=='\r' || buffer[x]=='\t' || buffer[x]==13)
+			continue;
+		else
+			break;
+	        }
+	if(x>0){
+		/* new length of the string after we stripped the end */
+		y=z+1;
+		
+		/* shift chars towards beginning of string to remove leading whitespace */
+		for(z=x;z<y;z++)
+			buffer[z-x]=buffer[z];
+		buffer[y-x]='\x0';
+	        }
+
+	return;
+	}

@@ -7,6 +7,12 @@ Note:  Consider this addon to be experimental/beta/alpha/potentially-hazardous-t
        using it in production environments.   - Ethan
 
 
+1.4b8 - ??/??/2008
+------------------
+NOTE: ** Requires Nagios 2.7 or higher, or Nagios 3.0b6
+- Added additional error messages during failed startup
+
+
 
 1.4b7 - 10/31/2007
 -----------------

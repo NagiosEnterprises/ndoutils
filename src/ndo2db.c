@@ -1,10 +1,10 @@
 /***************************************************************
  * NDO2DB.C - NDO To Database Daemon
  *
- * Copyright (c) 2005-2007 Ethan Galstad 
+ * Copyright (c) 2005-2008 Ethan Galstad 
  *
  * First Written: 05-19-2005
- * Last Modified: 10-31-2007
+ * Last Modified: 01-25-2008
  *
  **************************************************************/
 
@@ -85,7 +85,7 @@ int main(int argc, char **argv){
 
 		printf("\n");
 		printf("%s %s\n",NDO2DB_NAME,NDO2DB_VERSION);
-		printf("Copyright(c) 2005-2007 Ethan Galstad (nagios@nagios.org)\n");
+		printf("Copyright(c) 2005-2008 Ethan Galstad (nagios@nagios.org)\n");
 		printf("Last Modified: %s\n",NDO2DB_DATE);
 		printf("License: GPL v2\n");
 		printf("\n");
