@@ -13,6 +13,7 @@ NOTE: ** Requires Nagios 2.7 or higher, or Nagios 3.0b6
 - Added additional error messages during failed startup
 - Better MySQL library detection (Ton Voon, Herbert Straub, and Nagios Plugin Team)
 - Removed Postgres options to configure script, as it is not yet supported
+- Compiler flag fix for building on GNU/kFreeBSD systems (Hendrik Frenzel)
 
 
 
