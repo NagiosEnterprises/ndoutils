@@ -9,9 +9,9 @@ AC_CONFIG_HEADER(include/config.h)
 AC_PREFIX_DEFAULT(/usr/local/nagios)
 
 PKG_NAME=ndoutils
-PKG_VERSION="1.4b7"
+PKG_VERSION="1.4b8"
 PKG_HOME_URL="http://www.nagios.org/"
-PKG_REL_DATE="10-31-2007"
+PKG_REL_DATE="01-03-2009"
 
 dnl Figure out how to invoke "install" and what install options to use.
 AC_PROG_INSTALL

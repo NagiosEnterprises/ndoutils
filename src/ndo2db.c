@@ -4,7 +4,7 @@
  * Copyright (c) 2005-2008 Ethan Galstad 
  *
  * First Written: 05-19-2005
- * Last Modified: 01-25-2008
+ * Last Modified: 01-03-2009
  *
  **************************************************************/
 
@@ -24,14 +24,15 @@
 #include "../include/db.h"
 #include "../include/dbhandlers.h"
 
-#define NDO2DB_VERSION "1.4b7"
+#define NDO2DB_VERSION "1.4b8"
 #define NDO2DB_NAME "NDO2DB"
-#define NDO2DB_DATE "10-31-2007"
+#define NDO2DB_DATE "01-03-2009"
 
 
 extern int errno;
 
 char *ndo2db_config_file=NULL;
+char *lock_file=NULL;
 char *ndo2db_user=NULL;
 char *ndo2db_group=NULL;
 int ndo2db_sd=0;
@@ -304,7 +305,11 @@ int ndo2db_process_config_var(char *arg){
 
 	/* process the variable... */
 
-	if(!strcmp(var,"socket_type")){
+	if(!strcmp(var,"lock_file")){
+		if((lock_file=strdup(val))==NULL)
+			return NDO_ERROR;
+	        }
+	else if(!strcmp(var,"socket_type")){
 		if(!strcmp(val,"tcp"))
 			ndo2db_socket_type=NDO_SINK_TCPSOCKET;
 		else
@@ -547,6 +552,51 @@ int ndo2db_drop_privileges(char *user, char *group){
 
 int ndo2db_daemonize(void){
 	pid_t pid=-1;
+	int pidno=0;
+	int lockfile=0;
+	struct flock lock;
+	int val=0;
+	char buf[256];
+	char *msg=NULL;
+
+	umask(S_IWGRP|S_IWOTH);
+
+	/* get a lock on the lockfile */
+	if(lock_file){
+		lockfile=open(lock_file,O_RDWR | O_CREAT, S_IWUSR | S_IRUSR | S_IRGRP | S_IROTH);
+		if(lockfile<0){
+			asprintf(&msg,"Failed to obtain lock on file %s: %s\n", lock_file, strerror(errno));
+			perror(msg);
+			ndo2db_cleanup_socket();
+			return NDO_ERROR;
+			}
+
+		/* see if we can read the contents of the lockfile */
+		if((val=read(lockfile,buf,(size_t)10))<0){
+			asprintf(&msg,"Lockfile exists but cannot be read");
+			perror(msg);
+			ndo2db_cleanup_socket();
+			return NDO_ERROR;
+			}
+
+		/* place a file lock on the lock file */
+		lock.l_type=F_WRLCK;
+		lock.l_start=0;
+		lock.l_whence=SEEK_SET;
+		lock.l_len=0;
+		if(fcntl(lockfile,F_SETLK,&lock)<0){
+			if(errno==EACCES || errno==EAGAIN){
+				fcntl(lockfile,F_GETLK,&lock);
+				asprintf(&msg,"Lockfile '%s' looks like its already held by another instance.  Bailing out...",lock_file,(int)lock.l_pid);
+				}
+			else
+				asprintf(&msg,"Cannot lock lockfile '%s': %s. Bailing out...",lock_file,strerror(errno));
+
+			perror(msg);
+			ndo2db_cleanup_socket();
+			return NDO_ERROR;
+			}
+		}
 
 	/* fork */
 	if((pid=fork())<0){
@@ -582,6 +632,19 @@ int ndo2db_daemonize(void){
 		setsid();
 	        }
 
+	if(lock_file){
+		/* write PID to lockfile... */
+		lseek(lockfile,0,SEEK_SET);
+		ftruncate(lockfile,0);
+		sprintf(buf,"%d\n",(int)getpid());
+		write(lockfile,buf,strlen(buf));
+
+		/* make sure lock file stays open while program is executing... */
+		val=fcntl(lockfile,F_GETFD,0);
+		val|=FD_CLOEXEC;
+		fcntl(lockfile,F_SETFD,val);
+		}
+
         /* close existing stdin, stdout, stderr */
 	close(0);
 #ifndef DEBUG_NDO2DB
@@ -613,6 +676,9 @@ int ndo2db_cleanup_socket(void){
 	/* unlink the file */
 	if(ndo2db_socket_type==NDO_SINK_UNIXSOCKET)
 		unlink(ndo2db_socket_name);
+
+	if(lock_file)
+		unlink(lock_file);
 
 	return NDO_OK;
         }
