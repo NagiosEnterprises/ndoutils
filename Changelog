@@ -15,7 +15,8 @@ NOTE: ** Requires Nagios 2.7 or higher, or Nagios 3.0b6
 - Removed Postgres options to configure script, as it is not yet supported
 - Compiler flag fix for building on GNU/kFreeBSD systems (Hendrik Frenzel)
 - Added lock_file option
-
+- Fix debug file permission race (Lars Michelsen)
+- More error reporting if debug file can not be opened
 
 
 1.4b7 - 10/31/2007

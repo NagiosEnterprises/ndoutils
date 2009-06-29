@@ -4,7 +4,7 @@
  * Copyright (c) 2005-2008 Ethan Galstad 
  *
  * First Written: 05-19-2005
- * Last Modified: 01-03-2009
+ * Last Modified: 06-29-2009
  *
  **************************************************************/
 
@@ -110,9 +110,6 @@ int main(int argc, char **argv){
 		exit(1);
 	        }
 	
-	/* open debug log */
-	ndo2db_open_debug_log();
-
 	/* make sure we're good to go */
 	if(ndo2db_check_init_reqs()!=NDO_OK){
 		printf("One or more required parameters is missing or incorrect.\n");
@@ -146,6 +143,9 @@ int main(int argc, char **argv){
 
 	/* drop privileges */
 	ndo2db_drop_privileges(ndo2db_user,ndo2db_group);
+
+	/* open debug log */
+	ndo2db_open_debug_log();
 
 	/* if we're running under inetd... */
 	if(ndo2db_use_inetd==NDO_TRUE){
@@ -2003,8 +2003,10 @@ int ndo2db_open_debug_log(void){
 	if(ndo2db_debug_level==NDO2DB_DEBUGL_NONE)
 		return NDO_OK;
 
-	if((ndo2db_debug_file_fp=fopen(ndo2db_debug_file,"a+"))==NULL)
+	if((ndo2db_debug_file_fp=fopen(ndo2db_debug_file,"a+"))==NULL) {
+		syslog(LOG_ERR, "Warning: Could not open debug file '%s' - '%s'", ndo2db_debug_file, strerror(errno));
 		return NDO_ERROR;
+	}
 
 	return NDO_OK;
 	}
