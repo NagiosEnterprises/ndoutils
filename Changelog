@@ -17,7 +17,7 @@ NOTE: ** Requires Nagios 2.7 or higher, or Nagios 3.0b6
 - Added lock_file option
 - Fix debug file permission race (Lars Michelsen)
 - More error reporting if debug file can not be opened
-
+- Fix wait for childs on SIGCHLD
 
 1.4b7 - 10/31/2007
 -----------------

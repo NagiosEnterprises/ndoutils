@@ -688,7 +688,7 @@ void ndo2db_parent_sighandler(int sig){
 
 	/* cleanup children that exit, so we don't have zombies */
 	if(sig==SIGCHLD){
-		waitpid(-1,NULL,WNOHANG);
+		while(waitpid(-1,NULL,WNOHANG)>0);
 		return;
 	        }
 
