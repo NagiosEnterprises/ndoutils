@@ -882,7 +882,7 @@ int ndomod_load_unprocessed_data(char *f){
 
 /* initializes sink buffer */
 int ndomod_sink_buffer_init(ndomod_sink_buffer *sbuf,unsigned long maxitems){
-	int x;
+	unsigned long x;
 
 	if(sbuf==NULL || maxitems<=0)
 		return NDO_ERROR;
@@ -906,7 +906,7 @@ int ndomod_sink_buffer_init(ndomod_sink_buffer *sbuf,unsigned long maxitems){
 
 /* deinitializes sink buffer */
 int ndomod_sink_buffer_deinit(ndomod_sink_buffer *sbuf){
-	int x;
+	unsigned long x;
 
 	if(sbuf==NULL)
 		return NDO_ERROR;
