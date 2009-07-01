@@ -1,7 +1,6 @@
 -- phpMyAdmin SQL Dump
 -- version 2.11.8.1
 -- http://www.phpmyadmin.net
---
 -- Host: localhost
 -- Generation Time: Jan 03, 2009 at 09:24 AM
 -- Server version: 5.0.45
@@ -429,6 +428,7 @@ CREATE TABLE IF NOT EXISTS `nagios_eventhandlers` (
   `execution_time` double NOT NULL default '0',
   `return_code` smallint(6) NOT NULL default '0',
   `output` varchar(255) character set latin1 NOT NULL default '',
+  `long_output` varchar(8192) NOT NULL default '',
   PRIMARY KEY  (`eventhandler_id`),
   UNIQUE KEY `instance_id` (`instance_id`,`object_id`,`start_time`,`start_time_usec`)
 ) ENGINE=MyISAM COMMENT='Historical host and service event handlers';
@@ -501,6 +501,7 @@ CREATE TABLE IF NOT EXISTS `nagios_hostchecks` (
   `latency` double NOT NULL default '0',
   `return_code` smallint(6) NOT NULL default '0',
   `output` varchar(255) character set latin1 NOT NULL default '',
+  `long_output` varchar(8192) NOT NULL default '',
   `perfdata` varchar(255) character set latin1 NOT NULL default '',
   PRIMARY KEY  (`hostcheck_id`),
   UNIQUE KEY `instance_id` (`instance_id`,`host_object_id`,`start_time`,`start_time_usec`)
@@ -693,6 +694,7 @@ CREATE TABLE IF NOT EXISTS `nagios_hoststatus` (
   `host_object_id` int(11) NOT NULL default '0',
   `status_update_time` datetime NOT NULL default '0000-00-00 00:00:00',
   `output` varchar(255) character set latin1 NOT NULL default '',
+  `long_output` varchar(8192) NOT NULL default '',
   `perfdata` varchar(255) character set latin1 NOT NULL default '',
   `current_state` smallint(6) NOT NULL default '0',
   `has_been_checked` smallint(6) NOT NULL default '0',
@@ -850,6 +852,7 @@ CREATE TABLE IF NOT EXISTS `nagios_notifications` (
   `end_time_usec` int(11) NOT NULL default '0',
   `state` smallint(6) NOT NULL default '0',
   `output` varchar(255) character set latin1 NOT NULL default '',
+  `long_output` varchar(8192) NOT NULL default '',
   `escalated` smallint(6) NOT NULL default '0',
   `contacts_notified` smallint(6) NOT NULL default '0',
   PRIMARY KEY  (`notification_id`),
@@ -998,6 +1001,7 @@ CREATE TABLE IF NOT EXISTS `nagios_servicechecks` (
   `latency` double NOT NULL default '0',
   `return_code` smallint(6) NOT NULL default '0',
   `output` varchar(255) character set latin1 NOT NULL default '',
+  `long_output` varchar(8192) NOT NULL default '',
   `perfdata` varchar(255) character set latin1 NOT NULL default '',
   PRIMARY KEY  (`servicecheck_id`),
   KEY `instance_id` (`instance_id`),
@@ -1188,6 +1192,7 @@ CREATE TABLE IF NOT EXISTS `nagios_servicestatus` (
   `service_object_id` int(11) NOT NULL default '0',
   `status_update_time` datetime NOT NULL default '0000-00-00 00:00:00',
   `output` varchar(255) character set latin1 NOT NULL default '',
+  `long_output` varchar(8192) NOT NULL default '',
   `perfdata` varchar(255) character set latin1 NOT NULL default '',
   `current_state` smallint(6) NOT NULL default '0',
   `has_been_checked` smallint(6) NOT NULL default '0',
@@ -1301,6 +1306,7 @@ CREATE TABLE IF NOT EXISTS `nagios_statehistory` (
   `last_state` smallint(6) NOT NULL default '-1',
   `last_hard_state` smallint(6) NOT NULL default '-1',
   `output` varchar(255) character set latin1 NOT NULL default '',
+  `long_output` varchar(8192) NOT NULL default '',
   PRIMARY KEY  (`statehistory_id`)
 ) ENGINE=MyISAM COMMENT='Historical host and service state changes';
 
@@ -1323,6 +1329,7 @@ CREATE TABLE IF NOT EXISTS `nagios_systemcommands` (
   `execution_time` double NOT NULL default '0',
   `return_code` smallint(6) NOT NULL default '0',
   `output` varchar(255) character set latin1 NOT NULL default '',
+  `long_output` varchar(8192) NOT NULL default '',
   PRIMARY KEY  (`systemcommand_id`),
   KEY `instance_id` (`instance_id`),
   KEY `start_time` (`start_time`)

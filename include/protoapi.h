@@ -239,6 +239,7 @@
 #define NDO_DATA_STICKY                              122
 #define NDO_DATA_TIMEOUT                             123
 #define NDO_DATA_TRIGGEREDBY                         124
+#define NDO_DATA_LONGOUTPUT                          125
 
 /*********** OBJECT CONFIG DATA ATTRIBUTES **********/
 

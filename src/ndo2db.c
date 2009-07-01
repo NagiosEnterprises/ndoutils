@@ -1404,6 +1404,7 @@ int ndo2db_add_input_data_item(ndo2db_idi *idi, int type, char *buf){
 	case NDO_DATA_HOST:
 	case NDO_DATA_LOGENTRY:
 	case NDO_DATA_OUTPUT:
+	case NDO_DATA_LONGOUTPUT:
 	case NDO_DATA_PERFDATA:
 	case NDO_DATA_SERVICE:
 	case NDO_DATA_PROGRAMNAME:

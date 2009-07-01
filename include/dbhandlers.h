@@ -10,6 +10,7 @@
 #define _NDO2DB_DBHANDLERS_H
 
 #include "ndo2db.h"
+#define NAGIOS_SIZEOF_ARRAY(var)       (sizeof(var)/sizeof(var[0]))
 
 int ndo2db_get_object_id(ndo2db_idi *,int,char *,char *,unsigned long *);
 int ndo2db_get_object_id_with_insert(ndo2db_idi *,int,char *,char *,unsigned long *);
