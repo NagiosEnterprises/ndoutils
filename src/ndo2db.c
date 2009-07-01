@@ -587,7 +587,7 @@ int ndo2db_daemonize(void){
 		if(fcntl(lockfile,F_SETLK,&lock)<0){
 			if(errno==EACCES || errno==EAGAIN){
 				fcntl(lockfile,F_GETLK,&lock);
-				asprintf(&msg,"Lockfile '%s' looks like its already held by another instance.  Bailing out...",lock_file,(int)lock.l_pid);
+				asprintf(&msg,"Lockfile '%s' looks like its already held by another instance (%d).  Bailing out...",lock_file,(int)lock.l_pid);
 				}
 			else
 				asprintf(&msg,"Cannot lock lockfile '%s': %s. Bailing out...",lock_file,strerror(errno));
