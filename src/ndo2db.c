@@ -4,7 +4,7 @@
  * Copyright (c) 2005-2008 Ethan Galstad 
  *
  * First Written: 05-19-2005
- * Last Modified: 06-29-2009
+ * Last Modified: 07-01-2009
  *
  **************************************************************/
 
@@ -686,11 +686,18 @@ int ndo2db_cleanup_socket(void){
 
 void ndo2db_parent_sighandler(int sig){
 
-	/* cleanup children that exit, so we don't have zombies */
-	if(sig==SIGCHLD){
+	switch (sig){
+	case SIGTERM:
+		/* forward signal to all members of this group of processes */
+		kill(0, sig);
+		break;
+	case SIGCHLD:
+		/* cleanup children that exit, so we don't have zombies */
 		while(waitpid(-1,NULL,WNOHANG)>0);
 		return;
-	        }
+	default:
+		printf("Caught the Signal '%d' but don't care about this.\n", sig);
+	}
 
 	/* cleanup the socket */
 	ndo2db_cleanup_socket();

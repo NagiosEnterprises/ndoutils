@@ -19,6 +19,7 @@ NOTE: ** Requires Nagios 2.7 or higher, or Nagios 3.0b6
 - More error reporting if debug file can not be opened
 - Fix wait for childs on SIGCHLD
 - Added long_output support
+- Fix missing SIGTERM forwarding to childs
 
 1.4b7 - 10/31/2007
 -----------------
