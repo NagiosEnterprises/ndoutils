@@ -2058,7 +2058,7 @@ int ndomod_broker_data(int event_type, void *data){
 		es[5]=ndo_escape_buffer(temp_host->host_check_command);
 		es[6]=ndo_escape_buffer(temp_host->check_period);
 
-#ifdef BUILLD_NAGIOS_3X
+#ifdef BUILD_NAGIOS_3X
 		retry_interval=temp_host->retry_interval;
 #endif
 #ifdef BUILD_NAGIOS_2X
