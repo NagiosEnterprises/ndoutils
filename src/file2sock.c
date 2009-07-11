@@ -1,7 +1,7 @@
 /***************************************************************
  * FILE2SOCK.c - File to Socket Dump Utility
  *
- * Copyright (c) 20052-2007 Ethan Galstad 
+ * Copyright (c) 20052-2009 Ethan Galstad
  * License: GPL v2
  *
  * First Written: 05-13-2005

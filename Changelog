@@ -23,6 +23,7 @@ NOTE: ** Requires Nagios 2.7 or higher, or Nagios 3.0b6
 - Fix fmt specifier in ndo2db_daemonize()
 - Escape custom values in 'customvariablestatus' and 'customvariables'
 - Fix ndomod doesn't execute rotate_command propperly
+- Fix several compiler warnings
 
 1.4b7 - 10/31/2007
 -----------------

@@ -1,9 +1,9 @@
 /***************************************************************
  * DB.C - Datatabase routines for NDO2DB daemon
  *
- * Copyright (c) 2005-2007 Ethan Galstad 
+ * Copyright (c) 2005-2009 Ethan Galstad
  *
- * Last Modified: 10-18-2007
+ * Last Modified: 07-11-2009
  *
  **************************************************************/
 
@@ -192,7 +192,6 @@ int ndo2db_db_deinit(ndo2db_idi *idi){
 
 /* connects to the database server */
 int ndo2db_db_connect(ndo2db_idi *idi){
-	char connect_string[NDO2DB_INPUT_BUFFER];
 	int result=NDO_OK;
 
 	if(idi==NULL)

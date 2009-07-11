@@ -1,10 +1,10 @@
 /***************************************************************
  * NDO2DB.C - NDO To Database Daemon
  *
- * Copyright (c) 2005-2008 Ethan Galstad 
+ * Copyright (c) 2005-2009 Ethan Galstad
  *
  * First Written: 05-19-2005
- * Last Modified: 07-01-2009
+ * Last Modified: 07-11-2009
  *
  **************************************************************/
 
@@ -552,7 +552,6 @@ int ndo2db_drop_privileges(char *user, char *group){
 
 int ndo2db_daemonize(void){
 	pid_t pid=-1;
-	int pidno=0;
 	int lockfile=0;
 	struct flock lock;
 	int val=0;
@@ -1607,7 +1606,6 @@ int ndo2db_add_input_data_mbuf(ndo2db_idi *idi, int type, int mbuf_slot, char *b
 
 int ndo2db_end_input_data(ndo2db_idi *idi){
 	int result=NDO_OK;
-	int x,y;
 
 	if(idi==NULL)
 		return NDO_ERROR;

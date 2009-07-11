@@ -1,9 +1,9 @@
 /***************************************************************
  * DBHANDLERS.C - Data handler routines for NDO2DB daemon
  *
- * Copyright (c) 2005-2007 Ethan Galstad 
+ * Copyright (c) 2005-2009 Ethan Galstad
  *
- * Last Modified: 10-31-2007
+ * Last Modified: 07-11-2009
  *
  **************************************************************/
 
@@ -2259,11 +2259,6 @@ int ndo2db_handle_hoststatusdata(ndo2db_idi *idi){
 	unsigned long check_timeperiod_object_id=0L;
 	int x=0;
 	int result=NDO_OK;
-	char *ptr1=NULL;
-	char *ptr2=NULL;
-	char *ptr3=NULL;
-	int has_been_modified=0;
-	ndo2db_mbuf mbuf;
 
 	if(idi==NULL)
 		return NDO_ERROR;
@@ -2463,11 +2458,6 @@ int ndo2db_handle_servicestatusdata(ndo2db_idi *idi){
 	unsigned long check_timeperiod_object_id=0L;
 	int x=0;
 	int result=NDO_OK;
-	char *ptr1=NULL;
-	char *ptr2=NULL;
-	char *ptr3=NULL;
-	int has_been_modified=0;
-	ndo2db_mbuf mbuf;
 
 	if(idi==NULL)
 		return NDO_ERROR;
@@ -2630,18 +2620,12 @@ int ndo2db_handle_contactstatusdata(ndo2db_idi *idi){
 	unsigned long modified_service_attributes=0L;
 	int host_notifications_enabled=0;
 	int service_notifications_enabled=0;
-	char *es[2];
 	char *ts[3];
 	char *buf=NULL;
 	char *buf1=NULL;
 	unsigned long object_id=0L;
 	int x=0;
 	int result=NDO_OK;
-	char *ptr1=NULL;
-	char *ptr2=NULL;
-	char *ptr3=NULL;
-	int has_been_modified=0;
-	ndo2db_mbuf mbuf;
 
 	if(idi==NULL)
 		return NDO_ERROR;
@@ -3256,10 +3240,6 @@ int ndo2db_handle_hostdefinition(ndo2db_idi *idi){
 	ndo2db_mbuf mbuf;
 	char *cmdptr=NULL;
 	char *argptr=NULL;
-	char *ptr1=NULL;
-	char *ptr2=NULL;
-	char *ptr3=NULL;
-	int has_been_modified=0;
 
 	if(idi==NULL)
 		return NDO_ERROR;
@@ -3674,10 +3654,6 @@ int ndo2db_handle_servicedefinition(ndo2db_idi *idi){
 	ndo2db_mbuf mbuf;
 	char *cmdptr=NULL;
 	char *argptr=NULL;
-	char *ptr1=NULL;
-	char *ptr2=NULL;
-	char *ptr3=NULL;
-	int has_been_modified=0;
 
 	if(idi==NULL)
 		return NDO_ERROR;
@@ -4625,10 +4601,6 @@ int ndo2db_handle_contactdefinition(ndo2db_idi *idi){
 	int address_number=0;
 	char *cmdptr=NULL;
 	char *argptr=NULL;
-	char *ptr1=NULL;
-	char *ptr2=NULL;
-	char *ptr3=NULL;
-	int has_been_modified=0;
 
 	if(idi==NULL)
 		return NDO_ERROR;

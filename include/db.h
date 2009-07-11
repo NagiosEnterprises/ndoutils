@@ -2,7 +2,7 @@
  *
  * DB.H - NDO Database Include File
  * Copyright (c) 2005-2006 Ethan Galstad
- * Last Modified: 12-04-2006
+ * Last Modified: 07-11-2009
  *
  ************************************************************************/
 
@@ -141,5 +141,5 @@ int ndo2db_db_get_latest_data_time(ndo2db_idi *,char *,char *,unsigned long *);
 int ndo2db_db_perform_maintenance(ndo2db_idi *);
 int ndo2db_db_trim_data_table(ndo2db_idi *,char *,char *,unsigned long);
 
-
+extern int ndo2db_log_debug_info(int, int, const char *, ...);
 #endif

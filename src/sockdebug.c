@@ -1,7 +1,7 @@
 /***************************************************************
  * SOCKDEBUG.C - Socket Debugging Utility
  *
- * Copyright (c) 2005-2007 Ethan Galstad 
+ * Copyright (c) 2005-2009 Ethan Galstad
  *
  * First Written: 05-13-2005
  * Last Modified: 01-03-2009

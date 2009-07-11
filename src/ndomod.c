@@ -2,10 +2,10 @@
  *
  * NDOMOD.C - Nagios Data Output Event Broker Module
  *
- * Copyright (c) 2005-2007 Ethan Galstad
+ * Copyright (c) 2005-2009 Ethan Galstad
  *
  * First Written: 05-19-2005
- * Last Modified: 01-03-2009
+ * Last Modified: 07-11-2009
  *
  *****************************************************************************/
 
@@ -579,10 +579,13 @@ int ndomod_goodbye_sink(void){
 
 /* used to rotate data sink file on a regular basis */
 int ndomod_rotate_sink_file(void *args){
+#ifdef BUILD_NAGIOS_2X
 	char raw_command_line[MAX_COMMAND_BUFFER];
-	char *raw_command_line_3x=NULL;
 	char processed_command_line[MAX_COMMAND_BUFFER];
+#else
+	char *raw_command_line_3x=NULL;
 	char *processed_command_line_3x=NULL;
+#endif
 	int early_timeout=FALSE;
 	double exectime;
 

@@ -2,7 +2,7 @@
  *
  * NDO2DB.H - NDO2DB Include File
  * Copyright (c) 2005-2007 Ethan Galstad
- * Last Modified: 10-18-2007
+ * Last Modified: 07-11-2009
  *
  ************************************************************************/
 
@@ -246,4 +246,6 @@ int ndo2db_convert_string_to_long(char *,long *);
 int ndo2db_convert_string_to_unsignedlong(char *,unsigned long *);
 int ndo2db_convert_string_to_timeval(char *,struct timeval *);
 
+int ndo2db_open_debug_log(void);
+int ndo2db_close_debug_log(void);
 #endif

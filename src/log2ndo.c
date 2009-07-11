@@ -1,7 +1,7 @@
 /***************************************************************
  * LOG2NDO.C - Sends archived logs files to NDO2DB daemon
  *
- * Copyright (c) 2005-2007 Ethan Galstad 
+ * Copyright (c) 2005-2009 Ethan Galstad
  *
  * Last Modified: 01-03-2009
  *
