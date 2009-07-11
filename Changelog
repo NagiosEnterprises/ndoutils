@@ -21,6 +21,7 @@ NOTE: ** Requires Nagios 2.7 or higher, or Nagios 3.0b6
 - Added long_output support
 - Fix missing SIGTERM forwarding to childs
 - Fix fmt specifier in ndo2db_daemonize()
+- Escape custom values in 'customvariablestatus' and 'customvariables'
 
 1.4b7 - 10/31/2007
 -----------------

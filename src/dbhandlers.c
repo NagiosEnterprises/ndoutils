@@ -2403,45 +2403,8 @@ int ndo2db_handle_hoststatusdata(ndo2db_idi *idi){
 		free(es[x]);
 
 	/* save custom variables to db */
-	mbuf=idi->mbuf[NDO2DB_MBUF_CUSTOMVARIABLE];
-	for(x=0;x<mbuf.used_lines;x++){
+	result=ndo2db_save_custom_variables(idi,NDO2DB_DBTABLE_CUSTOMVARIABLESTATUS,object_id,ts[0]);
 
-		if(mbuf.buffer[x]==NULL)
-			continue;
-
-		if((ptr1=strtok(mbuf.buffer[x],":"))==NULL)
-			continue;
-		es[0]=strdup(ptr1);
-		if((ptr2=strtok(NULL,":"))==NULL)
-			continue;
-		has_been_modified=atoi(ptr2);
-		ptr3=strtok(NULL,"\n");
-		es[1]=strdup((ptr3==NULL)?"":ptr3);
-
-		if(asprintf(&buf,"instance_id='%d', object_id='%lu', status_update_time=%s, has_been_modified='%d', varname='%s', varvalue='%s'"
-			    ,idi->dbinfo.instance_id
-			    ,object_id
-			    ,ts[0]
-			    ,has_been_modified
-			    ,(es[0]==NULL)?"":es[0]
-			    ,(es[1]==NULL)?"":es[1]
-			   )==-1)
-			buf=NULL;
-
-		free(es[0]);
-		free(es[1]);
-	
-		if(asprintf(&buf1,"INSERT INTO %s SET %s ON DUPLICATE KEY UPDATE %s"
-			    ,ndo2db_db_tablenames[NDO2DB_DBTABLE_CUSTOMVARIABLESTATUS]
-			    ,buf
-			    ,buf
-			   )==-1)
-			buf1=NULL;
-
-		result=ndo2db_db_query(idi,buf1);
-		free(buf);
-		free(buf1);
-	        }
 
         /* free memory */
 	for (x = 0; x < NAGIOS_SIZEOF_ARRAY(ts); x++)
@@ -2647,45 +2610,7 @@ int ndo2db_handle_servicestatusdata(ndo2db_idi *idi){
 		free(es[x]);
 
 	/* save custom variables to db */
-	mbuf=idi->mbuf[NDO2DB_MBUF_CUSTOMVARIABLE];
-	for(x=0;x<mbuf.used_lines;x++){
-
-		if(mbuf.buffer[x]==NULL)
-			continue;
-
-		if((ptr1=strtok(mbuf.buffer[x],":"))==NULL)
-			continue;
-		es[0]=strdup(ptr1);
-		if((ptr2=strtok(NULL,":"))==NULL)
-			continue;
-		has_been_modified=atoi(ptr2);
-		ptr3=strtok(NULL,"\n");
-		es[1]=strdup((ptr3==NULL)?"":ptr3);
-
-		if(asprintf(&buf,"instance_id='%d', object_id='%lu', status_update_time=%s, has_been_modified='%d', varname='%s', varvalue='%s'"
-			    ,idi->dbinfo.instance_id
-			    ,object_id
-			    ,ts[0]
-			    ,has_been_modified
-			    ,(es[0]==NULL)?"":es[0]
-			    ,(es[1]==NULL)?"":es[1]
-			   )==-1)
-			buf=NULL;
-
-		free(es[0]);
-		free(es[1]);
-	
-		if(asprintf(&buf1,"INSERT INTO %s SET %s ON DUPLICATE KEY UPDATE %s"
-			    ,ndo2db_db_tablenames[NDO2DB_DBTABLE_CUSTOMVARIABLESTATUS]
-			    ,buf
-			    ,buf
-			   )==-1)
-			buf1=NULL;
-
-		result=ndo2db_db_query(idi,buf1);
-		free(buf);
-		free(buf1);
-	        }
+	result=ndo2db_save_custom_variables(idi,NDO2DB_DBTABLE_CUSTOMVARIABLESTATUS,object_id,ts[0]);
 
         /* free memory */
 	for (x = 0; x < NAGIOS_SIZEOF_ARRAY(ts); x++)
@@ -2772,45 +2697,8 @@ int ndo2db_handle_contactstatusdata(ndo2db_idi *idi){
 	free(buf1);
 
 	/* save custom variables to db */
-	mbuf=idi->mbuf[NDO2DB_MBUF_CUSTOMVARIABLE];
-	for(x=0;x<mbuf.used_lines;x++){
+	result=ndo2db_save_custom_variables(idi,NDO2DB_DBTABLE_CUSTOMVARIABLESTATUS,object_id,ts[0]);
 
-		if(mbuf.buffer[x]==NULL)
-			continue;
-
-		if((ptr1=strtok(mbuf.buffer[x],":"))==NULL)
-			continue;
-		es[0]=strdup(ptr1);
-		if((ptr2=strtok(NULL,":"))==NULL)
-			continue;
-		has_been_modified=atoi(ptr2);
-		ptr3=strtok(NULL,"\n");
-		es[1]=strdup((ptr3==NULL)?"":ptr3);
-
-		if(asprintf(&buf,"instance_id='%d', object_id='%lu',status_update_time=%s, has_been_modified='%d', varname='%s', varvalue='%s'"
-			    ,idi->dbinfo.instance_id
-			    ,object_id
-			    ,ts[0]
-			    ,has_been_modified
-			    ,(es[0]==NULL)?"":es[0]
-			    ,(es[1]==NULL)?"":es[1]
-			   )==-1)
-			buf=NULL;
-
-		free(es[0]);
-		free(es[1]);
-	
-		if(asprintf(&buf1,"INSERT INTO %s SET %s ON DUPLICATE KEY UPDATE %s"
-			    ,ndo2db_db_tablenames[NDO2DB_DBTABLE_CUSTOMVARIABLESTATUS]
-			    ,buf
-			    ,buf
-			   )==-1)
-			buf1=NULL;
-
-		result=ndo2db_db_query(idi,buf1);
-		free(buf);
-		free(buf1);
-	        }
 
         /* free memory */
 	for (x = 0; x < NAGIOS_SIZEOF_ARRAY(ts); x++)
@@ -3628,48 +3516,10 @@ int ndo2db_handle_hostdefinition(ndo2db_idi *idi){
 		result=ndo2db_db_query(idi,buf1);
 		free(buf);
 		free(buf1);
-	        }
+	}
 
 	/* save custom variables to db */
-	mbuf=idi->mbuf[NDO2DB_MBUF_CUSTOMVARIABLE];
-	for(x=0;x<mbuf.used_lines;x++){
-
-		if(mbuf.buffer[x]==NULL)
-			continue;
-
-		if((ptr1=strtok(mbuf.buffer[x],":"))==NULL)
-			continue;
-		es[0]=strdup(ptr1);
-		if((ptr2=strtok(NULL,":"))==NULL)
-			continue;
-		has_been_modified=atoi(ptr2);
-		ptr3=strtok(NULL,"\n");
-		es[1]=strdup((ptr3==NULL)?"":ptr3);
-
-		if(asprintf(&buf,"instance_id='%d', object_id='%lu', config_type='%d', has_been_modified='%d', varname='%s', varvalue='%s'"
-			    ,idi->dbinfo.instance_id
-			    ,object_id
-			    ,idi->current_object_config_type
-			    ,has_been_modified
-			    ,(es[0]==NULL)?"":es[0]
-			    ,(es[1]==NULL)?"":es[1]
-			   )==-1)
-			buf=NULL;
-
-		free(es[0]);
-		free(es[1]);
-	
-		if(asprintf(&buf1,"INSERT INTO %s SET %s ON DUPLICATE KEY UPDATE %s"
-			    ,ndo2db_db_tablenames[NDO2DB_DBTABLE_CUSTOMVARIABLES]
-			    ,buf
-			    ,buf
-			   )==-1)
-			buf1=NULL;
-
-		result=ndo2db_db_query(idi,buf1);
-		free(buf);
-		free(buf1);
-	        }
+	result=ndo2db_save_custom_variables(idi,NDO2DB_DBTABLE_CUSTOMVARIABLES,object_id,NULL);
 
 	return NDO_OK;
         }
@@ -4043,48 +3893,10 @@ int ndo2db_handle_servicedefinition(ndo2db_idi *idi){
 		result=ndo2db_db_query(idi,buf1);
 		free(buf);
 		free(buf1);
-	        }
-
-	/* save custom variables to db */
-	mbuf=idi->mbuf[NDO2DB_MBUF_CUSTOMVARIABLE];
-	for(x=0;x<mbuf.used_lines;x++){
-
-		if(mbuf.buffer[x]==NULL)
-			continue;
-
-		if((ptr1=strtok(mbuf.buffer[x],":"))==NULL)
-			continue;
-		es[0]=strdup(ptr1);
-		if((ptr2=strtok(NULL,":"))==NULL)
-			continue;
-		has_been_modified=atoi(ptr2);
-		ptr3=strtok(NULL,"\n");
-		es[1]=strdup((ptr3==NULL)?"":ptr3);
-
-		if(asprintf(&buf,"instance_id='%d', object_id='%lu', config_type='%d', has_been_modified='%d', varname='%s', varvalue='%s'"
-			    ,idi->dbinfo.instance_id
-			    ,object_id
-			    ,idi->current_object_config_type
-			    ,has_been_modified
-			    ,(es[0]==NULL)?"":es[0]
-			    ,(es[1]==NULL)?"":es[1]
-			   )==-1)
-			buf=NULL;
-
-		free(es[0]);
-		free(es[1]);
+	}
 	
-		if(asprintf(&buf1,"INSERT INTO %s SET %s ON DUPLICATE KEY UPDATE %s"
-			    ,ndo2db_db_tablenames[NDO2DB_DBTABLE_CUSTOMVARIABLES]
-			    ,buf
-			    ,buf
-			   )==-1)
-			buf1=NULL;
-
-		result=ndo2db_db_query(idi,buf1);
-		free(buf);
-		free(buf1);
-	        }
+	/* save custom variables to db */
+	result=ndo2db_save_custom_variables(idi,NDO2DB_DBTABLE_CUSTOMVARIABLES,object_id,NULL);
 
 	return NDO_OK;
         }
@@ -5027,48 +4839,10 @@ int ndo2db_handle_contactdefinition(ndo2db_idi *idi){
 		free(buf1);
 
 		free(es[0]);
-	        }
-
-	/* save custom variables to db */
-	mbuf=idi->mbuf[NDO2DB_MBUF_CUSTOMVARIABLE];
-	for(x=0;x<mbuf.used_lines;x++){
-
-		if(mbuf.buffer[x]==NULL)
-			continue;
-
-		if((ptr1=strtok(mbuf.buffer[x],":"))==NULL)
-			continue;
-		es[0]=strdup(ptr1);
-		if((ptr2=strtok(NULL,":"))==NULL)
-			continue;
-		has_been_modified=atoi(ptr2);
-		ptr3=strtok(NULL,"\n");
-		es[1]=strdup((ptr3==NULL)?"":ptr3);
-
-		if(asprintf(&buf,"instance_id='%d', object_id='%lu', config_type='%d', has_been_modified='%d', varname='%s', varvalue='%s'"
-			    ,idi->dbinfo.instance_id
-			    ,contact_id
-			    ,idi->current_object_config_type
-			    ,has_been_modified
-			    ,(es[0]==NULL)?"":es[0]
-			    ,(es[1]==NULL)?"":es[1]
-			   )==-1)
-			buf=NULL;
-
-		free(es[0]);
-		free(es[1]);
+	}
 	
-		if(asprintf(&buf1,"INSERT INTO %s SET %s ON DUPLICATE KEY UPDATE %s"
-			    ,ndo2db_db_tablenames[NDO2DB_DBTABLE_CUSTOMVARIABLES]
-			    ,buf
-			    ,buf
-			   )==-1)
-			buf1=NULL;
-
-		result=ndo2db_db_query(idi,buf1);
-		free(buf);
-		free(buf1);
-	        }
+	/* save custom variables to db */
+	result=ndo2db_save_custom_variables(idi,NDO2DB_DBTABLE_CUSTOMVARIABLES,contact_id,NULL);
 
 	return NDO_OK;
         }
@@ -5168,3 +4942,75 @@ int ndo2db_handle_contactgroupdefinition(ndo2db_idi *idi){
 
 	return NDO_OK;
         }
+
+int ndo2db_save_custom_variables(ndo2db_idi *idi,int table_idx, int o_id, char *ts ){
+	char *buf=NULL;
+	char *buf1=NULL;
+	ndo2db_mbuf mbuf;
+	char *es[1];
+	char *ptr1=NULL;
+	char *ptr2=NULL;
+	char *ptr3=NULL;
+	int result=NDO_OK;
+	int has_been_modified=0;
+	int x=0;
+
+	/* save custom variables to db */
+	mbuf=idi->mbuf[NDO2DB_MBUF_CUSTOMVARIABLE];
+	for(x=0;x<mbuf.used_lines;x++){
+
+		if(mbuf.buffer[x]==NULL)
+			continue;
+
+		if((ptr1=strtok(mbuf.buffer[x],":"))==NULL)
+			continue;
+
+		es[0]=strdup(ptr1);
+		if((ptr2=strtok(NULL,":"))==NULL)
+			continue;
+		has_been_modified=atoi(ptr2);
+		ptr3=strtok(NULL,"\n");
+
+		buf1=strdup((ptr3==NULL)?"":ptr3);
+		es[1]=ndo2db_db_escape_string(idi,buf1);
+		free(buf1);
+
+		if (table_idx==NDO2DB_DBTABLE_CUSTOMVARIABLES) {
+			if(asprintf(&buf,"instance_id='%d', object_id='%lu', config_type='%d', has_been_modified='%d', varname='%s', varvalue='%s'"
+					,idi->dbinfo.instance_id
+					,o_id
+					,idi->current_object_config_type
+					,has_been_modified
+					,(es[0]==NULL)?"":es[0]
+					,(es[1]==NULL)?"":es[1]
+				)==-1)
+				buf=NULL;
+		}
+		if (table_idx==NDO2DB_DBTABLE_CUSTOMVARIABLESTATUS) {
+			if(asprintf(&buf,"instance_id='%d', object_id='%lu',status_update_time=%s, has_been_modified='%d', varname='%s', varvalue='%s'"
+					,idi->dbinfo.instance_id
+					,o_id
+					,(ts==NULL)?"NULL":ts
+					,has_been_modified
+					,(es[0]==NULL)?"":es[0]
+					,(es[1]==NULL)?"":es[1]
+				)==-1)
+				buf=NULL;
+		}
+		free(es[0]);
+		free(es[1]);
+
+		if(asprintf(&buf1,"INSERT INtO %s SET %s ON DUPLICATE KEY UPDATE %s"
+			    ,ndo2db_db_tablenames[table_idx]
+			    ,buf
+			    ,buf
+			   )==-1)
+			buf1=NULL;
+
+		result=ndo2db_db_query(idi,buf1);
+		free(buf);
+		free(buf1);
+	}
+	return result;
+}
+
