@@ -8,6 +8,9 @@ AC_INIT(src/ndo2db.c)
 AC_CONFIG_HEADER(include/config.h)
 AC_PREFIX_DEFAULT(/usr/local/nagios)
 
+AC_DEFINE([DEFAULT_NAGIOS_USER], [nagios], [Default Nagios User])
+AC_DEFINE([DEFAULT_NAGIOS_GROUP], [nagios], [Default Nagios Group])
+
 PKG_NAME=ndoutils
 PKG_VERSION="1.4b8"
 PKG_HOME_URL="http://www.nagios.org/"
@@ -125,6 +128,23 @@ AC_TRY_LINK([
     [struct sockaddr_un su; int i = SUN_LEN(&su);],
     [AC_DEFINE(HAVE_SUN_LEN)], )
 
+dnl Check for location of init scripts
+init_dir=/etc/rc.d/init.d
+if test -d /etc/rc.d/init.d; then
+    init_dir="/etc/rc.d/init.d"
+elif test -d /usr/local/etc/rc.d; then
+    init_dir="/usr/local/etc/rc.d"
+elif test -d /etc/rc.d; then
+    init_dir="/etc/rc.d"
+elif test -d /etc/init.d; then
+    init_dir="/etc/init.d"
+elif test -d /sbin/init.d; then
+    init_dir="/sbin/init.d"
+fi
+
+dnl User can override init script location
+AC_ARG_WITH(init_dir,[  --with-init-dir=<path>  sets directory to place init script into],init_dir=$withval)
+AC_SUBST(init_dir)
 
 dnl - Modified version from www.erlang.org
 dnl - Some 12/15/05 mods made after reading http://xaxxon.slackworks.com/phuku/dl.html
@@ -240,12 +260,14 @@ AC_ARG_WITH(ndo2db_user,--with-ndo2db-user=<user> sets user name to run NDO2DB,n
 AC_ARG_WITH(ndo2db_group,--with-ndo2db-group=<group> sets group name to run NDO2DB,ndo2db_group=$withval,ndo2db_group=nagios)
 AC_SUBST(ndo2db_user)
 AC_SUBST(ndo2db_group)
+INSTALL_OPTS="-o $ndo2db_user -g $ndo2db_group"
+AC_SUBST(INSTALL_OPTS)
 
 
 
 AC_OUTPUT(Makefile src/Makefile subst)
 
-perl subst init-script.suse
+perl subst daemon-init
 
 
 dnl Review options

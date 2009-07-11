@@ -30,6 +30,7 @@ while ($f = shift @ARGV) {
 		s|\@bindir\@|@bindir@|g;
 		s|\$\{exec_prefix\}|@exec_prefix@|g; # must be next to last
 		s|\$\{prefix\}|@prefix@|g; # must be last
+		s|\@prefix\@|@prefix@|g;
 		print OUT $_;
 	}
 

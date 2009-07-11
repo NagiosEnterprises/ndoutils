@@ -310,7 +310,7 @@ ac_includes_default="\
 # include <unistd.h>
 #endif"
 
-ac_subst_vars='SHELL PATH_SEPARATOR PACKAGE_NAME PACKAGE_TARNAME PACKAGE_VERSION PACKAGE_STRING PACKAGE_BUGREPORT exec_prefix prefix program_transform_name bindir sbindir libexecdir datadir sysconfdir sharedstatedir localstatedir libdir includedir oldincludedir infodir mandir build_alias host_alias target_alias DEFS ECHO_C ECHO_N ECHO_T LIBS INSTALL_PROGRAM INSTALL_SCRIPT INSTALL_DATA INSTALL build build_cpu build_vendor build_os host host_cpu host_vendor host_os CC CFLAGS LDFLAGS CPPFLAGS ac_ct_CC EXEEXT OBJEXT SET_MAKE CPP EGREP OTHERLIBS SOCKETLIBS LIBWRAPLIBS MOD_CFLAGS MOD_LDFLAGS np_mysql_config DBCFLAGS DBLDFLAGS DBLIBS ndo2db_user ndo2db_group LIBOBJS LTLIBOBJS'
+ac_subst_vars='SHELL PATH_SEPARATOR PACKAGE_NAME PACKAGE_TARNAME PACKAGE_VERSION PACKAGE_STRING PACKAGE_BUGREPORT exec_prefix prefix program_transform_name bindir sbindir libexecdir datadir sysconfdir sharedstatedir localstatedir libdir includedir oldincludedir infodir mandir build_alias host_alias target_alias DEFS ECHO_C ECHO_N ECHO_T LIBS INSTALL_PROGRAM INSTALL_SCRIPT INSTALL_DATA INSTALL build build_cpu build_vendor build_os host host_cpu host_vendor host_os CC CFLAGS LDFLAGS CPPFLAGS ac_ct_CC EXEEXT OBJEXT SET_MAKE CPP EGREP OTHERLIBS SOCKETLIBS LIBWRAPLIBS init_dir MOD_CFLAGS MOD_LDFLAGS np_mysql_config DBCFLAGS DBLDFLAGS DBLIBS ndo2db_user ndo2db_group INSTALL_OPTS LIBOBJS LTLIBOBJS'
 ac_subst_files=''
 
 # Initialize some variables set by options.
@@ -850,6 +850,7 @@ Optional Features:
 Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
   --without-PACKAGE       do not use PACKAGE (same as --with-PACKAGE=no)
+  --with-init-dir=<path>  sets directory to place init script into
   --with-mysql=DIR        Locates mysql libraries. Expects
                           DIR/bin/mysql_config. Default to search for
                           mysql_config in PATH
@@ -1289,6 +1290,17 @@ ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
           ac_config_headers="$ac_config_headers include/config.h"
 
+
+
+
+cat >>confdefs.h <<\_ACEOF
+#define DEFAULT_NAGIOS_USER nagios
+_ACEOF
+
+
+cat >>confdefs.h <<\_ACEOF
+#define DEFAULT_NAGIOS_GROUP nagios
+_ACEOF
 
 
 PKG_NAME=ndoutils
@@ -5882,6 +5894,26 @@ fi
 rm -f conftest.err conftest.$ac_objext \
       conftest$ac_exeext conftest.$ac_ext
 
+init_dir=/etc/rc.d/init.d
+if test -d /etc/rc.d/init.d; then
+    init_dir="/etc/rc.d/init.d"
+elif test -d /usr/local/etc/rc.d; then
+    init_dir="/usr/local/etc/rc.d"
+elif test -d /etc/rc.d; then
+    init_dir="/etc/rc.d"
+elif test -d /etc/init.d; then
+    init_dir="/etc/init.d"
+elif test -d /sbin/init.d; then
+    init_dir="/sbin/init.d"
+fi
+
+
+# Check whether --with-init_dir or --without-init_dir was given.
+if test "${with_init_dir+set}" = set; then
+  withval="$with_init_dir"
+  init_dir=$withval
+fi;
+
 
 echo "$as_me:$LINENO: checking for linker flags for loadable modules" >&5
 echo $ECHO_N "checking for linker flags for loadable modules... $ECHO_C" >&6
@@ -6157,6 +6189,8 @@ else
   ndo2db_group=nagios
 fi;
 
+
+INSTALL_OPTS="-o $ndo2db_user -g $ndo2db_group"
 
 
 
@@ -6747,6 +6781,7 @@ s,@EGREP@,$EGREP,;t t
 s,@OTHERLIBS@,$OTHERLIBS,;t t
 s,@SOCKETLIBS@,$SOCKETLIBS,;t t
 s,@LIBWRAPLIBS@,$LIBWRAPLIBS,;t t
+s,@init_dir@,$init_dir,;t t
 s,@MOD_CFLAGS@,$MOD_CFLAGS,;t t
 s,@MOD_LDFLAGS@,$MOD_LDFLAGS,;t t
 s,@np_mysql_config@,$np_mysql_config,;t t
@@ -6755,6 +6790,7 @@ s,@DBLDFLAGS@,$DBLDFLAGS,;t t
 s,@DBLIBS@,$DBLIBS,;t t
 s,@ndo2db_user@,$ndo2db_user,;t t
 s,@ndo2db_group@,$ndo2db_group,;t t
+s,@INSTALL_OPTS@,$INSTALL_OPTS,;t t
 s,@LIBOBJS@,$LIBOBJS,;t t
 s,@LTLIBOBJS@,$LTLIBOBJS,;t t
 CEOF
@@ -7249,7 +7285,7 @@ if test "$no_create" != yes; then
 fi
 
 
-perl subst init-script.suse
+perl subst daemon-init
 
 
 echo ""

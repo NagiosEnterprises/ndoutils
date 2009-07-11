@@ -1,0 +1,193 @@
+#!/bin/sh
+# 
+### BEGIN INIT INFO
+# Provides:          ndo2db
+# Required-Start:    
+# Required-Stop:     
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: Nagios NDO2DB Initscript
+# Description: 	     Nagios Data Out Daemon
+### END INIT INFO
+
+# chkconfig: 345 99 01
+#
+# File : ndo2db
+#
+# Author : Jorge Sanchez Aymar (jsanchez@lanchile.cl)
+# 
+# Changelog :
+#
+# 1999-07-09 Karl DeBisschop <kdebisschop@infoplease.com>
+#  - setup for autoconf
+#  - add reload function
+# 1999-08-06 Ethan Galstad <egalstad@nagios.org>
+#  - Added configuration info for use with RedHat's chkconfig tool
+#    per Fran Boon's suggestion
+# 1999-08-13 Jim Popovitch <jimpop@rocketship.com>
+#  - added variable for nagios/var directory
+#  - cd into nagios/var directory before creating tmp files on startup
+# 1999-08-16 Ethan Galstad <egalstad@nagios.org>
+#  - Added test for rc.d directory as suggested by Karl DeBisschop
+# 2000-07-23 Karl DeBisschop <kdebisschop@users.sourceforge.net>
+#  - Clean out redhat macros and other dependencies
+# 2003-01-11 Ethan Galstad <egalstad@nagios.org>
+#  - Updated su syntax (Gary Miller)
+# 2009-07-11 Hendrik Bäcker <andurin@process-zero.de>
+#  - Rewrite ndo2db init script, inspired by Sascha Runschke
+#
+#
+  
+status_ndo2db ()
+{
+
+	pid_ndo2db
+
+	if ps -p $Ndo2dbPID > /dev/null 2>&1; then
+		return 0
+	else
+		if test -f $Ndo2dbLockDir/$Ndo2dbLockFile; then
+       			return 2
+		else
+			return 1
+		fi
+        fi
+
+        return 1
+}
+
+printstatus_ndo2db()
+{
+	if status_ndo2db $1 $2; then
+		echo "$servicename (pid $Ndo2dbPID) is running..."
+	elif test $? == 2; then
+		echo "$servicename is not running but subsystem locked"
+	else
+		echo "$servicename is not running"
+	fi
+}
+
+
+killproc_ndo2db ()
+{
+
+	kill $2 $Ndo2dbPID
+
+}
+
+
+pid_ndo2db ()
+{
+
+	if test ! -f $Ndo2dbRunFile; then
+		return 1
+	fi
+
+	Ndo2dbPID=`head -n 1 $Ndo2dbRunFile`
+	return 0
+}
+
+
+# Source function library
+# Solaris doesn't have an rc.d directory, so do a test first
+if [ -f /etc/rc.d/init.d/functions ]; then
+	. /etc/rc.d/init.d/functions
+elif [ -f /etc/init.d/functions ]; then
+	. /etc/init.d/functions
+fi
+
+servicename=ndo2db
+prefix=@prefix@
+exec_prefix=${prefix}
+Ndo2dbBin=@bindir@/ndo2db
+Ndo2dbCfgFile=@sysconfdir@/ndo2db.cfg
+Ndo2dbVarDir=@localstatedir@
+Ndo2dbRunFile=$Ndo2dbVarDir/ndo2db.lock
+Ndo2dbLockDir=/var/lock/subsys
+Ndo2dbLockFile=ndo2db
+Ndo2dbUser=nagios
+Ndo2dbGroup=nagios
+          
+
+# Check that ndo2db exists.
+if [ ! -f $Ndo2dbBin ]; then
+    echo "Executable file $Ndo2dbBin not found.  Exiting."
+    exit 1
+fi
+
+# Check that ndo2db.cfg exists.
+if [ ! -f $Ndo2dbCfgFile ]; then
+    echo "Configuration file $Ndo2dbCfgFile not found.  Exiting."
+    exit 1
+fi
+          
+# See how we were called.
+case "$1" in
+
+	start)
+		status_ndo2db
+		if [ $? -eq 0 ]; then
+			echo "$servicename already started..."
+			exit 1
+		fi
+		echo -n "Starting $servicename:"
+		touch $Ndo2dbRunFile
+		chown $Ndo2dbUser:$Ndo2dbGroup $Ndo2dbRunFile
+		$Ndo2dbBin -c $Ndo2dbCfgFile
+		if [ -d $Ndo2dbLockDir ]; then touch $Ndo2dbLockDir/$Ndo2dbLockFile; fi
+		echo " done."
+		exit 0
+		;;
+
+	stop)
+		status_ndo2db
+		if ! [ $? -eq 0 ]; then
+			echo "$servicename was not running... could not stop"
+			exit 1
+		fi
+		echo -n "Stopping $servicename: "
+
+		pid_ndo2db
+		killproc_ndo2db ndo2db
+
+ 		# now we have to wait for ndo2db to exit and remove its
+ 		# own Ndo2dbRunFile, otherwise a following "start" could
+ 		# happen, and then the exiting ndo2db will remove the
+ 		# new Ndo2dbRunFile, allowing multiple ndo2db daemons
+ 		# to (sooner or later) run - John Sellens
+		#echo -n 'Waiting for ndo2db to exit .'
+ 		for i in 1 2 3 4 5 6 7 8 9 10 ; do
+ 		    if status_ndo2db > /dev/null; then
+ 			echo -n '.'
+ 			sleep 1
+ 		    else
+ 			break
+ 		    fi
+ 		done
+ 		if status_ndo2db > /dev/null; then
+ 		    echo ''
+ 		    echo 'Warning - $servicename did not exit in a timely manner'
+ 		else
+ 		    echo 'done.'
+ 		fi
+
+		rm -f $Ndo2dbStatusFile $Ndo2dbRunFile $Ndo2dbLockDir/$Ndo2dbLockFile $Ndo2dbCommandFile
+		;;
+
+        status)
+		printstatus_ndo2db
+                ;;
+
+	restart)
+		$0 stop
+		$0 start
+		;;
+
+	*)
+		echo "Usage: $servicename {start|stop|restart|status}"
+		exit 1
+		;;
+
+esac
+  
+# End of this script
