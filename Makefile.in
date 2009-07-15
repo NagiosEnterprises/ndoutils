@@ -31,7 +31,7 @@ distclean: clean
 	cd $(SRC_BASE) && $(MAKE) $@
 	rm -f config.log config.status config.cache $(SRC_INCLUDE)/config.h
 	rm -f Makefile
-	rm -f init-script.suse subst daemon-init
+	rm -f subst daemon-init
 
 devclean: distclean
 
