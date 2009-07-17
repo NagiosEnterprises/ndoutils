@@ -5,7 +5,7 @@
  * Copyright (c) 2005-2009 Ethan Galstad
  *
  * First Written: 05-19-2005
- * Last Modified: 07-11-2009
+ * Last Modified: 07-16-2009
  *
  **************************************************************/
 
@@ -27,7 +27,7 @@
 
 #define NDO2DB_VERSION "1.4b8"
 #define NDO2DB_NAME "NDO2DB"
-#define NDO2DB_DATE "01-03-2009"
+#define NDO2DB_DATE "07-16-2009"
 
 
 extern int errno;

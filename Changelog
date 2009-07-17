@@ -6,7 +6,7 @@ Note:  Consider this addon to be experimental.  Memory leaks and segfaults are t
        expected until the code stabilizes, so beware of using it in production environments.
 
 
-1.4b8 - ??/??/2009
+1.4b8 - 07/16/2009
 ------------------
 NOTE: ** Requires Nagios 2.7 or higher, or Nagios 3.0b6 or higher
 - Added additional error messages during failed startup

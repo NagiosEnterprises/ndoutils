@@ -5,7 +5,7 @@
  * Copyright (c) 2005-2009 Ethan Galstad
  *
  * First Written: 05-13-2005
- * Last Modified: 01-03-2009
+ * Last Modified: 07-16-2009
  *
  **************************************************************/
 
@@ -13,7 +13,7 @@
 
 #define SOCKDEBUG_VERSION "1.4b8"
 #define SOCKDEBUG_NAME "SOCKDEBUG"
-#define SOCKDEBUG_DATE "01-03-2009"
+#define SOCKDEBUG_DATE "07-16-2009"
 
 
 int cleanup_socket(int,char *);
