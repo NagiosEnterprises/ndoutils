@@ -1,6 +1,7 @@
 /***************************************************************
  * LOG2NDO.C - Sends archived logs files to NDO2DB daemon
  *
+ * Copyright (c) 2009 Nagios Core Development Team and Community Contributors
  * Copyright (c) 2005-2009 Ethan Galstad
  *
  * Last Modified: 01-03-2009
@@ -49,7 +50,8 @@ int main(int argc, char **argv){
 
 		printf("\n");
 		printf("%s %s\n",LOG2NDO_NAME,LOG2NDO_VERSION);
-		printf("Copyright(c) 2005-2007 Ethan Galstad (nagios@nagios.org)\n");
+		printf("Copyright (c) 2009 Nagios Core Development Team and Community Contributors\n");
+		printf("Copyright (c) 2005-2007 Ethan Galstad\n");
 		printf("Last Mofieid: %s\n",LOG2NDO_DATE);
 		printf("License: GPL v2\n");
 		printf("\n");

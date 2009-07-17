@@ -1,6 +1,7 @@
 /***************************************************************
  * FILE2SOCK.c - File to Socket Dump Utility
  *
+ * Copyright (c) 2009 Nagios Core Development Team and Community Contributors
  * Copyright (c) 20052-2009 Ethan Galstad
  * License: GPL v2
  *
@@ -45,7 +46,8 @@ int main(int argc, char **argv){
 
 		printf("\n");
 		printf("%s %s\n",FILE2SOCK_NAME,FILE2SOCK_VERSION);
-		printf("Copyright(c) 2005-2007 Ethan Galstad (nagios@nagios.org)\n");
+		printf("Copyright (c) 2009 Nagios Core Development Team and Community Contributors\n");
+		printf("Copyright (c) 2005-2007 Ethan Galstad\n");
 		printf("Last Modified: %s\n",FILE2SOCK_DATE);
 		printf("License: GPL v2\n");
 		printf("\n");

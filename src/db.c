@@ -1,6 +1,7 @@
 /***************************************************************
  * DB.C - Datatabase routines for NDO2DB daemon
  *
+ * Copyright (c) 2009 Nagios Core Development Team and Community Contributors
  * Copyright (c) 2005-2009 Ethan Galstad
  *
  * Last Modified: 07-11-2009

@@ -1,9 +1,10 @@
 /***************************************************************
  * UTILS.C - NDO Utils
  *
+ * Copyright (c) 2009 Nagios Core Development Team and Community Contributors
  * Copyright (c) 2005-2008 Ethan Galstad 
- * First Written: 01-25-2008
  *
+ * First Written: 01-25-2008
  *
  **************************************************************/
 

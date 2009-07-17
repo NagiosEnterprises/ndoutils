@@ -2,6 +2,7 @@
  *
  * NDOMOD.C - Nagios Data Output Event Broker Module
  *
+ * Copyright (c) 2009 Nagios Core Development Team and Community Contributors
  * Copyright (c) 2005-2009 Ethan Galstad
  *
  * First Written: 05-19-2005
@@ -118,7 +119,7 @@ int nebmodule_init(int flags, char *args, void *handle){
 	ndomod_module_handle=handle;
 
 	/* log module info to the Nagios log file */
-	snprintf(temp_buffer,sizeof(temp_buffer)-1,"ndomod: %s %s (%s) Copyright (c) 2005-2008 Ethan Galstad (nagios@nagios.org)",NDOMOD_NAME,NDOMOD_VERSION,NDOMOD_DATE);
+	snprintf(temp_buffer,sizeof(temp_buffer)-1,"ndomod: %s %s (%s) Copyright (c) 2009 Nagios Core Development Team and Community Contributors",NDOMOD_NAME,NDOMOD_VERSION,NDOMOD_DATE);
 	temp_buffer[sizeof(temp_buffer)-1]='\x0';
 	ndomod_write_to_logs(temp_buffer,NSLOG_INFO_MESSAGE);
 

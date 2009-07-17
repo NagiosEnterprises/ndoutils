@@ -1,6 +1,7 @@
 /***************************************************************
  * SOCKDEBUG.C - Socket Debugging Utility
  *
+ * Copyright (c) 2009 Nagios Core Development Team and Community Contributors
  * Copyright (c) 2005-2009 Ethan Galstad
  *
  * First Written: 05-13-2005
@@ -34,7 +35,8 @@ int main(int argc, char **argv){
 
 	if(argc<2){
 		printf("%s %s\n",SOCKDEBUG_NAME,SOCKDEBUG_VERSION);
-		printf("Copyright(c) 2005-2007 Ethan Galstad\n");
+		printf("Copyright (c) 2009 Nagios Core Development Team and Community Contributors\n");
+		printf("Copyright (c) 2005-2007 Ethan Galstad\n");
 		printf("Last Modified: %s\n",SOCKDEBUG_DATE);
 		printf("License: GPL v2\n");
 		printf("\n");

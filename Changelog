@@ -2,14 +2,13 @@
 NDO Utils History
 =================
 
-Note:  Consider this addon to be experimental/beta/alpha/potentially-hazardous-to-your-health.
-       Memory leaks and segfaults are to be expected until the code stabilizes, so beware of
-       using it in production environments.   - Ethan
+Note:  Consider this addon to be experimental.  Memory leaks and segfaults are to be 
+       expected until the code stabilizes, so beware of using it in production environments.
 
 
 1.4b8 - ??/??/2009
 ------------------
-NOTE: ** Requires Nagios 2.7 or higher, or Nagios 3.0b6
+NOTE: ** Requires Nagios 2.7 or higher, or Nagios 3.0b6 or higher
 - Added additional error messages during failed startup
 - Better MySQL library detection (Ton Voon, Herbert Straub, and Nagios Plugin Team)
 - Removed Postgres options to configure script, as it is not yet supported
@@ -25,6 +24,8 @@ NOTE: ** Requires Nagios 2.7 or higher, or Nagios 3.0b6
 - Fix ndomod doesn't execute rotate_command propperly
 - Fix several compiler warnings
 - Rewrite ndo2db init script, install it with 'make install-init'
+
+
 
 1.4b7 - 10/31/2007
 -----------------

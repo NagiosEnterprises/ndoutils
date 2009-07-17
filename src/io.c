@@ -1,9 +1,10 @@
 /***************************************************************
  * IO.C - NDO I/O Functions
  *
+ * Copyright (c) 2009 Nagios Core Development Team and Community Contributors
  * Copyright (c) 2005-2006 Ethan Galstad 
- * First Written: 05-20-2006
  *
+ * First Written: 05-20-2006
  *
  **************************************************************/
 
