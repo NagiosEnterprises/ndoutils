@@ -9,6 +9,7 @@ Note:  Consider this addon to be experimental.  Memory leaks and segfaults are t
 ------------------
 NOTE: ** Requires Nagios 2.7 or higher, or Nagios 3.0b6 or higher
 - Improved writes from file2sock to ndo2db by matching buffer sizes (Opsera Ltd)
+- Add in 4 missing tables from clearout process during prelaunch (Opsera Ltd)
 
 1.4b8 - 07/16/2009
 ------------------

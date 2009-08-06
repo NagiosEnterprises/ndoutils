@@ -689,6 +689,10 @@ int ndo2db_handle_processdata(ndo2db_idi *idi){
 		ndo2db_db_clear_table(idi,ndo2db_db_tablenames[NDO2DB_DBTABLE_HOSTCONTACTS]);
 		ndo2db_db_clear_table(idi,ndo2db_db_tablenames[NDO2DB_DBTABLE_SERVICES]);
 		ndo2db_db_clear_table(idi,ndo2db_db_tablenames[NDO2DB_DBTABLE_SERVICECONTACTS]);
+		ndo2db_db_clear_table(idi,ndo2db_db_tablenames[NDO2DB_DBTABLE_SERVICECONTACTGROUPS]);
+		ndo2db_db_clear_table(idi,ndo2db_db_tablenames[NDO2DB_DBTABLE_HOSTCONTACTGROUPS]);
+		ndo2db_db_clear_table(idi,ndo2db_db_tablenames[NDO2DB_DBTABLE_HOSTESCALATIONCONTACTGROUPS]);
+		ndo2db_db_clear_table(idi,ndo2db_db_tablenames[NDO2DB_DBTABLE_SERVICEESCALATIONCONTACTGROUPS]);
 
 		/* flag all objects as being inactive */
 		ndo2db_set_all_objects_as_inactive(idi);
