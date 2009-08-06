@@ -13,6 +13,7 @@ NOTE: ** Requires Nagios 2.7 or higher, or Nagios 3.0b6 or higher
 - Fix for Solaris 10 which gets an EINTR on accept for the 2nd file2sock call (Opsera Ltd)
 - Fix for not retrying read on 'EAGAIN' and 'EINTR' soft errors (Opsera Ltd)
 - Improve error info by showing failed MySQL query in syslog (Opsera Ltd)
+- Move database connections/disconnections syslog detail to DEBUG from INFO (Opsera Ltd)
 
 1.4b8 - 07/16/2009
 ------------------

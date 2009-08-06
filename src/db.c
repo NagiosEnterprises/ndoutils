@@ -214,7 +214,7 @@ int ndo2db_db_connect(ndo2db_idi *idi){
 		        }
 		else{
 			idi->dbinfo.connected=NDO_TRUE;
-			syslog(LOG_USER|LOG_INFO,"Successfully connected to MySQL database");
+			syslog(LOG_USER|LOG_DEBUG,"Successfully connected to MySQL database");
 		        }
 #endif
 		break;
@@ -232,7 +232,7 @@ int ndo2db_db_connect(ndo2db_idi *idi){
 		        }
 		else{
 			idi->dbinfo.connected=NDO_TRUE;
-			syslog(LOG_USER|LOG_INFO,"Successfully connect to PostgreSQL database");
+			syslog(LOG_USER|LOG_DEBUG,"Successfully connected to PostgreSQL database");
 		        }
 #endif
 		break;
@@ -259,7 +259,7 @@ int ndo2db_db_disconnect(ndo2db_idi *idi){
 #ifdef USE_MYSQL
 		/* close the connection to the database server */		
 		mysql_close(&idi->dbinfo.mysql_conn);
-		syslog(LOG_USER|LOG_INFO,"Successfully disconnected from MySQL database");
+		syslog(LOG_USER|LOG_DEBUG,"Successfully disconnected from MySQL database");
 #endif
 		break;
 	case NDO2DB_DBSERVER_PGSQL:
@@ -267,7 +267,7 @@ int ndo2db_db_disconnect(ndo2db_idi *idi){
 		/* close database connection and cleanup */
 		if(PQstatus(idi->dbinfo.pgsql_conn)!=CONNECTION_BAD)
 			PQfinish(idi->dbinfo.pgsql_conn);
-		syslog(LOG_USER|LOG_INFO,"Successfully disconnected from PostgreSQL database");
+		syslog(LOG_USER|LOG_DEBUG,"Successfully disconnected from PostgreSQL database");
 #endif
 		break;
 	default:
