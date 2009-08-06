@@ -365,6 +365,8 @@ int ndo2db_process_config_var(char *arg){
 		ndo2db_db_settings.max_hostchecks_age=strtoul(val,NULL,0)*60;
 	else if(!strcmp(var,"max_eventhandlers_age"))
 		ndo2db_db_settings.max_eventhandlers_age=strtoul(val,NULL,0)*60;
+	else if(!strcmp(var,"max_externalcommands_age"))
+		ndo2db_db_settings.max_externalcommands_age=strtoul(val,NULL,0)*60;
 
 	else if(!strcmp(var,"ndo2db_user"))
 		ndo2db_user=strdup(val);
@@ -401,6 +403,7 @@ int ndo2db_initialize_variables(void){
 	ndo2db_db_settings.max_servicechecks_age=0L;
 	ndo2db_db_settings.max_hostchecks_age=0L;
 	ndo2db_db_settings.max_eventhandlers_age=0L;
+	ndo2db_db_settings.max_externalcommands_age=0L;
 
 	return NDO_OK;
         }

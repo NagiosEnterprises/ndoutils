@@ -80,6 +80,7 @@ typedef struct ndo2db_dbconninfo_struct{
 	unsigned long max_servicechecks_age;
 	unsigned long max_hostchecks_age;
 	unsigned long max_eventhandlers_age;
+	unsigned long max_externalcommands_age;
 	time_t last_table_trim_time;
 	time_t last_logentry_time;
 	char *last_logentry_data;

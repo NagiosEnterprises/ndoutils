@@ -25,6 +25,7 @@ typedef struct ndo2db_dbconfig_struct{
 	unsigned long max_servicechecks_age;
 	unsigned long max_hostchecks_age;
 	unsigned long max_eventhandlers_age;
+	unsigned long max_externalcommands_age;
         }ndo2db_dbconfig;
 
 /*************** DB server types ***************/

@@ -141,6 +141,7 @@ int ndo2db_db_init(ndo2db_idi *idi){
 	idi->dbinfo.max_servicechecks_age=ndo2db_db_settings.max_servicechecks_age;
 	idi->dbinfo.max_hostchecks_age=ndo2db_db_settings.max_hostchecks_age;
 	idi->dbinfo.max_eventhandlers_age=ndo2db_db_settings.max_eventhandlers_age;
+	idi->dbinfo.max_externalcommands_age=ndo2db_db_settings.max_externalcommands_age;
 	idi->dbinfo.last_table_trim_time=(time_t)0L;
 	idi->dbinfo.last_logentry_time=(time_t)0L;
 	idi->dbinfo.last_logentry_data=NULL;
@@ -763,6 +764,8 @@ int ndo2db_db_perform_maintenance(ndo2db_idi *idi){
 			ndo2db_db_trim_data_table(idi,ndo2db_db_tablenames[NDO2DB_DBTABLE_HOSTCHECKS],"start_time",(time_t)((unsigned long)current_time-idi->dbinfo.max_hostchecks_age));
 		if(idi->dbinfo.max_eventhandlers_age>0L)
 			ndo2db_db_trim_data_table(idi,ndo2db_db_tablenames[NDO2DB_DBTABLE_EVENTHANDLERS],"start_time",(time_t)((unsigned long)current_time-idi->dbinfo.max_eventhandlers_age));
+		if(idi->dbinfo.max_externalcommands_age>0L)
+			ndo2db_db_trim_data_table(idi,ndo2db_db_tablenames[NDO2DB_DBTABLE_EXTERNALCOMMANDS],"entry_time",(time_t)((unsigned long)current_time-idi->dbinfo.max_externalcommands_age));
 		idi->dbinfo.last_table_trim_time=current_time;
 	        }
 
