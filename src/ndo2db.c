@@ -908,9 +908,14 @@ int ndo2db_handle_client_connection(int sd){
 		result=read(sd,buf,sizeof(buf)-1);
 
 		/* bail out on hard errors */
-		if(result==-1 && (errno!=EAGAIN && errno!=EINTR)){
-			error=NDO_TRUE;
-			break;
+		if(result==-1) {
+			/* EAGAIN and EINTR are soft errors, so try another read() */
+			if (errno==EAGAIN || errno==EINTR)
+				continue;
+			else {
+				error=NDO_TRUE;
+				break;
+				}
 		        }
 
 		/* zero bytes read means we lost the connection with the client */
