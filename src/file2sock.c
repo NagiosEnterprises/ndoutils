@@ -33,8 +33,10 @@ int show_help=NDO_FALSE;
 int main(int argc, char **argv){
 	int sd=0;
 	int fd=0;
-	char ch[1];
+	char ch[511];	/* Matches ndo2db read buffer size */
 	int result=0;
+	int nbytesread,n,i;
+	char *p;
 
 
 	result=process_arguments(argc,argv);
@@ -88,13 +90,21 @@ int main(int argc, char **argv){
 #ifdef USE_SENDFILE
 	if(fd==STDIN_FILENO){
 #endif
-		while((read(fd,&ch,1))){
-			if(write(sd,&ch,1)==-1){
-				perror("Error while writing to destination socket");
-				result=1;
-				break;
-			        }
+		while((nbytesread = read(fd,&ch,sizeof(ch))) > 0){
+			p = &ch[0];
+			n = nbytesread;
+			while (n > 0) {
+				i = write(sd, p, n);
+				if(i < 0){
+					perror("Error while writing to destination socket");
+					result=1;
+					goto breakout;
+					}
+				p += i;
+				n -= i;
+				}
 		        }
+		breakout:
 #ifdef USE_SENDFILE
 	        }
 

@@ -5,6 +5,10 @@ NDO Utils History
 Note:  Consider this addon to be experimental.  Memory leaks and segfaults are to be 
        expected until the code stabilizes, so beware of using it in production environments.
 
+1.4b9 - ??/??/2009
+------------------
+NOTE: ** Requires Nagios 2.7 or higher, or Nagios 3.0b6 or higher
+- Improved writes from file2sock to ndo2db by matching buffer sizes (Opsera Ltd)
 
 1.4b8 - 07/16/2009
 ------------------
