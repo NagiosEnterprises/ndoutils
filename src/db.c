@@ -562,6 +562,7 @@ int ndo2db_db_query(ndo2db_idi *idi, char *buf){
 #ifdef USE_MYSQL
 		if((query_result=mysql_query(&idi->dbinfo.mysql_conn,buf))){
 			syslog(LOG_USER|LOG_INFO,"Error: mysql_query() failed for '%s'\n",buf);
+			syslog(LOG_USER|LOG_INFO,"mysql_error: '%s'\n", mysql_error(&idi->dbinfo.mysql_conn));
 			result=NDO_ERROR;
 		        }
 #endif
