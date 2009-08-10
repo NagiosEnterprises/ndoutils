@@ -856,7 +856,6 @@ int ndo2db_wait_for_connections(void){
 		default:
 			/* parent keeps on going... */
 			close(new_sd);
-			waitpid(new_pid,NULL,0);	/* Wait for child to finish before accepting the next connection */
 			break;
 		        }
 #endif
