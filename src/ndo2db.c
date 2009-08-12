@@ -25,10 +25,20 @@
 #include "../include/db.h"
 #include "../include/dbhandlers.h"
 
+#ifdef HAVE_SSL
+#include "../include/dh.h"
+#endif
+
 #define NDO2DB_VERSION "1.4b8"
 #define NDO2DB_NAME "NDO2DB"
 #define NDO2DB_DATE "07-16-2009"
 
+#ifdef HAVE_SSL
+SSL_METHOD *meth;
+SSL_CTX *ctx;
+int allow_weak_random_seed = NDO_FALSE;
+#endif
+extern int use_ssl;
 
 extern int errno;
 
@@ -78,6 +88,12 @@ int main(int argc, char **argv){
 	mtrace();
 #endif
 
+#ifdef HAVE_SSL
+	DH *dh;
+	char seedfile[FILENAME_MAX];
+	int i,c;
+#endif
+
 	result=ndo2db_process_arguments(argc,argv);
 
         if(result!=NDO_OK || ndo2db_show_help==NDO_TRUE || ndo2db_show_license==NDO_TRUE || ndo2db_show_version==NDO_TRUE){
@@ -91,6 +107,9 @@ int main(int argc, char **argv){
 		printf("Copyright (c) 2005-2008 Ethan Galstad\n");
 		printf("Last Modified: %s\n",NDO2DB_DATE);
 		printf("License: GPL v2\n");
+#ifdef HAVE_SSL
+		printf("SSL/TLS Available: Anonymous DH Mode, OpenSSL 0.9.6 or higher required\n");
+#endif
 		printf("\n");
 		printf("Stores Nagios event and configuration data to a database for later retrieval\n");
 		printf("and processing.  Clients that are capable of sending data to the NDO2DB daemon\n");
@@ -103,6 +122,54 @@ int main(int argc, char **argv){
 		exit(1);
 	        }
 
+#ifdef HAVE_SSL
+        /* initialize SSL */
+        if(use_ssl==NDO_TRUE){
+        	SSL_library_init();
+        	SSLeay_add_ssl_algorithms();
+        	meth=SSLv23_server_method();
+        	SSL_load_error_strings();
+
+        	/* use week random seed if necessary */
+        	if(allow_weak_random_seed && (RAND_status()==0)){
+
+        		if(RAND_file_name(seedfile,sizeof(seedfile)-1))
+        			if(RAND_load_file(seedfile,-1))
+        				RAND_write_file(seedfile);
+
+        		if(RAND_status()==0){
+        			syslog(LOG_ERR,"Warning: SSL/TLS uses a weak random seed which is highly discouraged");
+        			srand(time(NULL));
+        			for(i=0;i<500 && RAND_status()==0;i++){
+        				for(c=0;c<sizeof(seedfile);c+=sizeof(int)){
+        					*((int *)(seedfile+c))=rand();
+        					}
+        				RAND_seed(seedfile,sizeof(seedfile));
+        				}
+        			}
+        		}
+        	if((ctx=SSL_CTX_new(meth))==NULL){
+        		syslog(LOG_ERR,"Error: could not create SSL context.\n");
+        		exit(1);
+        		}
+
+        	/* ADDED 01/19/2004 */
+        	/* use only TLSv1 protocol */
+        	SSL_CTX_set_options(ctx,SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3);
+
+        	/* use anonymous DH ciphers */
+        	SSL_CTX_set_cipher_list(ctx,"ADH");
+        	dh=get_dh512();
+        	SSL_CTX_set_tmp_dh(ctx,dh);
+        	DH_free(dh);
+        	syslog(LOG_INFO,"INFO: SSL/TLS initialized. All network traffic will be encrypted.");
+        	}
+        else{
+        	syslog(LOG_INFO,"INFO: SSL/TLS NOT initialized. Network encryption DISABLED.");
+        	}
+        /*Fin Hack SSL*/
+#endif
+
 	/* initialize variables */
 	ndo2db_initialize_variables();
 
@@ -111,7 +178,7 @@ int main(int argc, char **argv){
 		printf("Error processing config file '%s'.\n",ndo2db_config_file);
 		exit(1);
 	        }
-	
+
 	/* make sure we're good to go */
 	if(ndo2db_check_init_reqs()!=NDO_OK){
 		printf("One or more required parameters is missing or incorrect.\n");
@@ -132,8 +199,14 @@ int main(int argc, char **argv){
 #endif
 	if(db_supported==NDO_FALSE){
 		printf("Support for the specified database server is either not yet supported, or was not found on your system.\n");
+
+#ifdef HAVE_SSL
+		if(use_ssl==NDO_TRUE)
+			SSL_CTX_free(ctx);
+#endif
+
 		exit(1);
-	        }
+		}
 
 	/* initialize signal handling */
 	signal(SIGQUIT,ndo2db_parent_sighandler);
@@ -174,8 +247,13 @@ int main(int argc, char **argv){
 	/* free memory */
 	ndo2db_free_program_memory();
 
+#ifdef HAVE_SSL
+	if(use_ssl==NDO_TRUE)
+		SSL_CTX_free(ctx);
+#endif
+
 	return 0;
-        }
+}
 
 
 /* process command line arguments */
@@ -372,7 +450,7 @@ int ndo2db_process_config_var(char *arg){
 		ndo2db_user=strdup(val);
 	else if(!strcmp(var,"ndo2db_group"))
 		ndo2db_group=strdup(val);
-		
+
 	else if(!strcmp(var,"debug_file")){
 		if((ndo2db_debug_file=strdup(val))==NULL)
 			return NDO_ERROR;
@@ -383,6 +461,8 @@ int ndo2db_process_config_var(char *arg){
 		ndo2db_debug_verbosity=atoi(val);
 	else if(!strcmp(var,"max_debug_file_size"))
 		ndo2db_max_debug_file_size=strtoul(val,NULL,0);
+	else if(!strcmp(var,"use_ssl"))
+		use_ssl = strtoul(val, NULL, 0);
 
 	return NDO_OK;
         }
@@ -390,7 +470,7 @@ int ndo2db_process_config_var(char *arg){
 
 /* initialize variables */
 int ndo2db_initialize_variables(void){
-	
+
 	ndo2db_db_settings.server_type=NDO2DB_DBSERVER_NONE;
 	ndo2db_db_settings.host=NULL;
 	ndo2db_db_settings.port=0;
@@ -490,7 +570,7 @@ int ndo2db_drop_privileges(char *user, char *group){
 
 	/* set effective group ID */
 	if(group!=NULL){
-		
+
 		/* see if this is a group name */
 		if(strspn(group,"0123456789")<strlen(group)){
 			grp=(struct group *)getgrnam(group);
@@ -516,7 +596,7 @@ int ndo2db_drop_privileges(char *user, char *group){
 
 	/* set effective user ID */
 	if(user!=NULL){
-		
+
 		/* see if this is a user name */
 		if(strspn(user,"0123456789")<strlen(user)){
 			pw=(struct passwd *)getpwnam(user);
@@ -530,7 +610,7 @@ int ndo2db_drop_privileges(char *user, char *group){
 		/* else we were passed the UID */
 		else
 			uid=(uid_t)atoi(user);
-			
+
 		/* set effective user ID if other than current EUID */
 		if(uid!=geteuid()){
 
@@ -739,6 +819,7 @@ int ndo2db_wait_for_connections(void){
 	struct sockaddr_in client_address_i;
 	socklen_t client_address_length;
 
+
 	/* TCP socket */
 	if(ndo2db_socket_type==NDO_SINK_TCPSOCKET){
 
@@ -757,7 +838,7 @@ int ndo2db_wait_for_connections(void){
 
 		/* clear the address */
 		bzero((char *)&server_address_i,sizeof(server_address_i));
-		server_address_i.sin_family=AF_INET; 
+		server_address_i.sin_family=AF_INET;
 		server_address_i.sin_addr.s_addr=INADDR_ANY;
 		server_address_i.sin_port=htons(ndo2db_tcp_port);
 
@@ -781,8 +862,8 @@ int ndo2db_wait_for_connections(void){
 	                }
 
 		/* copy the socket path */
-		strncpy(server_address_u.sun_path,ndo2db_socket_name,sizeof(server_address_u.sun_path)); 
-		server_address_u.sun_family=AF_UNIX; 
+		strncpy(server_address_u.sun_path,ndo2db_socket_name,sizeof(server_address_u.sun_path));
+		server_address_u.sun_family=AF_UNIX;
 
 		/* bind the socket */
 		if((bind(ndo2db_sd,(struct sockaddr *)&server_address_u,SUN_LEN(&server_address_u)))){
@@ -811,18 +892,27 @@ int ndo2db_wait_for_connections(void){
 	/* accept connections... */
 	while(1){
 
-		/* 
+		/*
 		Solaris 10 gets an EINTR error when file2sock invoked on the 2nd call
 		An alternative fix is not to fork below, but this has wider implications
 		*/
 		while(1) {
 			new_sd=accept(ndo2db_sd,(ndo2db_socket_type==NDO_SINK_TCPSOCKET)?(struct sockaddr *)&client_address_i:(struct sockaddr *)&client_address_u,(socklen_t *)&client_address_length);
+
+			/* ToDo:  Hendrik 08/12/2009
+			 * If both ends think differently about SSL encryption, data from a ndomod will
+			 * be lost forever (likewise on database errors/misconfiguration)
+			 * This seems a good place to output some information from which client
+			 * a possible misconfiguration comes from.
+			 * Logging the ip address together with the ndomod instance name might be
+			 * a great hint for further error hunting
+			 */
 			if(new_sd>=0)
 				/* data available */
 				break;
 			if(errno == EINTR) {
 				/* continue */
-				} 
+				}
 			else {
 				perror("Accept error");
 				ndo2db_cleanup_socket();
@@ -880,6 +970,10 @@ int ndo2db_handle_client_connection(int sd){
 	int result=0;
 	int error=NDO_FALSE;
 
+#ifdef HAVE_SSL
+	SSL *ssl=NULL;
+#endif
+
 	/* open syslog facility */
 	/*openlog("ndo2db",0,LOG_DAEMON);*/
 
@@ -904,8 +998,36 @@ int ndo2db_handle_client_connection(int sd){
 	ndo2db_db_init(&idi);
 	ndo2db_db_connect(&idi);
 
+#ifdef HAVE_SSL
+	if(use_ssl==NDO_TRUE){
+		if((ssl=SSL_new(ctx))!=NULL){
+
+			SSL_set_fd(ssl,sd);
+
+			/* keep attempting the request if needed */
+			while(((result=SSL_accept(ssl))!=1) && (SSL_get_error(ssl,result)==SSL_ERROR_WANT_READ));
+
+			if(result!=1){
+				syslog(LOG_ERR,"Error: Could not complete SSL handshake. %d\n",SSL_get_error(ssl,result));
+
+				return NDO_ERROR;
+			}
+		}
+	}
+#endif
+
 	/* read all data from client */
 	while(1){
+#ifdef HAVE_SSL
+		if(use_ssl==NDO_FALSE)
+			result=read(sd,buf,sizeof(buf)-1);
+		else{
+			result=SSL_read(ssl,buf,sizeof(buf)-1);
+			if(result==-1 && (SSL_get_error(ssl,result)==SSL_ERROR_WANT_READ)){
+				syslog(LOG_ERR,"SSL read error\n");
+			}
+		}
+#endif
 
 		result=read(sd,buf,sizeof(buf)-1);
 
@@ -916,12 +1038,28 @@ int ndo2db_handle_client_connection(int sd){
 				continue;
 			else {
 				error=NDO_TRUE;
+
+#ifdef HAVE_SSL
+				if(ssl){
+					SSL_shutdown(ssl);
+					SSL_free(ssl);
+					syslog(LOG_INFO,"INFO: SSL Socket Shutdown.\n");
+				}
+#endif
 				break;
 				}
 		        }
 
 		/* zero bytes read means we lost the connection with the client */
 		if(result==0){
+
+#ifdef HAVE_SSL
+				if(ssl){
+					SSL_shutdown(ssl);
+					SSL_free(ssl);
+					syslog(LOG_INFO,"INFO: SSL Socket Shutdown.\n");
+				}
+#endif
 
 			/* gracefully back out of current operation... */
 			ndo2db_db_goodbye(&idi);
@@ -1007,7 +1145,7 @@ int ndo2db_idi_init(ndo2db_idi *idi){
 		idi->mbuf[x].allocated_lines=0;
 		idi->mbuf[x].buffer=NULL;
 	        }
-	
+
 	return NDO_OK;
         }
 
@@ -1016,7 +1154,7 @@ int ndo2db_idi_init(ndo2db_idi *idi){
 int ndo2db_check_for_client_input(ndo2db_idi *idi,ndo_dbuf *dbuf){
 	char *buf=NULL;
 	register int x;
-	
+
 
 	if(dbuf==NULL)
 		return NDO_OK;
@@ -1047,7 +1185,7 @@ int ndo2db_check_for_client_input(ndo2db_idi *idi,ndo_dbuf *dbuf){
 				idi->lines_processed++;
 				idi->bytes_processed+=(x+1);
 			        }
-		
+
 			/* shift data back to front of buffer and adjust counters */
 			memmove((void *)&dbuf->buf[0],(void *)&dbuf->buf[x+1],(size_t)((int)dbuf->used_size-x-1));
 			dbuf->used_size-=(x+1);
@@ -1346,7 +1484,7 @@ int ndo2db_handle_client_input(ndo2db_idi *idi, char *buf){
 
 			/* get the data type */
 			data_type_long=strtoul(var,NULL,0);
-				
+
 			/* there was an error with the data type - throw it out */
 			if(data_type_long==ULONG_MAX && errno==ERANGE)
 				break;
@@ -1379,7 +1517,7 @@ int ndo2db_handle_client_input(ndo2db_idi *idi, char *buf){
 				ndo2db_add_input_data_item(idi,data_type,val);
 		                }
 		        }
-		
+
 		break;
 
 	default:
@@ -1884,7 +2022,7 @@ int ndo2db_free_connection_memory(ndo2db_idi *idi){
 
 	return NDO_OK;
 	}
-	
+
 
 
 /****************************************************************************/
@@ -1896,13 +2034,13 @@ int ndo2db_convert_standard_data_elements(ndo2db_idi *idi, int *type, int *flags
 	int result2=NDO_OK;
 	int result3=NDO_OK;
 	int result4=NDO_OK;
-	
+
 	result1=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_TYPE],type);
 	result2=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_FLAGS],flags);
 	result3=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_ATTRIBUTES],attr);
 	result4=ndo2db_convert_string_to_timeval(idi->buffered_input[NDO_DATA_TIMESTAMP],tstamp);
 
-	if(result1==NDO_ERROR || result2==NDO_ERROR || result3==NDO_ERROR || result4==NDO_ERROR) 
+	if(result1==NDO_ERROR || result2==NDO_ERROR || result3==NDO_ERROR || result4==NDO_ERROR)
 		return NDO_ERROR;
 
 	return NDO_OK;
@@ -2048,7 +2186,7 @@ int ndo2db_close_debug_log(void){
 
 	if(ndo2db_debug_file_fp!=NULL)
 		fclose(ndo2db_debug_file_fp);
-	
+
 	ndo2db_debug_file_fp=NULL;
 
 	return NDO_OK;
@@ -2087,7 +2225,7 @@ int ndo2db_log_debug_info(int level, int verbosity, const char *fmt, ...){
 
 		/* close the file */
 		ndo2db_close_debug_log();
-		
+
 		/* rotate the log file */
 		asprintf(&temp_path,"%s.old",ndo2db_debug_file);
 		if(temp_path){

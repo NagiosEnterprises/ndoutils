@@ -105,6 +105,7 @@ extern char *global_service_event_handler;
 
 extern int __nagios_object_structure_version;
 
+extern int use_ssl;
 
 
 #define DEBUG_NDO 1
@@ -436,6 +437,9 @@ int ndomod_process_config_var(char *arg){
 
 	else if(!strcmp(var,"buffer_file"))
 		ndomod_buffer_file=strdup(val);
+
+	else if(!strcmp(var,"use_ssl"))
+		use_ssl=strtoul(val,NULL,0);
 
 	else
 		return NDO_ERROR;
@@ -798,6 +802,10 @@ int ndomod_write_to_sink(char *buf, int buffer_write, int flush_buffer){
 			asprintf(&temp_buffer,"ndomod: Error writing to data sink!  Some output may get lost...");
 			ndomod_write_to_logs(temp_buffer,NSLOG_INFO_MESSAGE);
 			free(temp_buffer);
+			asprintf(&temp_buffer,"ndomod: Please check remote ndo2db log, database connection or SSL Parameters");
+			ndomod_write_to_logs(temp_buffer,NSLOG_INFO_MESSAGE);
+			free(temp_buffer);
+
 			temp_buffer=NULL;
 		        }
 

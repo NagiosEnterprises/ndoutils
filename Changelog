@@ -15,6 +15,7 @@ NOTE: ** Requires Nagios 2.7 or higher, or Nagios 3.0b6 or higher
 - Improve error info by showing failed MySQL query in syslog (Opsera Ltd)
 - Move database connections/disconnections syslog detail to DEBUG from INFO (Opsera Ltd)
 - Allow externalcommands table to be trimmed with a specific time limit (Opsera Ltd)
+- Support SSL encryption between the communication partners
 
 1.4b8 - 07/16/2009
 ------------------

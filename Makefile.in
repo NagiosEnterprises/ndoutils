@@ -29,7 +29,8 @@ clean:
 
 distclean: clean
 	cd $(SRC_BASE) && $(MAKE) $@
-	rm -f config.log config.status config.cache $(SRC_INCLUDE)/config.h
+	rm -f config.log config.status config.cache 
+	rm -f $(SRC_INCLUDE)/dh.h $(SRC_INCLUDE)/config.h
 	rm -f Makefile
 	rm -f subst daemon-init
 
