@@ -279,12 +279,12 @@ int ndo_sink_write(int fd, char *buf, int buflen){
 	while(tbytes<buflen){
 
 		/* try to write everything we have left */
-		if (use_ssl == NDO_FALSE) {
-			result=write(fd, buf+tbytes, buflen-tbytes);
-		}
-		else{
+#ifdef HAVE_SSL
+		if (use_ssl == NDO_TRUE)
 			result=SSL_write(ssl, buf+tbytes, buflen-tbytes);
-		}
+		else
+#endif
+			result=write(fd, buf+tbytes, buflen-tbytes);
 
 
 		/* some kind of error occurred */
