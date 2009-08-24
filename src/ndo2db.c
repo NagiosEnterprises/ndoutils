@@ -122,6 +122,15 @@ int main(int argc, char **argv){
 		exit(1);
 	        }
 
+	/* initialize variables */
+	ndo2db_initialize_variables();
+
+	/* process config file */
+	if(ndo2db_process_config_file(ndo2db_config_file)!=NDO_OK){
+		printf("Error processing config file '%s'.\n",ndo2db_config_file);
+		exit(1);
+	        }
+
 #ifdef HAVE_SSL
         /* initialize SSL */
         if(use_ssl==NDO_TRUE){
@@ -169,15 +178,6 @@ int main(int argc, char **argv){
         	}
         /*Fin Hack SSL*/
 #endif
-
-	/* initialize variables */
-	ndo2db_initialize_variables();
-
-	/* process config file */
-	if(ndo2db_process_config_file(ndo2db_config_file)!=NDO_OK){
-		printf("Error processing config file '%s'.\n",ndo2db_config_file);
-		exit(1);
-	        }
 
 	/* make sure we're good to go */
 	if(ndo2db_check_init_reqs()!=NDO_OK){
