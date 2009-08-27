@@ -8,3 +8,7 @@ ALTER TABLE `nagios_eventhandlers` ADD COLUMN `long_output` varchar(8192) NOT NU
 ALTER TABLE `nagios_systemcommands` ADD COLUMN `long_output` varchar(8192) NOT NULL default '' AFTER `output`;
 ALTER TABLE `nagios_notifications` ADD COLUMN `long_output` varchar(8192) NOT NULL default '' AFTER `output`;
 
+ALTER TABLE `nagios`.`nagios_hostchecks` MODIFY COLUMN `perfdata` VARCHAR(8192) NULL;
+ALTER TABLE `nagios`.`nagios_hoststatus` MODIFY COLUMN `perfdata` VARCHAR(8192) NULL;
+ALTER TABLE `nagios`.`nagios_servicechecks` MODIFY COLUMN `perfdata` VARCHAR(8192) NULL;
+ALTER TABLE `nagios`.`nagios_servicestatus` MODIFY COLUMN `perfdata` VARCHAR(8192) NULL;
