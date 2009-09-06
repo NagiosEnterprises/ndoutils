@@ -7,5 +7,5 @@
 
 define command{
 	command_name	rotate_ndo_log
-	command_line	/bin/mv /usr/local/nagios/var/ndo.dat /usr/local/nagios/var/ndo.`date +%s`
+	command_line	/bin/mv @localstatedir@/ndo.dat @localstatedir@/ndo.`date +%s`
         }

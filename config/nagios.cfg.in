@@ -5,7 +5,7 @@
 # configuration file (nagios.cfg).  Adjust the paths, etc. to suit your needs.
 
 # Uncomment the line below if you're running Nagios 2.x
-broker_module=/usr/local/nagios/bin/ndomod-2x.o config_file=/usr/local/nagios/etc/ndomod.cfg
+broker_module=@bindir@/ndomod-2x.o config_file=@sysconfdir@/ndomod.cfg
 
 # Uncomment the line below if you're running Nagios 3.x
-#broker_module=/usr/local/nagios/bin/ndomod-3x.o config_file=/usr/local/nagios/etc/ndomod.cfg
+#broker_module=@bindir@/ndomod-3x.o config_file=@sysconfdir@/ndomod.cfg

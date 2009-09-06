@@ -35,9 +35,9 @@ output_type=unixsocket
 # of fully qualified domain name of the host that the module should
 # connect to for sending output.
 
-#output=/usr/local/nagios/var/ndo.dat
+#output=@localstatedir@/ndo.dat
 #output=127.0.0.1
-output=/usr/local/nagios/var/ndo.sock
+output=@localstatedir@/ndo.sock
 
 
 
@@ -82,7 +82,7 @@ output_buffer_items=5000
 # Nagios (re)starts, the NDO NEB module will read the contents of this
 # file and send it to the NDO2DB daemon for processing.
 
-buffer_file=/usr/local/nagios/var/ndomod.tmp
+buffer_file=@localstatedir@/ndomod.tmp
 
 
 

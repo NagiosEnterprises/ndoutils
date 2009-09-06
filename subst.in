@@ -2,9 +2,11 @@
 
 my ${exec_prefix};
 my ${prefix};
+my ${datarootdir};
 
 ${prefix}="@prefix@";
 ${exec_prefix}="@exec_prefix@";
+${datarootdir}="@datarootdir@";
 while ($f = shift @ARGV) {
 
 	if (-x "/bin/mktemp") { 
@@ -25,6 +27,7 @@ while ($f = shift @ARGV) {
 		s|\@libexecdir\@|@libexecdir@|g; # put all --with-vars before directories
 		s|\@localstatedir\@|@localstatedir@|g;
 		s|\@sysconfdir\@|@sysconfdir@|g;
+		s|\@datarootdir\@|@datarootdir@|g;
 		s|\@datadir\@|@datadir@|g;
 		s|\@sbindir\@|@sbindir@|g;
 		s|\@bindir\@|@bindir@|g;

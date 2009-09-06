@@ -20,6 +20,9 @@ dnl Figure out how to invoke "install" and what install options to use.
 AC_PROG_INSTALL
 AC_SUBST(INSTALL)
 
+dnl Figure out how to invoke "perl"
+AC_PATH_PROG(PERL,perl)
+
 dnl What OS are we running?
 AC_CANONICAL_HOST
 
@@ -392,8 +395,11 @@ fi
 
 AC_OUTPUT(Makefile src/Makefile subst)
 
-perl subst daemon-init
-
+$PERL subst daemon-init
+$PERL subst config/ndo2db.cfg-sample
+$PERL subst config/ndomod.cfg-sample
+$PERL subst config/nagios.cfg
+$PERL subst config/misccommands.cfg
 
 dnl Review options
 echo ""
