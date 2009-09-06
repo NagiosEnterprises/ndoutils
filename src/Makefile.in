@@ -116,6 +116,12 @@ install: install-3x
 	@echo "  If you want to install NDOUtils for Nagios v2.x"
 	@echo "  please type  'make install-2x"
 	@echo ""
+	@echo ""
+	@echo "  Next step should be the database initialization/upgrade"
+	@echo "  cd into the db/ directory and either:"
+	@echo "     ./installdb  (for a new installation) or:"
+	@echo "     ./upgradedb  (for an existing one)"
+	@echo ""
 
 install-2x:
 	$(INSTALL) -m 775 $(INSTALL_OPTS) -d $(DESTDIR)$(BINDIR)
