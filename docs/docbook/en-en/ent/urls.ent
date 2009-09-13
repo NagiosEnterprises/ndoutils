@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<!ENTITY url-nagios "http://www.nagios.org/">
+<!ENTITY url-ndoutils "http://www.nagios.org/">
+<!ENTITY url-nagiosplug "http://www.nagios.org/">
+<!ENTITY url-nagiosplug-sf "http://sourceforge.net/projects/nagiosplug">
+<!ENTITY url-nagiosdoc "http://nagios.sourceforge.net/docs/3_0/toc.html">
+<!ENTITY url-nagioswiki "http://www.nagioswiki.org/">
+<!ENTITY url-nagios-dev-guidelines "http://nagiosplug.sourceforge.net/developer-guidelines.html">
+<!ENTITY url-nagios-community "http://www.nagioscommunity.org/wiki">
+<!ENTITY url-libdbi "http://libdbi.sourceforge.net">
+<!ENTITY url-novell-coolsolutions "http://www.novell.com/coolsolutions/">
+<!ENTITY url-sf-projects "http://sourceforge.net/projects/">
+<!ENTITY url-apache "http://www.apache.org">
+<!ENTITY url-apache-docs "http://httpd.apache.org/docs/">
+<!ENTITY url-splunk "http://www.splunk.com/">
+<!ENTITY url-gd "http://www.boutell.com/gd/">
+<!ENTITY url-snmptt "http://www.snmptt.org">
+<!ENTITY url-opennms "http://www.opennms.org">
+<!ENTITY url-monitoringexchange "http://www.monitoringexchange.org">
+<!ENTITY url-wikipedia "http://en.wikipedia.org/wiki/">
+<!ENTITY url-centos "http://www.centos.org/">
+<!ENTITY url-debian "http://www.debian.org/">
+<!ENTITY url-fedora "http://fedoraproject.org/">
+<!ENTITY url-opensuse "http://www.opensuse.org/">
+<!ENTITY url-sles "http://www.novell.com/products/server/">
+<!ENTITY url-redhat "http://www.redhat.com/">
+<!ENTITY url-ubuntu "http://www.ubuntu.com/">
+<!ENTITY url-solaris "http://www.sun.com/software/solaris/">
+<!ENTITY url-hp "http://www.hp.com">
+
+<!ENTITY url-nagios-base "/usr/local/nagios">
+<!ENTITY url-nagios-cfg "/usr/local/nagios/etc/nagios.cfg">
+<!ENTITY url-nagios-bin "/usr/local/nagios/bin/nagios">
+<!ENTITY url-nagios-libexec "/usr/local/nagios/libexec">
+<!ENTITY url-nagios-cgi "/cgi-bin/nagios">
+<!ENTITY url-nagios-web "/etc/httpd/conf.d/nagios.conf">

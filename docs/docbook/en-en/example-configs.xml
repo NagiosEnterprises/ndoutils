@@ -1,0 +1,219 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE chapter [
+<!ENTITY % all.entities SYSTEM "all-entities.ent">
+%all.entities;
+]>
+<section version="5.0" xml:id="example-configs"
+         xmlns="http://docbook.org/ns/docbook"
+         xmlns:xlink="http://www.w3.org/1999/xlink"
+         xmlns:xi="http://www.w3.org/2001/XInclude"
+         xmlns:svg="http://www.w3.org/2000/svg"
+         xmlns:m="http://www.w3.org/1998/Math/MathML"
+         xmlns:html="http://www.w3.org/1999/xhtml"
+         xmlns:db="http://docbook.org/ns/docbook">
+  <title>Example Configurations</title>
+
+  <section>
+    <title>Single Server, Single Instance Setup</title>
+
+    <para>The easiest configuration occurs when you have a single Nagios
+    instance running on your network. In this case, installing and configuring
+    the various components of the NODUTILS addon is fairly
+    straighforward.</para>
+
+    <para>The following diagram illustrates how the various components can fit
+    together in a single server, single Nagios instance setup....</para>
+
+    <figure>
+      <title>Single Server, Single Instance Setup</title>
+
+      <mediaobject>
+        <imageobject>
+          <imagedata fileref="../images/fig11.png"></imagedata>
+        </imageobject>
+      </mediaobject>
+    </figure>
+
+    <para>Here's a description of what's happening at each point in the
+    diagram:</para>
+
+    <orderedlist>
+      <listitem>
+        <para>The NDOMOD module is configured with an instance name of
+        "default" since there is only one instance of Nagios that is running
+        on the network.</para>
+      </listitem>
+
+      <listitem>
+        <para>While the Nagios daemon is running and performing its usual
+        business of monitoring the network, the NDOMOD module is sending
+        configuration data and event information to the TCP or Unix domain
+        socket that was created by the NDO2DB daemon.</para>
+      </listitem>
+
+      <listitem>
+        <para>The NDO2DB daemon reads data that is coming into the socket from
+        the NDOMOD module.</para>
+      </listitem>
+
+      <listitem>
+        <para>The NDO2DB daemon processes and transforms data that has been
+        received from the NDOMOD module.</para>
+      </listitem>
+
+      <listitem>
+        <para>The processed data is stored in a database for later retrieval
+        and processing.</para>
+      </listitem>
+    </orderedlist>
+
+    <para>This example assumes that:</para>
+
+    <orderedlist>
+      <listitem>
+        <para>Nagios is configured to load the NDOMOD module at
+        startup.</para>
+      </listitem>
+
+      <listitem>
+        <para>The NDO2DB daemon (which is a seperate process from the Nagios
+        daemon) is running.</para>
+      </listitem>
+    </orderedlist>
+  </section>
+
+  <section>
+    <title>Single Server, Multiple Instance Setup</title>
+
+    <para>Another simple configuration can be used when you have a multiple
+    Nagios instances running on a single server. Installing and configuring
+    the various components of the NODUTILS addon is similiar as to what was
+    shown in the previous example.</para>
+
+    <para>The following diagram illustrates how the various components can fit
+    together in a single server, multiple Nagios instance setup....</para>
+
+    <figure>
+      <title>Single Server, Multiple Instance Setup</title>
+
+      <mediaobject>
+        <imageobject>
+          <imagedata fileref="../images/fig12.png"></imagedata>
+        </imageobject>
+      </mediaobject>
+    </figure>
+
+    <para>You'll notice that the diagram above is similiar to the one for the
+    single-server, single instance configuration. The main difference is that
+    there are now three (3) different Nagios daemons instead of just
+    one.</para>
+
+    <orderedlist>
+      <listitem>
+        <para>Each Nagios daemon loads the NODMOD module at startup with a
+        unique instance name. In this example the instances are simply named
+        "nagios1", "nagios2" and "nagios3".</para>
+      </listitem>
+
+      <listitem>
+        <para>Each NDOMOD module sends configuration data and event
+        information for its specific instance of the Nagios daemon to the TCP
+        or Unix domain socket that was created by the NDO2DB daemon.</para>
+      </listitem>
+
+      <listitem>
+        <para>The NDO2DB daemon reads data that is coming into the socket from
+        the three NDOMOD modules.</para>
+      </listitem>
+
+      <listitem>
+        <para>The NDO2DB daemon processes and transforms data that has been
+        received from the NDOMOD modules.</para>
+      </listitem>
+
+      <listitem>
+        <para>The processed data is stored in a database for later retrieval
+        and processing. Data from each instance of Nagios is kept seperate
+        (using the instance names as unique identifiers) in the
+        database.</para>
+      </listitem>
+    </orderedlist>
+  </section>
+
+  <section>
+    <title>Single Server, Single Instance Log File Import</title>
+
+    <para>There are two reasons you'll probably want to import your Nagios log
+    files into the same database that Nagios configuration and event data is
+    stored in:</para>
+
+    <orderedlist>
+      <listitem>
+        <para>Historical log file data isn't imported into the database by
+        default and having a record of events that occurred before you
+        implemented the NDOUTILS addon is probably desireable.</para>
+      </listitem>
+
+      <listitem>
+        <para>The NDOMOD module is not able to process realtime log entries
+        from the time right after the Nagios daemon starts to the time that
+        the NDOMOD module is loaded by the Nagios daemon. This "blackout
+        period" is unavoidable and causing log entries such as "Nagios 2.0
+        starting..." to be missed by the NDOMOD module. Thus, importing
+        day-old Nagios log files on a daily basis (via a cron job) is
+        recommended.</para>
+      </listitem>
+    </orderedlist>
+
+    <figure>
+      <title>Single Server, Single Instance Log File Import</title>
+
+      <mediaobject>
+        <imageobject>
+          <imagedata fileref="../images/fig13.png"></imagedata>
+        </imageobject>
+      </mediaobject>
+    </figure>
+
+    <para>Here's a description of what's happening at each point in the
+    diagram:</para>
+
+    <orderedlist>
+      <listitem>
+        <para>Historical Nagios log files are read by the LOG2NDO
+        utility.</para>
+      </listitem>
+
+      <listitem>
+        <para>The LOG2NDO utility processes the contents of the log files and
+        tags them with an instance name of "default". This instance name must
+        match the same instance name used by the NDOMOD module in the Nagios
+        daemon.</para>
+      </listitem>
+
+      <listitem>
+        <para>Historical log file data is sent to the TCP or Unix domain
+        socket in a format that the NDO2DB daemon can understand.</para>
+      </listitem>
+
+      <listitem>
+        <para>The NDO2DB daemon reads the log file data from the Unix domain
+        socket.</para>
+      </listitem>
+
+      <listitem>
+        <para>The NDO2DB daemon processes the log file data.</para>
+      </listitem>
+
+      <listitem>
+        <para>Historical log file data is stored in a database for later
+        retrieval and processing. The NDO2DB daemon will perform some checks
+        to make sure it doesn't re-import duplicate historical log entries, so
+        running the LOG2NDO utility on the same historical log file multiple
+        times shouldn't have any negative side effects.</para>
+      </listitem>
+    </orderedlist>
+
+    <para>That's it! Pretty simple.</para>
+  </section>
+</section>

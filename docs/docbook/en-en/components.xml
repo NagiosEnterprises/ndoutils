@@ -1,0 +1,186 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE chapter [
+<!ENTITY % all.entities SYSTEM "all-entities.ent">
+%all.entities;
+]>
+<section version="5.0" xml:id="components"
+         xmlns="http://docbook.org/ns/docbook"
+         xmlns:xlink="http://www.w3.org/1999/xlink"
+         xmlns:xi="http://www.w3.org/2001/XInclude"
+         xmlns:svg="http://www.w3.org/2000/svg"
+         xmlns:m="http://www.w3.org/1998/Math/MathML"
+         xmlns:html="http://www.w3.org/1999/xhtml"
+         xmlns:db="http://docbook.org/ns/docbook">
+  <title>Components</title>
+
+  <section>
+    <title>Overview</title>
+
+    <para>There are four main components that make up the NDO
+    utilities:</para>
+
+    <orderedlist>
+      <listitem>
+        <para>NDOMOD Event Broker Module</para>
+      </listitem>
+
+      <listitem>
+        <para>LOG2NDO Utility</para>
+      </listitem>
+
+      <listitem>
+        <para>FILE2SOCK Utility</para>
+      </listitem>
+
+      <listitem>
+        <para>NDO2DB Daemon</para>
+      </listitem>
+    </orderedlist>
+
+    <para>Each component is described in more detail on the following
+    pages.</para>
+  </section>
+
+  <section>
+    <title>NDOMOD</title>
+
+    <para>The NDO utilities includes a Nagios event broker module (NDOMOD.O)
+    that exports data from the Nagios daemon.</para>
+
+    <para>Assuming that Nagios has been compiled with the event broker enabled
+    (this is the default), you can configure Nagios to load the NDOMOD module
+    during runtime. Once the module has been loaded by the Nagios daemon, it
+    can access all of the data and logic present in the running Nagios
+    process.</para>
+
+    <figure>
+      <title>Loaded NDOMOD Eventbroker Module</title>
+
+      <mediaobject>
+        <imageobject role="html">
+          <imagedata fileref="../images/fig5.png" format="PNG"></imagedata>
+        </imageobject>
+      </mediaobject>
+    </figure>
+
+    <para>The NDOMOD module has been designed to export configuration data, as
+    well as information about various runtime events that occur in the
+    monitoring process, from the Nagios daemon. The module can send this data
+    to a standard file, a Unix domain socket, or a TCP socket.</para>
+
+    <figure>
+      <title>NDOMOD Capabilities</title>
+
+      <mediaobject>
+        <imageobject>
+          <imagedata fileref="../images/fig6.png"></imagedata>
+        </imageobject>
+      </mediaobject>
+    </figure>
+
+    <para>The NDOMOD module writes data in a format that the NDO2DB daemon
+    (described later) can understand.</para>
+
+    <para>If the NDOMOD module is writing its output to a file, you can
+    configure it to periodically rotate and/or process the output file using a
+    predefined Nagios command. This can be useful if you want to transfer the
+    output file to another physical machine (using SSH, etc. ) and send its
+    contents to the NDO2DB daemon using the FILE2SOCK utility (described
+    later).</para>
+
+    <para>If the NDOMOD module is writing it output to a TCP or Unix domain
+    socket, it has some resistance to connection dropouts. The module will
+    attempt to cache its output until it can (re)connect to the socket for
+    writing. This is helpful if the process that creates and listens on the
+    socket needs to be restarted, etc.</para>
+  </section>
+
+  <section>
+    <title>LOG2NDO</title>
+
+    <para>The LOG2NDO utility has been designed to allow you to import
+    historical Nagios and NetSaint log files into a database via the NDO2DB
+    daemon (described later). The utility works by sending historical log file
+    data to a standard file, a Unix domain socket, or a TCP socket in a format
+    the NDO2DB daemon understands. The NDO2DB daemon can then be used to
+    process that output and store the historical logfile information in a
+    database.</para>
+
+    <figure>
+      <title>LOG2NDO Utility</title>
+
+      <mediaobject>
+        <imageobject>
+          <imagedata fileref="../images/fig7.png"></imagedata>
+        </imageobject>
+      </mediaobject>
+    </figure>
+  </section>
+
+  <section>
+    <title>FILE2SOCK</title>
+
+    <para>The FILE2SOCK utility is quite simple. Its reads input from a
+    standard file (or STDIN) and writes all of that data to either a Unix
+    domain socket or TCP socket. The data that is read is not processed in any
+    way before it is sent to the socket.</para>
+
+    <figure>
+      <title>FILE2SOCK Utility</title>
+
+      <mediaobject>
+        <imageobject>
+          <imagedata fileref="../images/fig8.png"></imagedata>
+        </imageobject>
+      </mediaobject>
+    </figure>
+
+    <para>This utility is useful if you are directing the output of the NDOMOD
+    event broker module and/or LOG2NDO utility to a standard file. Once these
+    components finish writing their output to a file, you can use the
+    FILE2SOCK utility to send the contents of the file to the NDO2DB daemon's
+    TCP or Unix domain socket.</para>
+  </section>
+
+  <section>
+    <title>NDO2DB</title>
+
+    <para>The NDO2DB utility is designed to take the data output from the
+    NDOMOD and LOG2NDO components and store it in a MySQL or PostgreSQL
+    database.</para>
+
+    <para>When it starts, the NDO2DB daemon creates either a TCP or Unix
+    domain socket and waits for clients to connect. NDO2DB can run either as a
+    standalone, multi-process daemon or under INETD (if using a TCP
+    socket).</para>
+
+    <figure>
+      <title>NDO2DB Daemon</title>
+
+      <mediaobject>
+        <imageobject>
+          <imagedata fileref="../images/fig9.png"></imagedata>
+        </imageobject>
+      </mediaobject>
+    </figure>
+
+    <para>Multiple clients can connect to the NDO2DB daemon's socket and
+    transmit data simultaneously. A seperate NDO2DB process is spawned to
+    handle each new client that connects. Data is read from each client and
+    stored in a user-specified database for later retrieval and
+    processing.</para>
+
+    <figure>
+      <title>NDO2DB with multiple Clients</title>
+
+      <mediaobject>
+        <imageobject>
+          <imagedata fileref="../images/fig10.png"></imagedata>
+        </imageobject>
+      </mediaobject>
+    </figure>
+
+    <para>The NDO2DB daemon currently supports only MySQL databases, but
+    future support for PostgreSQL databases is planned.</para>
+  </section>
+</section>

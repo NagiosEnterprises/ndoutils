@@ -6884,7 +6884,7 @@ _ACEOF
 fi
 
 
-ac_config_files="$ac_config_files Makefile src/Makefile subst"
+ac_config_files="$ac_config_files Makefile src/Makefile docs/docbook/en-en/Makefile subst"
 
 
 
@@ -7370,6 +7370,7 @@ do
     "include/config.h") CONFIG_HEADERS="$CONFIG_HEADERS include/config.h" ;;
     "Makefile") CONFIG_FILES="$CONFIG_FILES Makefile" ;;
     "src/Makefile") CONFIG_FILES="$CONFIG_FILES src/Makefile" ;;
+    "docs/docbook/en-en/Makefile") CONFIG_FILES="$CONFIG_FILES docs/docbook/en-en/Makefile" ;;
     "subst") CONFIG_FILES="$CONFIG_FILES subst" ;;
 
   *) { { echo "$as_me:$LINENO: error: invalid argument: $ac_config_target" >&5

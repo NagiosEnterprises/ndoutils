@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!ENTITY doc-whatsnew SYSTEM "../whatsnew.xml">
+<!ENTITY doc-quickstart SYSTEM "../quickstart.xml">
+<!ENTITY doc-quickstart-nagios SYSTEM "../quickstart-nagios.xml">
+<!ENTITY doc-quickstart-ndoutils SYSTEM "../quickstart-ndoutils.xml">
+<!ENTITY doc-startstop SYSTEM "../startstop.xml">
+<!ENTITY doc-verifyconfig SYSTEM "../verifyconfig.xml">

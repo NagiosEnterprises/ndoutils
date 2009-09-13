@@ -393,7 +393,7 @@ if test x$check_for_ssl = xyes; then
 fi
 
 
-AC_OUTPUT(Makefile src/Makefile subst)
+AC_OUTPUT(Makefile src/Makefile docs/docbook/en-en/Makefile subst)
 
 $PERL subst daemon-init
 $PERL subst config/ndo2db.cfg-sample

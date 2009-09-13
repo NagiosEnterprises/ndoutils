@@ -1,0 +1,181 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<title>NDOUtils Documentation</title>
+<meta name="generator" content="DocBook XSL Stylesheets V1.75.1">
+<meta name="keywords" content="Supervision, NDOUtils, Nagios, Linux">
+<link rel="home" href="index.html" title="NDOUtils Documentation">
+<link rel="next" href="ch01.html" title="Chapter 1. The Beginning">
+</head>
+<body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
+<CENTER><IMG src="../images/logofullsize.png" border="0" alt="Nagios" title="Nagios"></CENTER>
+<div class="navheader">
+<table width="100%" summary="Navigation header">
+<tr><th colspan="3" align="center">NDOUtils Documentation</th></tr>
+<tr>
+<td width="20%" align="left"> </td>
+<th width="60%" align="center"> </th>
+<td width="20%" align="right"> <a accesskey="n" href="ch01.html">Next</a>
+</td>
+</tr>
+</table>
+<hr>
+</div>
+<div lang="en" class="book" title="NDOUtils Documentation">
+<div class="titlepage">
+<div>
+<div><h1 class="title">
+<a name="NDOUtils"></a>NDOUtils Documentation</h1></div>
+<div><h2 class="subtitle">Version 1.4</h2></div>
+<div><div class="author"><h3 class="author">
+      <span class="orgname">NDOUtils Developer Team</span>
+    </h3></div></div>
+<div><p class="copyright">Copyright © 1999-2009 Ethan Galstad</p></div>
+<div><p class="copyright">Copyright © 2009 Nagios Core Development Team</p></div>
+<div><div class="legalnotice" title="Legal Notice">
+<a name="id1292981"></a>
+      <p>NDOUtils is licensed under the terms of the GNU General
+      Public License Version 2 as published by the Free Software Foundation.
+      This gives you legal permission to copy, distribute and/or modify
+      NDOUtils under certain conditions. Read the 'LICENSE' file in the
+      NDOUtils distribution or read the online version of the license
+      for more details.</p>
+
+      <p>NDOUtils is provided <span class="quote">“<span class="quote">AS IS</span>”</span> with <span class="quote">“<span class="quote">NO
+      WARRANTY OF ANY KIND, INCLUDING THE WARRANTY OF DESIGN, MERCHANTABILITY,
+      AND FITNESS FOR A PARTICULAR PURPOSE.</span>”</span></p>
+    </div></div>
+<div><div class="legalnotice" title="Legal Notice">
+<a name="id1293000"></a>
+      <p>Nagios and the Nagios logo are registered trademarks
+      of Ethan Galstad. All other trademarks, servicemarks, registered
+      trademarks, and registered servicemarks mentioned herein may be the
+      property of their respective owner(s). The information contained herein
+      is provided <span class="quote">“<span class="quote">AS IS</span>”</span> with <span class="quote">“<span class="quote">NO WARRANTY OF ANY KIND,
+      INCLUDING THE WARRANTY OF DESIGN, MERCHANTABILITY, AND FITNESS FOR A
+      PARTICULAR PURPOSE.</span>”</span></p>
+    </div></div>
+<div><p class="pubdate">09/04/2009</p></div>
+<div><div class="revhistory"><table border="1" width="100%" summary="Revision history">
+<tr><th align="left" valign="top" colspan="2"><b>Revision History</b></th></tr>
+      <tr>
+<td align="left">Revision 0.1</td>
+<td align="left">2009-09-04</td>
+</tr>
+<tr><td align="left" colspan="2">First DocBook Release</td></tr>
+    </table></div></div>
+</div>
+<hr>
+</div>
+<div class="toc">
+<p><b>Table of Contents</b></p>
+<dl>
+<dt><span class="chapter"><a href="ch01.html">1. The Beginning</a></span></dt>
+<dd><dl>
+<dt><span class="section"><a href="intro.html">Introduction</a></span></dt>
+<dd><dl>
+<dt><span class="section"><a href="intro.html#id1293044">Purpose</a></span></dt>
+<dt><span class="section"><a href="intro.html#id1293064">Design Overview</a></span></dt>
+<dt><span class="section"><a href="intro.html#id1293143">Instances</a></span></dt>
+</dl></dd>
+<dt><span class="section"><a href="whatsnew.html">What's new in NDOUtils</a></span></dt>
+</dl></dd>
+<dt><span class="chapter"><a href="ch02.html">2. Design en detail</a></span></dt>
+<dd><dl>
+<dt><span class="section"><a href="components.html">Components</a></span></dt>
+<dd><dl>
+<dt><span class="section"><a href="components.html#id1293242">Overview</a></span></dt>
+<dt><span class="section"><a href="components.html#id1293290">NDOMOD</a></span></dt>
+<dt><span class="section"><a href="components.html#id1293377">LOG2NDO</a></span></dt>
+<dt><span class="section"><a href="components.html#id1293415">FILE2SOCK</a></span></dt>
+<dt><span class="section"><a href="components.html#id1293456">NDO2DB</a></span></dt>
+</dl></dd>
+</dl></dd>
+<dt><span class="chapter"><a href="ch03.html">3. Examples</a></span></dt>
+<dd><dl>
+<dt><span class="section"><a href="example-configs.html">Example Configurations</a></span></dt>
+<dd><dl>
+<dt><span class="section"><a href="example-configs.html#id1293537">Single Server, Single Instance Setup</a></span></dt>
+<dt><span class="section"><a href="example-configs.html#id1293652">Single Server, Multiple Instance Setup</a></span></dt>
+<dt><span class="section"><a href="example-configs.html#id1293743">Single Server, Single Instance Log File Import</a></span></dt>
+</dl></dd>
+</dl></dd>
+<dt><span class="chapter"><a href="ch04.html">4. Installation</a></span></dt>
+<dd><dl>
+<dt><span class="section"><a href="installation.html">Installation</a></span></dt>
+<dd><dl>
+<dt><span class="section"><a href="installation.html#id1293882">Prerequisites</a></span></dt>
+<dt><span class="section"><a href="installation.html#id1293914">Version Compatibility</a></span></dt>
+<dt><span class="section"><a href="installation.html#id1293925">Obtaining New Versions</a></span></dt>
+<dt><span class="section"><a href="installation.html#id1293944">Compiling</a></span></dt>
+<dt><span class="section"><a href="installation.html#id1293974">Installation</a></span></dt>
+<dt><span class="section"><a href="installation.html#id1293977">Initializing the database</a></span></dt>
+<dt><span class="section"><a href="installation.html#id1294110">Configuration</a></span></dt>
+<dt><span class="section"><a href="installation.html#id1294174">Getting things running</a></span></dt>
+</dl></dd>
+</dl></dd>
+</dl>
+</div>
+<div class="list-of-figures">
+<p><b>List of Figures</b></p>
+<dl>
+<dt>1.1. <a href="intro.html#id1293102">Possible Designs</a>
+</dt>
+<dt>1.2. <a href="intro.html#id1293127">Future development: One Instance, multiple databases</a>
+</dt>
+<dt>1.3. <a href="intro.html#id1293163">Instance names based on geographical locations</a>
+</dt>
+<dt>1.4. <a href="intro.html#id1293188">Instance names based on their purpose</a>
+</dt>
+<dt>2.1. <a href="components.html#id1293309">Loaded NDOMOD Eventbroker Module</a>
+</dt>
+<dt>2.2. <a href="components.html#id1293322">NDOMOD Capabilities</a>
+</dt>
+<dt>2.3. <a href="components.html#id1293393">LOG2NDO Utility</a>
+</dt>
+<dt>2.4. <a href="components.html#id1293426">FILE2SOCK Utility</a>
+</dt>
+<dt>2.5. <a href="components.html#id1293472">NDO2DB Daemon</a>
+</dt>
+<dt>2.6. <a href="components.html#id1293499">NDO2DB with multiple Clients</a>
+</dt>
+<dt>3.1. <a href="example-configs.html#id1293557">Single Server, Single Instance Setup</a>
+</dt>
+<dt>3.2. <a href="example-configs.html#id1293670">Single Server, Multiple Instance Setup</a>
+</dt>
+<dt>3.3. <a href="example-configs.html#id1293781">Single Server, Single Instance Log File Import</a>
+</dt>
+</dl>
+</div>
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+</div>
+<div class="navfooter">
+<hr>
+<table width="100%" summary="Navigation footer">
+<tr>
+<td width="40%" align="left"> </td>
+<td width="20%" align="center"> </td>
+<td width="40%" align="right"> <a accesskey="n" href="ch01.html">Next</a>
+</td>
+</tr>
+<tr>
+<td width="40%" align="left" valign="top"> </td>
+<td width="20%" align="center"> </td>
+<td width="40%" align="right" valign="top"> Chapter 1. The Beginning</td>
+</tr>
+</table>
+</div>
+<P class="copyright">© 2009 Nagios Development Team, http://www.nagios.org</P>
+</body>
+</html>

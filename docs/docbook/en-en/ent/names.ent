@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<!ENTITY name-nrpe "NRPE">
+<!ENTITY name-nsca "NSCA">
+<!ENTITY name-nsclient "NSClient++">
+<!ENTITY name-nagios "Nagios">
+<!ENTITY name-nagioswiki "Nagios Wiki">
+<!ENTITY name-ndoutils "NDOUtils">
+<!ENTITY name-gd "GD">
+<!ENTITY name-apache "Apache">
+<!ENTITY name-linux "Linux">
+<!ENTITY name-centos "CentOS">
+<!ENTITY name-debian "Debian">
+<!ENTITY name-fedora "Fedora">
+<!ENTITY name-macosx "Mac OS X">
+<!ENTITY name-opensuse "openSuSE">
+<!ENTITY name-redhat "RedHat">
+<!ENTITY name-sles "SLES">
+<!ENTITY name-ubuntu "Ubuntu">
+<!ENTITY name-hp "HP">
+<!ENTITY name-solaris "Solaris">

@@ -55,6 +55,7 @@ clean:
 
 distclean: clean
 	cd $(SRC_BASE) && $(MAKE) $@
+	cd docs/docbook/en-en/ && $(MAKE) $@
 	rm -f config.log config.status config.cache 
 	rm -f $(SRC_INCLUDE)/dh.h $(SRC_INCLUDE)/config.h
 	rm -f $(SRC_CONFIG)/ndo2db.cfg-sample $(SRC_CONFIG)/ndomod.cfg-sample $(SRC_CONFIG)/nagios.cfg $(SRC_CONFIG)/misccommands.cfg
