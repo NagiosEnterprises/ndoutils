@@ -16,11 +16,9 @@
 SSL_METHOD *meth;
 SSL_CTX *ctx;
 SSL *ssl;
-int use_ssl=NDO_TRUE;
-#else
-int use_ssl=NDO_FALSE;
 #endif
 
+int use_ssl=NDO_FALSE;
 
 
 /**************************************************************/
@@ -200,7 +198,7 @@ int ndo_sink_open(char *name, int fd, int type, int port, int flags, int *nfd){
 			SSL_load_error_strings();
 
 			if((ctx=SSL_CTX_new(meth))==NULL){
-					printf("CHECK_NRPE: Error - could not create SSL context.\n");
+					printf("NDOUtils: Error - could not create SSL context.\n");
 					return NDO_ERROR;
 			}
 			/* ADDED 01/19/2004 */
@@ -248,7 +246,7 @@ int ndo_sink_open(char *name, int fd, int type, int port, int flags, int *nfd){
 					return NDO_ERROR;
 				}
 			} else {
-				printf("CHECK_NRPE: Error - Could not create SSL connection structure.\n");
+				printf("NDOUtils: Error - Could not create SSL connection structure.\n");
 				return NDO_ERROR;
 			}
 		}

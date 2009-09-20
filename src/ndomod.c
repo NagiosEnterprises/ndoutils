@@ -438,8 +438,15 @@ int ndomod_process_config_var(char *arg){
 	else if(!strcmp(var,"buffer_file"))
 		ndomod_buffer_file=strdup(val);
 
-	else if(!strcmp(var,"use_ssl"))
-		use_ssl=strtoul(val,NULL,0);
+	else if(!strcmp(var,"use_ssl")){
+		if (strlen(val) == 1) {
+			if (isdigit((int)val[strlen(val)-1]) == NDO_TRUE)
+				use_ssl = atoi(val);
+			else
+				use_ssl = 0;
+		}
+	}
+
 
 	else
 		return NDO_ERROR;

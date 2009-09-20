@@ -461,8 +461,14 @@ int ndo2db_process_config_var(char *arg){
 		ndo2db_debug_verbosity=atoi(val);
 	else if(!strcmp(var,"max_debug_file_size"))
 		ndo2db_max_debug_file_size=strtoul(val,NULL,0);
-	else if(!strcmp(var,"use_ssl"))
-		use_ssl = strtoul(val, NULL, 0);
+	else if(!strcmp(var,"use_ssl")){
+		if (strlen(val) == 1) {
+			if (isdigit((int)val[strlen(val)-1]) == NDO_TRUE)
+				use_ssl = atoi(val);
+			else
+				use_ssl = 0;
+		}
+	}
 
 	return NDO_OK;
         }
@@ -1027,10 +1033,10 @@ int ndo2db_handle_client_connection(int sd){
 				syslog(LOG_ERR,"SSL read error\n");
 			}
 		}
-#endif
+#else
 
 		result=read(sd,buf,sizeof(buf)-1);
-
+#endif
 		/* bail out on hard errors */
 		if(result==-1) {
 			/* EAGAIN and EINTR are soft errors, so try another read() */
