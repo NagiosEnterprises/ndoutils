@@ -1613,7 +1613,7 @@ int ndo2db_handle_hostcheckdata(ndo2db_idi *idi){
 		is_raw_check=0;
 
 	/* save entry to db */
-	if(asprintf(&buf1,"instance_id='%lu', host_object_id='%lu', check_type='%d', is_raw_check='%d', current_check_attempt='%d', max_check_attempts='%d', state='%d', state_type='%d', start_time=%s, start_time_usec='%lu', end_time=%s, end_time_usec='%lu', timeout='%d', early_timeout='%d', execution_time='%lf', latency='%lf', return_code='%d', output='%s', perfdata='%s'"
+	if(asprintf(&buf1,"instance_id='%lu', host_object_id='%lu', check_type='%d', is_raw_check='%d', current_check_attempt='%d', max_check_attempts='%d', state='%d', state_type='%d', start_time=%s, start_time_usec='%lu', end_time=%s, end_time_usec='%lu', timeout='%d', early_timeout='%d', execution_time='%lf', latency='%lf', return_code='%d', output='%s', long_output='%s', perfdata='%s'"
 		    ,idi->dbinfo.instance_id
 		    ,object_id
 		    ,check_type
@@ -1633,6 +1633,7 @@ int ndo2db_handle_hostcheckdata(ndo2db_idi *idi){
 		    ,return_code
 		    ,es[2]
 		    ,es[3]
+		    ,es[4]
 		   )==-1)
 		buf1=NULL;
 

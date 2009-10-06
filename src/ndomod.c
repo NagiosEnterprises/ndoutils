@@ -1755,7 +1755,7 @@ int ndomod_broker_data(int event_type, void *data){
 			 ,scdata->return_code
 			 ,NDO_DATA_OUTPUT
 			 ,(es[5]==NULL)?"":es[5]
-			 ,NDO_DATA_OUTPUT
+			 ,NDO_DATA_LONGOUTPUT
 			 ,(es[6]==NULL)?"":es[6]
 			 ,NDO_DATA_PERFDATA
 			 ,(es[7]==NULL)?"":es[7]
@@ -1830,7 +1830,7 @@ int ndomod_broker_data(int event_type, void *data){
 			 ,hcdata->return_code
 			 ,NDO_DATA_OUTPUT
 			 ,(es[4]==NULL)?"":es[4]
-			 ,NDO_DATA_OUTPUT
+			 ,NDO_DATA_LONGOUTPUT
 			 ,(es[5]==NULL)?"":es[5]
 			 ,NDO_DATA_PERFDATA
 			 ,(es[6]==NULL)?"":es[6]
