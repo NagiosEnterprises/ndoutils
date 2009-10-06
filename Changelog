@@ -18,6 +18,7 @@ NOTE: ** Requires Nagios 2.7 or higher, or Nagios 3.0b6 or higher
 - Support SSL encryption between the communication partners
 - Support 8192 chars for performance data
 - Added installation procedure with "make install" or "make fullinstall"
+- Fix missing output fields in hostcheck and servicecheck tables
 
 1.4b8 - 07/16/2009
 ------------------
