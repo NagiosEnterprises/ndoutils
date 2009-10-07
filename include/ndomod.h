@@ -24,7 +24,7 @@ typedef struct ndomod_sink_buffer_struct{
         }ndomod_sink_buffer;
 
 
-#define NDOMOD_MAX_BUFLEN   4096
+#define NDOMOD_MAX_BUFLEN   16384
 
 
 #define NDOMOD_PROCESS_PROCESS_DATA                   1
