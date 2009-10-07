@@ -517,7 +517,7 @@ char *ndo_unescape_buffer(char *buffer){
 	len=(int)strlen(buffer);
 	for(x=0;x<len;x++){
 		if(buffer[x]=='\\'){
-			if(buffer[x+1]=='\t')
+			if(buffer[x+1]=='t')
 				buffer[y++]='\t';
 			else if(buffer[x+1]=='r')
 				buffer[y++]='\r';
