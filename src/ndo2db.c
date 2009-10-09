@@ -463,7 +463,7 @@ int ndo2db_process_config_var(char *arg){
 		ndo2db_max_debug_file_size=strtoul(val,NULL,0);
 	else if(!strcmp(var,"use_ssl")){
 		if (strlen(val) == 1) {
-			if (isdigit((int)val[strlen(val)-1]) == NDO_TRUE)
+			if (isdigit((int)val[strlen(val)-1]) != NDO_FALSE)
 				use_ssl = atoi(val);
 			else
 				use_ssl = 0;

@@ -440,7 +440,7 @@ int ndomod_process_config_var(char *arg){
 
 	else if(!strcmp(var,"use_ssl")){
 		if (strlen(val) == 1) {
-			if (isdigit((int)val[strlen(val)-1]) == NDO_TRUE)
+			if (isdigit((int)val[strlen(val)-1]) != NDO_FALSE)
 				use_ssl = atoi(val);
 			else
 				use_ssl = 0;
