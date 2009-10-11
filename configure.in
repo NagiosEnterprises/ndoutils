@@ -274,7 +274,7 @@ AC_ARG_ENABLE(ssl,AC_HELP_STRING([--enable-ssl],[enables native SSL support]),[
 	else
 		check_for_ssl=no
 	fi
-	],check_for_ssl=yes)
+	],check_for_ssl=no)
 
 dnl Optional SSL library and include paths
 ssl_dir=
