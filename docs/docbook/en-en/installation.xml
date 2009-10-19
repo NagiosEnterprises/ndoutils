@@ -17,7 +17,7 @@
     <title>Prerequisites</title>
 
     <para>In order to use the NDOUtils addon you'll need to have the following
-    installed and working on your system: </para>
+    installed and working on your system:</para>
 
     <itemizedlist>
       <listitem>
@@ -36,21 +36,21 @@
     <para>In order to use the NDOUtils addon, you'll need to be running at
     least Nagios 2.0 (stable). NDOUtils will not work with beta releases of
     Nagios 2.0. NDOUtils also works with updates to the Nagios 2.x branch, and
-    the current development branch of Nagios 3. </para>
+    the current Nagios 3 branch since b6 stage.</para>
   </section>
 
   <section>
     <title>Obtaining New Versions</title>
 
     <para>You can always obtain the latest version of the NDOUtils addon by
-    visiting the Nagios download site at: </para>
+    visiting the Nagios download site at:</para>
 
     <para>http://www.nagios.org/download/</para>
 
-    <para>Bugs are bound to be present in this daemon, and updates are always
+    <para>Bugs are bound to be present in this daemon and updates are always
     being made to Nagios, so its important that you stay up to date with the
-    latest version of NDOUtils that works with the version of Nagios you have.
-    </para>
+    latest version of NDOUtils that works with the version of Nagios you
+    have.</para>
   </section>
 
   <section>
@@ -77,67 +77,70 @@
   <section>
     <title>Installation</title>
 
-    <para>There isn't currently a "make install" functionality, so you'll have
-    to manually install the various components of the addon. Don't worry – its
-    pretty easy...</para>
+    <para>Since NDOUtils 1.4b9 you are able to install NDOUtils like your
+    Nagios using a simple make target.</para>
 
-    <para>There are two versions of the ndomod.o NEB module and ndo2db daemon
-    that get compiled. One for Nagios 2.x and one for Nagios 3.x. Each
-    Nagios-specific binary is named after the version it works with: </para>
+    <para>During this step all necessary binaries will be copied to your
+    --prefix path, especially to your --bindir which you specified during the
+    configure.</para>
 
-    <para>ndomod-2x.o &lt;- These work with Nagios 2.x </para>
+    <section>
+      <title>To use with a Nagios 3.x Installation</title>
 
-    <para>ndo2db-2x </para>
+      <para>Since NDOUtils 1.4b9 you are able to run</para>
 
-    <para></para>
+      <para>
+        <programlisting>make install</programlisting>
+      </para>
 
-    <para>ndomod-3x.o &lt;- These work with Nagios 3.x </para>
+      <para>direct after <code>make</code>.</para>
 
-    <para>ndo2db-3x </para>
+      <para>This will install the different binary files which belongs to the
+      NDOUtils Project to your specified path (<code>--prefix</code> or
+      <code>--binddir</code>).</para>
 
-    <para>There are two other binaries that come with the NDOUtils addon that
-    are not (Nagios) version-specific. They are:</para>
+      <note>
+        <para><code>make install</code> will install ndomod and ndo2db for a
+        Nagios 3.x installation per default.</para>
 
-    <para>file2sock </para>
+        <para>If you would install NDOUtils for a Nagios 2.x Version, read
+        Section 1.5.2</para>
+      </note>
+    </section>
 
-    <para>log2ndo </para>
+    <section>
+      <title>To use with a Nagios 2.x Installation</title>
+    </section>
 
-    <para>In order to install the NDOUtils components on your system, you'll
-    need to copy the compiled binaries into your Nagios binary directory
-    (usually /usr/local/nagios/bin) like so: </para>
+    <para>
+      <note>
+        <para><code>make install-2x</code> will install ndomod and ndo2db for
+        a Nagios 2.x installation.</para>
 
-    <para><programlisting>cp ndomod-2x ndo2db-2x log2ndo file2sock /usr/local/nagios/bin </programlisting></para>
+        <para>If you would install NDOUtils for a Nagios 3.x Version, read
+        Section 1.5.1</para>
+      </note>
+    </para>
 
-    <para>If you're using Nagios 3.x:,</para>
-
-    <programlisting>cp ndomod-3x ndo2db-3x log2ndo file2sock /usr/local/nagios/bin </programlisting>
-
-    <note>
-      <para>This assumes that you're running the NDO2DB daemon on the same
-      server that runs Nagios. If you plan on running the NDO2DB daemon on
-      another machine, you'll need to install the daemon binary on the remote
-      machine. </para>
-    </note>
-
-    <para>That's it! Now its time to configure everything... </para>
+    <para>That's it! Now its time to configure everything...</para>
   </section>
 
   <section>
     <title>Initializing the database</title>
 
     <para>Currently, the NDOUtils addon only supports MySQL as a database
-    backed. Support for PostgresQL will likely be added in the future. </para>
+    backed. Support for PostgresQL will likely be added in the future.</para>
 
     <note>
       <para>If you aren't already using it, I would suggest installing
       phpMyAdmin (http://www.phpmyadmin.net) to help manage your MySQL server
-      and databases. </para>
+      and databases.</para>
     </note>
 
     <orderedlist>
       <listitem>
         <para>First, you'll need to create a new database called "nagios", or
-        whatever you'd like. </para>
+        whatever you'd like.</para>
       </listitem>
 
       <listitem>
@@ -163,33 +166,42 @@
 
     <para>Its time to configure the NDOUtils addon components. Sample config
     files are included in the config/ subdirectory of the NDOUtils
-    distribution. </para>
+    distribution.</para>
 
     <orderedlist>
       <listitem>
-        <para>First, add the entries from the sample nagios.cfg file (located
-        in the config/ subdirectory) to your main Nagios configuration file
-        (usually /usr/local/nagios/etc/nagios.cfg). Uncomment the appropriate
-        config file entry as noted to match the version of Nagios that you're
-        running.</para>
+        <para>First, add the following entry to your main Nagios configuration
+        file (usually /usr/local/nagios/etc/nagios.cfg):</para>
+
+        <programlisting>broker_module=/usr/local/nagios/bin/ndomod.o config_file=/usr/local/nagios/etc/ndomod.cfg</programlisting>
       </listitem>
 
       <listitem>
-        <para>Next, copy the sample NDOUtils config files to the Nagios etc/
-        directory: </para>
+        <para>Next, install the sample NDOUilts config files:</para>
 
-        <programlisting>cp ndomod.cfg ndo2db.cfg /usr/local/nagios/etc/</programlisting>
+        <programlisting>make install-config</programlisting>
+
+        <para>This will install the distribution configuration files to your
+        sysconfdir (usually /usr/local/nagios/etc/) as
+        &lt;filename&gt;-sample.cfg.</para>
+
+        <para>This will prevent to overwrite your personal changes. After
+        adapting your personal changes to the newly created config files and
+        rename them:</para>
+
+        <programlisting>mv /usr/local/nagios/etc/ndomod-sample.cfg /usr/local/nagios/etc/ndomod.cfg
+mv /usr/local/nagios/etc/ndo2db-sample.cfg /usr/local/nagios/etc/ndo2db.cfg</programlisting>
       </listitem>
 
       <listitem>
         <para>Edit the ndomod.cfg and ndo2db.cfg config files to match your
         setup. You'll need to specify things like the database name, prefix,
-        username/password, etc. </para>
+        username/password, etc.</para>
       </listitem>
 
       <listitem>
         <para>Make sure the following entry appears in your main Nagios
-        configuration file (nagios.cfg). </para>
+        configuration file (nagios.cfg).</para>
 
         <para>If you don't specify this option, Nagios may not pass any data
         to the addon for storage in the database.</para>
@@ -197,20 +209,35 @@
         <programlisting>event_broker_options=-1</programlisting>
       </listitem>
     </orderedlist>
+
+    <para><tip>
+        <para>To save some overall performance, you should think about which
+        data you really need from the NDOUtils.</para>
+
+        <para>Nagios itself produces a lot of timed event data which
+        represents the nagios internal scheduling queue. You can safe yourself
+        some trouble if you unregister your ndomod.o from this events.</para>
+
+        <para>Just configure a less greedy ndo broker option like this:</para>
+
+        <para><programlisting>data_processing_options=1048573</programlisting></para>
+      </tip></para>
   </section>
 
   <section>
     <title>Getting things running</title>
 
-    <para>Once things are configured, you can start things running. The
-    following examples assume you're using Nagios 2.x and are thus using the
-    2.x versions of the components. </para>
+    <para>Once things are configured, you can start things running.</para>
 
     <orderedlist>
       <listitem>
         <para>Start the NDO2DB daemon:</para>
 
-        <programlisting>/usr/local/nagios/bin/ndo2db-2x -c /usr/local/nagios/etc/ndo2db.cfg</programlisting>
+        <programlisting>/usr/local/nagios/bin/ndo2db -c /usr/local/nagios/etc/ndo2db.cfg</programlisting>
+
+        <para>or just use the init script by execute:</para>
+
+        <programlisting>/etc/init.d/ndo2db start</programlisting>
       </listitem>
 
       <listitem>
@@ -219,49 +246,53 @@
       </listitem>
 
       <listitem>
-        <para>Start Nagios if its not running. </para>
+        <para>Start Nagios if its not running.</para>
 
         <programlisting>/usr/local/nagios/bin/nagios -d /usr/local/nagios/etc/nagios.cfg</programlisting>
 
         <note>
           <para>If Nagios is already running, restart it by sending a SIGHUP
-          signal or using the Nagios web interface. </para>
+          signal or using the Nagios web interface.</para>
         </note>
       </listitem>
 
       <listitem>
-        <para>Check the Nagios logs to make sure it started okay. You should
-        see some log entries that say the ndomod.o module was loaded
-        successfully and connected to the data sink. If the ndomod.o module
-        didn't appear to load, check your Nagios config files to make sure you
-        added the appropriate broker module entries to your main config file.
-        If there are errors connecting to the data sink, make sure the NDO2DB
-        daemon is running. </para>
+        <para>Check the Nagios logs to make sure it started okay.</para>
+
+        <para>You should see some log entries that say the ndomod.o module was
+        loaded successfully and connected to the data sink.</para>
+
+        <para>If the ndomod.o module didn't appear to load, check your Nagios
+        config files to make sure you added the appropriate broker module
+        entries to your main config file.</para>
+
+        <para>If there are errors connecting to the data sink, make sure the
+        NDO2DB daemon is running.</para>
       </listitem>
 
       <listitem>
         <para>Check the system logs to make sure the NDO2DB daemon is working
-        okay. </para>
+        okay.</para>
 
         <para>You should see some log entries telling you that a connection
         was received (by the ndomod.o module loaded by Nagios) and a
-        connection to the database was successfully make. </para>
+        connection to the database was successfully make.</para>
 
         <para>If there are errors, make sure you specified the appropriate
         database, username, password, and table prefix in your ndo2db.cfg
-        config file. </para>
+        config file.</para>
 
         <para>If there are errors relating to being unable to run a specific
         MySQL query, chances are that you either didn't create the appropriate
         database tables (outlined above in the configuration section) or your
-        ndo2db.cfg config file entries don't match your setup. </para>
+        ndo2db.cfg config file entries don't match your setup.</para>
 
         <para>You'll need to restart the NDO2DB daemon if you make changes to
-        the config file. </para>
+        the config file.</para>
       </listitem>
     </orderedlist>
 
     <para>That's it - data from Nagios should now be getting stored in
-    database! </para>
+    database!</para>
   </section>
 </section>

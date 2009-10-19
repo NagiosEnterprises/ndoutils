@@ -54,7 +54,7 @@
     process.</para>
 
     <figure>
-      <title>Loaded NDOMOD Eventbroker Module</title>
+      <title>Loaded NDOMOD Event broker Module</title>
 
       <mediaobject>
         <imageobject role="html">
@@ -100,11 +100,11 @@
 
     <para>The LOG2NDO utility has been designed to allow you to import
     historical Nagios and NetSaint log files into a database via the NDO2DB
-    daemon (described later). The utility works by sending historical log file
-    data to a standard file, a Unix domain socket, or a TCP socket in a format
-    the NDO2DB daemon understands. The NDO2DB daemon can then be used to
-    process that output and store the historical logfile information in a
-    database.</para>
+    daemon (<link linkend="ndo2db-description">described later</link>). The
+    utility works by sending historical log file data to a standard file, a
+    Unix domain socket, or a TCP socket in a format the NDO2DB daemon
+    understands. The NDO2DB daemon can then be used to process that output and
+    store the historical logfile information in a database.</para>
 
     <figure>
       <title>LOG2NDO Utility</title>
@@ -142,7 +142,7 @@
     TCP or Unix domain socket.</para>
   </section>
 
-  <section>
+  <section label="NDO2DB" xml:id="ndo2db-description">
     <title>NDO2DB</title>
 
     <para>The NDO2DB utility is designed to take the data output from the

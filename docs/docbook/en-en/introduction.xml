@@ -19,13 +19,17 @@
     data from Nagios in a database. Storing information from Nagios in a
     database will allow for quicker retrieval and processing of that data and
     will help serve as a foundation for the development of a new PHP-based web
-    interface in Nagios 3.0.</para>
+    interface in future Nagios versions.</para>
 
-    <para>MySQL databases are currently supported by the addon and PostgreSQL
-    support is in development.</para>
+    <para>MySQL databases are currently supported by the addon. Other
+    databases will be supported in the next versions.</para>
+
+    <para>The development for this will start right after the next stable
+    NDOUtils release (1.6).</para>
 
     <para>Support for other database servers may be added if there is
-    sufficient user interest.</para>
+    sufficient user interest and even more user who are interested in
+    testing.</para>
   </section>
 
   <section>
@@ -44,7 +48,7 @@
 
       <listitem>
         <para>Multiple Nagios installations in distributed, redundant, and/or
-        failover environments</para>
+        fail over environments</para>
       </listitem>
     </itemizedlist>
 
@@ -80,8 +84,8 @@
   <section>
     <title>Instances</title>
 
-    <para>Each Nagios process, whether it is a standalong monitoring server,
-    or part of a distributed, redundant, or failover monitoring setup, is
+    <para>Each Nagios process, whether it is a standalone monitoring server,
+    or part of a distributed, redundant, or fail over monitoring setup, is
     referred to as an "instance". In order to maintain the integrity of stored
     data, each Nagios instance must be labeled with a unique identifier or
     name.</para>
