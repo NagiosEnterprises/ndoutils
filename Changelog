@@ -21,6 +21,11 @@ NOTE: ** Requires Nagios 2.7 or higher, or Nagios 3.0b6 or higher
 - Fix missing output fields in hostcheck and servicecheck tables
 - Workaround small NDOMOD Buffers to handle more than 4k chars (tracker id 21)
 - Fix unescape of strings containing tabstops
+- Fix case insensitive behavior in NDOUtils (tracker id 66)
+  HINT: Now NDOUtils handles renaming objects like Nagios itself.
+	localhost is not like LoCaLhOsT - they are two different objects
+
+
 
 1.4b8 - 07/16/2009
 ------------------
