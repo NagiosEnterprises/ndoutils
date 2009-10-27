@@ -81,6 +81,10 @@ int ndo2db_get_object_id(ndo2db_idi *idi, int object_type, char *n1, char *n2, u
 	        }
 	else{
 		es[0]=ndo2db_db_escape_string(idi,name1);
+		/* HINT: HB 10/27/2009
+		 * BINARY operator is just a MySQL special to provide case sensitive queries
+		 * Think about it in the future if not only MySQL is supported 
+		 */
 		if(asprintf(&buf1,"BINARY name1='%s'",es[0])==-1)
 			buf1=NULL;
 	        }
@@ -92,6 +96,10 @@ int ndo2db_get_object_id(ndo2db_idi *idi, int object_type, char *n1, char *n2, u
 	        }
 	else{
 		es[1]=ndo2db_db_escape_string(idi,name2);
+		/* HINT: HB 10/27/2009
+		 * BINARY operator is just a MySQL special to provide case sensitive queries
+		 * Think about it in the future if not only MySQL is supported 
+		 */
 		if(asprintf(&buf2,"BINARY name2='%s'",es[1])==-1)
 			buf2=NULL;
 	        }
