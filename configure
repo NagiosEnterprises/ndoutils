@@ -1724,9 +1724,9 @@ _ACEOF
 
 
 PKG_NAME=ndoutils
-PKG_VERSION="1.4b8"
+PKG_VERSION="1.4b9"
 PKG_HOME_URL="http://www.nagios.org/"
-PKG_REL_DATE="07-16-2009"
+PKG_REL_DATE="10-27-2009"
 
 ac_aux_dir=
 for ac_dir in "$srcdir" "$srcdir/.." "$srcdir/../.."; do
