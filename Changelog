@@ -5,7 +5,11 @@ NDO Utils History
 Note:  Consider this addon to be experimental.  Memory leaks and segfaults are to be 
        expected until the code stabilizes, so beware of using it in production environments.
 
-1.4b9 - ??/??/2009
+1.??? - ??/??/2010
+* Fixed to small es array (Michael Friedrich)
+* Fixed wrong type of object_id in ndo2db_save_custom_variables() (Michael Friedrich)
+
+1.4b9 - 10/27/2009
 ------------------
 NOTE: ** Requires Nagios 2.7 or higher, or Nagios 3.0b6 or higher
 - Improved writes from file2sock to ndo2db by matching buffer sizes (Opsera Ltd)

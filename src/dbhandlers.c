@@ -4929,11 +4929,11 @@ int ndo2db_handle_contactgroupdefinition(ndo2db_idi *idi){
 	return NDO_OK;
         }
 
-int ndo2db_save_custom_variables(ndo2db_idi *idi,int table_idx, int o_id, char *ts ){
+int ndo2db_save_custom_variables(ndo2db_idi *idi,int table_idx, unsigned long o_id, char *ts ){
 	char *buf=NULL;
 	char *buf1=NULL;
 	ndo2db_mbuf mbuf;
-	char *es[1];
+	char *es[2];
 	char *ptr1=NULL;
 	char *ptr2=NULL;
 	char *ptr3=NULL;
