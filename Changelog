@@ -1,13 +1,15 @@
-=================
-NDO Utils History
-=================
+===================
+NDO Utils Changelog
+===================
 
-Note:  Consider this addon to be experimental.  Memory leaks and segfaults are to be 
-       expected until the code stabilizes, so beware of using it in production environments.
 
-1.??? - ??/??/2010
+1.5 - 02/??/2012
+----------------
+* Added various performance improvements originally added for Nagios XI (Ethan Galstad)
+* Added asynchronous data spooling to increase performance (andree)
 * Fixed to small es array (Michael Friedrich)
 * Fixed wrong type of object_id in ndo2db_save_custom_variables() (Michael Friedrich)
+
 
 1.4b9 - 10/27/2009
 ------------------
