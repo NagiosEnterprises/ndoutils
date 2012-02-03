@@ -249,4 +249,6 @@ int ndo2db_convert_string_to_timeval(char *,struct timeval *);
 
 int ndo2db_open_debug_log(void);
 int ndo2db_close_debug_log(void);
+
+void ndo2db_async_client_handle();
 #endif

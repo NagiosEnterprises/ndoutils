@@ -3,7 +3,7 @@ NDO Utils Changelog
 ===================
 
 
-1.5 - 02/??/2012
+1.5 - 02/03/2012
 ----------------
 * Added various performance improvements originally added for Nagios XI (Ethan Galstad)
 * Added asynchronous data spooling to increase performance (andree)

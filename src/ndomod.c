@@ -1691,8 +1691,13 @@ int ndomod_broker_data(int event_type, void *data){
 		break;
 
 	case NEBCALLBACK_SERVICE_CHECK_DATA:
-
+	
 		scdata=(nebstruct_service_check_data *)data;
+
+		/* Nagios XI MOD */
+		/* send only the data we really use */
+		if(scdata->type!=NEBTYPE_SERVICECHECK_PROCESSED)
+			break;
 
 		es[0]=ndo_escape_buffer(scdata->host_name);
 		es[1]=ndo_escape_buffer(scdata->service_description);
@@ -1770,6 +1775,11 @@ int ndomod_broker_data(int event_type, void *data){
 	case NEBCALLBACK_HOST_CHECK_DATA:
 
 		hcdata=(nebstruct_host_check_data *)data;
+
+		/* Nagios XI MOD */
+		/* send only the data we really use */
+		if(hcdata->type!=NEBTYPE_HOSTCHECK_PROCESSED)
+			break;
 
 		es[0]=ndo_escape_buffer(hcdata->host_name);
 		es[1]=ndo_escape_buffer(hcdata->command_name);
@@ -2803,7 +2813,7 @@ int ndomod_broker_data(int event_type, void *data){
 			 ,NDO_DATA_SERVICE
 			 ,(es[1]==NULL)?"":es[1]
 			 ,NDO_DATA_CONTACTNAME
-			 ,(es[5]==NULL)?"":es[5]
+			 ,(es[7]==NULL)?"":es[7]
 			 ,NDO_DATA_NOTIFICATIONREASON
 			 ,cnotdata->reason_type
 			 ,NDO_DATA_STATE

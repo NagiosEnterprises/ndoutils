@@ -24,6 +24,7 @@
 #include "../include/ndo2db.h"
 #include "../include/db.h"
 #include "../include/dbhandlers.h"
+#include "../include/queue.h"
 
 #ifdef HAVE_SSL
 #include "../include/dh.h"
@@ -994,6 +995,11 @@ int ndo2db_handle_client_connection(int sd){
 	signal(SIGSEGV,ndo2db_child_sighandler);
 	signal(SIGFPE,ndo2db_child_sighandler);
 
+	pid_t chpid;
+	if ((chpid = fork()) == 0) {
+		ndo2db_async_client_handle();
+	}
+
 	/* initialize input data information */
 	ndo2db_idi_init(&idi);
 
@@ -1069,6 +1075,7 @@ int ndo2db_handle_client_connection(int sd){
 
 			/* gracefully back out of current operation... */
 			ndo2db_db_goodbye(&idi);
+			kill (chpid, SIGTERM);
 
 			break;
 		        }
@@ -1083,12 +1090,16 @@ int ndo2db_handle_client_connection(int sd){
 
 		/* check for completed lines of input */
 		ndo2db_check_for_client_input(&idi,&dbuf);
+		/* reinitialize buffer */
+		ndo_dbuf_free(&dbuf);
+		ndo_dbuf_init(&dbuf,dbuf_chunk);
 
 		/* should we disconnect the client? */
 		if(idi.disconnect_client==NDO_TRUE){
 
 			/* gracefully back out of current operation... */
 			ndo2db_db_goodbye(&idi);
+			kill (chpid, SIGTERM);
 
 			break;
 		        }
@@ -1108,6 +1119,12 @@ int ndo2db_handle_client_connection(int sd){
 	/* free memory */
 	ndo2db_free_input_memory(&idi);
 	ndo2db_free_connection_memory(&idi);
+
+	/* clean queue */
+	del_queue();
+
+	/* wait for child to end work */
+	waitpid(chpid, NULL, 0);
 
 	/* close syslog facility */
 	/*closelog();*/
@@ -1172,40 +1189,83 @@ int ndo2db_check_for_client_input(ndo2db_idi *idi,ndo_dbuf *dbuf){
 	printf("  USED1: %lu, BYTES: %lu, LINES: %lu\n",dbuf->used_size,idi->bytes_processed,idi->lines_processed);
 #endif
 
-	/* search for complete lines of input */
-	for(x=0;dbuf->buf[x]!='\x0';x++){
-
-		/* we found the end of a line */
-		if(dbuf->buf[x]=='\n'){
-
-#ifdef DEBUG_NDO2DB2
-			printf("BUF[%d]='\\n'\n",x);
-#endif
-
-			/* handle this line of input */
-			dbuf->buf[x]='\x0';
-			if((buf=strdup(dbuf->buf))){
-				ndo2db_handle_client_input(idi,buf);
-				free(buf);
-				buf=NULL;
-				idi->lines_processed++;
-				idi->bytes_processed+=(x+1);
-			        }
-
-			/* shift data back to front of buffer and adjust counters */
-			memmove((void *)&dbuf->buf[0],(void *)&dbuf->buf[x+1],(size_t)((int)dbuf->used_size-x-1));
-			dbuf->used_size-=(x+1);
-			dbuf->buf[dbuf->used_size]='\x0';
-			x=-1;
-#ifdef DEBUG_NDO2DB2
-			printf("  USED2: %lu, BYTES: %lu, LINES: %lu\n",dbuf->used_size,idi->bytes_processed,idi->lines_processed);
-#endif
-		        }
-	        }
+	get_queue_id(getpid());
+	push_into_queue(dbuf->buf);
 
 	return NDO_OK;
         }
 
+/* asynchronous handle clients events */
+void ndo2db_async_client_handle() {
+	ndo2db_idi idi;
+
+	/* initialize input data information */
+	ndo2db_idi_init(&idi);
+
+	/* initialize database connection */
+	ndo2db_db_init(&idi);
+	ndo2db_db_connect(&idi);
+
+	get_queue_id(getppid());
+
+	char *old_buf = NULL;
+
+	for (;;) {
+		char * qbuf = pop_from_queue();
+		char *buf;
+		char * temp_buf;
+		int i, start=0;
+
+		if (old_buf != NULL) {
+			buf = (char*)calloc(strlen(qbuf)+strlen(old_buf)+2, sizeof(char));
+
+			strcat(buf, old_buf);
+			strcat(buf, qbuf);
+
+			free(old_buf); old_buf = NULL;
+			free(qbuf);
+		} else {
+			buf = qbuf;
+		}
+
+		for (i=0; i<=strlen(buf); i++) {
+			if (buf[i] == '\n') {
+				int size = i-start;
+				temp_buf = (char*)calloc(size+1, sizeof(char));
+				strncpy(temp_buf, &buf[start], size);
+				temp_buf[size] = '\x0';
+
+				ndo2db_handle_client_input(&idi,temp_buf);
+
+				free(temp_buf);
+
+				start=i+1;
+
+				idi.lines_processed++;
+				idi.bytes_processed+=size+1;
+			}
+		}
+
+		if (start <= strlen(buf)) {
+			old_buf = (char*)calloc(strlen(&buf[start])+1, sizeof(char));
+			strcpy(old_buf, &buf[start]);
+		}
+
+		free(buf);
+	}
+
+	if (old_buf != NULL) {
+		free(old_buf);
+	}
+
+	/* disconnect from database */
+	ndo2db_db_disconnect(&idi);
+	ndo2db_db_deinit(&idi);
+
+	/* free memory */
+	ndo2db_free_input_memory(&idi);
+	ndo2db_free_connection_memory(&idi);
+}
 
 /* handles a single line of input from a client connection */
 int ndo2db_handle_client_input(ndo2db_idi *idi, char *buf){

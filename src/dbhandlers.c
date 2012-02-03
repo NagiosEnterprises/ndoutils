@@ -789,7 +789,7 @@ int ndo2db_handle_timedeventdata(ndo2db_idi *idi){
 	/* HISTORICAL TIMED EVENTS */
 
 	/* save a record of timed events that get added */
-	if(type==NEBTYPE_TIMEDEVENT_ADD){
+	if(type==NEBTYPE_TIMEDEVENT_ADD && 0){
 
 		/* save entry to db */
 		if(asprintf(&buf,"instance_id='%lu', event_type='%d', queued_time=%s, queued_time_usec='%lu', scheduled_time=%s, recurring_event='%d', object_id='%lu'"
@@ -816,7 +816,7 @@ int ndo2db_handle_timedeventdata(ndo2db_idi *idi){
 	        }
 
 	/* save a record of timed events that get executed.... */
-	if(type==NEBTYPE_TIMEDEVENT_EXECUTE){
+	if(type==NEBTYPE_TIMEDEVENT_EXECUTE && 0){
 
 		/* save entry to db */
 		if(asprintf(&buf,"instance_id='%lu', event_type='%d', event_time=%s, event_time_usec='%lu', scheduled_time=%s, recurring_event='%d', object_id='%lu'"
@@ -843,7 +843,7 @@ int ndo2db_handle_timedeventdata(ndo2db_idi *idi){
 	        }
 
 	/* save a record of timed events that get removed.... */
-	if(type==NEBTYPE_TIMEDEVENT_REMOVE){
+	if(type==NEBTYPE_TIMEDEVENT_REMOVE && 0){
 
 		/* save entry to db */
 		if(asprintf(&buf,"UPDATE %s SET deletion_time=%s, deletion_time_usec='%lu' WHERE instance_id='%lu' AND event_type='%d' AND scheduled_time=%s AND recurring_event='%d' AND object_id='%lu'"
