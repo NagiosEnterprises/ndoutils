@@ -3145,7 +3145,7 @@ int ndomod_write_config(int config_type){
         }
 
 
-#define OBJECTCONFIG_ES_ITEMS 15
+#define OBJECTCONFIG_ES_ITEMS 16
 
 /* dumps object configuration data to sink */
 int ndomod_write_object_config(int config_type){
@@ -3560,13 +3560,13 @@ int ndomod_write_object_config(int config_type){
 		es[7]=ndo_escape_buffer(temp_host->failure_prediction_options);
 
 #ifdef BUILD_NAGIOS_3X
-		es[7]=ndo_escape_buffer(temp_host->notes);
-		es[8]=ndo_escape_buffer(temp_host->notes_url);
-		es[9]=ndo_escape_buffer(temp_host->action_url);
-		es[10]=ndo_escape_buffer(temp_host->icon_image);
-		es[11]=ndo_escape_buffer(temp_host->icon_image_alt);
-		es[12]=ndo_escape_buffer(temp_host->vrml_image);
-		es[13]=ndo_escape_buffer(temp_host->statusmap_image);
+		es[8]=ndo_escape_buffer(temp_host->notes);
+		es[9]=ndo_escape_buffer(temp_host->notes_url);
+		es[10]=ndo_escape_buffer(temp_host->action_url);
+		es[11]=ndo_escape_buffer(temp_host->icon_image);
+		es[12]=ndo_escape_buffer(temp_host->icon_image_alt);
+		es[13]=ndo_escape_buffer(temp_host->vrml_image);
+		es[14]=ndo_escape_buffer(temp_host->statusmap_image);
 		have_2d_coords=temp_host->have_2d_coords;
 		x_2d=temp_host->x_2d;
 		y_2d=temp_host->y_2d;
@@ -3581,17 +3581,17 @@ int ndomod_write_object_config(int config_type){
 		flap_detection_on_up=temp_host->flap_detection_on_up;
 		flap_detection_on_down=temp_host->flap_detection_on_down;
 		flap_detection_on_unreachable=temp_host->flap_detection_on_unreachable;
-		es[14]=ndo_escape_buffer(temp_host->display_name);
+		es[15]=ndo_escape_buffer(temp_host->display_name);
 #endif
 #ifdef BUILD_NAGIOS_2X
 		if((temp_hostextinfo=find_hostextinfo(temp_host->name))!=NULL){
-			es[7]=ndo_escape_buffer(temp_hostextinfo->notes);
-			es[8]=ndo_escape_buffer(temp_hostextinfo->notes_url);
-			es[9]=ndo_escape_buffer(temp_hostextinfo->action_url);
-			es[10]=ndo_escape_buffer(temp_hostextinfo->icon_image);
-			es[11]=ndo_escape_buffer(temp_hostextinfo->icon_image_alt);
-			es[12]=ndo_escape_buffer(temp_hostextinfo->vrml_image);
-			es[13]=ndo_escape_buffer(temp_hostextinfo->statusmap_image);
+			es[8]=ndo_escape_buffer(temp_hostextinfo->notes);
+			es[9]=ndo_escape_buffer(temp_hostextinfo->notes_url);
+			es[10]=ndo_escape_buffer(temp_hostextinfo->action_url);
+			es[11]=ndo_escape_buffer(temp_hostextinfo->icon_image);
+			es[12]=ndo_escape_buffer(temp_hostextinfo->icon_image_alt);
+			es[13]=ndo_escape_buffer(temp_hostextinfo->vrml_image);
+			es[14]=ndo_escape_buffer(temp_hostextinfo->statusmap_image);
 			have_2d_coords=temp_hostextinfo->have_2d_coords;
 			x_2d=temp_hostextinfo->x_2d;
 			y_2d=temp_hostextinfo->y_2d;
@@ -3601,13 +3601,13 @@ int ndomod_write_object_config(int config_type){
 			z_3d=temp_hostextinfo->z_3d;
 			}
 		else{
-			es[7]=NULL;
 			es[8]=NULL;
 			es[9]=NULL;
 			es[10]=NULL;
 			es[11]=NULL;
 			es[12]=NULL;
 			es[13]=NULL;
+			es[14]=NULL;
 			have_2d_coords=FALSE;
 			x_2d=0;
 			y_2d=0;
@@ -3623,7 +3623,7 @@ int ndomod_write_object_config(int config_type){
 		flap_detection_on_up=1;
 		flap_detection_on_down=1;
 		flap_detection_on_unreachable=1;
-		es[14]=ndo_escape_buffer(temp_host->name);
+		es[15]=ndo_escape_buffer(temp_host->name);
 #endif
 
 		snprintf(temp_buffer,sizeof(temp_buffer)-1
@@ -3635,7 +3635,7 @@ int ndomod_write_object_config(int config_type){
 			 ,NDO_DATA_HOSTNAME
 			 ,(es[0]==NULL)?"":es[0]
 			 ,NDO_DATA_DISPLAYNAME
-			 ,(es[14]==NULL)?"":es[14]
+			 ,(es[15]==NULL)?"":es[15]
 			 ,NDO_DATA_HOSTALIAS
 			 ,(es[1]==NULL)?"":es[1]
 			 ,NDO_DATA_HOSTADDRESS
@@ -3711,19 +3711,19 @@ int ndomod_write_object_config(int config_type){
 			 ,NDO_DATA_OBSESSOVERHOST
 			 ,temp_host->obsess_over_host
 			 ,NDO_DATA_NOTES
-			 ,(es[7]==NULL)?"":es[7]
-			 ,NDO_DATA_NOTESURL
 			 ,(es[8]==NULL)?"":es[8]
-			 ,NDO_DATA_ACTIONURL
+			 ,NDO_DATA_NOTESURL
 			 ,(es[9]==NULL)?"":es[9]
-			 ,NDO_DATA_ICONIMAGE
+			 ,NDO_DATA_ACTIONURL
 			 ,(es[10]==NULL)?"":es[10]
-			 ,NDO_DATA_ICONIMAGEALT
+			 ,NDO_DATA_ICONIMAGE
 			 ,(es[11]==NULL)?"":es[11]
-			 ,NDO_DATA_VRMLIMAGE
+			 ,NDO_DATA_ICONIMAGEALT
 			 ,(es[12]==NULL)?"":es[12]
-			 ,NDO_DATA_STATUSMAPIMAGE
+			 ,NDO_DATA_VRMLIMAGE
 			 ,(es[13]==NULL)?"":es[13]
+			 ,NDO_DATA_STATUSMAPIMAGE
+			 ,(es[14]==NULL)?"":es[14]
 			 ,NDO_DATA_HAVE2DCOORDS
 			 ,have_2d_coords
 			 ,NDO_DATA_X2D
