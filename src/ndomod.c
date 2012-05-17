@@ -6,7 +6,7 @@
  * Copyright (c) 2005-2009 Ethan Galstad
  *
  * First Written: 05-19-2005
- * Last Modified: 02-03-2012
+ * Last Modified: 05-15-2012
  *
  *****************************************************************************/
 
@@ -50,9 +50,9 @@
 NEB_API_VERSION(CURRENT_NEB_API_VERSION)
 
 
-#define NDOMOD_VERSION "1.5"
+#define NDOMOD_VERSION "1.5.1"
 #define NDOMOD_NAME "NDOMOD"
-#define NDOMOD_DATE "02-03-2012"
+#define NDOMOD_DATE "05-15-2012"
 
 
 void *ndomod_module_handle=NULL;

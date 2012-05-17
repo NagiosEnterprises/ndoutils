@@ -3,6 +3,10 @@ NDO Utils Changelog
 ===================
 
 
+1.5.1 - 05/15/2012
+------------------
+* Fixed off-by-one error packing data in ndomod.
+
 1.5 - 02/03/2012
 ----------------
 * Added various performance improvements originally added for Nagios XI (Ethan Galstad)
