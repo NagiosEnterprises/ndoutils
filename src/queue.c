@@ -6,6 +6,8 @@
 #include <string.h>
 #include <syslog.h>
 #include "../include/queue.h"
+#include <errno.h>
+#include <time.h>
 
 static int queue_id;
 static const int queue_buff_size = sizeof(struct queue_msg) - sizeof(long);
@@ -39,14 +41,32 @@ void push_into_queue (char* buf) {
 	int size;
 	msg.type = NDO_MSG_TYPE;
 	zero_string(msg.text, NDO_MAX_MSG_SIZE);
+	struct timespec delay;
+	int sleep_time;
 
 	strncpy(msg.text, buf, NDO_MAX_MSG_SIZE-1);
-//	size = sizeof(struct queue_msg) - sizeof(long);
 
-//	if (msgsnd(queue_id, &msg, size, IPC_NOWAIT) < 0) {
 	if (msgsnd(queue_id, &msg, queue_buff_size, IPC_NOWAIT) < 0) {
-		syslog(LOG_ERR,"Error: queue send error.\n");
-        }
+			syslog(LOG_ERR,"Error: queue send error, retrying...\n");
+			/* added retry loop, data was being dropped if queue was full 5/22/2012 -MG */
+			while(errno == EAGAIN) {
+					if(msgsnd(queue_id, &msg, queue_buff_size, IPC_NOWAIT)==0)
+							break;
+					#ifdef USE_NANOSLEEP
+						delay.tv_sec=(time_t)sleep_time;
+						delay.tv_nsec=(long)((sleep_time-(double)delay.tv_sec)*1000000000);
+						nanosleep(&delay,NULL);
+					#else
+						delay.tv_sec=(time_t)sleep_time;
+						if(delay.tv_sec==0L)
+							delay.tv_sec=1;
+							delay.tv_nsec=0L;
+							sleep((unsigned int)delay.tv_sec);
+					#endif 		
+				}
+				syslog(LOG_ERR,"Message sent to queue\n");
+		}
+
 }
 
 char* pop_from_queue() {
