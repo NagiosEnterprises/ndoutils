@@ -21,6 +21,9 @@ INSTALL_OPTS=@INSTALL_OPTS@
 INIT_DIR=@init_dir@
 INIT_OPTS=-o root -g root
 
+ctags:
+	ctags -R
+
 all:
 	cd $(SRC_BASE) && $(MAKE)
 
@@ -61,6 +64,7 @@ distclean: clean
 	rm -f $(SRC_CONFIG)/ndo2db.cfg-sample $(SRC_CONFIG)/ndomod.cfg-sample $(SRC_CONFIG)/nagios.cfg $(SRC_CONFIG)/misccommands.cfg
 	rm -f Makefile
 	rm -f subst daemon-init
+	rm -f tags
 
 devclean: distclean
 
