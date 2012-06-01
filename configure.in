@@ -392,6 +392,12 @@ if test x$check_for_ssl = xyes; then
 
 fi
 
+USE_NANOSLEEP=yes
+AC_ARG_ENABLE(nanosleep,AC_HELP_STRING([--enable-nanosleep],[enables use of nanosleep (instead of sleep) in event timing]))
+AS_IF([test x$enable_nanosleep = xno],[USE_NANOSLEEP=no],[USE_NANOSLEEP=yes])
+if test x$USE_NANOSLEEP = xyes ; then
+	AC_DEFINE_UNQUOTED(USE_NANOSLEEP)
+fi
 
 AC_OUTPUT(Makefile src/Makefile docs/docbook/en-en/Makefile subst)
 

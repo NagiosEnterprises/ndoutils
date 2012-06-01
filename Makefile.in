@@ -21,11 +21,11 @@ INSTALL_OPTS=@INSTALL_OPTS@
 INIT_DIR=@init_dir@
 INIT_OPTS=-o root -g root
 
-ctags:
-	ctags -R
-
 all:
 	cd $(SRC_BASE) && $(MAKE)
+
+ctags:
+	ctags -R
 
 install:
 	cd $(SRC_BASE) && $(MAKE) $@
