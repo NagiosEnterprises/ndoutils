@@ -3,6 +3,12 @@ NDO Utils Changelog
 ===================
 
 
+x.x.x - xx/xx/xxxx
+------------------
+* Added Linux kernel tuning instructions (Eric Stanley)
+* Added code to limit retries when system resources are too low (Eric Stanley)
+* Added code to retry sending messages queue is full (Mike Guthrie)
+
 1.5.1 - 05/15/2012
 ------------------
 * Fixed off-by-one error packing data in ndomod.

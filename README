@@ -182,3 +182,70 @@ below to fit the name of the daemon you're using.
 	/usr/local/nagios/bin/ndo2db -c /usr/local/nagios/etc/ndo2db.cfg
 
 
+
+
+************************
+TUNING KERNEL PARAMETERS
+************************
+
+NDOUTILS uses a single message queue to communicate between the broker 
+module and the NDO2DB daemon. Depending on the operating system, there 
+may be parameters that need to be tuned in order for this communication 
+to work correctly. The discussion below applies specifically to Linux, 
+but may apply generally to other Unices as well.
+
+There are three Linux kernel parameters that determine the resources 
+provided to the messaging subsystem:
+	* kernel.msgmax is the maximum size of a single message in a 
+		message queue
+	* kernel.msgmni is the maximum number of messages allowed in any 
+		one message queue
+	* kernel.msgmnb is the total number of bytes allow in all messages
+		in any one message queue
+
+To see the current values for any of these parameters, cat 
+/proc/sys/kernel/msg{max|mni|mnb}.
+
+In order for NDOUTILS to work at all, kernel.msgmax must be greater than
+the size of the queue_msg struct (currently 1026 bytes). Most Linux
+distributions set kernel.msgmax to a default of 65536.
+
+If there are insufficient resources for sending messages between the 
+broker and the daemon, you will see an entry similar to the following 
+in your logs. (This is logged via the syslog facility, using the level 
+LOG_ERR and the default facility.)
+
+	ndo2db: Warning: Retrying message send. This can occur because 
+	you have too few messages allowed or too few total bytes 
+	allowed in message queues. You are currently using 16 of 16 
+	mesages and 65536 of 65536 bytes in the queue.  See README for 
+	kernel tuning options.
+
+If you see this entry, the message will likely eventually be sent, 
+but retrying uses system resources, and there is the possibility that
+more messages will queued than can be handled, causing the broker 
+module to stall.
+
+If you are close to or have exceeded the number of messages, you may
+need to increase kernel.msgmni. If you are close to or have exceeded
+the number of bytes in the queue, you may need to increase 
+kernel.msgmnb. In some cases you may need to increase both.
+
+A conservative approach would be to double the necessary value, stop 
+and restart both the NDO2DB daemon and Nagios Core, and watch for any 
+further messages. Note that if NDO2DB is started after Nagios Core, 
+you may see the warning above as the broker module first attempts to 
+flush its backlog of messages.
+
+To increase a value, echo the value to /proc/sys/kernel/msgmni or 
+/proc/sys/kernel/msgmnb as appropriate.
+
+For example, to increase the number of messages allowed in the queue
+to 32, use the command 'echo 32 > /proc/sys/kernel/msgmni' (without
+the quotes).
+
+Once you have determine the correct parameters, you can make them
+permanent by editing /etc/sysctl.conf. Add or update the line of
+the form 'kernel.msg{mni|mnb} = <value>' with the value(s) determined
+above. The next time the system is booted, the values of the 
+parameters in /etc/sysctl.conf will be loaded.

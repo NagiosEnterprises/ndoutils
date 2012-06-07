@@ -9,6 +9,10 @@
 #include <errno.h>
 #include <time.h>
 
+#define RETRY_LOG_INTERVAL	600		/* Seconds */
+#define MAX_RETRIES	20				/* Max number of times to retry sending message */
+
+static time_t last_retry_log_time = ( time_t)0;
 static int queue_id;
 static const int queue_buff_size = sizeof(struct queue_msg) - sizeof(long);
 
@@ -36,6 +40,73 @@ int get_queue_id(int id) {
 	}
 }
 
+long get_msgmni( void) {
+	FILE *	fp;
+	char	buf[ 1024];
+	char *	endptr;
+	long	msgmni;
+
+	if( !( fp = fopen( "/proc/sys/kernel/msgmni", "r"))) {
+		return -1;
+		}
+	else {
+		fgets( buf, sizeof( buf), fp);
+		msgmni = strtol((const char *)buf, &endptr, 10);
+		return msgmni;
+		}
+}
+
+void log_retry( void) {
+
+	time_t			now;
+	struct msqid_ds	queue_stats;
+	FILE *			fp;
+	long			msgmni;
+	char 			logmsg[ 1024];
+	char 			curstats[ 1024];
+	const char *	logfmt = "Warning: Retrying message send. This can occur because you have too few messages allowed or too few total bytes allowed in message queues. %s See README for kernel tuning options.\n";
+#if defined( __linux__)
+	const char *	statsfmt = "You are currently using %lu of %lu messages and %lu of %lu bytes in the queue.";
+#endif
+	
+	time( &now);
+
+	/* if we've never logged a retry message or we've exceeded the retry log interval */
+	if(( now - last_retry_log_time) > RETRY_LOG_INTERVAL) {
+		/* Get the message queue statistics */
+		if(msgctl(queue_id, IPC_STAT, &queue_stats)) {
+			sprintf(curstats, "Unable to determine current message queue usage: error reading IPC_STAT: %d", errno);
+			sprintf(logmsg, logfmt, curstats);
+			syslog(LOG_ERR, logmsg);
+			}
+		else {
+#if defined( __linux__)
+			/* Get the maximum number of messages allowed in a queue */
+			msgmni = get_msgmni();
+			if( msgmni < 0) {
+				sprintf(curstats, "Unable to determine current message queue usage: error reading IPC_INFO: %d", errno);
+				sprintf(logmsg, logfmt, curstats);
+				syslog(LOG_ERR, logmsg);
+				}
+			else {
+				sprintf(curstats, statsfmt, queue_stats.msg_qnum, 
+						(unsigned long)msgmni, queue_stats.__msg_cbytes, 
+						queue_stats.msg_qbytes);
+				sprintf(logmsg, logfmt, curstats);
+				syslog(LOG_ERR, logmsg);
+				}
+#else
+			sprintf(logmsg, logfmt, "");
+			syslog(LOG_ERR, logmsg);
+#endif
+			}
+		last_retry_log_time = now;
+		}
+	else {
+		syslog(LOG_ERR,"Warning: queue send error, retrying...\n");
+		}
+}
+
 void push_into_queue (char* buf) {
 	struct queue_msg msg;
 	int size;
@@ -43,13 +114,15 @@ void push_into_queue (char* buf) {
 	zero_string(msg.text, NDO_MAX_MSG_SIZE);
 	struct timespec delay;
 	int sleep_time;
+	unsigned retrynum = 0;
 
 	strncpy(msg.text, buf, NDO_MAX_MSG_SIZE-1);
 
 	if (msgsnd(queue_id, &msg, queue_buff_size, IPC_NOWAIT) < 0) {
-			syslog(LOG_ERR,"Error: queue send error, retrying...\n");
+		if (EAGAIN == errno) {
+			log_retry();
 			/* added retry loop, data was being dropped if queue was full 5/22/2012 -MG */
-			while(errno == EAGAIN) {
+			while((EAGAIN == errno) && ( retrynum++ < MAX_RETRIES)) {
 					if(msgsnd(queue_id, &msg, queue_buff_size, IPC_NOWAIT)==0)
 							break;
 					#ifdef USE_NANOSLEEP
@@ -64,7 +137,16 @@ void push_into_queue (char* buf) {
 							sleep((unsigned int)delay.tv_sec);
 					#endif 		
 				}
-				syslog(LOG_ERR,"Message sent to queue\n");
+				if (retrynum < MAX_RETRIES) {
+					syslog(LOG_ERR,"Message sent to queue.\n");
+					}
+				else {
+					syslog(LOG_ERR,"Error: max retries exceeded sending message to queue. Kernel queue parameters may neeed to be tuned. See README.\n");
+				}
+			}
+		else {
+			syslog(LOG_ERR,"Error: queue send error.\n");
+			}
 		}
 
 }
