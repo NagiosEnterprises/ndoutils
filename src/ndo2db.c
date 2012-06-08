@@ -5,7 +5,7 @@
  * Copyright (c) 2005-2009 Ethan Galstad
  *
  * First Written: 05-19-2005
- * Last Modified: 05-15-2012
+ * Last Modified: 06-08-2012
  *
  **************************************************************/
 
@@ -30,9 +30,9 @@
 #include "../include/dh.h"
 #endif
 
-#define NDO2DB_VERSION "1.5.1"
+#define NDO2DB_VERSION "1.5.2"
 #define NDO2DB_NAME "NDO2DB"
-#define NDO2DB_DATE "05-15-2012"
+#define NDO2DB_DATE "06-08-2012"
 
 #ifdef HAVE_SSL
 SSL_METHOD *meth;

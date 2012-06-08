@@ -3,7 +3,7 @@ NDO Utils Changelog
 ===================
 
 
-x.x.x - xx/xx/xxxx
+1.5.2 - 06/08/2012
 ------------------
 * Added Linux kernel tuning instructions (Eric Stanley)
 * Added code to limit retries when system resources are too low (Eric Stanley)
