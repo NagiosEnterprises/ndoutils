@@ -2,12 +2,14 @@
  *
  * NDOMOD.C - Nagios Data Output Event Broker Module
  *
- * Copyright (c) 2009 Nagios Core Development Team and Community Contributors
+ * Copyright (c) 2009-2012 Nagios Core Development Team and Community Contributors
  * Copyright (c) 2005-2009 Ethan Galstad
  *
  * First Written: 05-19-2005
- * Last Modified: 06-08-2012
+ * Last Modified: 09-27-2012
  *
+ * TO DO: Add service parents, hourly value (hosts / services), 
+ *        minimum value (contacts) 
  *****************************************************************************/
 
 /* include our project's header files */
@@ -30,6 +32,12 @@
 #include "../include/nagios-3x/nebcallbacks.h"
 #include "../include/nagios-3x/broker.h"
 #endif
+#ifdef BUILD_NAGIOS_4X
+#include "../include/nagios-4x/nebstructs.h"
+#include "../include/nagios-4x/nebmodules.h"
+#include "../include/nagios-4x/nebcallbacks.h"
+#include "../include/nagios-4x/broker.h"
+#endif
 
 /* include other Nagios header files for access to functions, data structs, etc. */
 #ifdef BUILD_NAGIOS_2X
@@ -44,6 +52,13 @@
 #include "../include/nagios-3x/downtime.h"
 #include "../include/nagios-3x/comments.h"
 #include "../include/nagios-3x/macros.h"
+#endif
+#ifdef BUILD_NAGIOS_4X
+#include "../include/nagios-4x/common.h"
+#include "../include/nagios-4x/nagios.h"
+#include "../include/nagios-4x/downtime.h"
+#include "../include/nagios-4x/comments.h"
+#include "../include/nagios-4x/macros.h"
 #endif
 
 /* specify event broker API version (required) */
@@ -1096,7 +1111,7 @@ int ndomod_register_callbacks(void){
 		result=neb_register_callback(NEBCALLBACK_ACKNOWLEDGEMENT_DATA,ndomod_module_handle,priority,ndomod_broker_data);
 	if(result==NDO_OK)
 		result=neb_register_callback(NEBCALLBACK_STATE_CHANGE_DATA,ndomod_module_handle,priority,ndomod_broker_data);
-#ifdef BUILD_NAGIOS_3X
+#if ( defined( BUILD_NAGIOS_3X) || defined( BUILD_NAGIOS_4X))
 	if(result==NDO_OK)
 		result=neb_register_callback(NEBCALLBACK_CONTACT_STATUS_DATA,ndomod_module_handle,priority,ndomod_broker_data);
 	if(result==NDO_OK)
@@ -1134,7 +1149,7 @@ int ndomod_deregister_callbacks(void){
 	neb_deregister_callback(NEBCALLBACK_CONTACT_NOTIFICATION_METHOD_DATA,ndomod_broker_data);
 	neb_deregister_callback(NEBCALLBACK_ACKNOWLEDGEMENT_DATA,ndomod_broker_data);
 	neb_deregister_callback(NEBCALLBACK_STATE_CHANGE_DATA,ndomod_broker_data);
-#ifdef BUILD_NAGIOS_3X
+#if ( defined( BUILD_NAGIOS_3X) || defined( BUILD_NAGIOS_4X))
 	neb_deregister_callback(NEBCALLBACK_CONTACT_STATUS_DATA,ndomod_broker_data);
 	neb_deregister_callback(NEBCALLBACK_ADAPTIVE_CONTACT_DATA,ndomod_broker_data);
 #endif
@@ -1150,7 +1165,7 @@ int ndomod_broker_data(int event_type, void *data){
 	int write_to_sink=NDO_TRUE;
 	host *temp_host=NULL;
 	service *temp_service=NULL;
-#ifdef BUILD_NAGIOS_3X
+#if ( defined( BUILD_NAGIOS_3X) || defined( BUILD_NAGIOS_4X))
 	contact *temp_contact=NULL;
 #endif
 	char *es[9];
@@ -1181,14 +1196,14 @@ int ndomod_broker_data(int event_type, void *data){
 	nebstruct_contact_notification_method_data *cnotmdata=NULL;
 	nebstruct_acknowledgement_data *ackdata=NULL;
 	nebstruct_statechange_data *schangedata=NULL;
-#ifdef BUILD_NAGIOS_3X
+#if ( defined( BUILD_NAGIOS_3X) || defined( BUILD_NAGIOS_4X))
 	nebstruct_contact_status_data *csdata=NULL;
 	nebstruct_adaptive_contact_data *acdata=NULL;
 #endif
 	double retry_interval=0.0;
 	int last_state=-1;
 	int last_hard_state=-1;
-#ifdef BUILD_NAGIOS_3X
+#if ( defined( BUILD_NAGIOS_3X) || defined( BUILD_NAGIOS_4X))
 	customvariablesmember *temp_customvar=NULL;
 #endif
 
@@ -1254,7 +1269,7 @@ int ndomod_broker_data(int event_type, void *data){
 		if(!(ndomod_process_options & NDOMOD_PROCESS_SERVICE_STATUS_DATA))
 			return 0;
 		break;
-#ifdef BUILD_NAGIOS_3X
+#if ( defined( BUILD_NAGIOS_3X) || defined( BUILD_NAGIOS_4X))
 	case NEBCALLBACK_CONTACT_STATUS_DATA:
 		if(!(ndomod_process_options & NDOMOD_PROCESS_CONTACT_STATUS_DATA))
 			return 0;
@@ -1272,7 +1287,7 @@ int ndomod_broker_data(int event_type, void *data){
 		if(!(ndomod_process_options & NDOMOD_PROCESS_ADAPTIVE_SERVICE_DATA))
 			return 0;
 		break;
-#ifdef BUILD_NAGIOS_3X
+#if ( defined( BUILD_NAGIOS_3X) || defined( BUILD_NAGIOS_4X))
 	case NEBCALLBACK_ADAPTIVE_CONTACT_DATA:
 		if(!(ndomod_process_options & NDOMOD_PROCESS_ADAPTIVE_CONTACT_DATA))
 			return 0;
@@ -1705,7 +1720,7 @@ int ndomod_broker_data(int event_type, void *data){
 		es[3]=ndo_escape_buffer(scdata->command_args);
 		es[4]=ndo_escape_buffer(scdata->command_line);
 		es[5]=ndo_escape_buffer(scdata->output);
-#ifdef BUILD_NAGIOS_3X
+#if ( defined( BUILD_NAGIOS_3X) || defined( BUILD_NAGIOS_4X))
 		es[6]=ndo_escape_buffer(scdata->long_output);
 #endif
 		es[7]=ndo_escape_buffer(scdata->perf_data);
@@ -1786,7 +1801,7 @@ int ndomod_broker_data(int event_type, void *data){
 		es[2]=ndo_escape_buffer(hcdata->command_args);
 		es[3]=ndo_escape_buffer(hcdata->command_line);
 		es[4]=ndo_escape_buffer(hcdata->output);
-#ifdef BUILD_NAGIOS_3X
+#if ( defined( BUILD_NAGIOS_3X) || defined( BUILD_NAGIOS_4X))
 		es[5]=ndo_escape_buffer(hcdata->long_output);
 #endif
 		es[6]=ndo_escape_buffer(hcdata->perf_data);
@@ -2032,7 +2047,11 @@ int ndomod_broker_data(int event_type, void *data){
 			 ,NDO_DATA_DAEMONMODE
 			 ,psdata->daemon_mode
 			 ,NDO_DATA_LASTCOMMANDCHECK
+#ifdef BUILD_NAGIOS_4X
+			 ,0
+#else
 			 ,(unsigned long)psdata->last_command_check
+#endif
 			 ,NDO_DATA_LASTLOGROTATION
 			 ,(unsigned long)psdata->last_log_rotation
 			 ,NDO_DATA_NOTIFICATIONSENABLED
@@ -2050,7 +2069,11 @@ int ndomod_broker_data(int event_type, void *data){
 			 ,NDO_DATA_FLAPDETECTIONENABLED
 			 ,psdata->flap_detection_enabled
 			 ,NDO_DATA_FAILUREPREDICTIONENABLED
+#ifdef BUILD_NAGIOS_4X
+			 ,0
+#else
 			 ,psdata->failure_prediction_enabled
+#endif
 			 ,NDO_DATA_PROCESSPERFORMANCEDATA
 			 ,psdata->process_performance_data
 			 ,NDO_DATA_OBSESSOVERHOSTS
@@ -2084,15 +2107,19 @@ int ndomod_broker_data(int event_type, void *data){
 
 		es[0]=ndo_escape_buffer(temp_host->name);
 		es[1]=ndo_escape_buffer(temp_host->plugin_output);
-#ifdef BUILD_NAGIOS_3X
+#if ( defined( BUILD_NAGIOS_3X) || defined( BUILD_NAGIOS_4X))
 		es[2]=ndo_escape_buffer(temp_host->long_plugin_output);
 #endif
 		es[3]=ndo_escape_buffer(temp_host->perf_data);
 		es[4]=ndo_escape_buffer(temp_host->event_handler);
+#ifdef BUILD_NAGIOS_4X
+		es[5]=ndo_escape_buffer(temp_host->check_command);
+#else
 		es[5]=ndo_escape_buffer(temp_host->host_check_command);
+#endif
 		es[6]=ndo_escape_buffer(temp_host->check_period);
 
-#ifdef BUILD_NAGIOS_3X
+#if ( defined( BUILD_NAGIOS_3X) || defined( BUILD_NAGIOS_4X))
 		retry_interval=temp_host->retry_interval;
 #endif
 #ifdef BUILD_NAGIOS_2X
@@ -2150,9 +2177,17 @@ int ndomod_broker_data(int event_type, void *data){
 			 ,NDO_DATA_STATETYPE
 			 ,temp_host->state_type
 			 ,NDO_DATA_LASTHOSTNOTIFICATION
+#ifdef BUILD_NAGIOS_4X
+			 ,(unsigned long)temp_host->last_notification
+#else
 			 ,(unsigned long)temp_host->last_host_notification
+#endif
 			 ,NDO_DATA_NEXTHOSTNOTIFICATION
+#ifdef BUILD_NAGIOS_4X
+			 ,(unsigned long)temp_host->next_notification
+#else
 			 ,(unsigned long)temp_host->next_host_notification
+#endif
 			 ,NDO_DATA_NOMORENOTIFICATIONS
 			 ,temp_host->no_more_notifications
 			 ,NDO_DATA_NOTIFICATIONSENABLED
@@ -2164,7 +2199,11 @@ int ndomod_broker_data(int event_type, void *data){
 			 ,NDO_DATA_CURRENTNOTIFICATIONNUMBER
 			 ,temp_host->current_notification_number
 			 ,NDO_DATA_PASSIVEHOSTCHECKSENABLED
+#ifdef BUILD_NAGIOS_4X
+			 ,temp_host->accept_passive_checks
+#else
 			 ,temp_host->accept_passive_host_checks
+#endif
 			 ,NDO_DATA_EVENTHANDLERENABLED
 			 ,temp_host->event_handler_enabled
 			 ,NDO_DATA_ACTIVEHOSTCHECKSENABLED
@@ -2182,11 +2221,19 @@ int ndomod_broker_data(int event_type, void *data){
 			 ,NDO_DATA_SCHEDULEDDOWNTIMEDEPTH
 			 ,temp_host->scheduled_downtime_depth
 			 ,NDO_DATA_FAILUREPREDICTIONENABLED
+#ifdef BUILD_NAGIOS_4X
+			 ,0
+#else
 			 ,temp_host->failure_prediction_enabled
+#endif
 			 ,NDO_DATA_PROCESSPERFORMANCEDATA
 			 ,temp_host->process_performance_data
 			 ,NDO_DATA_OBSESSOVERHOST
+#ifdef BUILD_NAGIOS_4X
+			 ,temp_host->obsess
+#else
 			 ,temp_host->obsess_over_host
+#endif
 
 			 ,NDO_DATA_MODIFIEDHOSTATTRIBUTES
 			 ,temp_host->modified_attributes
@@ -2205,7 +2252,7 @@ int ndomod_broker_data(int event_type, void *data){
 		temp_buffer[sizeof(temp_buffer)-1]='\x0';
 		ndo_dbuf_strcat(&dbuf,temp_buffer);
 
-#ifdef BUILD_NAGIOS_3X
+#if ( defined( BUILD_NAGIOS_3X) || defined( BUILD_NAGIOS_4X))
 		/* dump customvars */
 		for(temp_customvar=temp_host->custom_variables;temp_customvar!=NULL;temp_customvar=temp_customvar->next){
 
@@ -2252,12 +2299,16 @@ int ndomod_broker_data(int event_type, void *data){
 		es[0]=ndo_escape_buffer(temp_service->host_name);
 		es[1]=ndo_escape_buffer(temp_service->description);
 		es[2]=ndo_escape_buffer(temp_service->plugin_output);
-#ifdef BUILD_NAGIOS_3X
+#if ( defined( BUILD_NAGIOS_3X) || defined( BUILD_NAGIOS_4X))
 		es[3]=ndo_escape_buffer(temp_service->long_plugin_output);
 #endif
 		es[4]=ndo_escape_buffer(temp_service->perf_data);
 		es[5]=ndo_escape_buffer(temp_service->event_handler);
+#ifdef BUILD_NAGIOS_4X
+		es[6]=ndo_escape_buffer(temp_service->check_command);
+#else
 		es[6]=ndo_escape_buffer(temp_service->service_check_command);
+#endif
 		es[7]=ndo_escape_buffer(temp_service->check_period);
 
 		snprintf(temp_buffer,sizeof(temp_buffer)-1
@@ -2329,7 +2380,11 @@ int ndomod_broker_data(int event_type, void *data){
 			 ,NDO_DATA_CURRENTNOTIFICATIONNUMBER
 			 ,temp_service->current_notification_number
 			 ,NDO_DATA_PASSIVESERVICECHECKSENABLED
+#ifdef BUILD_NAGIOS_4X
+			 ,temp_service->accept_passive_checks
+#else
 			 ,temp_service->accept_passive_service_checks
+#endif
 			 ,NDO_DATA_EVENTHANDLERENABLED
 			 ,temp_service->event_handler_enabled
 			 ,NDO_DATA_ACTIVESERVICECHECKSENABLED
@@ -2347,11 +2402,19 @@ int ndomod_broker_data(int event_type, void *data){
 			 ,NDO_DATA_SCHEDULEDDOWNTIMEDEPTH
 			 ,temp_service->scheduled_downtime_depth
 			 ,NDO_DATA_FAILUREPREDICTIONENABLED
+#ifdef BUILD_NAGIOS_4X
+			 ,0
+#else
 			 ,temp_service->failure_prediction_enabled
+#endif
 			 ,NDO_DATA_PROCESSPERFORMANCEDATA
 			 ,temp_service->process_performance_data
 			 ,NDO_DATA_OBSESSOVERSERVICE
+#ifdef BUILD_NAGIOS_4X
+			 ,temp_service->obsess
+#else
 			 ,temp_service->obsess_over_service
+#endif
 
 			 ,NDO_DATA_MODIFIEDSERVICEATTRIBUTES
 			 ,temp_service->modified_attributes
@@ -2370,7 +2433,7 @@ int ndomod_broker_data(int event_type, void *data){
 		temp_buffer[sizeof(temp_buffer)-1]='\x0';
 		ndo_dbuf_strcat(&dbuf,temp_buffer);
 
-#ifdef BUILD_NAGIOS_3X
+#if ( defined( BUILD_NAGIOS_3X) || defined( BUILD_NAGIOS_4X))
 		/* dump customvars */
 		for(temp_customvar=temp_service->custom_variables;temp_customvar!=NULL;temp_customvar=temp_customvar->next){
 
@@ -2405,7 +2468,7 @@ int ndomod_broker_data(int event_type, void *data){
 
 		break;
 
-#ifdef BUILD_NAGIOS_3X
+#if ( defined( BUILD_NAGIOS_3X) || defined( BUILD_NAGIOS_4X))
 	case NEBCALLBACK_CONTACT_STATUS_DATA:
 
 		csdata=(nebstruct_contact_status_data *)data;
@@ -2537,13 +2600,17 @@ int ndomod_broker_data(int event_type, void *data){
 #ifdef BUILD_NAGIOS_2X
 		retry_interval=0.0;
 #endif
-#ifdef BUILD_NAGIOS_3X
+#if ( defined( BUILD_NAGIOS_3X) || defined( BUILD_NAGIOS_4X))
 		retry_interval=temp_host->retry_interval;
 #endif
 
 		es[0]=ndo_escape_buffer(temp_host->name);
 		es[1]=ndo_escape_buffer(temp_host->event_handler);
+#ifdef BUILD_NAGIOS_4X
+		es[2]=ndo_escape_buffer(temp_host->check_command);
+#else
 		es[2]=ndo_escape_buffer(temp_host->host_check_command);
+#endif
 
 		snprintf(temp_buffer,sizeof(temp_buffer)-1
 			 ,"\n%d:\n%d=%d\n%d=%d\n%d=%d\n%d=%ld.%ld\n%d=%d\n%d=%lu\n%d=%lu\n%d=%s\n%d=%s\n%d=%s\n%d=%lf\n%d=%lf\n%d=%d\n%d\n\n"
@@ -2595,7 +2662,11 @@ int ndomod_broker_data(int event_type, void *data){
 		es[0]=ndo_escape_buffer(temp_service->host_name);
 		es[1]=ndo_escape_buffer(temp_service->description);
 		es[2]=ndo_escape_buffer(temp_service->event_handler);
+#ifdef BUILD_NAGIOS_4X
+		es[3]=ndo_escape_buffer(temp_service->check_command);
+#else
 		es[3]=ndo_escape_buffer(temp_service->service_check_command);
+#endif
 
 		snprintf(temp_buffer,sizeof(temp_buffer)-1
 			 ,"\n%d:\n%d=%d\n%d=%d\n%d=%d\n%d=%ld.%ld\n%d=%d\n%d=%lu\n%d=%lu\n%d=%s\n%d=%s\n%d=%s\n%d=%s\n%d=%lf\n%d=%lf\n%d=%d\n%d\n\n"
@@ -2637,7 +2708,7 @@ int ndomod_broker_data(int event_type, void *data){
 
 		break;
 
-#ifdef BUILD_NAGIOS_3X
+#if ( defined( BUILD_NAGIOS_3X) || defined( BUILD_NAGIOS_4X))
 	case NEBCALLBACK_ADAPTIVE_CONTACT_DATA:
 
 		acdata=(nebstruct_adaptive_contact_data *)data;
@@ -3198,7 +3269,7 @@ int ndomod_write_object_config(int config_type){
 	int flap_detection_on_warning=0;
 	int flap_detection_on_unknown=0;
 	int flap_detection_on_critical=0;
-#ifdef BUILD_NAGIOS_3X
+#if ( defined( BUILD_NAGIOS_3X) || defined( BUILD_NAGIOS_4X))
 	customvariablesmember *temp_customvar=NULL;
 	contactsmember *temp_contactsmember=NULL;
 	servicesmember *temp_servicesmember=NULL;
@@ -3316,6 +3387,13 @@ int ndomod_write_object_config(int config_type){
 		es[4]=ndo_escape_buffer(temp_contact->host_notification_period);
 		es[5]=ndo_escape_buffer(temp_contact->service_notification_period);
 
+#ifdef BUILD_NAGIOS_4X
+		notify_on_service_downtime=flag_isset(temp_contact->service_notification_options,OPT_DOWNTIME);
+		notify_on_host_downtime=flag_isset(temp_contact->host_notification_options,OPT_DOWNTIME);
+		host_notifications_enabled=temp_contact->host_notifications_enabled;
+		service_notifications_enabled=temp_contact->service_notifications_enabled;
+		can_submit_commands=temp_contact->can_submit_commands;
+#endif
 #ifdef BUILD_NAGIOS_3X
 		notify_on_service_downtime=temp_contact->notify_on_service_downtime;
 		notify_on_host_downtime=temp_contact->notify_on_host_downtime;
@@ -3356,25 +3434,61 @@ int ndomod_write_object_config(int config_type){
 			 ,NDO_DATA_CANSUBMITCOMMANDS
 			 ,can_submit_commands
 			 ,NDO_DATA_NOTIFYSERVICEUNKNOWN
+#ifdef BUILD_NAGIOS_4X
+			 ,flag_isset(temp_contact->service_notification_options,OPT_UNKNOWN)
+#else
 			 ,temp_contact->notify_on_service_unknown
+#endif
 			 ,NDO_DATA_NOTIFYSERVICEWARNING
+#ifdef BUILD_NAGIOS_4X
+			 ,flag_isset(temp_contact->service_notification_options,OPT_WARNING)
+#else
 			 ,temp_contact->notify_on_service_warning
+#endif
 			 ,NDO_DATA_NOTIFYSERVICECRITICAL
+#ifdef BUILD_NAGIOS_4X
+			 ,flag_isset(temp_contact->service_notification_options,OPT_CRITICAL)
+#else
 			 ,temp_contact->notify_on_service_critical
+#endif
 			 ,NDO_DATA_NOTIFYSERVICERECOVERY
+#ifdef BUILD_NAGIOS_4X
+			 ,flag_isset(temp_contact->service_notification_options,OPT_RECOVERY)
+#else
 			 ,temp_contact->notify_on_service_recovery
+#endif
 			 ,NDO_DATA_NOTIFYSERVICEFLAPPING
+#ifdef BUILD_NAGIOS_4X
+			 ,flag_isset(temp_contact->service_notification_options,OPT_FLAPPING)
+#else
 			 ,temp_contact->notify_on_service_flapping
+#endif
 			 ,NDO_DATA_NOTIFYSERVICEDOWNTIME
 			 ,notify_on_service_downtime
 			 ,NDO_DATA_NOTIFYHOSTDOWN
+#ifdef BUILD_NAGIOS_4X
+			 ,flag_isset(temp_contact->host_notification_options,OPT_DOWN)
+#else
 			 ,temp_contact->notify_on_host_down
+#endif
 			 ,NDO_DATA_NOTIFYHOSTUNREACHABLE
+#ifdef BUILD_NAGIOS_4X
+			 ,flag_isset(temp_contact->host_notification_options,OPT_UNREACHABLE)
+#else
 			 ,temp_contact->notify_on_host_unreachable
+#endif
 			 ,NDO_DATA_NOTIFYHOSTRECOVERY
+#ifdef BUILD_NAGIOS_4X
+			 ,flag_isset(temp_contact->host_notification_options,OPT_RECOVERY)
+#else
 			 ,temp_contact->notify_on_host_recovery
+#endif
 			 ,NDO_DATA_NOTIFYHOSTFLAPPING
+#ifdef BUILD_NAGIOS_4X
+			 ,flag_isset(temp_contact->host_notification_options,OPT_FLAPPING)
+#else
 			 ,temp_contact->notify_on_host_flapping
+#endif
 			 ,NDO_DATA_NOTIFYHOSTDOWNTIME
 			 ,notify_on_host_downtime
 			);
@@ -3436,7 +3550,7 @@ int ndomod_write_object_config(int config_type){
 			es[0]=NULL;
 		        }
 
-#ifdef BUILD_NAGIOS_3X
+#if ( defined( BUILD_NAGIOS_3X) || defined( BUILD_NAGIOS_4X))
 		/* dump customvars */
 		for(temp_customvar=temp_contact->custom_variables;temp_customvar!=NULL;temp_customvar=temp_customvar->next){
 
@@ -3553,13 +3667,21 @@ int ndomod_write_object_config(int config_type){
 		es[0]=ndo_escape_buffer(temp_host->name);
 		es[1]=ndo_escape_buffer(temp_host->alias);
 		es[2]=ndo_escape_buffer(temp_host->address);
+#ifdef BUILD_NAGIOS_4X
+		es[3]=ndo_escape_buffer(temp_host->check_command);
+#else
 		es[3]=ndo_escape_buffer(temp_host->host_check_command);
+#endif
 		es[4]=ndo_escape_buffer(temp_host->event_handler);
 		es[5]=ndo_escape_buffer(temp_host->notification_period);
 		es[6]=ndo_escape_buffer(temp_host->check_period);
+#ifdef BUILD_NAGIOS_4X
+		es[7]="";
+#else
 		es[7]=ndo_escape_buffer(temp_host->failure_prediction_options);
+#endif
 
-#ifdef BUILD_NAGIOS_3X
+#if ( defined( BUILD_NAGIOS_3X) || defined( BUILD_NAGIOS_4X))
 		es[8]=ndo_escape_buffer(temp_host->notes);
 		es[9]=ndo_escape_buffer(temp_host->notes_url);
 		es[10]=ndo_escape_buffer(temp_host->action_url);
@@ -3577,10 +3699,17 @@ int ndomod_write_object_config(int config_type){
 
 		first_notification_delay=temp_host->first_notification_delay;
 		retry_interval=temp_host->retry_interval;
+#ifdef BUILD_NAGIOS_4X
+		notify_on_host_downtime=flag_isset(temp_host->notification_options,OPT_DOWNTIME);
+		flap_detection_on_up=flag_isset(temp_host->flap_detection_options,OPT_UP);
+		flap_detection_on_down=flag_isset(temp_host->flap_detection_options,OPT_DOWN);
+		flap_detection_on_unreachable=flag_isset(temp_host->flap_detection_options,OPT_UNREACHABLE);
+#else
 		notify_on_host_downtime=temp_host->notify_on_downtime;
 		flap_detection_on_up=temp_host->flap_detection_on_up;
 		flap_detection_on_down=temp_host->flap_detection_on_down;
 		flap_detection_on_unreachable=temp_host->flap_detection_on_unreachable;
+#endif
 		es[15]=ndo_escape_buffer(temp_host->display_name);
 #endif
 #ifdef BUILD_NAGIOS_2X
@@ -3661,13 +3790,29 @@ int ndomod_write_object_config(int config_type){
 			 ,NDO_DATA_HOSTNOTIFICATIONINTERVAL
 			 ,(double)temp_host->notification_interval
 			 ,NDO_DATA_NOTIFYHOSTDOWN
+#ifdef BUILD_NAGIOS_4X
+			 ,flag_isset(temp_host->notification_options,OPT_DOWN)
+#else
 			 ,temp_host->notify_on_down
+#endif
 			 ,NDO_DATA_NOTIFYHOSTUNREACHABLE
+#ifdef BUILD_NAGIOS_4X
+			 ,flag_isset(temp_host->notification_options,OPT_UNREACHABLE)
+#else
 			 ,temp_host->notify_on_unreachable
+#endif
 			 ,NDO_DATA_NOTIFYHOSTRECOVERY
+#ifdef BUILD_NAGIOS_4X
+			 ,flag_isset(temp_host->notification_options,OPT_RECOVERY)
+#else
 			 ,temp_host->notify_on_recovery
+#endif
 			 ,NDO_DATA_NOTIFYHOSTFLAPPING
+#ifdef BUILD_NAGIOS_4X
+			 ,flag_isset(temp_host->notification_options,OPT_FLAPPING)
+#else
 			 ,temp_host->notify_on_flapping
+#endif
 			 ,NDO_DATA_NOTIFYHOSTDOWNTIME
 			 ,notify_on_host_downtime
 			 ,NDO_DATA_HOSTFLAPDETECTIONENABLED
@@ -3683,11 +3828,23 @@ int ndomod_write_object_config(int config_type){
 			 ,NDO_DATA_HIGHHOSTFLAPTHRESHOLD
 			 ,temp_host->high_flap_threshold
 			 ,NDO_DATA_STALKHOSTONUP
+#ifdef BUILD_NAGIOS_4X
+			 ,flag_isset(temp_host->stalking_options,OPT_UP)
+#else
 			 ,temp_host->stalk_on_up
+#endif
 			 ,NDO_DATA_STALKHOSTONDOWN
+#ifdef BUILD_NAGIOS_4X
+			 ,flag_isset(temp_host->stalking_options,OPT_DOWN)
+#else
 			 ,temp_host->stalk_on_down
+#endif
 			 ,NDO_DATA_STALKHOSTONUNREACHABLE
+#ifdef BUILD_NAGIOS_4X
+			 ,flag_isset(temp_host->stalking_options,OPT_UNREACHABLE)
+#else
 			 ,temp_host->stalk_on_unreachable
+#endif
 			 ,NDO_DATA_HOSTFRESHNESSCHECKSENABLED
 			 ,temp_host->check_freshness
 			 ,NDO_DATA_HOSTFRESHNESSTHRESHOLD
@@ -3697,7 +3854,11 @@ int ndomod_write_object_config(int config_type){
 			 ,NDO_DATA_ACTIVEHOSTCHECKSENABLED
 			 ,temp_host->checks_enabled
 			 ,NDO_DATA_PASSIVEHOSTCHECKSENABLED
+#ifdef BUILD_NAGIOS_4X
+			 ,temp_host->accept_passive_checks
+#else
 			 ,temp_host->accept_passive_host_checks
+#endif
 			 ,NDO_DATA_HOSTEVENTHANDLERENABLED
 			 ,temp_host->event_handler_enabled
 			 ,NDO_DATA_RETAINHOSTSTATUSINFORMATION
@@ -3707,9 +3868,17 @@ int ndomod_write_object_config(int config_type){
 			 ,NDO_DATA_HOSTNOTIFICATIONSENABLED
 			 ,temp_host->notifications_enabled
 			 ,NDO_DATA_HOSTFAILUREPREDICTIONENABLED
+#ifdef BUILD_NAGIOS_4X
+			 ,0
+#else
 			 ,temp_host->failure_prediction_enabled
+#endif
 			 ,NDO_DATA_OBSESSOVERHOST
+#ifdef BUILD_NAGIOS_4X
+			 ,temp_host->obsess
+#else
 			 ,temp_host->obsess_over_host
+#endif
 			 ,NDO_DATA_NOTES
 			 ,(es[8]==NULL)?"":es[8]
 			 ,NDO_DATA_NOTESURL
@@ -3799,7 +3968,7 @@ int ndomod_write_object_config(int config_type){
 #endif
 
 
-#ifdef BUILD_NAGIOS_3X
+#if ( defined( BUILD_NAGIOS_3X) || defined( BUILD_NAGIOS_4X))
 		/* dump customvars */
 		for(temp_customvar=temp_host->custom_variables;temp_customvar!=NULL;temp_customvar=temp_customvar->next){
 
@@ -3915,12 +4084,20 @@ int ndomod_write_object_config(int config_type){
 
 		es[0]=ndo_escape_buffer(temp_service->host_name);
 		es[1]=ndo_escape_buffer(temp_service->description);
+#ifdef BUILD_NAGIOS_4X
+		es[2]=ndo_escape_buffer(temp_service->check_command);
+#else
 		es[2]=ndo_escape_buffer(temp_service->service_check_command);
+#endif
 		es[3]=ndo_escape_buffer(temp_service->event_handler);
 		es[4]=ndo_escape_buffer(temp_service->notification_period);
 		es[5]=ndo_escape_buffer(temp_service->check_period);
+#ifdef BUILD_NAGIOS_4X
+		es[6]="";
+#else
 		es[6]=ndo_escape_buffer(temp_service->failure_prediction_options);
-#ifdef BUILD_NAGIOS_3X
+#endif
+#if ( defined( BUILD_NAGIOS_3X) || defined( BUILD_NAGIOS_4X))
 		es[7]=ndo_escape_buffer(temp_service->notes);
 		es[8]=ndo_escape_buffer(temp_service->notes_url);
 		es[9]=ndo_escape_buffer(temp_service->action_url);
@@ -3928,11 +4105,19 @@ int ndomod_write_object_config(int config_type){
 		es[11]=ndo_escape_buffer(temp_service->icon_image_alt);
 
 		first_notification_delay=temp_service->first_notification_delay;
+#ifdef BUILD_NAGIOS_4X
+		notify_on_service_downtime=flag_isset(temp_service->notification_options,OPT_DOWNTIME);
+		flap_detection_on_ok=flag_isset(temp_service->flap_detection_options,OPT_OK);
+		flap_detection_on_warning=flag_isset(temp_service->flap_detection_options,OPT_WARNING);
+		flap_detection_on_unknown=flag_isset(temp_service->flap_detection_options,OPT_UNKNOWN);
+		flap_detection_on_critical=flag_isset(temp_service->flap_detection_options,OPT_CRITICAL);
+#else
 		notify_on_service_downtime=temp_service->notify_on_downtime;
 		flap_detection_on_ok=temp_service->flap_detection_on_ok;
 		flap_detection_on_warning=temp_service->flap_detection_on_warning;
 		flap_detection_on_unknown=temp_service->flap_detection_on_unknown;
 		flap_detection_on_critical=temp_service->flap_detection_on_critical;
+#endif
 		es[12]=ndo_escape_buffer(temp_service->display_name);
 #endif
 #ifdef BUILD_NAGIOS_2X
@@ -3993,25 +4178,61 @@ int ndomod_write_object_config(int config_type){
 			 ,NDO_DATA_SERVICENOTIFICATIONINTERVAL
 			 ,(double)temp_service->notification_interval
 			 ,NDO_DATA_NOTIFYSERVICEUNKNOWN
+#ifdef BUILD_NAGIOS_4X
+			 ,flag_isset(temp_service->notification_options,OPT_UNKNOWN)
+#else
 			 ,temp_service->notify_on_unknown
+#endif
 			 ,NDO_DATA_NOTIFYSERVICEWARNING
+#ifdef BUILD_NAGIOS_4X
+			 ,flag_isset(temp_service->notification_options,OPT_WARNING)
+#else
 			 ,temp_service->notify_on_warning
+#endif
 			 ,NDO_DATA_NOTIFYSERVICECRITICAL
+#ifdef BUILD_NAGIOS_4X
+			 ,flag_isset(temp_service->notification_options,OPT_CRITICAL)
+#else
 			 ,temp_service->notify_on_critical
+#endif
 			 ,NDO_DATA_NOTIFYSERVICERECOVERY
+#ifdef BUILD_NAGIOS_4X
+			 ,flag_isset(temp_service->notification_options,OPT_RECOVERY)
+#else
 			 ,temp_service->notify_on_recovery
+#endif
 			 ,NDO_DATA_NOTIFYSERVICEFLAPPING
+#ifdef BUILD_NAGIOS_4X
+			 ,flag_isset(temp_service->notification_options,OPT_FLAPPING)
+#else
 			 ,temp_service->notify_on_flapping
+#endif
 			 ,NDO_DATA_NOTIFYSERVICEDOWNTIME
 			 ,notify_on_service_downtime
 			 ,NDO_DATA_STALKSERVICEONOK
+#ifdef BUILD_NAGIOS_4X
+			 ,flag_isset(temp_service->stalking_options,OPT_OK)
+#else
 			 ,temp_service->stalk_on_ok
+#endif
 			 ,NDO_DATA_STALKSERVICEONWARNING
+#ifdef BUILD_NAGIOS_4X
+			 ,flag_isset(temp_service->stalking_options,OPT_WARNING)
+#else
 			 ,temp_service->stalk_on_warning
+#endif
 			 ,NDO_DATA_STALKSERVICEONUNKNOWN
+#ifdef BUILD_NAGIOS_4X
+			 ,flag_isset(temp_service->stalking_options,OPT_UNKNOWN)
+#else
 			 ,temp_service->stalk_on_unknown
+#endif
 			 ,NDO_DATA_STALKSERVICEONCRITICAL
+#ifdef BUILD_NAGIOS_4X
+			 ,flag_isset(temp_service->stalking_options,OPT_CRITICAL)
+#else
 			 ,temp_service->stalk_on_critical
+#endif
 			 ,NDO_DATA_SERVICEISVOLATILE
 			 ,temp_service->is_volatile
 			 ,NDO_DATA_SERVICEFLAPDETECTIONENABLED
@@ -4035,7 +4256,11 @@ int ndomod_write_object_config(int config_type){
 			 ,NDO_DATA_SERVICEFRESHNESSTHRESHOLD
 			 ,temp_service->freshness_threshold
 			 ,NDO_DATA_PASSIVESERVICECHECKSENABLED
+#ifdef BUILD_NAGIOS_4X
+			 ,temp_service->accept_passive_checks
+#else
 			 ,temp_service->accept_passive_service_checks
+#endif
 			 ,NDO_DATA_SERVICEEVENTHANDLERENABLED
 			 ,temp_service->event_handler_enabled
 			 ,NDO_DATA_ACTIVESERVICECHECKSENABLED
@@ -4047,9 +4272,17 @@ int ndomod_write_object_config(int config_type){
 			 ,NDO_DATA_SERVICENOTIFICATIONSENABLED
 			 ,temp_service->notifications_enabled
 			 ,NDO_DATA_OBSESSOVERSERVICE
+#ifdef BUILD_NAGIOS_4X
+			 ,temp_service->obsess
+#else
 			 ,temp_service->obsess_over_service
-			 ,NDO_DATA_SERVICEFAILUREPREDICTIONENABLED
+#endif
+			 ,NDO_DATA_FAILUREPREDICTIONENABLED
+#ifdef BUILD_NAGIOS_4X
+			 ,0
+#else
 			 ,temp_service->failure_prediction_enabled
+#endif
 			 ,NDO_DATA_NOTES
 			 ,(es[7]==NULL)?"":es[7]
 			 ,NDO_DATA_NOTESURL
@@ -4103,7 +4336,7 @@ int ndomod_write_object_config(int config_type){
 			}
 #endif
 
-#ifdef BUILD_NAGIOS_3X
+#if ( defined( BUILD_NAGIOS_3X) || defined( BUILD_NAGIOS_4X))
 		/* dump customvars */
 		for(temp_customvar=temp_service->custom_variables;temp_customvar!=NULL;temp_customvar=temp_customvar->next){
 
@@ -4222,8 +4455,12 @@ int ndomod_write_object_config(int config_type){
 	        }
 
 	/****** dump host escalation config ******/
+#ifdef BUILD_NAGIOS_4X
+	for(x=0; x<num_objects.hostescalations; x++) {
+		temp_hostescalation=hostescalation_ary[ x];
+#else
 	for(temp_hostescalation=hostescalation_list;temp_hostescalation!=NULL;temp_hostescalation=temp_hostescalation->next){
-
+#endif
 		es[0]=ndo_escape_buffer(temp_hostescalation->host_name);
 		es[1]=ndo_escape_buffer(temp_hostescalation->escalation_period);
 
@@ -4244,11 +4481,23 @@ int ndomod_write_object_config(int config_type){
 			 ,NDO_DATA_NOTIFICATIONINTERVAL
 			 ,(double)temp_hostescalation->notification_interval
 			 ,NDO_DATA_ESCALATEONRECOVERY
+#ifdef BUILD_NAGIOS_4X
+			 ,flag_isset(temp_hostescalation->escalation_options,OPT_RECOVERY)
+#else
 			 ,temp_hostescalation->escalate_on_recovery
+#endif
 			 ,NDO_DATA_ESCALATEONDOWN
+#ifdef BUILD_NAGIOS_4X
+			 ,flag_isset(temp_hostescalation->escalation_options,OPT_DOWN)
+#else
 			 ,temp_hostescalation->escalate_on_down
+#endif
 			 ,NDO_DATA_ESCALATEONUNREACHABLE
+#ifdef BUILD_NAGIOS_4X
+			 ,flag_isset(temp_hostescalation->escalation_options,OPT_UNREACHABLE)
+#else
 			 ,temp_hostescalation->escalate_on_unreachable
+#endif
 			);
 		temp_buffer[sizeof(temp_buffer)-1]='\x0';
 		ndo_dbuf_strcat(&dbuf,temp_buffer);
@@ -4312,7 +4561,12 @@ int ndomod_write_object_config(int config_type){
 	        }
 
 	/****** dump service escalation config ******/
+#ifdef BUILD_NAGIOS_4X
+	for(x=0; x<num_objects.serviceescalations; x++) {
+		temp_serviceescalation=serviceescalation_ary[ x];
+#else
 	for(temp_serviceescalation=serviceescalation_list;temp_serviceescalation!=NULL;temp_serviceescalation=temp_serviceescalation->next){
+#endif
 
 		es[0]=ndo_escape_buffer(temp_serviceescalation->host_name);
 		es[1]=ndo_escape_buffer(temp_serviceescalation->description);
@@ -4337,13 +4591,29 @@ int ndomod_write_object_config(int config_type){
 			 ,NDO_DATA_NOTIFICATIONINTERVAL
 			 ,(double)temp_serviceescalation->notification_interval
 			 ,NDO_DATA_ESCALATEONRECOVERY
+#ifdef BUILD_NAGIOS_4X
+			 ,flag_isset(temp_serviceescalation->escalation_options,OPT_RECOVERY)
+#else
 			 ,temp_serviceescalation->escalate_on_recovery
+#endif
 			 ,NDO_DATA_ESCALATEONWARNING
+#ifdef BUILD_NAGIOS_4X
+			 ,flag_isset(temp_serviceescalation->escalation_options,OPT_WARNING)
+#else
 			 ,temp_serviceescalation->escalate_on_warning
+#endif
 			 ,NDO_DATA_ESCALATEONUNKNOWN
+#ifdef BUILD_NAGIOS_4X
+			 ,flag_isset(temp_serviceescalation->escalation_options,OPT_UNKNOWN)
+#else
 			 ,temp_serviceescalation->escalate_on_unknown
+#endif
 			 ,NDO_DATA_ESCALATEONCRITICAL
+#ifdef BUILD_NAGIOS_4X
+			 ,flag_isset(temp_serviceescalation->escalation_options,OPT_CRITICAL)
+#else
 			 ,temp_serviceescalation->escalate_on_critical
+#endif
 			);
 		temp_buffer[sizeof(temp_buffer)-1]='\x0';
 		ndo_dbuf_strcat(&dbuf,temp_buffer);
@@ -4407,12 +4677,17 @@ int ndomod_write_object_config(int config_type){
 	        }
 
 	/****** dump host dependency config ******/
+#ifdef BUILD_NAGIOS_4X
+	for(x=0; x<num_objects.hostdependencies; x++) {
+		temp_hostdependency=hostdependency_ary[ x];
+#else
 	for(temp_hostdependency=hostdependency_list;temp_hostdependency!=NULL;temp_hostdependency=temp_hostdependency->next){
+#endif
 
 		es[0]=ndo_escape_buffer(temp_hostdependency->host_name);
 		es[1]=ndo_escape_buffer(temp_hostdependency->dependent_host_name);
 
-#ifdef BUILD_NAGIOS_3X
+#if ( defined( BUILD_NAGIOS_3X) || defined( BUILD_NAGIOS_4X))
 		es[2]=ndo_escape_buffer(temp_hostdependency->dependency_period);
 #endif
 #ifdef BUILD_NAGIOS_2X
@@ -4436,11 +4711,23 @@ int ndomod_write_object_config(int config_type){
 			 ,NDO_DATA_DEPENDENCYPERIOD
 			 ,(es[2]==NULL)?"":es[2]
 			 ,NDO_DATA_FAILONUP
+#ifdef BUILD_NAGIOS_4X
+			 ,flag_isset(temp_hostdependency->failure_options,OPT_UP)
+#else
 			 ,temp_hostdependency->fail_on_up
+#endif
 			 ,NDO_DATA_FAILONDOWN
+#ifdef BUILD_NAGIOS_4X
+			 ,flag_isset(temp_hostdependency->failure_options,OPT_DOWN)
+#else
 			 ,temp_hostdependency->fail_on_down
+#endif
 			 ,NDO_DATA_FAILONUNREACHABLE
+#ifdef BUILD_NAGIOS_4X
+			 ,flag_isset(temp_hostdependency->failure_options,OPT_UNREACHABLE)
+#else
 			 ,temp_hostdependency->fail_on_unreachable
+#endif
 			);
 		temp_buffer[sizeof(temp_buffer)-1]='\x0';
 		ndo_dbuf_strcat(&dbuf,temp_buffer);
@@ -4465,14 +4752,19 @@ int ndomod_write_object_config(int config_type){
 	        }
 
 	/****** dump service dependency config ******/
+#ifdef BUILD_NAGIOS_4X
+	for(x=0; x<num_objects.servicedependencies; x++) {
+		temp_servicedependency=servicedependency_ary[ x];
+#else
 	for(temp_servicedependency=servicedependency_list;temp_servicedependency!=NULL;temp_servicedependency=temp_servicedependency->next){
+#endif
 
 		es[0]=ndo_escape_buffer(temp_servicedependency->host_name);
 		es[1]=ndo_escape_buffer(temp_servicedependency->service_description);
 		es[2]=ndo_escape_buffer(temp_servicedependency->dependent_host_name);
 		es[3]=ndo_escape_buffer(temp_servicedependency->dependent_service_description);
 
-#ifdef BUILD_NAGIOS_3X
+#if ( defined( BUILD_NAGIOS_3X) || defined( BUILD_NAGIOS_4X))
 		es[4]=ndo_escape_buffer(temp_servicedependency->dependency_period);
 #endif
 #ifdef BUILD_NAGIOS_2X
@@ -4500,13 +4792,29 @@ int ndomod_write_object_config(int config_type){
 			 ,NDO_DATA_DEPENDENCYPERIOD
 			 ,(es[4]==NULL)?"":es[4]
 			 ,NDO_DATA_FAILONOK
+#ifdef BUILD_NAGIOS_4X
+			 ,flag_isset(temp_servicedependency->failure_options,OPT_OK)
+#else
 			 ,temp_servicedependency->fail_on_ok
+#endif
 			 ,NDO_DATA_FAILONWARNING
+#ifdef BUILD_NAGIOS_4X
+			 ,flag_isset(temp_servicedependency->failure_options,OPT_WARNING)
+#else
 			 ,temp_servicedependency->fail_on_warning
+#endif
 			 ,NDO_DATA_FAILONUNKNOWN
+#ifdef BUILD_NAGIOS_4X
+			 ,flag_isset(temp_servicedependency->failure_options,OPT_UNKNOWN)
+#else
 			 ,temp_servicedependency->fail_on_unknown
+#endif
 			 ,NDO_DATA_FAILONCRITICAL
+#ifdef BUILD_NAGIOS_4X
+			 ,flag_isset(temp_servicedependency->failure_options,OPT_CRITICAL)
+#else
 			 ,temp_servicedependency->fail_on_critical
+#endif
 			);
 		temp_buffer[sizeof(temp_buffer)-1]='\x0';
 		ndo_dbuf_strcat(&dbuf,temp_buffer);

@@ -112,7 +112,8 @@ version of Nagios you are running, and adjust the directions given
 below to fit the name of the module version you're using.  
 
 	ndomod-2x.o = NDOMOD module for Nagios 2.x
-	ndomod-3x.o = NDOMOD module for Nagios 3.x (unstable)
+	ndomod-3x.o = NDOMOD module for Nagios 3.x
+	ndomod-4x.o = NDOMOD module for Nagios 4.x (unstable)
 
 
 1.  Copy the compiled NDOMOD module to your Nagios installation:
@@ -162,6 +163,7 @@ below to fit the name of the daemon you're using.
 
 	ndo2db-2x.o = NDO2DB daemon for Nagios 2.x
 	ndo2db-3x.o = NDO2DB daemon for Nagios 3.x
+	ndo2db-4x.o = NDO2DB daemon for Nagios 4.x
 
 
 1.  Copy the compiled NDO2DB daemon to your Nagios installation:

@@ -1,10 +1,10 @@
 /***************************************************************
  * DBHANDLERS.C - Data handler routines for NDO2DB daemon
  *
- * Copyright (c) 2009 Nagios Core Development Team and Community Contributors
+ * Copyright (c) 2009-2012 Nagios Core Development Team and Community Contributors
  * Copyright (c) 2005-2009 Ethan Galstad
  *
- * Last Modified: 07-11-2009
+ * Last Modified: 09-27-2012
  *
  **************************************************************/
 
@@ -29,6 +29,11 @@
 #include "../include/nagios-3x/nagios.h"
 #include "../include/nagios-3x/broker.h"
 #include "../include/nagios-3x/comments.h"
+#endif
+#ifdef BUILD_NAGIOS_4X
+#include "../include/nagios-4x/nagios.h"
+#include "../include/nagios-4x/broker.h"
+#include "../include/nagios-4x/comments.h"
 #endif
 
 
@@ -1453,7 +1458,7 @@ int ndo2db_handle_servicecheckdata(ndo2db_idi *idi){
 	if(type!=NEBTYPE_SERVICECHECK_INITIATE && type!=NEBTYPE_SERVICECHECK_PROCESSED)
 		return NDO_OK;
 
-#ifdef BUILD_NAGIOS_3X
+#if ( defined( BUILD_NAGIOS_3X) || defined( BUILD_NAGIOS_4X))
 	/* skip precheck events - they aren't useful to us */
 	if(type==NEBTYPE_SERVICECHECK_ASYNC_PRECHECK)
 		return NDO_OK;
@@ -1576,7 +1581,7 @@ int ndo2db_handle_hostcheckdata(ndo2db_idi *idi){
 		return NDO_OK;
 	*/
 
-#ifdef BUILD_NAGIOS_3X
+#if ( defined( BUILD_NAGIOS_3X) || defined( BUILD_NAGIOS_4X))
 	/* skip precheck events - they aren't useful to us */
 	if(type==NEBTYPE_HOSTCHECK_ASYNC_PRECHECK || type==NEBTYPE_HOSTCHECK_SYNC_PRECHECK)
 		return NDO_OK;

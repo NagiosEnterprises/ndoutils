@@ -1,8 +1,11 @@
 /************************************************************************
  *
  * UTILS.H - NDO utilities header file
+ *
+ * Copyright (c) 2009-2012 Nagios Core Development Team and Community Contributors
  * Copyright (c) 2005-2008 Ethan Galstad
- * Last Modified: 01-25-2008
+ *
+ * Last Modified: 09-27-2012
  *
  ************************************************************************/
 
@@ -10,7 +13,11 @@
 #define _NDO_UTILS_H
 
 /* my_free has been freed from bondage as a function */
+#ifdef BUILD_NAGIOS_4X
+#define my_free(ptr) do { if(ptr) { free(ptr); ptr = NULL; } } while(0)
+#else
 #define my_free(ptr) { if(ptr) { free(ptr); ptr = NULL; } }
+#endif
 
 
 typedef struct ndo_dbuf_struct{
