@@ -3676,7 +3676,7 @@ int ndomod_write_object_config(int config_type){
 		es[5]=ndo_escape_buffer(temp_host->notification_period);
 		es[6]=ndo_escape_buffer(temp_host->check_period);
 #ifdef BUILD_NAGIOS_4X
-		es[7]="";
+		es[7]=ndo_escape_buffer("");
 #else
 		es[7]=ndo_escape_buffer(temp_host->failure_prediction_options);
 #endif
@@ -4093,7 +4093,7 @@ int ndomod_write_object_config(int config_type){
 		es[4]=ndo_escape_buffer(temp_service->notification_period);
 		es[5]=ndo_escape_buffer(temp_service->check_period);
 #ifdef BUILD_NAGIOS_4X
-		es[6]="";
+		es[6]=ndo_escape_buffer("");
 #else
 		es[6]=ndo_escape_buffer(temp_service->failure_prediction_options);
 #endif
