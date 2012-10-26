@@ -148,8 +148,39 @@ below to fit the name of the module version you're using.
     That directive will cause the Nagios daemon to send data to the NDOMOD
     module.  Without that option, NDOMOD won't get any information.
 
-
-
+5.  ndomod processing options. As of ndoutils2.x, users can define which 
+	types of data are processed and stored by ndoutils. Each of these options
+	can be defined in the ndomod.cfg file, and are considered a replacement for 
+	previous ndomod_processing_options config option, which used a bitmask. The 
+	following processing options are available.
+	
+	acknowledgement_data=1
+	adaptive_contact_data=1
+	adaptive_host_data=1
+	adaptive_program_data=1
+	adaptive_service_data=1
+	aggregated_status_data=1
+	comment_data=1
+	contact_status_data=1
+	downtime_data=1
+	event_handler_data=1
+	external_command_data=1
+	flapping_data=1
+	host_check_data=1
+	host_status_data=1
+	log_data=1
+	main_config_data=1
+	notification_data=1
+	object_config_data=1
+	process_data=1
+	program_status_data=1
+	retention_data=1
+	service_check_data=1
+	service_status_data=1
+	statechange_data=1
+	system_command_data=1
+	timed_event_data=1
+	
 
 ****************************
 INSTALLING THE NDO2DB DAEMON

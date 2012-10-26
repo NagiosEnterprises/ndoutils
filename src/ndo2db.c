@@ -30,9 +30,9 @@
 #include "../include/dh.h"
 #endif
 
-#define NDO2DB_VERSION "1.5.2"
+#define NDO2DB_VERSION "2.0.0"
 #define NDO2DB_NAME "NDO2DB"
-#define NDO2DB_DATE "06-08-2012"
+#define NDO2DB_DATE "10-30-2012"
 
 #ifdef HAVE_SSL
 SSL_METHOD *meth;

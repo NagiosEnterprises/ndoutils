@@ -137,19 +137,35 @@ reconnect_warning_interval=15
 
 
 
-# DATA PROCESSING OPTION
-# This option determines what data the NDO NEB module will process. 
-# Do not mess with this option unless you know what you're doing!!!!
-# Read the source code (include/ndbxtmod.h) to determine what values
-# to use here.  Values from source code should be OR'ed to get the
-# value to use here.  A value of -1 will cause all data to be processed.
-# Read the source code (include/ndomod.h) and look for "NDOMOD_PROCESS_"
-# to determine what values to use here.  Values from source code should
-# be OR'ed to get the value to use here.  A value of -1 will cause all
-# data to be processed. 
-
-data_processing_options=-1
-
+# DATA PROCESSING OPTIONS
+# These options determine what data the NDO NEB Module will process
+#
+acknowledgement_data=1
+adaptive_contact_data=1
+adaptive_host_data=1
+adaptive_program_data=1
+adaptive_service_data=1
+aggregated_status_data=1
+comment_data=1
+contact_status_data=1
+downtime_data=1
+event_handler_data=1
+external_command_data=1
+flapping_data=1
+host_check_data=1
+host_status_data=1
+log_data=1
+main_config_data=1
+notification_data=1
+object_config_data=1
+process_data=1
+program_status_data=1
+retention_data=1
+service_check_data=1
+service_status_data=1
+statechange_data=1
+system_command_data=1
+timed_event_data=1
 
 
 # CONFIG OUTPUT OPTION
