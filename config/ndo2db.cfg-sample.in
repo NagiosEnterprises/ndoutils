@@ -148,6 +148,20 @@ max_eventhandlers_age=44640
 # Keep external commands for 31 days
 max_externalcommands_age=44640
 
+# Keep notifications for 31 days
+max_notifications_age=44640
+
+# Keep contactnotifications for 31 days
+max_contactnotifications=44640
+
+# Keep contactnotificationmethods for 31 days
+max_contactnotificationmethods=44640
+
+# Keep logentries for 90 days
+max_logentries_age=129600
+
+# Keep acknowledgements for 31 days
+max_acknowledgements_age=44640
 
 
 

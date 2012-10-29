@@ -142,6 +142,11 @@ int ndo2db_db_init(ndo2db_idi *idi){
 	idi->dbinfo.max_hostchecks_age=ndo2db_db_settings.max_hostchecks_age;
 	idi->dbinfo.max_eventhandlers_age=ndo2db_db_settings.max_eventhandlers_age;
 	idi->dbinfo.max_externalcommands_age=ndo2db_db_settings.max_externalcommands_age;
+	idi->dbinfo.max_notifications_age=ndo2db_db_settings.max_notifications_age;
+	idi->dbinfo.max_contactnotifications_age=ndo2db_db_settings.max_contactnotifications_age;
+	idi->dbinfo.max_contactnotificationmethods_age=ndo2db_db_settings.max_contactnotificationmethods_age;
+	idi->dbinfo.max_logentries_age=ndo2db_db_settings.max_logentries_age;
+	idi->dbinfo.max_acknowledgements_age=ndo2db_db_settings.max_acknowledgements_age;	
 	idi->dbinfo.last_table_trim_time=(time_t)0L;
 	idi->dbinfo.last_logentry_time=(time_t)0L;
 	idi->dbinfo.last_logentry_data=NULL;
@@ -768,7 +773,19 @@ int ndo2db_db_perform_maintenance(ndo2db_idi *idi){
 			ndo2db_db_trim_data_table(idi,ndo2db_db_tablenames[NDO2DB_DBTABLE_EVENTHANDLERS],"start_time",(time_t)((unsigned long)current_time-idi->dbinfo.max_eventhandlers_age));
 		if(idi->dbinfo.max_externalcommands_age>0L)
 			ndo2db_db_trim_data_table(idi,ndo2db_db_tablenames[NDO2DB_DBTABLE_EXTERNALCOMMANDS],"entry_time",(time_t)((unsigned long)current_time-idi->dbinfo.max_externalcommands_age));
-		idi->dbinfo.last_table_trim_time=current_time;
+		if(idi->dbinfo.max_notifications_age>0L)
+			ndo2db_db_trim_data_table(idi,ndo2db_db_tablenames[NDO2DB_DBTABLE_NOTIFICATIONS],"entry_time",(time_t)((unsigned long)current_time-idi->dbinfo.max_notifications_age));
+
+		if(idi->dbinfo.max_contactnotifications_age>0L)
+			ndo2db_db_trim_data_table(idi,ndo2db_db_tablenames[NDO2DB_DBTABLE_CONTACTNOTIFICATIONS],"entry_time",(time_t)((unsigned long)current_time-idi->dbinfo.max_contactnotifications_age));
+		if(idi->dbinfo.max_contactnotificationmethods_age>0L)
+			ndo2db_db_trim_data_table(idi,ndo2db_db_tablenames[NDO2DB_DBTABLE_CONTACTNOTIFICATIONMETHODS],"entry_time",(time_t)((unsigned long)current_time-idi->dbinfo.max_contactnotificationmethods_age));
+		if(idi->dbinfo.max_logentries_age>0L)
+			ndo2db_db_trim_data_table(idi,ndo2db_db_tablenames[NDO2DB_DBTABLE_LOGENTRIES],"entry_time",(time_t)((unsigned long)current_time-idi->dbinfo.max_logentries_age));
+		if(idi->dbinfo.max_acknowledgements_age>0L)
+			ndo2db_db_trim_data_table(idi,ndo2db_db_tablenames[NDO2DB_DBTABLE_ACKNOWLEDGEMENTS],"entry_time",(time_t)((unsigned long)current_time-idi->dbinfo.max_acknowledgements_age));			
+			
+			idi->dbinfo.last_table_trim_time=current_time;
 	        }
 
 	return NDO_OK;

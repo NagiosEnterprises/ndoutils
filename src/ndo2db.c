@@ -446,7 +446,17 @@ int ndo2db_process_config_var(char *arg){
 		ndo2db_db_settings.max_eventhandlers_age=strtoul(val,NULL,0)*60;
 	else if(!strcmp(var,"max_externalcommands_age"))
 		ndo2db_db_settings.max_externalcommands_age=strtoul(val,NULL,0)*60;
-
+	else if(!strcmp(var,"max_logentries_age"))
+		ndo2db_db_settings.max_externalcommands_age=strtoul(val,NULL,0)*60;		
+	else if(!strcmp(var,"max_notifications_age"))
+		ndo2db_db_settings.max_externalcommands_age=strtoul(val,NULL,0)*60;			
+	else if(!strcmp(var,"max_contactnotifications_age"))
+		ndo2db_db_settings.max_externalcommands_age=strtoul(val,NULL,0)*60;	
+	else if(!strcmp(var,"max_contactnotificationmethods_age"))
+		ndo2db_db_settings.max_externalcommands_age=strtoul(val,NULL,0)*60;	
+	else if(!strcmp(var,"max_acknowledgements_age"))
+		ndo2db_db_settings.max_externalcommands_age=strtoul(val,NULL,0)*60;			
+		
 	else if(!strcmp(var,"ndo2db_user"))
 		ndo2db_user=strdup(val);
 	else if(!strcmp(var,"ndo2db_group"))
@@ -491,6 +501,11 @@ int ndo2db_initialize_variables(void){
 	ndo2db_db_settings.max_hostchecks_age=0L;
 	ndo2db_db_settings.max_eventhandlers_age=0L;
 	ndo2db_db_settings.max_externalcommands_age=0L;
+	ndo2db_db_settings.max_notifications_age=0L;
+	ndo2db_db_settings.max_contactnotifications_age=0L;
+	ndo2db_db_settings.max_contactnotificationmethods_age=0L;
+	ndo2db_db_settings.max_logentries_age=0L;
+	ndo2db_db_settings.max_acknowledgements_age=0L;
 
 	return NDO_OK;
         }
