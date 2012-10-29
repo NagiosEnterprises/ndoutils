@@ -74,7 +74,7 @@ if ($version eq $thisversion){
 
 
 # Read upgrade script in the directory containing this script
-my $file="mysql-upgrade-$version.sql";
+my $file="mysql-upgrade-$thisversion.sql";
 if (-e $file){
 	print "** DB upgrade required for $thisversion",$/;
 	print "     Using $file for upgrade...",$/;
