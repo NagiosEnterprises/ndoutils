@@ -13,10 +13,10 @@
 #define _NDO_UTILS_H
 
 /* my_free has been freed from bondage as a function */
-#ifdef BUILD_NAGIOS_4X
-#define my_free(ptr) do { if(ptr) { free(ptr); ptr = NULL; } } while(0)
-#else
+#ifdef BUILD_NAGIOS_2X
 #define my_free(ptr) { if(ptr) { free(ptr); ptr = NULL; } }
+#else
+#define my_free(ptr) do { if(ptr) { free(ptr); ptr = NULL; } } while(0)
 #endif
 
 

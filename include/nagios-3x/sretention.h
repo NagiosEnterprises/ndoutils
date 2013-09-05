@@ -2,7 +2,7 @@
  *
  * SRETENTION.H - Header for state retention routines
  *
- * Copyright (c) 1999-2006 Ethan Galstad (nagios@nagios.org)
+ * Copyright (c) 1999-2006 Ethan Galstad (egalstad@nagios.org)
  * Last Modified:   02-28-2006
  *
  * License:
@@ -22,15 +22,12 @@
  *
  *****************************************************************************/
 
-#ifdef __cplusplus
-  extern "C" {
-#endif
+#include "compat.h"
+NAGIOS_BEGIN_DECL
 
 int initialize_retention_data(char *);
 int cleanup_retention_data(char *);
 int save_state_information(int);                 /* saves all host and state information */
 int read_initial_state_information(void);        /* reads in initial host and state information */
 
-#ifdef __cplusplus
-  }
-#endif
+NAGIOS_END_DECL
