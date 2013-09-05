@@ -26,7 +26,7 @@
 
 #include "common.h"
 #include "objects.h"
-#ifdef NSCORE
+#ifndef NSCGI
 #include "nagios.h"
 #endif
 
@@ -39,21 +39,23 @@ typedef struct scheduled_downtime {
 	char *service_description;
 	time_t entry_time;
 	time_t start_time;
+	time_t flex_downtime_start;		/* Time the flexible downtime started */
 	time_t end_time;
 	int fixed;
 	unsigned long triggered_by;
 	unsigned long duration;
 	unsigned long downtime_id;
 	int is_in_effect;
+	int	start_notification_sent;
 	char *author;
 	char *comment;
-#ifdef NSCORE
+#ifndef NSCGI
 	unsigned long comment_id;
 	int start_flex_downtime;
 	int incremented_pending_downtime;
 #endif
 	struct scheduled_downtime *next;
-#ifdef NSCORE
+#ifndef NSCGI
 	struct timed_event *start_event, *stop_event;
 #endif
 	} scheduled_downtime;
@@ -61,13 +63,13 @@ typedef struct scheduled_downtime {
 extern struct scheduled_downtime *scheduled_downtime_list;
 
 
-#ifdef NSCORE
-int initialize_downtime_data(char *);                                /* initializes scheduled downtime data */
-int cleanup_downtime_data(char *);                                   /* cleans up scheduled downtime data */
+#ifndef NSCGI
+int initialize_downtime_data(void);        /* initializes scheduled downtime data */
+int cleanup_downtime_data(void);           /* cleans up scheduled downtime data */
 
-int add_new_downtime(int, char *, char *, time_t, char *, char *, time_t, time_t, int, unsigned long, unsigned long, unsigned long *, int);
-int add_new_host_downtime(char *, time_t, char *, char *, time_t, time_t, int, unsigned long, unsigned long, unsigned long *, int);
-int add_new_service_downtime(char *, char *, time_t, char *, char *, time_t, time_t, int, unsigned long, unsigned long, unsigned long *, int);
+int add_new_downtime(int, char *, char *, time_t, char *, char *, time_t, time_t, int, unsigned long, unsigned long, unsigned long *, int, int);
+int add_new_host_downtime(char *, time_t, char *, char *, time_t, time_t, int, unsigned long, unsigned long, unsigned long *, int, int);
+int add_new_service_downtime(char *, char *, time_t, char *, char *, time_t, time_t, int, unsigned long, unsigned long, unsigned long *, int, int);
 
 int delete_host_downtime(unsigned long);
 int delete_service_downtime(unsigned long);
@@ -86,15 +88,15 @@ int check_pending_flex_service_downtime(struct service *);
 int check_for_expired_downtime(void);
 #endif
 
-int add_host_downtime(char *, time_t, char *, char *, time_t, time_t, int, unsigned long, unsigned long, unsigned long, int);
-int add_service_downtime(char *, char *, time_t, char *, char *, time_t, time_t, int, unsigned long, unsigned long, unsigned long, int);
+int add_host_downtime(char *, time_t, char *, char *, time_t, time_t, time_t, int, unsigned long, unsigned long, unsigned long, int, int);
+int add_service_downtime(char *, char *, time_t, char *, char *, time_t, time_t, time_t, int, unsigned long, unsigned long, unsigned long, int, int);
 
 /* If you are going to be adding a lot of downtime in sequence, set
    defer_downtime_sorting to 1 before you start and then call
    sort_downtime afterwards. Things will go MUCH faster. */
 
 extern int defer_downtime_sorting;
-int add_downtime(int, char *, char *, time_t, char *, char *, time_t, time_t, int, unsigned long, unsigned long, unsigned long, int);
+int add_downtime(int, char *, char *, time_t, char *, char *, time_t, time_t, time_t, int, unsigned long, unsigned long, unsigned long, int, int);
 int sort_downtime(void);
 
 struct scheduled_downtime *find_downtime(int, unsigned long);

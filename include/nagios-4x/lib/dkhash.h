@@ -10,6 +10,8 @@
  * much data in Nagios pertains to services (which are uniquely
  * identified based on both host_name and service_description), it
  * makes sense here.
+ *
+ * @{
  */
 
 /** return flags usable from the callback function of dkhash_walk_data() */
@@ -74,7 +76,7 @@ extern int dkhash_insert(dkhash_table *t, const char *k1, const char *k2, void *
 extern void *dkhash_remove(dkhash_table *t, const char *k1, const char *k2);
 
 /**
- * Call a funciton once for each item in the hash-table
+ * Call a function once for each item in the hash-table
  * The callback function can return DKHASH_WALK_{REMOVE,STOP} or any
  * OR'ed combination thereof to control the walking procedure, and
  * should return 0 on the normal case.
@@ -128,4 +130,5 @@ extern unsigned int dkhash_num_entries_removed(dkhash_table *t);
  * @return Number of bucket-slots in hash table
  */
 extern unsigned int dkhash_table_size(dkhash_table *t);
+/** @} */
 #endif /* LIBNAGIOS_dkhash_h__ */

@@ -3,7 +3,6 @@
  *
  * Nagios Config Header File
  * Written By: Ethan Galstad (egalstad@nagios.org)
- * Last Modified: 11-02-2008
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -51,12 +50,12 @@
 /* #undef DEBUG5 */
 
 /* I/O implementations */
-#define USE_XSDDEFAULT /**/
-#define USE_XCDDEFAULT /**/
-#define USE_XRDDEFAULT /**/
-#define USE_XODTEMPLATE /**/
-#define USE_XPDDEFAULT /**/
-#define USE_XDDDEFAULT /**/
+/* #undef USE_XSDDEFAULT */
+/* #undef USE_XCDDEFAULT */
+/* #undef USE_XRDDEFAULT */
+/* #undef USE_XODTEMPLATE */
+/* #undef USE_XPDDEFAULT */
+/* #undef USE_XDDDEFAULT */
 
 
 /***** CGI COMPILE OPTIONS *****/
@@ -292,6 +291,16 @@
 /* #undef HAVE_LINUX_MODULE_H */
 #ifdef HAVE_LINUX_MODULE_H
 #include <linux/module.h>
+#endif
+
+#define HAVE_LOCALE_H 1
+#ifdef HAVE_LOCALE_H
+#include <locale.h>
+#endif
+
+#define HAVE_WCHAR_H 1
+#ifdef HAVE_WCHAR_H
+#include <wchar.h>
 #endif
 
 /* configure script should allow user to override ltdl choice, but this will do for now... */

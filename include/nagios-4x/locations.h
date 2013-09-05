@@ -2,7 +2,6 @@
  *
  * Nagios Locations Header File
  * Written By: Ethan Galstad (egalstad@nagios.org)
- * Last Modified: 04-30-2007
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -29,6 +28,7 @@
 #define DEFAULT_DOWNTIME_FILE			"/usr/local/nagios/var/downtime.dat"
 #define DEFAULT_RETENTION_FILE			"/usr/local/nagios/var/retention.dat"
 #define DEFAULT_COMMAND_FILE			"/usr/local/nagios/var/rw/nagios.cmd"
+#define DEFAULT_QUERY_SOCKET            "/usr/local/nagios/var/rw/nagios.qh"
 #define DEFAULT_CONFIG_FILE			"/usr/local/nagios/etc/nagios.cfg"
 #define DEFAULT_PHYSICAL_HTML_PATH		"/usr/local/nagios/share"
 #define DEFAULT_URL_HTML_PATH			"/nagios"

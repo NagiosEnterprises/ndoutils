@@ -19,10 +19,13 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  ************************************************************************/
 
+#ifndef INCLUDE_COMMON_H
+#define INCLUDE_COMMON_H
+
 #include "shared.h"
 
-#define PROGRAM_VERSION "3.99.95"
-#define PROGRAM_MODIFICATION_DATE "09-14-2012"
+#define PROGRAM_VERSION "4.0.0beta4"
+#define PROGRAM_MODIFICATION_DATE "09-01-2013"
 
 NAGIOS_BEGIN_DECL
 
@@ -32,6 +35,7 @@ NAGIOS_BEGIN_DECL
 extern int date_format;
 extern int interval_length;
 extern char *illegal_output_chars;
+extern char illegal_output_char_map[256];
 
 extern int log_rotation_method;
 extern int check_external_commands;
@@ -39,6 +43,7 @@ extern int check_external_commands;
 extern int defer_comment_sorting;
 
 extern char *object_cache_file;
+extern char *status_file;
 
 extern time_t program_start;
 extern int nagios_pid;
@@ -58,6 +63,8 @@ extern int obsess_over_services;
 extern int obsess_over_hosts;
 
 extern int enable_timing_point;
+
+extern char *config_file_dir;
 
 #ifdef HAVE_TZNAME
 #ifdef CYGWIN
@@ -191,19 +198,16 @@ NAGIOS_END_DECL
 #define CMD_ENABLE_HOSTGROUP_SVC_CHECKS                 67
 #define CMD_DISABLE_HOSTGROUP_SVC_CHECKS                68
 
-#define CMD_CANCEL_HOST_DOWNTIME                        69 /* not internally implemented */
-#define CMD_CANCEL_SVC_DOWNTIME                         70 /* not internally implemented */
-
-#define CMD_CANCEL_ACTIVE_HOST_DOWNTIME                 71 /* old - no longer used */
-#define CMD_CANCEL_PENDING_HOST_DOWNTIME                72 /* old - no longer used */
-
-#define CMD_CANCEL_ACTIVE_SVC_DOWNTIME                  73 /* old - no longer used */
-#define CMD_CANCEL_PENDING_SVC_DOWNTIME                 74 /* old - no longer used */
-
-#define CMD_CANCEL_ACTIVE_HOST_SVC_DOWNTIME             75 /* unimplemented */
-#define CMD_CANCEL_PENDING_HOST_SVC_DOWNTIME            76 /* unimplemented */
-
-#define CMD_FLUSH_PENDING_COMMANDS                      77
+/* commands 69-77 are unimplemented */
+#define CMD_UNIMPLEMENTED_69                            69
+#define CMD_UNIMPLEMENTED_70                            70
+#define CMD_UNIMPLEMENTED_71                            71
+#define CMD_UNIMPLEMENTED_72                            72
+#define CMD_UNIMPLEMENTED_73                            73
+#define CMD_UNIMPLEMENTED_74                            74
+#define CMD_UNIMPLEMENTED_75                            75
+#define CMD_UNIMPLEMENTED_76                            76
+#define CMD_UNIMPLEMENTED_77                            77
 
 #define CMD_DEL_HOST_DOWNTIME                           78
 #define CMD_DEL_SVC_DOWNTIME                            79
@@ -344,6 +348,14 @@ NAGIOS_END_DECL
 /* custom command introduced in Nagios 3.x */
 #define CMD_CUSTOM_COMMAND                              999
 
+/**************************** COMMAND ERRORS *****************************/
+#define CMD_ERROR_OK 0 /* No errors encountered */
+#define CMD_ERROR_UNKNOWN_COMMAND 1 /* Unknown/unsupported command */
+#define CMD_ERROR_MALFORMED_COMMAND 2 /* Command malformed/missing timestamp? */
+#define CMD_ERROR_INTERNAL_ERROR 3 /* Internal error */
+#define CMD_ERROR_FAILURE 4 /* Command routine failed */
+
+extern const char *cmd_error_strerror(int error_code);
 
 /**************************** CHECK TYPES ********************************/
 
@@ -406,6 +418,7 @@ NAGIOS_END_DECL
 #define CHECK_OPTION_FORCE_EXECUTION	1	/* force execution of a check (ignores disabled services/hosts, invalid timeperiods) */
 #define CHECK_OPTION_FRESHNESS_CHECK    2       /* this is a freshness check */
 #define CHECK_OPTION_ORPHAN_CHECK       4       /* this is an orphan check */
+#define CHECK_OPTION_DEPENDENCY_CHECK   8       /* dependency check. different scheduling rules apply */
 
 
 /**************************** PROGRAM MODES ******************************/
@@ -514,3 +527,4 @@ NAGIOS_END_DECL
 #define MODATTR_CHECK_TIMEPERIOD                16384
 #define MODATTR_CUSTOM_VARIABLE                 32768
 #define MODATTR_NOTIFICATION_TIMEPERIOD         65536
+#endif /* INCLUDE_COMMON_H */

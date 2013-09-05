@@ -35,6 +35,7 @@
  * global variables only used in the core. Reducing this list would be
  * a Good Thing(tm).
  */
+extern char *nagios_binary_path;
 extern char *config_file;
 extern char *command_file;
 extern char *temp_file;
@@ -42,6 +43,8 @@ extern char *temp_path;
 extern char *check_result_path;
 extern char *lock_file;
 extern char *object_precache_file;
+
+extern unsigned int nofile_limit, nproc_limit, max_apps;
 
 extern int num_check_workers;
 extern char *qh_socket_path;
@@ -64,7 +67,6 @@ extern command *global_host_event_handler_ptr;
 extern command *global_service_event_handler_ptr;
 
 extern char *illegal_object_chars;
-extern char *illegal_output_chars;
 
 extern int use_regexp_matches;
 extern int use_true_regexp_matching;
@@ -78,7 +80,6 @@ extern int log_host_retries;
 extern int log_event_handlers;
 extern int log_external_commands;
 extern int log_passive_checks;
-extern time_t last_log_rotation;
 extern unsigned long logging_options;
 extern unsigned long syslog_options;
 
@@ -91,8 +92,6 @@ extern int notification_timeout;
 extern int log_initial_states;
 extern int log_current_states;
 
-extern int nagios_pid;
-extern int daemon_mode;
 extern int daemon_dumps_core;
 extern int sig_id;
 extern int caught_signal;
@@ -103,7 +102,6 @@ extern int test_scheduling;
 extern int precache_objects;
 extern int use_precached_objects;
 
-extern int interval_length;
 extern int service_inter_check_delay_method;
 extern int host_inter_check_delay_method;
 extern int service_interleave_factor_method;
@@ -121,7 +119,6 @@ extern int host_freshness_check_interval;
 extern int auto_rescheduling_interval;
 extern int auto_rescheduling_window;
 
-extern int check_external_commands;
 extern int check_orphaned_services;
 extern int check_orphaned_hosts;
 extern int check_service_freshness;
@@ -139,8 +136,8 @@ extern char *last_program_version;
 extern char *new_program_version;
 
 extern int use_aggressive_host_checking;
-extern unsigned long cached_host_check_horizon;
-extern unsigned long cached_service_check_horizon;
+extern time_t cached_host_check_horizon;
+extern time_t cached_service_check_horizon;
 extern int enable_predictive_host_dependency_checks;
 extern int enable_predictive_service_dependency_checks;
 
@@ -151,6 +148,7 @@ extern int retention_update_interval;
 extern int use_retained_program_state;
 extern int use_retained_scheduling_info;
 extern int retention_scheduling_horizon;
+extern char *retention_file;
 extern unsigned long retained_host_attribute_mask;
 extern unsigned long retained_service_attribute_mask;
 extern unsigned long retained_contact_host_attribute_mask;
@@ -158,31 +156,15 @@ extern unsigned long retained_contact_service_attribute_mask;
 extern unsigned long retained_process_host_attribute_mask;
 extern unsigned long retained_process_service_attribute_mask;
 
-extern int log_rotation_method;
-
-extern int enable_notifications;
-extern int execute_service_checks;
-extern int accept_passive_service_checks;
-extern int execute_host_checks;
-extern int accept_passive_host_checks;
-extern int enable_event_handlers;
-extern int obsess_over_services;
-extern int obsess_over_hosts;
-
-extern int process_performance_data;
-
 extern int translate_passive_host_checks;
 extern int passive_host_checks_are_soft;
 
 extern int status_update_interval;
+extern char *retention_file;
 
 extern int time_change_threshold;
 
 extern unsigned long event_broker_options;
-
-extern int process_performance_data;
-
-extern int enable_flap_detection;
 
 extern double low_service_flap_threshold;
 extern double high_service_flap_threshold;
@@ -196,7 +178,7 @@ extern int child_processes_fork_twice;
 
 extern char *use_timezone;
 
-extern unsigned long max_check_result_file_age;
+extern time_t max_check_result_file_age;
 
 extern char *debug_file;
 extern int debug_level;
@@ -205,7 +187,6 @@ extern unsigned long max_debug_file_size;
 
 extern int allow_empty_hostgroup_assignment;
 
-extern time_t program_start;
 extern time_t last_program_stop;
 extern time_t event_start;
 
@@ -228,9 +209,57 @@ extern iobroker_set *nagios_iobs;
 
 extern struct check_stats check_statistics[MAX_CHECK_STATS_TYPES];
 
+/*** perfdata variables ***/
+extern int     perfdata_timeout;
+extern char    *host_perfdata_command;
+extern char    *service_perfdata_command;
+extern char    *host_perfdata_file_template;
+extern char    *service_perfdata_file_template;
+extern char    *host_perfdata_file;
+extern char    *service_perfdata_file;
+extern int     host_perfdata_file_append;
+extern int     service_perfdata_file_append;
+extern int     host_perfdata_file_pipe;
+extern int     service_perfdata_file_pipe;
+extern unsigned long host_perfdata_file_processing_interval;
+extern unsigned long service_perfdata_file_processing_interval;
+extern char    *host_perfdata_file_processing_command;
+extern char    *service_perfdata_file_processing_command;
+extern int     host_perfdata_process_empty_results;
+extern int     service_perfdata_process_empty_results;
+/*** end perfdata variables */
+
 extern struct notify_list *notification_list;
 
 extern struct check_engine nagios_check_engine;
+
+/*
+ * Everything we need to keep system load in check.
+ * Don't use this from modules.
+ */
+struct load_control {
+	time_t last_check;  /* last time we checked the real load */
+	time_t last_change; /* last time we changed settings */
+	time_t check_interval; /* seconds between load checks */
+	double load[3];      /* system load, as reported by getloadavg() */
+	float backoff_limit; /* limit we must reach before we back off */
+	float rampup_limit;  /* limit we must reach before we ramp back up */
+	unsigned int backoff_change; /* backoff by this much */
+	unsigned int rampup_change;  /* ramp up by this much */
+	unsigned int changes;  /* number of times we've changed settings */
+	unsigned int jobs_max;   /* upper setting for jobs_limit */
+	unsigned int jobs_limit; /* current limit */
+	unsigned int jobs_min;   /* lower setting for jobs_limit */
+	unsigned int jobs_running;  /* jobs currently running */
+	unsigned int nproc_limit;  /* rlimit for user processes */
+	unsigned int nofile_limit; /* rlimit for open files */
+	unsigned int options; /* various option flags */
+};
+extern struct load_control loadctl;
+
+/* options for load control */
+#define LOADCTL_ENABLED    (1 << 0)
+
 
 	/************* MISC LENGTH/SIZE DEFINITIONS ***********/
 
@@ -288,7 +317,7 @@ extern struct check_engine nagios_check_engine;
 #define NOTIFICATION_DOWNTIMESTART      5
 #define NOTIFICATION_DOWNTIMEEND        6
 #define NOTIFICATION_DOWNTIMECANCELLED  7
-#define NOTIFICATION_CUSTOM             99
+#define NOTIFICATION_CUSTOM             8
 
 
 
@@ -336,6 +365,34 @@ extern struct check_engine nagios_check_engine;
 #define EVENT_SLEEP                     98      /* asynchronous sleep event that occurs when event queues are empty */
 #define EVENT_USER_FUNCTION             99      /* USER-defined function (modules) */
 
+/*
+ * VERSIONFIX: Make EVENT_SLEEP and EVENT_USER_FUNCTION appear
+ * linearly in order.
+ */
+
+#define EVENT_TYPE_STR(type)	( \
+	type == EVENT_SERVICE_CHECK ? "SERVICE_CHECK" : \
+	type == EVENT_COMMAND_CHECK ? "COMMAND_CHECK" : \
+	type == EVENT_LOG_ROTATION ? "LOG_ROTATION" : \
+	type == EVENT_PROGRAM_SHUTDOWN ? "PROGRAM_SHUTDOWN" : \
+	type == EVENT_PROGRAM_RESTART ? "PROGRAM_RESTART" : \
+	type == EVENT_CHECK_REAPER ? "CHECK_REAPER" : \
+	type == EVENT_ORPHAN_CHECK ? "ORPHAN_CHECK" : \
+	type == EVENT_RETENTION_SAVE ? "RETENTION_SAVE" : \
+	type == EVENT_STATUS_SAVE ? "STATUS_SAVE" : \
+	type == EVENT_SCHEDULED_DOWNTIME ? "SCHEDULED_DOWNTIME" : \
+	type == EVENT_SFRESHNESS_CHECK ? "SFRESHNESS_CHECK" : \
+	type == EVENT_EXPIRE_DOWNTIME ? "EXPIRE_DOWNTIME" : \
+	type == EVENT_HOST_CHECK ? "HOST_CHECK" : \
+	type == EVENT_HFRESHNESS_CHECK ? "HFRESHNESS_CHECK" : \
+	type == EVENT_RESCHEDULE_CHECKS ? "RESCHEDULE_CHECKS" : \
+	type == EVENT_EXPIRE_COMMENT ? "EXPIRE_COMMENT" : \
+	type == EVENT_CHECK_PROGRAM_UPDATE ? "CHECK_PROGRAM_UPDATE" : \
+	type == EVENT_SLEEP ? "SLEEP" : \
+	type == EVENT_USER_FUNCTION ? "USER_FUNCTION" : \
+	"UNKNOWN" \
+)
+
 
 
 	/******* INTER-CHECK DELAY CALCULATION TYPES **********/
@@ -365,22 +422,39 @@ NAGIOS_BEGIN_DECL
 /* useful for hosts and services to determine time 'til next check */
 #define normal_check_window(o) ((time_t)(o->check_interval * interval_length))
 #define retry_check_window(o) ((time_t)(o->retry_interval * interval_length))
-#define check_window(o) (o->state_type == SOFT_STATE ? retry_check_window(o) : normal_check_window(o))
+#define check_window(o) \
+	((!o->current_state && o->state_type == SOFT_STATE) ? \
+		retry_check_window(o) : \
+		normal_check_window(o))
+
+/** Nerd subscription type */
+struct nerd_subscription {
+	int sd;
+	struct nerd_channel *chan;
+	char *format; /* requested format (macro string) for this subscription */
+};
 
 /******************** FUNCTIONS **********************/
+extern int set_loadctl_options(char *opts, unsigned int len);
 
 /* silly helpers useful pretty much all over the place */
 extern const char *service_state_name(int state);
 extern const char *host_state_name(int state);
 extern const char *state_type_name(int state_type);
+extern const char *check_type_name(int check_type);
 extern const char *check_result_source(check_result *cr);
 
 /*** Nagios Event Radio Dispatcher functions ***/
 extern int nerd_init(void);
-extern int nerd_mkchan(const char *name, int (*handler)(int, void *), unsigned int callbacks);
+extern int nerd_mkchan(const char *name, const char *description, int (*handler)(int, void *), unsigned int callbacks);
+extern int nerd_cancel_subscriber(int sd);
+extern int nerd_get_channel_id(const char *chan_name);
+extern objectlist *nerd_get_subscriptions(int chan_id);
+extern int nerd_broadcast(unsigned int chan_id, void *buf, unsigned int len);
 
 /*** Query Handler functions, types and macros*/
 typedef int (*qh_handler)(int, char *, unsigned int);
+extern int dump_event_stats(int sd);
 
 /* return codes for query_handlers() */
 #define QH_OK        0  /* keep listening */
@@ -389,7 +463,8 @@ typedef int (*qh_handler)(int, char *, unsigned int);
 #define QH_TAKEOVER  3  /* handler will take full control. de-register but don't close */
 extern int qh_init(const char *path);
 extern void qh_deinit(const char *path);
-extern int qh_register_handler(const char *name, unsigned int options, qh_handler handler);
+extern int qh_register_handler(const char *name, const char *description, unsigned int options, qh_handler handler);
+extern const char *qh_strerror(int code);
 
 /**** Configuration Functions ****/
 int read_main_config_file(char *);                     		/* reads the main config file (nagios.cfg) */
@@ -404,6 +479,8 @@ int pre_flight_circular_check(int *, int *);             	/* detects circular de
 void init_timing_loop(void);                         		/* setup the initial scheduling queue */
 void setup_sighandler(void);                         		/* trap signals */
 void reset_sighandler(void);                         		/* reset signals to default action */
+extern void handle_sigxfsz(int);				/* handle SIGXFSZ */
+
 int daemon_init(void);				     		/* switches to daemon mode */
 int drop_privileges(char *, char *);				/* drops privileges before startup */
 void display_scheduling_info(void);				/* displays service check scheduling information */
@@ -465,7 +542,6 @@ void handle_service_flap_detection_disabled(service *);		/* handles the details 
 
 
 /**** Route/Host Check Functions ****/
-int perform_on_demand_host_check(host *, int *, int, int, unsigned long);
 int check_host_check_viability(host *, int, int *, time_t *);
 int adjust_host_check_attempt(host *, int);
 int determine_host_reachability(host *);
@@ -510,6 +586,7 @@ int run_global_host_event_handler(nagios_macros *mac, host *);			/* runs the glo
 
 
 /**** Notification Functions ****/
+const char *notification_reason_name(unsigned int reason_type);
 int check_service_notification_viability(service *, int, int);			/* checks viability of notifying all contacts about a service */
 int is_valid_escalation_for_service_notification(service *, serviceescalation *, int);	/* checks if an escalation entry is valid for a particular service notification */
 int should_service_notification_be_escalated(service *);			/* checks if a service notification should be escalated */
@@ -565,7 +642,7 @@ void get_next_valid_time(time_t, time_t *, timeperiod *);	/* get the next valid 
 time_t get_next_log_rotation_time(void);	     	/* determine the next time to schedule a log rotation */
 int dbuf_init(dbuf *, int);
 int dbuf_free(dbuf *);
-int dbuf_strcat(dbuf *, char *);
+int dbuf_strcat(dbuf *, const char *);
 int set_environment_var(char *, char *, int);           /* sets/clears and environment variable */
 int check_for_nagios_updates(int, int);                 /* checks to see if new version of Nagios are available */
 int query_update_api(void);                             /* checks to see if new version of Nagios are available */

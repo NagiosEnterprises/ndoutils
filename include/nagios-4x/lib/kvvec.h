@@ -1,5 +1,5 @@
-#ifndef INCLUDE_kvvec_h__
-#define INCLUDE_kvvec_h__
+#ifndef LIBNAGIOS_kvvec_h__
+#define LIBNAGIOS_kvvec_h__
 
 /**
  * @file kvvec.h
@@ -8,6 +8,7 @@
  * The kvvec library is nifty as either a configuration meta-format
  * or for IPC purposes. Take a look at the buf2kvvec() and kvvec2buf()
  * pair of functions for the latter.
+ * @{
  */
 
 /**
@@ -98,6 +99,13 @@ extern int kvvec_resize(struct kvvec *kvv, int size);
 extern int kvvec_grow(struct kvvec *kvv, int hint);
 
 /**
+ * Return remaining storage capacity of key/value vector
+ * @param[in] kvv The key/value vector to check
+ * @return Number of key/value pairs that can be stored without growing
+ */
+extern unsigned int kvvec_capacity(struct kvvec *kvv);
+
+/**
  * Sort a key/value vector alphabetically by key name
  * @param kvv The key/value vector to sort
  * @return 0
@@ -114,7 +122,7 @@ extern int kvvec_sort(struct kvvec *kvv);
  * @param valuelen Length of the value
  * @return 0 on success, < 0 on errors
  */
-extern int kvvec_addkv_wlen(struct kvvec *kvv, char *key, int keylen, char *value, int valuelen);
+extern int kvvec_addkv_wlen(struct kvvec *kvv, const char *key, int keylen, const char *value, int valuelen);
 
 /**
  * Shortcut to kvvec_addkv_wlen() when lengths aren't known
@@ -144,6 +152,13 @@ extern int kvvec_foreach(struct kvvec *kvv, void *arg, int (*callback)(struct ke
  * @return 0 on success, < 0 on errors
  */
 extern int kvvec_destroy(struct kvvec *kvv, int flags);
+
+/**
+ * Free key/value pairs associated with a key/value vector
+ * @param kvv The key/value vector to operate on
+ * @param flags flags or'ed combination of KVVEC_FREE_{KEYS,VALUES}, or KVVEC_FREE_ALL
+ */
+void kvvec_free_kvpairs(struct kvvec *kvv, int flags);
 
 /**
  * Create a linear buffer of all the key/value pairs and
@@ -188,4 +203,5 @@ extern struct kvvec *buf2kvvec(char *str, unsigned int len, const char kvsep, co
  * @return The number of pairs in the created key/value vector
  */
 extern int buf2kvvec_prealloc(struct kvvec *kvv, char *str, unsigned int len, const char kvsep, const char pair_sep, int flags);
+/** @} */
 #endif /* INCLUDE_kvvec_h__ */

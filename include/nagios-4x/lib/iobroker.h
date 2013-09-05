@@ -1,9 +1,15 @@
-#ifndef INCLUDE_iobroker_h__
-#define INCLUDE_iobroker_h__
+#ifndef LIBNAGIOS_iobroker_h__
+#define LIBNAGIOS_iobroker_h__
 
 /**
  * @file iobroker.h
  * @brief I/O broker library function declarations
+ *
+ * The I/O broker library handles multiplexing between hundreds or
+ * thousands of sockets with a few simple calls. It's designed to
+ * be as lightweight as possible so as to not cause memory bloat,
+ * and is therefore highly suitable for use by processes that are
+ * fork()-intensive.
  *
  * @{
  */
@@ -76,6 +82,20 @@ extern int iobroker_max_usable_fds(void);
  */
 extern int iobroker_register(iobroker_set *iobs, int sd, void *arg, int (*handler)(int, int, void *));
 
+
+/**
+ * Register a socket for output polling with the broker
+ * @note There's no guarantee that *ALL* data is writable just
+ * because the socket won't block you completely.
+ *
+ * @param iobs The socket set to add the socket to.
+ * @param sd The socket descriptor to add
+ * @param arg Argument passed to output handler on ready-to-write
+ * @param handler The function to call when output won't block
+ *
+ * @return 0 on success. < 0 on errors
+ */
+extern int iobroker_register_out(iobroker_set *iobs, int sd, void *arg, int (*handler)(int, int, void *));
 
 /**
  * Check if a particular filedescriptor is registered with the iobroker set

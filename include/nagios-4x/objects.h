@@ -93,9 +93,9 @@ NAGIOS_BEGIN_DECL
 #define OPT_DISABLED      (1 << 15) /* will denote disabled checks some day */
 
 /* macros useful with both hosts and services */
-#define flag_set(c, flag)    (c |= (flag))
-#define flag_get(c, flag)    (c & (flag))
-#define flag_isset(c, flag)  (flag_get((c), (flag)) == (flag))
+#define flag_set(c, flag)    ((c) |= (flag))
+#define flag_get(c, flag)    (unsigned int)((c) & (flag))
+#define flag_isset(c, flag)  (flag_get((c), (flag)) == (unsigned int)(flag))
 #define flag_unset(c, flag)  (c &= ~(flag))
 #define should_stalk(o) flag_isset(o->stalking_options, 1 << o->current_state)
 #define should_flap_detect(o) flag_isset(o->flap_detection_options, 1 << o->current_state)
@@ -278,9 +278,7 @@ typedef struct timeperiod {
 /* CONTACTSMEMBER structure */
 typedef struct contactsmember {
 	char    *contact_name;
-#ifdef NSCORE
 	struct contact *contact_ptr;
-#endif
 	struct contactsmember *next;
 	} contactsmember;
 
@@ -298,9 +296,7 @@ typedef struct contactgroup {
 /* CONTACTGROUPSMEMBER structure */
 typedef struct contactgroupsmember {
 	char    *group_name;
-#ifdef NSCORE
 	struct contactgroup *group_ptr;
-#endif
 	struct contactgroupsmember *next;
 	} contactgroupsmember;
 
@@ -326,9 +322,7 @@ typedef struct command {
 /* COMMANDSMEMBER structure */
 typedef struct commandsmember {
 	char	*command;
-#ifdef NSCORE
 	struct command *command_ptr;
-#endif
 	struct	commandsmember *next;
 	} commandsmember;
 
@@ -354,17 +348,17 @@ struct contact {
 	int     retain_status_information;
 	int     retain_nonstatus_information;
 	struct customvariablesmember *custom_variables;
-#ifdef NSCORE
+#ifndef NSCGI
 	time_t  last_host_notification;
 	time_t  last_service_notification;
 	unsigned long modified_attributes;
 	unsigned long modified_host_attributes;
 	unsigned long modified_service_attributes;
+#endif
 
 	struct timeperiod *host_notification_period_ptr;
 	struct timeperiod *service_notification_period_ptr;
 	struct objectlist *contactgroups_ptr;
-#endif
 	struct	contact *next;
 	};
 
@@ -373,9 +367,7 @@ struct contact {
 typedef struct servicesmember {
 	char    *host_name;
 	char    *service_description;
-#ifdef NSCORE
 	struct service *service_ptr;
-#endif
 	struct servicesmember *next;
 	} servicesmember;
 
@@ -383,9 +375,7 @@ typedef struct servicesmember {
 /* HOSTSMEMBER structure */
 typedef struct hostsmember {
 	char    *host_name;
-#ifdef NSCORE
 	struct host    *host_ptr;
-#endif
 	struct hostsmember *next;
 	} hostsmember;
 
@@ -466,7 +456,7 @@ struct host {
 	int     should_be_drawn;
 /* #endif */
 	customvariablesmember *custom_variables;
-#ifdef NSCORE
+#ifndef NSCGI
 	int     problem_has_been_acknowledged;
 	int     acknowledgement_type;
 	int     check_type;
@@ -515,18 +505,18 @@ struct host {
 	int     total_services;
 	unsigned long total_service_check_interval;
 	unsigned long modified_attributes;
+#endif
 
 	struct command *event_handler_ptr;
 	struct command *check_command_ptr;
 	struct timeperiod *check_period_ptr;
 	struct timeperiod *notification_period_ptr;
 	struct objectlist *hostgroups_ptr;
-#endif
 	/* objects we depend upon */
 	struct objectlist *exec_deps, *notify_deps;
 	struct objectlist *escalation_list;
 	struct  host *next;
-	void *next_check_event;
+	struct timed_event *next_check_event;
 	};
 
 
@@ -589,7 +579,7 @@ struct service {
 	char    *icon_image;
 	char    *icon_image_alt;
 	struct customvariablesmember *custom_variables;
-#ifdef NSCORE
+#ifndef NSCGI
 	int     problem_has_been_acknowledged;
 	int     acknowledgement_type;
 	int     host_problem_at_last_check;
@@ -636,6 +626,7 @@ struct service {
 	unsigned long flapping_comment_id;
 	double  percent_state_change;
 	unsigned long modified_attributes;
+#endif
 
 	struct host *host_ptr;
 	struct command *event_handler_ptr;
@@ -645,7 +636,6 @@ struct service {
 	struct timeperiod *check_period_ptr;
 	struct timeperiod *notification_period_ptr;
 	struct objectlist *servicegroups_ptr;
-#endif
 	struct objectlist *exec_deps, *notify_deps;
 	struct objectlist *escalation_list;
 	struct service *next;
@@ -665,10 +655,8 @@ typedef struct serviceescalation {
 	int     escalation_options;
 	struct contactgroupsmember *contact_groups;
 	struct contactsmember *contacts;
-#ifdef NSCORE
 	struct service *service_ptr;
 	struct timeperiod *escalation_period_ptr;
-#endif
 	} serviceescalation;
 
 
@@ -683,11 +671,9 @@ typedef struct servicedependency {
 	char    *dependency_period;
 	int     inherits_parent;
 	int     failure_options;
-#ifdef NSCORE
 	struct service *master_service_ptr;
 	struct service *dependent_service_ptr;
 	struct timeperiod *dependency_period_ptr;
-#endif
 	} servicedependency;
 
 
@@ -702,10 +688,8 @@ typedef struct hostescalation {
 	int     escalation_options;
 	struct contactgroupsmember *contact_groups;
 	struct contactsmember *contacts;
-#ifdef NSCORE
 	struct host    *host_ptr;
 	struct timeperiod *escalation_period_ptr;
-#endif
 	} hostescalation;
 
 
@@ -718,11 +702,9 @@ typedef struct hostdependency {
 	char    *dependency_period;
 	int     inherits_parent;
 	int     failure_options;
-#ifdef NSCORE
 	struct host    *master_host_ptr;
 	struct host    *dependent_host_ptr;
 	struct timeperiod *dependency_period_ptr;
-#endif
 	} hostdependency;
 
 extern struct command *command_list;
@@ -752,7 +734,7 @@ extern struct servicedependency **servicedependency_ary;
 /********************* FUNCTIONS **********************/
 
 /**** Top-level input functions ****/
-int read_object_config_data(char *, int);     /* reads all external configuration data of specific types */
+int read_object_config_data(const char *, int);     /* reads all external configuration data of specific types */
 
 
 /**** Object Creation Functions ****/
@@ -837,30 +819,13 @@ int is_contact_for_host(struct host *, struct contact *);			       /* tests whet
 int is_escalated_contact_for_host(struct host *, struct contact *);                   /* checks whether or not a contact is an escalated contact for a specific host */
 int is_contact_for_service(struct service *, struct contact *);		       /* tests whether or not a contact is a contact member for a specific service */
 int is_escalated_contact_for_service(struct service *, struct contact *);             /* checks whether or not a contact is an escalated contact for a specific service */
-int is_host_immediate_parent_of_host(struct host *, struct host *);		       /* tests whether or not a host is an immediate parent of another host */
 
 int number_of_immediate_child_hosts(struct host *);		                /* counts the number of immediate child hosts for a particular host */
 int number_of_total_child_hosts(struct host *);				/* counts the number of total child hosts for a particular host */
 int number_of_immediate_parent_hosts(struct host *);				/* counts the number of immediate parents hosts for a particular host */
 
-#ifdef NSCORE
+#ifndef NSCGI
 void fcache_contactlist(FILE *fp, const char *prefix, struct contactsmember *list);
-void fcache_contactgrouplist(FILE *fp, const char *prefix, struct contactgroupsmember *list);
-void fcache_hostlist(FILE *fp, const char *prefix, struct hostsmember *list);
-void fcache_customvars(FILE *fp, struct customvariablesmember *cvlist);
-void fcache_timeperiod(FILE *fp, struct timeperiod *temp_timeperiod);
-void fcache_command(FILE *fp, struct command *temp_command);
-void fcache_contactgroup(FILE *fp, struct contactgroup *temp_contactgroup);
-void fcache_hostgroup(FILE *fp, struct hostgroup *temp_hostgroup);
-void fcache_servicegroup(FILE *fp, struct servicegroup *temp_servicegroup);
-void fcache_contact(FILE *fp, struct contact *temp_contact);
-void fcache_host(FILE *fp, struct host *temp_host);
-void fcache_service(FILE *fp, struct service *temp_service);
-void fcache_servicedependency(FILE *fp, struct servicedependency *temp_servicedependency);
-void fcache_serviceescalation(FILE *fp, struct serviceescalation *temp_serviceescalation);
-void fcache_hostdependency(FILE *fp, struct hostdependency *temp_hostdependency);
-void fcache_hostescalation(FILE *fp, struct hostescalation *temp_hostescalation);
-void fcache_contactlist(FILE *fp, const char *prefix, contactsmember *list);
 void fcache_contactgrouplist(FILE *fp, const char *prefix, struct contactgroupsmember *list);
 void fcache_hostlist(FILE *fp, const char *prefix, struct hostsmember *list);
 void fcache_customvars(FILE *fp, struct customvariablesmember *cvlist);
