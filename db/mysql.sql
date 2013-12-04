@@ -38,7 +38,7 @@ CREATE TABLE IF NOT EXISTS `nagios_acknowledgements` (
   `persistent_comment` smallint(6) NOT NULL default '0',
   `notify_contacts` smallint(6) NOT NULL default '0',
   PRIMARY KEY  (`acknowledgement_id`),
-  UNIQUE_KEY `instance_id` (`entry_time`)
+  UNIQUE KEY `instance_id` (`entry_time`)
 ) ENGINE=MyISAM COMMENT='Current and historical host and service acknowledgements';
 
 -- --------------------------------------------------------
@@ -250,6 +250,7 @@ CREATE TABLE IF NOT EXISTS `nagios_contacts` (
   `alias` varchar(64) character set latin1 NOT NULL default '',
   `email_address` varchar(255) character set latin1 NOT NULL default '',
   `pager_address` varchar(64) character set latin1 NOT NULL default '',
+  `minimum_importance` int(11) NOT NULL default '0',
   `host_timeperiod_object_id` int(11) NOT NULL default '0',
   `service_timeperiod_object_id` int(11) NOT NULL default '0',
   `host_notifications_enabled` smallint(6) NOT NULL default '0',
@@ -627,6 +628,7 @@ CREATE TABLE IF NOT EXISTS `nagios_hosts` (
   `alias` varchar(64) character set latin1 NOT NULL default '',
   `display_name` varchar(64) character set latin1 NOT NULL default '',
   `address` varchar(128) character set latin1 NOT NULL default '',
+  `importance` int(11) NOT NULL default '0',
   `check_command_object_id` int(11) NOT NULL default '0',
   `check_command_args` varchar(255) character set latin1 NOT NULL default '',
   `eventhandler_command_object_id` int(11) NOT NULL default '0',
@@ -1131,6 +1133,7 @@ CREATE TABLE IF NOT EXISTS `nagios_services` (
   `host_object_id` int(11) NOT NULL default '0',
   `service_object_id` int(11) NOT NULL default '0',
   `display_name` varchar(64) character set latin1 NOT NULL default '',
+  `importance` int(11) NOT NULL default '0',
   `check_command_object_id` int(11) NOT NULL default '0',
   `check_command_args` varchar(255) character set latin1 NOT NULL default '',
   `eventhandler_command_object_id` int(11) NOT NULL default '0',
@@ -1287,6 +1290,21 @@ CREATE TABLE IF NOT EXISTS `nagios_service_contacts` (
   PRIMARY KEY  (`service_contact_id`),
   UNIQUE KEY `instance_id` (`instance_id`,`service_id`,`contact_object_id`)
 ) ENGINE=MyISAM ;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `nagios_service_parentservices`
+--
+
+CREATE TABLE IF NOT EXISTS `nagios_service_parentservices` (
+  `service_parentservice_id` int(11) NOT NULL auto_increment,
+  `instance_id` smallint(6) NOT NULL default '0',
+  `service_id` int(11) NOT NULL default '0',
+  `parent_service_object_id` int(11) NOT NULL default '0',
+  PRIMARY KEY  (`service_parentservice_id`),
+  UNIQUE KEY `instance_id` (`service_id`,`parent_service_object_id`)
+) ENGINE=MyISAM  COMMENT='Parent services';
 
 -- --------------------------------------------------------
 
