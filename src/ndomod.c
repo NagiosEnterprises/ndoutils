@@ -1312,7 +1312,16 @@ int ndomod_deregister_callbacks(void){
 	return NDO_OK;
         }
 
-static int ndomod_broker_data_serialize(char *buf, size_t bufsize, int datatype,
+static void ndomod_enddata_serialize(ndo_dbuf *dbufp) {
+
+	char temp[64];
+
+	snprintf(temp, sizeof(temp)-1, "\n%d\n\n", NDO_API_ENDDATA);
+	temp[sizeof(temp)-1] = '\x0';
+	ndo_dbuf_strcat(dbufp, temp);
+	}
+
+static void ndomod_broker_data_serialize(ndo_dbuf *dbufp, int datatype,
 		struct ndo_broker_data *bd, size_t bdsize, int add_enddata) {
 
 	size_t bufused = 0;
@@ -1322,13 +1331,8 @@ static int ndomod_broker_data_serialize(char *buf, size_t bufsize, int datatype,
 
 	/* Start everything out with the broker data type */
 	snprintf(temp, sizeof(temp)-1, "\n%d:", datatype);
-	if(bufused + strlen(temp) < bufsize) {
-		strcat(buf, temp);
-		bufused += strlen(temp);
-		}
-	else {
-		return 0;
-		}
+	temp[sizeof(temp)-1]='\x0';
+	ndo_dbuf_strcat(dbufp, temp);
 
 	/* Add each value */
 	for(x = 0, bdp = bd; x < bdsize; x++, bdp++) {
@@ -1336,62 +1340,254 @@ static int ndomod_broker_data_serialize(char *buf, size_t bufsize, int datatype,
 		case BD_INT:
 			snprintf(temp, sizeof(temp)-1, "\n%d=%d", bdp->key, 
 					bdp->value.integer);
-			bufused += strlen(temp);
-			if(bufused < bufsize) {
-				strcat(buf, temp);
-				}
+			temp[sizeof(temp)-1]='\x0';
+			ndo_dbuf_strcat(dbufp, temp);
 			break;
 		case BD_TIMEVAL:
 			snprintf(temp, sizeof(temp)-1, "\n%d=%ld.%ld", bdp->key, 
 					bdp->value.timestamp.tv_sec, bdp->value.timestamp.tv_usec);
-			bufused += strlen(temp);
-			if(bufused + strlen(temp) < bufsize) {
-				strcat(buf, temp);
-				}
+			temp[sizeof(temp)-1]='\x0';
+			ndo_dbuf_strcat(dbufp, temp);
 			break;
 		case BD_STRING:
 			snprintf(temp, sizeof(temp)-1, "\n%d=", bdp->key);
-			bufused += strlen(temp) + strlen(bdp->value.string);
-			if(bufused < bufsize) {
-				strcat(buf, temp);
-				strcat(buf, bdp->value.string);
-				}
+			temp[sizeof(temp)-1]='\x0';
+			ndo_dbuf_strcat(dbufp, temp);
+			ndo_dbuf_strcat(dbufp, bdp->value.string);
 			break;
 		case BD_UNSIGNED_LONG:
 			snprintf(temp, sizeof(temp)-1, "\n%d=%lu", bdp->key, 
 					bdp->value.unsigned_long);
-			bufused += strlen(temp);
-			if(bufused < bufsize) {
-				strcat(buf, temp);
-				}
+			temp[sizeof(temp)-1]='\x0';
+			ndo_dbuf_strcat(dbufp, temp);
 			break;
 		case BD_FLOAT:
 			snprintf(temp, sizeof(temp)-1, "\n%d=%.5lf", bdp->key, 
 					bdp->value.floating_point);
-			bufused += strlen(temp);
-			if(bufused < bufsize) {
-				strcat(buf, temp);
-				}
+			temp[sizeof(temp)-1]='\x0';
+			ndo_dbuf_strcat(dbufp, temp);
 			break;
-			}
-		if(bufused > bufsize) {
-			return 0;
 			}
 		}
 
 	/* Close everything out with an NDO_API_ENDDATA marker */
 	if(FALSE != add_enddata) {
-		snprintf(temp, sizeof(temp)-1, "\n%d\n\n", NDO_API_ENDDATA);
-		bufused += strlen(temp);
-		if(bufused < bufsize) {
-			strcat(buf, temp);
-			}
-		else {
-			return 0;
-			}
+		ndomod_enddata_serialize(dbufp);
 		}
 
-	return 1;
+	}
+
+#if ( defined( BUILD_NAGIOS_3X) || defined( BUILD_NAGIOS_4X))
+static void ndomod_customvars_serialize(customvariablesmember *customvars,
+	ndo_dbuf *dbufp) {
+
+	customvariablesmember *temp_customvar = NULL;
+	char * cvname;
+	char * cvvalue;
+	char temp_buffer[NDOMOD_MAX_BUFLEN];
+
+	for(temp_customvar = customvars; temp_customvar != NULL;
+			temp_customvar = temp_customvar->next) {
+
+		cvname = ndo_escape_buffer(temp_customvar->variable_name);
+		cvvalue = ndo_escape_buffer(temp_customvar->variable_value);
+
+		snprintf(temp_buffer, sizeof(temp_buffer)-1, "\n%d=%s:%d:%s",
+				NDO_DATA_CUSTOMVARIABLE, (NULL == cvname) ? "" : cvname,
+				temp_customvar->has_been_modified, 
+				(NULL == cvvalue ) ? "" : cvvalue);
+
+		temp_buffer[sizeof(temp_buffer)-1] = '\x0';
+		ndo_dbuf_strcat(dbufp, temp_buffer);
+
+		if(NULL != cvname) free(cvname);
+		if(NULL != cvvalue) free(cvvalue);
+		}
+	}
+#endif
+
+static void ndomod_contactgroups_serialize(contactgroupsmember *contactgroups,
+	ndo_dbuf *dbufp) {
+		
+	contactgroupsmember *temp_contactgroupsmember = NULL;
+	char *groupname;
+	char temp_buffer[NDOMOD_MAX_BUFLEN];
+
+	for(temp_contactgroupsmember = contactgroups; 
+			temp_contactgroupsmember != NULL;
+			temp_contactgroupsmember = temp_contactgroupsmember->next) {
+
+		groupname = ndo_escape_buffer(temp_contactgroupsmember->group_name);
+
+		snprintf(temp_buffer, sizeof(temp_buffer)-1,"\n%d=%s", 
+				NDO_DATA_CONTACTGROUP ,(NULL == groupname) ? "" : groupname);
+		temp_buffer[sizeof(temp_buffer)-1] = '\x0';
+		ndo_dbuf_strcat(dbufp, temp_buffer);
+
+		if(NULL != groupname) free(groupname);
+		}
+	}
+
+#ifdef BUILD_NAGIOS_2X
+static void ndomod_contacts_serialize(contactgroupmember *contacts,
+	ndo_dbuf *dbufp, int varnum) {
+
+	contactgroupmember *temp_contactgroupmember = NULL;
+	char *contact_name;
+	char temp_buffer[NDOMOD_MAX_BUFLEN];
+
+	for(temp_contactgroupmember = contacts; temp_contactgroupmember != NULL;
+			temp_contactgroupmember=temp_contactgroupmember->next) {
+
+		contact_name = ndo_escape_buffer(temp_contactgroupmember->contact_name);
+
+		snprintf(temp_buffer, sizeof(temp_buffer)-1, "\n%d=%s", varnum, 
+				(NULL == contact_name) ? "" : contact_name);
+		temp_buffer[sizeof(temp_buffer)-1] = '\x0';
+		ndo_dbuf_strcat(dbufp, temp_buffer);
+
+		if(NULL != contact_name) free(contact_name);
+		}
+	}
+
+#else
+static void ndomod_contacts_serialize(contactsmember *contacts,
+	ndo_dbuf *dbufp, int varnum) {
+
+	contactsmember *temp_contactsmember = NULL;
+	char *contact_name;
+	char temp_buffer[NDOMOD_MAX_BUFLEN];
+
+	for(temp_contactsmember = contacts; temp_contactsmember != NULL;
+			temp_contactsmember = temp_contactsmember->next) {
+
+		contact_name = ndo_escape_buffer(temp_contactsmember->contact_name);
+
+		snprintf(temp_buffer, sizeof(temp_buffer)-1, "\n%d=%s", varnum, 
+				(NULL == contact_name) ? "" : contact_name);
+		temp_buffer[sizeof(temp_buffer)-1] = '\x0';
+		ndo_dbuf_strcat(dbufp, temp_buffer);
+
+		if(NULL != contact_name) free(contact_name);
+		}
+	}
+#endif
+
+#ifdef BUILD_NAGIOS_2X
+static void ndomod_hosts_serialize_2x(hostgroupmember *hosts, ndo_dbuf *dbufp, 
+		int varnum) {
+
+	hostgroupmember *temp_hostgroupmember=NULL;
+	char *host_name;
+	char temp_buffer[NDOMOD_MAX_BUFLEN];
+
+	for(temp_hostgroupmember = hosts; temp_hostgroupmember != NULL;
+			temp_hostgroupmember = temp_hostgroupmember->next) {
+
+		host_name = ndo_escape_buffer(temp_hostgroupmember->host_name);
+
+		snprintf(temp_buffer, sizeof(temp_buffer)-1, "\n%d=%s", varnum,
+				(NULL == host_name) ? "" : host_name);
+		temp_buffer[sizeof(temp_buffer)-1] =  '\x0';
+		ndo_dbuf_strcat(dbufp, temp_buffer);
+
+		if(NULL != host_name) free(host_name);
+		}
+	}
+#endif
+
+static void ndomod_hosts_serialize(hostsmember *hosts, ndo_dbuf *dbufp, 
+		int varnum) {
+
+	hostsmember *temp_hostsmember = NULL;
+	char *host_name;
+	char temp_buffer[NDOMOD_MAX_BUFLEN];
+
+	for(temp_hostsmember = hosts; temp_hostsmember != NULL;
+			temp_hostsmember = temp_hostsmember->next) {
+
+		host_name = ndo_escape_buffer(temp_hostsmember->host_name);
+
+		snprintf(temp_buffer, sizeof(temp_buffer)-1, "\n%d=%s", varnum,
+				(NULL == host_name) ? "" : host_name);
+		temp_buffer[sizeof(temp_buffer)-1] =  '\x0';
+		ndo_dbuf_strcat(dbufp, temp_buffer);
+
+		if(NULL != host_name) free(host_name);
+		}
+	}
+
+#ifdef BUILD_NAGIOS_2X
+static void ndomod_services_serialize(servicegroupmember *services, 
+		ndo_dbuf *dbufp, int varnum) {
+
+	servicegroupmember *temp_servicegroupmember = NULL;
+	char *host_name;
+	char *service_description;
+	char temp_buffer[NDOMOD_MAX_BUFLEN];
+
+	for(temp_servicegroupmember = services; temp_servicegroupmember != NULL;
+			temp_servicegroupmember = temp_servicegroupmember->next) {
+
+		host_name = ndo_escape_buffer(temp_servicegroupmember->host_name);
+		service_description = ndo_escape_buffer(temp_servicegroupmember->service_description);
+
+		snprintf(temp_buffer, sizeof(temp_buffer)-1, "\n%d=%s;%s", varnum,
+				(NULL == host_name) ? "" : host_name,
+				(NULL == service_description) ? "" : service_description);
+		temp_buffer[sizeof(temp_buffer)-1] = '\x0';
+		ndo_dbuf_strcat(dbufp, temp_buffer);
+
+		if(NULL != host_name) free(host_name);
+		if(NULL != service_description) free(service_description);
+		}
+	}
+#else
+static void ndomod_services_serialize(servicesmember *services, ndo_dbuf *dbufp,
+		int varnum) {
+
+	servicesmember *temp_servicesmember = NULL;
+	char *host_name;
+	char *service_description;
+	char temp_buffer[NDOMOD_MAX_BUFLEN];
+
+	for(temp_servicesmember = services; temp_servicesmember != NULL;
+			temp_servicesmember=temp_servicesmember->next) {
+
+		host_name = ndo_escape_buffer(temp_servicesmember->host_name);
+		service_description = ndo_escape_buffer(temp_servicesmember->service_description);
+
+		snprintf(temp_buffer, sizeof(temp_buffer)-1, "\n%d=%s;%s", varnum,
+				(NULL == host_name) ? "" : host_name,
+				(NULL == service_description) ? "" : service_description);
+		temp_buffer[sizeof(temp_buffer)-1] = '\x0';
+		ndo_dbuf_strcat(dbufp, temp_buffer);
+
+		if(NULL != host_name) free(host_name);
+		if(NULL != service_description) free(service_description);
+		}
+	}
+#endif
+
+static void ndomod_commands_serialize(commandsmember *commands, ndo_dbuf *dbufp,
+		int varnum) {
+
+	commandsmember *temp_commandsmember = NULL;
+	char *command;
+	char temp_buffer[NDOMOD_MAX_BUFLEN];
+
+	for(temp_commandsmember = commands; temp_commandsmember != NULL;
+			temp_commandsmember=temp_commandsmember->next){
+
+		command = ndo_escape_buffer(temp_commandsmember->command);
+
+		snprintf(temp_buffer, sizeof(temp_buffer)-1, "\n%d=%s", varnum,
+				(command == NULL) ? "" : command);
+		temp_buffer[sizeof(temp_buffer)-1] = '\x0';
+		ndo_dbuf_strcat(dbufp, temp_buffer);
+
+		if(NULL != command) free(command);
+		}
 	}
 
 /* handles brokered event data */
@@ -1593,13 +1789,10 @@ int ndomod_broker_data(int event_type, void *data){
 						{ .unsigned_long = (unsigned long)getpid() }}
 				};
 
-			ndomod_broker_data_serialize(temp_buffer, sizeof(temp_buffer), 
-					NDO_API_PROCESSDATA, process_data, 
+			ndomod_broker_data_serialize(&dbuf, NDO_API_PROCESSDATA, 
+					process_data, 
 					sizeof(process_data) / sizeof(process_data[ 0]), TRUE);
 		}
-
-		temp_buffer[sizeof(temp_buffer)-1]='\x0';
-		ndo_dbuf_strcat(&dbuf,temp_buffer);
 
 		break;
 
@@ -1635,8 +1828,8 @@ int ndomod_broker_data(int event_type, void *data){
 							{ .string = (es[1]==NULL) ? "" : es[1] }}
 					};
 
-				ndomod_broker_data_serialize(temp_buffer, sizeof(temp_buffer), 
-						NDO_API_TIMEDEVENTDATA, timed_event_data, 
+				ndomod_broker_data_serialize(&dbuf, NDO_API_TIMEDEVENTDATA, 
+						timed_event_data, 
 						sizeof(timed_event_data) / sizeof(timed_event_data[ 0]),
 						TRUE);
 			}
@@ -1666,8 +1859,8 @@ int ndomod_broker_data(int event_type, void *data){
 							{ .string = (es[0]==NULL) ? "" : es[0] }}
 					};
 
-				ndomod_broker_data_serialize(temp_buffer, sizeof(temp_buffer), 
-						NDO_API_TIMEDEVENTDATA, timed_event_data, 
+				ndomod_broker_data_serialize(&dbuf, NDO_API_TIMEDEVENTDATA, 
+						timed_event_data, 
 						sizeof(timed_event_data) / sizeof(timed_event_data[ 0]),
 						TRUE);
 			}
@@ -1702,8 +1895,8 @@ int ndomod_broker_data(int event_type, void *data){
 							{ .string = (es[1]==NULL) ? "" : es[1] }}
 					};
 
-				ndomod_broker_data_serialize(temp_buffer, sizeof(temp_buffer), 
-						NDO_API_TIMEDEVENTDATA, timed_event_data, 
+				ndomod_broker_data_serialize(&dbuf, NDO_API_TIMEDEVENTDATA, 
+						timed_event_data, 
 						sizeof(timed_event_data) / sizeof(timed_event_data[ 0]),
 						TRUE);
 			}
@@ -1728,17 +1921,14 @@ int ndomod_broker_data(int event_type, void *data){
 							(unsigned long)eventdata->run_time }}
 					};
 
-				ndomod_broker_data_serialize(temp_buffer, sizeof(temp_buffer), 
-						NDO_API_TIMEDEVENTDATA, timed_event_data, 
+				ndomod_broker_data_serialize(&dbuf, NDO_API_TIMEDEVENTDATA, 
+						timed_event_data, 
 						sizeof(timed_event_data) / sizeof(timed_event_data[ 0]),
 						TRUE);
 			}
 
 			break;
 		        }
-
-		temp_buffer[sizeof(temp_buffer)-1]='\x0';
-		ndo_dbuf_strcat(&dbuf,temp_buffer);
 
 		break;
 
@@ -1761,13 +1951,9 @@ int ndomod_broker_data(int event_type, void *data){
 				{ NDO_DATA_LOGENTRY, BD_STRING, { .string = logdata->data }}
 				};
 
-			ndomod_broker_data_serialize(temp_buffer, sizeof(temp_buffer), 
-					NDO_API_LOGDATA, log_data, 
+			ndomod_broker_data_serialize(&dbuf, NDO_API_LOGDATA, log_data, 
 					sizeof(log_data) / sizeof(log_data[ 0]), TRUE);
 		}
-
-		temp_buffer[sizeof(temp_buffer)-1]='\x0';
-		ndo_dbuf_strcat(&dbuf,temp_buffer);
 
 		break;
 
@@ -1806,14 +1992,10 @@ int ndomod_broker_data(int event_type, void *data){
 						{ .string = (es[2]==NULL) ? "" : es[2] }}
 				};
 
-			ndomod_broker_data_serialize(temp_buffer, sizeof(temp_buffer), 
-					NDO_API_SYSTEMCOMMANDDATA, system_command_data, 
-					sizeof(system_command_data) / 
+			ndomod_broker_data_serialize(&dbuf, NDO_API_SYSTEMCOMMANDDATA, 
+					system_command_data, sizeof(system_command_data) / 
 					sizeof(system_command_data[ 0]), TRUE);
 		}
-
-		temp_buffer[sizeof(temp_buffer)-1]='\x0';
-		ndo_dbuf_strcat(&dbuf,temp_buffer);
 
 		break;
 
@@ -1868,14 +2050,11 @@ int ndomod_broker_data(int event_type, void *data){
 						{ .string = (es[6]==NULL) ? "" : es[6] }}
 				};
 
-			ndomod_broker_data_serialize(temp_buffer, sizeof(temp_buffer), 
-					NDO_API_EVENTHANDLERDATA, event_handler_data, 
+			ndomod_broker_data_serialize(&dbuf, NDO_API_EVENTHANDLERDATA, 
+					event_handler_data, 
 					sizeof(event_handler_data) / sizeof(event_handler_data[ 0]),
 					TRUE);
 		}
-
-		temp_buffer[sizeof(temp_buffer)-1]='\x0';
-		ndo_dbuf_strcat(&dbuf,temp_buffer);
 
 		break;
 
@@ -1926,14 +2105,11 @@ int ndomod_broker_data(int event_type, void *data){
 						{ .integer = notdata->contacts_notified }}
 				};
 
-			ndomod_broker_data_serialize(temp_buffer, sizeof(temp_buffer), 
-					NDO_API_NOTIFICATIONDATA, notification_data, 
+			ndomod_broker_data_serialize(&dbuf, NDO_API_NOTIFICATIONDATA, 
+					notification_data, 
 					sizeof(notification_data) / sizeof(notification_data[ 0]),
 					TRUE);
 		}
-
-		temp_buffer[sizeof(temp_buffer)-1]='\x0';
-		ndo_dbuf_strcat(&dbuf,temp_buffer);
 
 		break;
 
@@ -2005,14 +2181,11 @@ int ndomod_broker_data(int event_type, void *data){
 						{ .string = (es[7]==NULL) ? "" : es[7] }}
 				};
 
-			ndomod_broker_data_serialize(temp_buffer, sizeof(temp_buffer), 
-					NDO_API_SERVICECHECKDATA, service_check_data, 
+			ndomod_broker_data_serialize(&dbuf, NDO_API_SERVICECHECKDATA, 
+					service_check_data, 
 					sizeof(service_check_data) / sizeof(service_check_data[ 0]),
 					TRUE);
 		}
-
-		temp_buffer[sizeof(temp_buffer)-1]='\x0';
-		ndo_dbuf_strcat(&dbuf,temp_buffer);
 
 		break;
 
@@ -2081,14 +2254,11 @@ int ndomod_broker_data(int event_type, void *data){
 						{ .string = (es[6]==NULL) ? "" : es[6] }}
 				};
 
-			ndomod_broker_data_serialize(temp_buffer, sizeof(temp_buffer), 
-					NDO_API_HOSTCHECKDATA, host_check_data, 
+			ndomod_broker_data_serialize(&dbuf, NDO_API_HOSTCHECKDATA, 
+					host_check_data, 
 					sizeof(host_check_data) / sizeof(host_check_data[ 0]),
 					TRUE);
 		}
-
-		temp_buffer[sizeof(temp_buffer)-1]='\x0';
-		ndo_dbuf_strcat(&dbuf,temp_buffer);
 
 		break;
 
@@ -2135,13 +2305,10 @@ int ndomod_broker_data(int event_type, void *data){
 						{ .unsigned_long = comdata->comment_id }}
 				};
 
-			ndomod_broker_data_serialize(temp_buffer, sizeof(temp_buffer), 
-					NDO_API_COMMENTDATA, comment_data, 
+			ndomod_broker_data_serialize(&dbuf, NDO_API_COMMENTDATA, 
+					comment_data, 
 					sizeof(comment_data) / sizeof(comment_data[ 0]), TRUE);
 		}
-
-		temp_buffer[sizeof(temp_buffer)-1]='\x0';
-		ndo_dbuf_strcat(&dbuf,temp_buffer);
 
 		break;
 
@@ -2187,13 +2354,10 @@ int ndomod_broker_data(int event_type, void *data){
 						(unsigned long)downdata->downtime_id }}
 				};
 
-			ndomod_broker_data_serialize(temp_buffer, sizeof(temp_buffer), 
-					NDO_API_DOWNTIMEDATA, downtime_data, 
+			ndomod_broker_data_serialize(&dbuf, NDO_API_DOWNTIMEDATA, 
+					downtime_data, 
 					sizeof(downtime_data) / sizeof(downtime_data[ 0]), TRUE);
 		}
-
-		temp_buffer[sizeof(temp_buffer)-1]='\x0';
-		ndo_dbuf_strcat(&dbuf,temp_buffer);
 
 		break;
 
@@ -2236,13 +2400,10 @@ int ndomod_broker_data(int event_type, void *data){
 						{ .unsigned_long = flapdata->comment_id }}
 				};
 
-			ndomod_broker_data_serialize(temp_buffer, sizeof(temp_buffer), 
-					NDO_API_FLAPPINGDATA, flapping_data, 
+			ndomod_broker_data_serialize(&dbuf, NDO_API_FLAPPINGDATA, 
+					flapping_data, 
 					sizeof(flapping_data) / sizeof(flapping_data[ 0]), TRUE);
 		}
-
-		temp_buffer[sizeof(temp_buffer)-1]='\x0';
-		ndo_dbuf_strcat(&dbuf,temp_buffer);
 
 		break;
 
@@ -2316,14 +2477,11 @@ int ndomod_broker_data(int event_type, void *data){
 						{ .string = (es[1]==NULL) ? "" : es[1] }},
 				};
 
-			ndomod_broker_data_serialize(temp_buffer, sizeof(temp_buffer), 
-					NDO_API_PROGRAMSTATUSDATA, program_status_data, 
+			ndomod_broker_data_serialize(&dbuf, NDO_API_PROGRAMSTATUSDATA, 
+					program_status_data, 
 					sizeof(program_status_data) / 
 					sizeof(program_status_data[ 0]), TRUE);
 		}
-
-		temp_buffer[sizeof(temp_buffer)-1]='\x0';
-		ndo_dbuf_strcat(&dbuf,temp_buffer);
 
 		break;
 
@@ -2492,47 +2650,17 @@ int ndomod_broker_data(int event_type, void *data){
 						{ .string = (es[6]==NULL) ? "" : es[6] }}
 				};
 
-			ndomod_broker_data_serialize(temp_buffer, sizeof(temp_buffer), 
-					NDO_API_HOSTSTATUSDATA, host_status_data, 
+			ndomod_broker_data_serialize(&dbuf, NDO_API_HOSTSTATUSDATA, 
+					host_status_data, 
 					sizeof(host_status_data) / sizeof(host_status_data[ 0]),
 					FALSE);
 		}
 
-		temp_buffer[sizeof(temp_buffer)-1]='\x0';
-		ndo_dbuf_strcat(&dbuf,temp_buffer);
-
 #if ( defined( BUILD_NAGIOS_3X) || defined( BUILD_NAGIOS_4X))
-		/* dump customvars */
-		for(temp_customvar=temp_host->custom_variables;temp_customvar!=NULL;temp_customvar=temp_customvar->next){
-
-			for(x=0;x<2;x++){
-				free(es[x]);
-				es[x]=NULL;
-				}
-
-			es[0]=ndo_escape_buffer(temp_customvar->variable_name);
-			es[1]=ndo_escape_buffer(temp_customvar->variable_value);
-
-			snprintf(temp_buffer,sizeof(temp_buffer)-1
-				 ,"\n%d=%s:%d:%s"
-				 ,NDO_DATA_CUSTOMVARIABLE
-				 ,(es[0]==NULL)?"":es[0]
-				 ,temp_customvar->has_been_modified
-				 ,(es[1]==NULL)?"":es[1]
-				);
-
-			temp_buffer[sizeof(temp_buffer)-1]='\x0';
-			ndo_dbuf_strcat(&dbuf,temp_buffer);
-		        }
+		ndomod_customvars_serialize(temp_host->custom_variables, &dbuf);
 #endif
 
-		snprintf(temp_buffer,sizeof(temp_buffer)-1
-			 ,"\n%d\n\n"
-			 ,NDO_API_ENDDATA
-			);
-
-		temp_buffer[sizeof(temp_buffer)-1]='\x0';
-		ndo_dbuf_strcat(&dbuf,temp_buffer);
+		ndomod_enddata_serialize(&dbuf);
 
 		break;
 
@@ -2695,47 +2823,16 @@ int ndomod_broker_data(int event_type, void *data){
 						{ .string = (es[7]==NULL) ? "" : es[7] }}
 				};
 
-			ndomod_broker_data_serialize(temp_buffer, sizeof(temp_buffer), 
-					NDO_API_SERVICESTATUSDATA, service_status_data, 
-					sizeof(service_status_data) / 
+			ndomod_broker_data_serialize(&dbuf, NDO_API_SERVICESTATUSDATA, 
+					service_status_data, sizeof(service_status_data) / 
 					sizeof(service_status_data[ 0]), FALSE);
 		}
 
-		temp_buffer[sizeof(temp_buffer)-1]='\x0';
-		ndo_dbuf_strcat(&dbuf,temp_buffer);
-
 #if ( defined( BUILD_NAGIOS_3X) || defined( BUILD_NAGIOS_4X))
-		/* dump customvars */
-		for(temp_customvar=temp_service->custom_variables;temp_customvar!=NULL;temp_customvar=temp_customvar->next){
-
-			for(x=0;x<2;x++){
-				free(es[x]);
-				es[x]=NULL;
-				}
-
-			es[0]=ndo_escape_buffer(temp_customvar->variable_name);
-			es[1]=ndo_escape_buffer(temp_customvar->variable_value);
-
-			snprintf(temp_buffer,sizeof(temp_buffer)-1
-				 ,"\n%d=%s:%d:%s"
-				 ,NDO_DATA_CUSTOMVARIABLE
-				 ,(es[0]==NULL)?"":es[0]
-				 ,temp_customvar->has_been_modified
-				 ,(es[1]==NULL)?"":es[1]
-				);
-
-			temp_buffer[sizeof(temp_buffer)-1]='\x0';
-			ndo_dbuf_strcat(&dbuf,temp_buffer);
-		        }
+		ndomod_customvars_serialize(temp_service->custom_variables, &dbuf);
 #endif
 
-		snprintf(temp_buffer,sizeof(temp_buffer)-1
-			 ,"\n%d\n\n"
-			 ,NDO_API_ENDDATA
-			);
-
-		temp_buffer[sizeof(temp_buffer)-1]='\x0';
-		ndo_dbuf_strcat(&dbuf,temp_buffer);
+		ndomod_enddata_serialize(&dbuf);
 
 		break;
 
@@ -2783,45 +2880,15 @@ int ndomod_broker_data(int event_type, void *data){
 						temp_contact->modified_service_attributes }}
 				};
 
-			ndomod_broker_data_serialize(temp_buffer, sizeof(temp_buffer), 
-					NDO_API_CONTACTSTATUSDATA, contact_status_data, 
-					sizeof(contact_status_data) / 
+			ndomod_broker_data_serialize(&dbuf, NDO_API_CONTACTSTATUSDATA, 
+					contact_status_data, sizeof(contact_status_data) / 
 					sizeof(contact_status_data[ 0]), FALSE);
 		}
 
-		temp_buffer[sizeof(temp_buffer)-1]='\x0';
-		ndo_dbuf_strcat(&dbuf,temp_buffer);
-
 		/* dump customvars */
-		for(temp_customvar=temp_contact->custom_variables;temp_customvar!=NULL;temp_customvar=temp_customvar->next){
+		ndomod_customvars_serialize(temp_contact->custom_variables, &dbuf);
 
-			for(x=0;x<2;x++){
-				free(es[x]);
-				es[x]=NULL;
-				}
-
-			es[0]=ndo_escape_buffer(temp_customvar->variable_name);
-			es[1]=ndo_escape_buffer(temp_customvar->variable_value);
-
-			snprintf(temp_buffer,sizeof(temp_buffer)-1
-				 ,"\n%d=%s:%d:%s"
-				 ,NDO_DATA_CUSTOMVARIABLE
-				 ,(es[0]==NULL)?"":es[0]
-				 ,temp_customvar->has_been_modified
-				 ,(es[1]==NULL)?"":es[1]
-				);
-
-			temp_buffer[sizeof(temp_buffer)-1]='\x0';
-			ndo_dbuf_strcat(&dbuf,temp_buffer);
-		        }
-
-		snprintf(temp_buffer,sizeof(temp_buffer)-1
-			 ,"\n%d\n\n"
-			 ,NDO_API_ENDDATA
-			);
-
-		temp_buffer[sizeof(temp_buffer)-1]='\x0';
-		ndo_dbuf_strcat(&dbuf,temp_buffer);
+		ndomod_enddata_serialize(&dbuf);
 
 		break;
 #endif
@@ -2859,14 +2926,10 @@ int ndomod_broker_data(int event_type, void *data){
 						{ .string = (es[1]==NULL) ? "" : es[1] }},
 				};
 
-			ndomod_broker_data_serialize(temp_buffer, sizeof(temp_buffer), 
-					NDO_API_ADAPTIVEPROGRAMDATA, adaptive_program_data, 
-					sizeof(adaptive_program_data) / 
+			ndomod_broker_data_serialize(&dbuf, NDO_API_ADAPTIVEPROGRAMDATA, 
+					adaptive_program_data, sizeof(adaptive_program_data) / 
 					sizeof(adaptive_program_data[ 0]), TRUE);
 		}
-
-		temp_buffer[sizeof(temp_buffer)-1]='\x0';
-		ndo_dbuf_strcat(&dbuf,temp_buffer);
 
 		break;
 
@@ -2922,14 +2985,11 @@ int ndomod_broker_data(int event_type, void *data){
 						{ .integer = temp_host->max_attempts }},
 				};
 
-			ndomod_broker_data_serialize(temp_buffer, sizeof(temp_buffer), 
-					NDO_API_ADAPTIVEHOSTDATA, adaptive_host_data, 
+			ndomod_broker_data_serialize(&dbuf, NDO_API_ADAPTIVEHOSTDATA, 
+					adaptive_host_data, 
 					sizeof(adaptive_host_data) / sizeof(adaptive_host_data[ 0]),
 					TRUE);
 		}
-
-		temp_buffer[sizeof(temp_buffer)-1]='\x0';
-		ndo_dbuf_strcat(&dbuf,temp_buffer);
 
 		break;
 
@@ -2983,14 +3043,10 @@ int ndomod_broker_data(int event_type, void *data){
 						{ .integer = temp_service->max_attempts }},
 				};
 
-			ndomod_broker_data_serialize(temp_buffer, sizeof(temp_buffer), 
-					NDO_API_ADAPTIVESERVICEDATA, adaptive_service_data, 
-					sizeof(adaptive_service_data) / 
+			ndomod_broker_data_serialize(&dbuf, NDO_API_ADAPTIVESERVICEDATA, 
+					adaptive_service_data, sizeof(adaptive_service_data) / 
 					sizeof(adaptive_service_data[ 0]), TRUE);
 		}
-
-		temp_buffer[sizeof(temp_buffer)-1]='\x0';
-		ndo_dbuf_strcat(&dbuf,temp_buffer);
 
 		break;
 
@@ -3040,14 +3096,10 @@ int ndomod_broker_data(int event_type, void *data){
 						temp_contact->service_notifications_enabled }},
 				};
 
-			ndomod_broker_data_serialize(temp_buffer, sizeof(temp_buffer), 
-					NDO_API_ADAPTIVECONTACTDATA, adaptive_contact_data, 
-					sizeof(adaptive_contact_data) / 
+			ndomod_broker_data_serialize(&dbuf, NDO_API_ADAPTIVECONTACTDATA, 
+					adaptive_contact_data, sizeof(adaptive_contact_data) / 
 					sizeof(adaptive_contact_data[ 0]), TRUE);
 		}
-
-		temp_buffer[sizeof(temp_buffer)-1]='\x0';
-		ndo_dbuf_strcat(&dbuf,temp_buffer);
 
 		break;
 #endif
@@ -3077,14 +3129,10 @@ int ndomod_broker_data(int event_type, void *data){
 						{ .string = (es[1]==NULL) ? "" : es[1] }},
 				};
 
-			ndomod_broker_data_serialize(temp_buffer, sizeof(temp_buffer), 
-					NDO_API_EXTERNALCOMMANDDATA, external_command_data, 
-					sizeof(external_command_data) / 
+			ndomod_broker_data_serialize(&dbuf, NDO_API_EXTERNALCOMMANDDATA, 
+					external_command_data, sizeof(external_command_data) / 
 					sizeof(external_command_data[ 0]), TRUE);
 		}
-
-		temp_buffer[sizeof(temp_buffer)-1]='\x0';
-		ndo_dbuf_strcat(&dbuf,temp_buffer);
 
 		break;
 
@@ -3102,14 +3150,10 @@ int ndomod_broker_data(int event_type, void *data){
 						{ .timestamp = agsdata->timestamp }},
 				};
 
-			ndomod_broker_data_serialize(temp_buffer, sizeof(temp_buffer), 
-					NDO_API_AGGREGATEDSTATUSDATA, aggregated_status_data, 
-					sizeof(aggregated_status_data) / 
+			ndomod_broker_data_serialize(&dbuf, NDO_API_AGGREGATEDSTATUSDATA, 
+					aggregated_status_data, sizeof(aggregated_status_data) / 
 					sizeof(aggregated_status_data[ 0]), TRUE);
 		}
-
-		temp_buffer[sizeof(temp_buffer)-1]='\x0';
-		ndo_dbuf_strcat(&dbuf,temp_buffer);
 
 		break;
 
@@ -3127,13 +3171,10 @@ int ndomod_broker_data(int event_type, void *data){
 						{ .timestamp = rdata->timestamp }},
 				};
 
-			ndomod_broker_data_serialize(temp_buffer, sizeof(temp_buffer), 
-					NDO_API_RETENTIONDATA, retention_data, 
+			ndomod_broker_data_serialize(&dbuf, NDO_API_RETENTIONDATA, 
+					retention_data, 
 					sizeof(retention_data) / sizeof(retention_data[ 0]), TRUE);
 		}
-
-		temp_buffer[sizeof(temp_buffer)-1]='\x0';
-		ndo_dbuf_strcat(&dbuf,temp_buffer);
 
 		break;
 
@@ -3187,14 +3228,11 @@ int ndomod_broker_data(int event_type, void *data){
 						{ .string = (es[6]==NULL) ? "" : es[6] }},
 				};
 
-			ndomod_broker_data_serialize(temp_buffer, sizeof(temp_buffer), 
+			ndomod_broker_data_serialize(&dbuf,
 					NDO_API_CONTACTNOTIFICATIONDATA, contact_notification_data, 
 					sizeof(contact_notification_data) / 
 					sizeof(contact_notification_data[ 0]), TRUE);
 		}
-
-		temp_buffer[sizeof(temp_buffer)-1]='\x0';
-		ndo_dbuf_strcat(&dbuf,temp_buffer);
 
 		break;
 
@@ -3246,15 +3284,12 @@ int ndomod_broker_data(int event_type, void *data){
 						{ .string = (es[4]==NULL) ? "" : es[4] }},
 				};
 
-			ndomod_broker_data_serialize(temp_buffer, sizeof(temp_buffer), 
+			ndomod_broker_data_serialize(&dbuf,
 					NDO_API_CONTACTNOTIFICATIONMETHODDATA, 
 					contact_notification_method_data, 
 					sizeof(contact_notification_method_data) / 
 					sizeof(contact_notification_method_data[ 0]), TRUE);
 		}
-
-		temp_buffer[sizeof(temp_buffer)-1]='\x0';
-		ndo_dbuf_strcat(&dbuf,temp_buffer);
 
 		break;
 
@@ -3293,14 +3328,10 @@ int ndomod_broker_data(int event_type, void *data){
 						{ .integer = ackdata->notify_contacts }},
 				};
 
-			ndomod_broker_data_serialize(temp_buffer, sizeof(temp_buffer), 
-					NDO_API_ACKNOWLEDGEMENTDATA, acknowledgement_data, 
-					sizeof(acknowledgement_data) / 
+			ndomod_broker_data_serialize(&dbuf, NDO_API_ACKNOWLEDGEMENTDATA, 
+					acknowledgement_data, sizeof(acknowledgement_data) / 
 					sizeof(acknowledgement_data[ 0]), TRUE);
 		}
-
-		temp_buffer[sizeof(temp_buffer)-1]='\x0';
-		ndo_dbuf_strcat(&dbuf,temp_buffer);
 
 		break;
 
@@ -3381,14 +3412,11 @@ int ndomod_broker_data(int event_type, void *data){
 						{ .string = (es[3]==NULL) ? "" : es[3] }},
 				};
 
-			ndomod_broker_data_serialize(temp_buffer, sizeof(temp_buffer), 
-					NDO_API_STATECHANGEDATA, state_change_data, 
+			ndomod_broker_data_serialize(&dbuf, NDO_API_STATECHANGEDATA, 
+					state_change_data, 
 					sizeof(state_change_data) / sizeof(state_change_data[ 0]), 
 					TRUE);
 		}
-
-		temp_buffer[sizeof(temp_buffer)-1]='\x0';
-		ndo_dbuf_strcat(&dbuf,temp_buffer);
 
 		break;
 
@@ -3595,15 +3623,15 @@ int ndomod_write_object_config(int config_type){
 						{ .string = (es[1]==NULL) ? "" : es[1] }},
 				};
 
-			ndomod_broker_data_serialize(temp_buffer, sizeof(temp_buffer), 
-					NDO_API_COMMANDDEFINITION, command_definition, 
+			ndomod_broker_data_serialize(&dbuf, NDO_API_COMMANDDEFINITION, 
+					command_definition, 
 					sizeof(command_definition) / sizeof(command_definition[ 0]),
 					TRUE);
 		}
 
 		/* write data to sink */
-		temp_buffer[sizeof(temp_buffer)-1]='\x0';
-		ndomod_write_to_sink(temp_buffer,NDO_TRUE,NDO_TRUE);
+		ndomod_write_to_sink(dbuf.buf,NDO_TRUE,NDO_TRUE);
+		ndo_dbuf_free(&dbuf);
 	        }
 
 	/* free buffers */
@@ -3628,14 +3656,10 @@ int ndomod_write_object_config(int config_type){
 						{ .string = (es[1]==NULL) ? "" : es[1] }},
 				};
 
-			ndomod_broker_data_serialize(temp_buffer, sizeof(temp_buffer), 
-					NDO_API_TIMEPERIODDEFINITION, timeperiod_definition, 
-					sizeof(timeperiod_definition) / 
+			ndomod_broker_data_serialize(&dbuf, NDO_API_TIMEPERIODDEFINITION, 
+					timeperiod_definition, sizeof(timeperiod_definition) / 
 					sizeof(timeperiod_definition[ 0]), FALSE);
 		}
-
-		temp_buffer[sizeof(temp_buffer)-1]='\x0';
-		ndo_dbuf_strcat(&dbuf,temp_buffer);
 
 		/* dump timeranges for each day */
 		for(x=0;x<7;x++){
@@ -3653,12 +3677,7 @@ int ndomod_write_object_config(int config_type){
 			        }
 		        }
 
-		snprintf(temp_buffer,sizeof(temp_buffer)-1
-			 ,"\n%d\n\n"
-			 ,NDO_API_ENDDATA
-			);
-		temp_buffer[sizeof(temp_buffer)-1]='\x0';
-		ndo_dbuf_strcat(&dbuf,temp_buffer);
+		ndomod_enddata_serialize(&dbuf);
 
 		ndomod_write_to_sink(dbuf.buf,NDO_TRUE,NDO_TRUE);
 
@@ -3808,14 +3827,10 @@ int ndomod_write_object_config(int config_type){
 						{ .integer = notify_on_host_downtime }}
 				};
 
-			ndomod_broker_data_serialize(temp_buffer, sizeof(temp_buffer), 
-					NDO_API_CONTACTDEFINITION, contact_definition, 
-					sizeof(contact_definition) / 
+			ndomod_broker_data_serialize(&dbuf, NDO_API_CONTACTDEFINITION, 
+					contact_definition, sizeof(contact_definition) / 
 					sizeof(contact_definition[ 0]), FALSE);
 		}
-
-		temp_buffer[sizeof(temp_buffer)-1]='\x0';
-		ndo_dbuf_strcat(&dbuf,temp_buffer);
 
 		free(es[0]);
 		es[0]=NULL;
@@ -3839,69 +3854,19 @@ int ndomod_write_object_config(int config_type){
 		        }
 
 		/* dump host notification commands for each contact */
-		for(temp_commandsmember=temp_contact->host_notification_commands;temp_commandsmember!=NULL;temp_commandsmember=temp_commandsmember->next){
-
-			es[0]=ndo_escape_buffer(temp_commandsmember->command);
-
-			snprintf(temp_buffer,sizeof(temp_buffer)-1
-				 ,"\n%d=%s"
-				 ,NDO_DATA_HOSTNOTIFICATIONCOMMAND
-				 ,(es[0]==NULL)?"":es[0]
-				);
-			temp_buffer[sizeof(temp_buffer)-1]='\x0';
-			ndo_dbuf_strcat(&dbuf,temp_buffer);
-
-			free(es[0]);
-			es[0]=NULL;
-		        }
+		ndomod_commands_serialize(temp_contact->host_notification_commands, 
+				&dbuf, NDO_DATA_HOSTNOTIFICATIONCOMMAND);
 
 		/* dump service notification commands for each contact */
-		for(temp_commandsmember=temp_contact->service_notification_commands;temp_commandsmember!=NULL;temp_commandsmember=temp_commandsmember->next){
-
-			es[0]=ndo_escape_buffer(temp_commandsmember->command);
-
-			snprintf(temp_buffer,sizeof(temp_buffer)-1
-				 ,"\n%d=%s"
-				 ,NDO_DATA_SERVICENOTIFICATIONCOMMAND
-				 ,(es[0]==NULL)?"":es[0]
-				);
-			temp_buffer[sizeof(temp_buffer)-1]='\x0';
-			ndo_dbuf_strcat(&dbuf,temp_buffer);
-
-			free(es[0]);
-			es[0]=NULL;
-		        }
+		ndomod_commands_serialize(temp_contact->service_notification_commands, 
+				&dbuf, NDO_DATA_SERVICENOTIFICATIONCOMMAND);
 
 #if ( defined( BUILD_NAGIOS_3X) || defined( BUILD_NAGIOS_4X))
 		/* dump customvars */
-		for(temp_customvar=temp_contact->custom_variables;temp_customvar!=NULL;temp_customvar=temp_customvar->next){
-
-			es[0]=ndo_escape_buffer(temp_customvar->variable_name);
-			es[1]=ndo_escape_buffer(temp_customvar->variable_value);
-
-			snprintf(temp_buffer,sizeof(temp_buffer)-1
-				 ,"\n%d=%s:%d:%s"
-				 ,NDO_DATA_CUSTOMVARIABLE
-				 ,(es[0]==NULL)?"":es[0]
-				 ,temp_customvar->has_been_modified
-				 ,(es[1]==NULL)?"":es[1]
-				);
-			temp_buffer[sizeof(temp_buffer)-1]='\x0';
-			ndo_dbuf_strcat(&dbuf,temp_buffer);
-
-			for(x=0;x<2;x++){
-				free(es[x]);
-				es[x]=NULL;
-				}
-		        }
+		ndomod_customvars_serialize(temp_contact->custom_variables, &dbuf);
 #endif
 
-		snprintf(temp_buffer,sizeof(temp_buffer)-1
-			 ,"\n%d\n\n"
-			 ,NDO_API_ENDDATA
-			);
-		temp_buffer[sizeof(temp_buffer)-1]='\x0';
-		ndo_dbuf_strcat(&dbuf,temp_buffer);
+		ndomod_enddata_serialize(&dbuf);
 
 		ndomod_write_to_sink(dbuf.buf,NDO_TRUE,NDO_TRUE);
 
@@ -3931,50 +3896,19 @@ int ndomod_write_object_config(int config_type){
 						{ .string = (es[1]==NULL) ? "" : es[1] }},
 				};
 
-			ndomod_broker_data_serialize(temp_buffer, sizeof(temp_buffer), 
-					NDO_API_CONTACTGROUPDEFINITION, contactgroup_definition, 
-					sizeof(contactgroup_definition) / 
+			ndomod_broker_data_serialize(&dbuf, NDO_API_CONTACTGROUPDEFINITION, 
+					contactgroup_definition, sizeof(contactgroup_definition) / 
 					sizeof(contactgroup_definition[ 0]), FALSE);
 		}
-
-		temp_buffer[sizeof(temp_buffer)-1]='\x0';
-		ndo_dbuf_strcat(&dbuf,temp_buffer);
 
 		free(es[0]);
 		es[0]=NULL;
 
 		/* dump members for each contactgroup */
-#ifdef BUILD_NAGIOS_2X
-		for(temp_contactgroupmember=temp_contactgroup->members;temp_contactgroupmember!=NULL;temp_contactgroupmember=temp_contactgroupmember->next)
-#else
-		for(temp_contactsmember=temp_contactgroup->members;temp_contactsmember!=NULL;temp_contactsmember=temp_contactsmember->next)
-#endif
-			{
+		ndomod_contacts_serialize(temp_contactgroup->members, &dbuf, 
+				NDO_DATA_CONTACTGROUPMEMBER);
 
-#ifdef BUILD_NAGIOS_2X
-			es[0]=ndo_escape_buffer(temp_contactgroupmember->contact_name);
-#else
-			es[0]=ndo_escape_buffer(temp_contactsmember->contact_name);
-#endif
-
-			snprintf(temp_buffer,sizeof(temp_buffer)-1
-				 ,"\n%d=%s"
-				 ,NDO_DATA_CONTACTGROUPMEMBER
-				 ,(es[0]==NULL)?"":es[0]
-				);
-			temp_buffer[sizeof(temp_buffer)-1]='\x0';
-			ndo_dbuf_strcat(&dbuf,temp_buffer);
-
-			free(es[0]);
-			es[0]=NULL;
-		        }
-
-		snprintf(temp_buffer,sizeof(temp_buffer)-1
-			 ,"\n%d\n\n"
-			 ,NDO_API_ENDDATA
-			);
-		temp_buffer[sizeof(temp_buffer)-1]='\x0';
-		ndo_dbuf_strcat(&dbuf,temp_buffer);
+		ndomod_enddata_serialize(&dbuf);
 
 		ndomod_write_to_sink(dbuf.buf,NDO_TRUE,NDO_TRUE);
 
@@ -4256,102 +4190,32 @@ int ndomod_write_object_config(int config_type){
 				{ NDO_DATA_Z3D, BD_FLOAT, { .floating_point = z_3d }},
 				};
 
-			ndomod_broker_data_serialize(temp_buffer, sizeof(temp_buffer), 
-					NDO_API_HOSTDEFINITION, host_definition, 
-					sizeof(host_definition) / sizeof(host_definition[ 0]), 
-					FALSE);
+			ndomod_broker_data_serialize(&dbuf, NDO_API_HOSTDEFINITION, 
+					host_definition, sizeof(host_definition) / 
+					sizeof(host_definition[ 0]), FALSE);
 		}
-
-		temp_buffer[sizeof(temp_buffer)-1]='\x0';
-		ndo_dbuf_strcat(&dbuf,temp_buffer);
 
 		free(es[0]);
 		es[0]=NULL;
 
 		/* dump parent hosts */
-		for(temp_hostsmember=temp_host->parent_hosts;temp_hostsmember!=NULL;temp_hostsmember=temp_hostsmember->next){
-
-			es[0]=ndo_escape_buffer(temp_hostsmember->host_name);
-
-			snprintf(temp_buffer,sizeof(temp_buffer)-1
-				 ,"\n%d=%s"
-				 ,NDO_DATA_PARENTHOST
-				 ,(es[0]==NULL)?"":es[0]
-				);
-			temp_buffer[sizeof(temp_buffer)-1]='\x0';
-			ndo_dbuf_strcat(&dbuf,temp_buffer);
-
-			free(es[0]);
-			es[0]=NULL;
-		        }
+		ndomod_hosts_serialize(temp_host->parent_hosts, &dbuf, 
+				NDO_DATA_PARENTHOST);
 
 		/* dump contactgroups */
-		for(temp_contactgroupsmember=temp_host->contact_groups;temp_contactgroupsmember!=NULL;temp_contactgroupsmember=temp_contactgroupsmember->next){
-
-			es[0]=ndo_escape_buffer(temp_contactgroupsmember->group_name);
-
-			snprintf(temp_buffer,sizeof(temp_buffer)-1
-				 ,"\n%d=%s"
-				 ,NDO_DATA_CONTACTGROUP
-				 ,(es[0]==NULL)?"":es[0]
-				);
-			temp_buffer[sizeof(temp_buffer)-1]='\x0';
-			ndo_dbuf_strcat(&dbuf,temp_buffer);
-
-			free(es[0]);
-			es[0]=NULL;
-		        }
+		ndomod_contactgroups_serialize(temp_host->contact_groups, &dbuf);
 
 		/* dump individual contacts (not supported in Nagios 2.x) */
 #ifndef BUILD_NAGIOS_2X
-		for(temp_contactsmember=temp_host->contacts;temp_contactsmember!=NULL;temp_contactsmember=temp_contactsmember->next){
-
-			es[0]=ndo_escape_buffer(temp_contactsmember->contact_name);
-
-			snprintf(temp_buffer,sizeof(temp_buffer)-1
-				 ,"\n%d=%s"
-				 ,NDO_DATA_CONTACT
-				 ,(es[0]==NULL)?"":es[0]
-				);
-			temp_buffer[sizeof(temp_buffer)-1]='\x0';
-			ndo_dbuf_strcat(&dbuf,temp_buffer);
-
-			free(es[0]);
-			es[0]=NULL;
-			}
+		ndomod_contacts_serialize(temp_host->contacts, &dbuf, NDO_DATA_CONTACT);
 #endif
-
 
 #if ( defined( BUILD_NAGIOS_3X) || defined( BUILD_NAGIOS_4X))
 		/* dump customvars */
-		for(temp_customvar=temp_host->custom_variables;temp_customvar!=NULL;temp_customvar=temp_customvar->next){
-
-			es[0]=ndo_escape_buffer(temp_customvar->variable_name);
-			es[1]=ndo_escape_buffer(temp_customvar->variable_value);
-
-			snprintf(temp_buffer,sizeof(temp_buffer)-1
-				 ,"\n%d=%s:%d:%s"
-				 ,NDO_DATA_CUSTOMVARIABLE
-				 ,(es[0]==NULL)?"":es[0]
-				 ,temp_customvar->has_been_modified
-				 ,(es[1]==NULL)?"":es[1]
-				);
-			temp_buffer[sizeof(temp_buffer)-1]='\x0';
-			ndo_dbuf_strcat(&dbuf,temp_buffer);
-
-			for(x=0;x<2;x++){
-				free(es[x]);
-				es[x]=NULL;
-				}
-		        }
+		ndomod_customvars_serialize(temp_host->custom_variables, &dbuf);
 #endif
 
-		snprintf(temp_buffer,sizeof(temp_buffer)-1
-			 ,"\n%d\n\n"
-			 ,NDO_API_ENDDATA
-			);
-		temp_buffer[sizeof(temp_buffer)-1]='\x0';
-		ndo_dbuf_strcat(&dbuf,temp_buffer);
+		ndomod_enddata_serialize(&dbuf);
 
 		ndomod_write_to_sink(dbuf.buf,NDO_TRUE,NDO_TRUE);
 
@@ -4381,50 +4245,24 @@ int ndomod_write_object_config(int config_type){
 						{ .string = (es[1]==NULL) ? "" : es[1] }},
 				};
 
-			ndomod_broker_data_serialize(temp_buffer, sizeof(temp_buffer), 
-					NDO_API_HOSTGROUPDEFINITION, hostgroup_definition, 
-					sizeof(hostgroup_definition) / 
+			ndomod_broker_data_serialize(&dbuf, NDO_API_HOSTGROUPDEFINITION, 
+					hostgroup_definition, sizeof(hostgroup_definition) / 
 					sizeof(hostgroup_definition[ 0]), FALSE);
 		}
-
-		temp_buffer[sizeof(temp_buffer)-1]='\x0';
-		ndo_dbuf_strcat(&dbuf,temp_buffer);
 
 		free(es[0]);
 		es[0]=NULL;
 
 		/* dump members for each hostgroup */
 #ifdef BUILD_NAGIOS_2X
-		for(temp_hostgroupmember=temp_hostgroup->members;temp_hostgroupmember!=NULL;temp_hostgroupmember=temp_hostgroupmember->next)
+		ndomod_hosts_serialize_2x(temp_hostgroup->members, &dbuf, 
+				NDO_DATA_HOSTGROUPMEMBER);
 #else
-		for(temp_hostsmember=temp_hostgroup->members;temp_hostsmember!=NULL;temp_hostsmember=temp_hostsmember->next)
-#endif
-			{
-
-#ifdef BUILD_NAGIOS_2X
-			es[0]=ndo_escape_buffer(temp_hostgroupmember->host_name);
-#else
-			es[0]=ndo_escape_buffer(temp_hostsmember->host_name);
+		ndomod_hosts_serialize(temp_hostgroup->members, &dbuf, 
+				NDO_DATA_HOSTGROUPMEMBER);
 #endif
 
-			snprintf(temp_buffer,sizeof(temp_buffer)-1
-				 ,"\n%d=%s"
-				 ,NDO_DATA_HOSTGROUPMEMBER
-				 ,(es[0]==NULL)?"":es[0]
-				);
-			temp_buffer[sizeof(temp_buffer)-1]='\x0';
-			ndo_dbuf_strcat(&dbuf,temp_buffer);
-
-			free(es[0]);
-			es[0]=NULL;
-		        }
-
-		snprintf(temp_buffer,sizeof(temp_buffer)-1
-			 ,"\n%d\n\n"
-			 ,NDO_API_ENDDATA
-			);
-		temp_buffer[sizeof(temp_buffer)-1]='\x0';
-		ndo_dbuf_strcat(&dbuf,temp_buffer);
+		ndomod_enddata_serialize(&dbuf);
 
 		ndomod_write_to_sink(dbuf.buf,NDO_TRUE,NDO_TRUE);
 
@@ -4690,84 +4528,29 @@ int ndomod_write_object_config(int config_type){
 						{ .string = (es[11]==NULL) ? "" : es[11] }},
 				};
 
-			ndomod_broker_data_serialize(temp_buffer, sizeof(temp_buffer), 
-					NDO_API_SERVICEDEFINITION, service_definition, 
-					sizeof(service_definition) / 
+			ndomod_broker_data_serialize(&dbuf, NDO_API_SERVICEDEFINITION, 
+					service_definition, sizeof(service_definition) / 
 					sizeof(service_definition[ 0]), FALSE);
 		}
-
-		temp_buffer[sizeof(temp_buffer)-1]='\x0';
-		ndo_dbuf_strcat(&dbuf,temp_buffer);
 
 		free(es[0]);
 		es[0]=NULL;
 
 		/* dump contactgroups */
-		for(temp_contactgroupsmember=temp_service->contact_groups;temp_contactgroupsmember!=NULL;temp_contactgroupsmember=temp_contactgroupsmember->next){
-
-			es[0]=ndo_escape_buffer(temp_contactgroupsmember->group_name);
-
-			snprintf(temp_buffer,sizeof(temp_buffer)-1
-				 ,"\n%d=%s"
-				 ,NDO_DATA_CONTACTGROUP
-				 ,(es[0]==NULL)?"":es[0]
-				);
-			temp_buffer[sizeof(temp_buffer)-1]='\x0';
-			ndo_dbuf_strcat(&dbuf,temp_buffer);
-
-			free(es[0]);
-			es[0]=NULL;
-		        }
+		ndomod_contactgroups_serialize(temp_service->contact_groups, &dbuf);
 
 		/* dump individual contacts (not supported in Nagios 2.x) */
 #ifndef BUILD_NAGIOS_2X
-		for(temp_contactsmember=temp_service->contacts;temp_contactsmember!=NULL;temp_contactsmember=temp_contactsmember->next){
-
-			es[0]=ndo_escape_buffer(temp_contactsmember->contact_name);
-
-			snprintf(temp_buffer,sizeof(temp_buffer)-1
-				 ,"\n%d=%s"
-				 ,NDO_DATA_CONTACT
-				 ,(es[0]==NULL)?"":es[0]
-				);
-			temp_buffer[sizeof(temp_buffer)-1]='\x0';
-			ndo_dbuf_strcat(&dbuf,temp_buffer);
-
-			free(es[0]);
-			es[0]=NULL;
-			}
+		ndomod_contacts_serialize(temp_service->contacts, &dbuf, 
+				NDO_DATA_CONTACT);
 #endif
 
 #if ( defined( BUILD_NAGIOS_3X) || defined( BUILD_NAGIOS_4X))
 		/* dump customvars */
-		for(temp_customvar=temp_service->custom_variables;temp_customvar!=NULL;temp_customvar=temp_customvar->next){
-
-			es[0]=ndo_escape_buffer(temp_customvar->variable_name);
-			es[1]=ndo_escape_buffer(temp_customvar->variable_value);
-
-			snprintf(temp_buffer,sizeof(temp_buffer)-1
-				 ,"\n%d=%s:%d:%s"
-				 ,NDO_DATA_CUSTOMVARIABLE
-				 ,(es[0]==NULL)?"":es[0]
-				 ,temp_customvar->has_been_modified
-				 ,(es[1]==NULL)?"":es[1]
-				);
-			temp_buffer[sizeof(temp_buffer)-1]='\x0';
-			ndo_dbuf_strcat(&dbuf,temp_buffer);
-
-			for(x=0;x<2;x++){
-				free(es[x]);
-				es[x]=NULL;
-				}
-		        }
+		ndomod_customvars_serialize(temp_service->custom_variables, &dbuf);
 #endif
 
-		snprintf(temp_buffer,sizeof(temp_buffer)-1
-			 ,"\n%d\n\n"
-			 ,NDO_API_ENDDATA
-			);
-		temp_buffer[sizeof(temp_buffer)-1]='\x0';
-		ndo_dbuf_strcat(&dbuf,temp_buffer);
+		ndomod_enddata_serialize(&dbuf);
 
 		ndomod_write_to_sink(dbuf.buf,NDO_TRUE,NDO_TRUE);
 
@@ -4797,14 +4580,10 @@ int ndomod_write_object_config(int config_type){
 						{ .string = (es[1]==NULL) ? "" : es[1] }},
 				};
 
-			ndomod_broker_data_serialize(temp_buffer, sizeof(temp_buffer), 
-					NDO_API_SERVICEGROUPDEFINITION, servicegroup_definition, 
-					sizeof(servicegroup_definition) / 
+			ndomod_broker_data_serialize(&dbuf, NDO_API_SERVICEGROUPDEFINITION, 
+					servicegroup_definition, sizeof(servicegroup_definition) / 
 					sizeof(servicegroup_definition[ 0]), FALSE);
 		}
-
-		temp_buffer[sizeof(temp_buffer)-1]='\x0';
-		ndo_dbuf_strcat(&dbuf,temp_buffer);
 
 		free(es[0]);
 		free(es[1]);
@@ -4812,42 +4591,10 @@ int ndomod_write_object_config(int config_type){
 		es[1]=NULL;
 
 		/* dump members for each servicegroup */
-#ifdef BUILD_NAGIOS_2X
-		for(temp_servicegroupmember=temp_servicegroup->members;temp_servicegroupmember!=NULL;temp_servicegroupmember=temp_servicegroupmember->next)
-#else
-		for(temp_servicesmember=temp_servicegroup->members;temp_servicesmember!=NULL;temp_servicesmember=temp_servicesmember->next)
-#endif
-			{
+		ndomod_services_serialize(temp_servicegroup->members, &dbuf, 
+				NDO_DATA_SERVICEGROUPMEMBER);
 
-#ifdef BUILD_NAGIOS_2X
-			es[0]=ndo_escape_buffer(temp_servicegroupmember->host_name);
-			es[1]=ndo_escape_buffer(temp_servicegroupmember->service_description);
-#else
-			es[0]=ndo_escape_buffer(temp_servicesmember->host_name);
-			es[1]=ndo_escape_buffer(temp_servicesmember->service_description);
-#endif
-
-			snprintf(temp_buffer,sizeof(temp_buffer)-1
-				 ,"\n%d=%s;%s"
-				 ,NDO_DATA_SERVICEGROUPMEMBER
-				 ,(es[0]==NULL)?"":es[0]
-				 ,(es[1]==NULL)?"":es[1]
-				);
-			temp_buffer[sizeof(temp_buffer)-1]='\x0';
-			ndo_dbuf_strcat(&dbuf,temp_buffer);
-
-			free(es[0]);
-			free(es[1]);
-			es[0]=NULL;
-			es[1]=NULL;
-		        }
-
-		snprintf(temp_buffer,sizeof(temp_buffer)-1
-			 ,"\n%d\n\n"
-			 ,NDO_API_ENDDATA
-			);
-		temp_buffer[sizeof(temp_buffer)-1]='\x0';
-		ndo_dbuf_strcat(&dbuf,temp_buffer);
+		ndomod_enddata_serialize(&dbuf);
 
 		ndomod_write_to_sink(dbuf.buf,NDO_TRUE,NDO_TRUE);
 
@@ -4915,61 +4662,27 @@ int ndomod_write_object_config(int config_type){
 						}},
 				};
 
-			ndomod_broker_data_serialize(temp_buffer, sizeof(temp_buffer), 
+			ndomod_broker_data_serialize(&dbuf, 
 					NDO_API_HOSTESCALATIONDEFINITION, 
 					hostescalation_definition, 
 					sizeof(hostescalation_definition) / 
 					sizeof(hostescalation_definition[ 0]), FALSE);
 		}
 
-		temp_buffer[sizeof(temp_buffer)-1]='\x0';
-		ndo_dbuf_strcat(&dbuf,temp_buffer);
-
 		free(es[0]);
 		es[0]=NULL;
 
 		/* dump contactgroups */
-		for(temp_contactgroupsmember=temp_hostescalation->contact_groups;temp_contactgroupsmember!=NULL;temp_contactgroupsmember=temp_contactgroupsmember->next){
-
-			es[0]=ndo_escape_buffer(temp_contactgroupsmember->group_name);
-
-			snprintf(temp_buffer,sizeof(temp_buffer)-1
-				 ,"\n%d=%s"
-				 ,NDO_DATA_CONTACTGROUP
-				 ,(es[0]==NULL)?"":es[0]
-				);
-			temp_buffer[sizeof(temp_buffer)-1]='\x0';
-			ndo_dbuf_strcat(&dbuf,temp_buffer);
-
-			free(es[0]);
-			es[0]=NULL;
-		        }
+		ndomod_contactgroups_serialize(temp_hostescalation->contact_groups, 
+				&dbuf);
 
 		/* dump individual contacts (not supported in Nagios 2.x) */
 #ifndef BUILD_NAGIOS_2X
-		for(temp_contactsmember=temp_hostescalation->contacts;temp_contactsmember!=NULL;temp_contactsmember=temp_contactsmember->next){
-
-			es[0]=ndo_escape_buffer(temp_contactsmember->contact_name);
-
-			snprintf(temp_buffer,sizeof(temp_buffer)-1
-				 ,"\n%d=%s"
-				 ,NDO_DATA_CONTACT
-				 ,(es[0]==NULL)?"":es[0]
-				);
-			temp_buffer[sizeof(temp_buffer)-1]='\x0';
-			ndo_dbuf_strcat(&dbuf,temp_buffer);
-
-			free(es[0]);
-			es[0]=NULL;
-			}
+		ndomod_contacts_serialize(temp_hostescalation->contacts, &dbuf, 
+				NDO_DATA_CONTACT);
 #endif
 
-		snprintf(temp_buffer,sizeof(temp_buffer)-1
-			 ,"\n%d\n\n"
-			 ,NDO_API_ENDDATA
-			);
-		temp_buffer[sizeof(temp_buffer)-1]='\x0';
-		ndo_dbuf_strcat(&dbuf,temp_buffer);
+		ndomod_enddata_serialize(&dbuf);
 
 		ndomod_write_to_sink(dbuf.buf,NDO_TRUE,NDO_TRUE);
 
@@ -5053,61 +4766,27 @@ int ndomod_write_object_config(int config_type){
 						}},
 				};
 
-			ndomod_broker_data_serialize(temp_buffer, sizeof(temp_buffer), 
+			ndomod_broker_data_serialize(&dbuf, 
 					NDO_API_SERVICEESCALATIONDEFINITION, 
 					serviceescalation_definition, 
 					sizeof(serviceescalation_definition) / 
 					sizeof(serviceescalation_definition[ 0]), FALSE);
 		}
 
-		temp_buffer[sizeof(temp_buffer)-1]='\x0';
-		ndo_dbuf_strcat(&dbuf,temp_buffer);
-
 		free(es[0]);
 		es[0]=NULL;
 
 		/* dump contactgroups */
-		for(temp_contactgroupsmember=temp_serviceescalation->contact_groups;temp_contactgroupsmember!=NULL;temp_contactgroupsmember=temp_contactgroupsmember->next){
-
-			es[0]=ndo_escape_buffer(temp_contactgroupsmember->group_name);
-
-			snprintf(temp_buffer,sizeof(temp_buffer)-1
-				 ,"\n%d=%s"
-				 ,NDO_DATA_CONTACTGROUP
-				 ,(es[0]==NULL)?"":es[0]
-				);
-			temp_buffer[sizeof(temp_buffer)-1]='\x0';
-			ndo_dbuf_strcat(&dbuf,temp_buffer);
-
-			free(es[0]);
-			es[0]=NULL;
-		        }
+		ndomod_contactgroups_serialize(temp_serviceescalation->contact_groups, 
+				&dbuf);
 
 		/* dump individual contacts (not supported in Nagios 2.x) */
 #ifndef BUILD_NAGIOS_2X
-		for(temp_contactsmember=temp_serviceescalation->contacts;temp_contactsmember!=NULL;temp_contactsmember=temp_contactsmember->next){
-
-			es[0]=ndo_escape_buffer(temp_contactsmember->contact_name);
-
-			snprintf(temp_buffer,sizeof(temp_buffer)-1
-				 ,"\n%d=%s"
-				 ,NDO_DATA_CONTACT
-				 ,(es[0]==NULL)?"":es[0]
-				);
-			temp_buffer[sizeof(temp_buffer)-1]='\x0';
-			ndo_dbuf_strcat(&dbuf,temp_buffer);
-
-			free(es[0]);
-			es[0]=NULL;
-			}
+		ndomod_contacts_serialize(temp_serviceescalation->contacts, &dbuf, 
+				NDO_DATA_CONTACT);
 #endif
 
-		snprintf(temp_buffer,sizeof(temp_buffer)-1
-			 ,"\n%d\n\n"
-			 ,NDO_API_ENDDATA
-			);
-		temp_buffer[sizeof(temp_buffer)-1]='\x0';
-		ndo_dbuf_strcat(&dbuf,temp_buffer);
+		ndomod_enddata_serialize(&dbuf);
 
 		ndomod_write_to_sink(dbuf.buf,NDO_TRUE,NDO_TRUE);
 
@@ -5182,15 +4861,12 @@ int ndomod_write_object_config(int config_type){
 						}},
 				};
 
-			ndomod_broker_data_serialize(temp_buffer, sizeof(temp_buffer), 
+			ndomod_broker_data_serialize(&dbuf, 
 					NDO_API_HOSTDEPENDENCYDEFINITION, 
 					hostdependency_definition, 
 					sizeof(hostdependency_definition) / 
 					sizeof(hostdependency_definition[ 0]), TRUE);
 		}
-
-		temp_buffer[sizeof(temp_buffer)-1]='\x0';
-		ndo_dbuf_strcat(&dbuf,temp_buffer);
 
 		ndomod_write_to_sink(dbuf.buf,NDO_TRUE,NDO_TRUE);
 
@@ -5280,15 +4956,12 @@ int ndomod_write_object_config(int config_type){
 						}},
 				};
 
-			ndomod_broker_data_serialize(temp_buffer, sizeof(temp_buffer), 
+			ndomod_broker_data_serialize(&dbuf, 
 					NDO_API_SERVICEDEPENDENCYDEFINITION, 
 					servicedependency_definition, 
 					sizeof(servicedependency_definition) / 
 					sizeof(servicedependency_definition[ 0]), TRUE);
 		}
-
-		temp_buffer[sizeof(temp_buffer)-1]='\x0';
-		ndo_dbuf_strcat(&dbuf,temp_buffer);
 
 		ndomod_write_to_sink(dbuf.buf,NDO_TRUE,NDO_TRUE);
 
