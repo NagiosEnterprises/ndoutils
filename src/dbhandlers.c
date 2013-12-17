@@ -3259,6 +3259,9 @@ int ndo2db_handle_hostdefinition(ndo2db_idi *idi){
 	ndo2db_mbuf mbuf;
 	char *cmdptr=NULL;
 	char *argptr=NULL;
+#ifdef BUILD_NAGIOS_4X
+	int	importance=0;
+#endif
 
 	if(idi==NULL)
 		return NDO_ERROR;
@@ -3308,6 +3311,9 @@ int ndo2db_handle_hostdefinition(ndo2db_idi *idi){
 	result=ndo2db_convert_string_to_double(idi->buffered_input[NDO_DATA_X3D],&x_3d);
 	result=ndo2db_convert_string_to_double(idi->buffered_input[NDO_DATA_Y3D],&y_3d);
 	result=ndo2db_convert_string_to_double(idi->buffered_input[NDO_DATA_Z3D],&z_3d);
+#ifdef BUILD_NAGIOS_4X
+	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_IMPORTANCE],&importance);
+#endif
 
 	es[0]=ndo2db_db_escape_string(idi,idi->buffered_input[NDO_DATA_HOSTADDRESS]);
 	es[1]=ndo2db_db_escape_string(idi,idi->buffered_input[NDO_DATA_HOSTFAILUREPREDICTIONOPTIONS]);
@@ -3346,6 +3352,9 @@ int ndo2db_handle_hostdefinition(ndo2db_idi *idi){
 
  	/* add definition to db */
 	if(asprintf(&buf,"instance_id='%lu', config_type='%d', host_object_id='%lu', alias='%s', display_name='%s', address='%s', check_command_object_id='%lu', check_command_args='%s', eventhandler_command_object_id='%lu', eventhandler_command_args='%s', check_timeperiod_object_id='%lu', notification_timeperiod_object_id='%lu', failure_prediction_options='%s', check_interval='%lf', retry_interval='%lf', max_check_attempts='%d', first_notification_delay='%lf', notification_interval='%lf', notify_on_down='%d', notify_on_unreachable='%d', notify_on_recovery='%d', notify_on_flapping='%d', notify_on_downtime='%d', stalk_on_up='%d', stalk_on_down='%d', stalk_on_unreachable='%d', flap_detection_enabled='%d', flap_detection_on_up='%d', flap_detection_on_down='%d', flap_detection_on_unreachable='%d', low_flap_threshold='%lf', high_flap_threshold='%lf', process_performance_data='%d', freshness_checks_enabled='%d', freshness_threshold='%d', passive_checks_enabled='%d', event_handler_enabled='%d', active_checks_enabled='%d', retain_status_information='%d', retain_nonstatus_information='%d', notifications_enabled='%d', obsess_over_host='%d', failure_prediction_enabled='%d', notes='%s', notes_url='%s', action_url='%s', icon_image='%s', icon_image_alt='%s', vrml_image='%s', statusmap_image='%s', have_2d_coords='%d', x_2d='%d', y_2d='%d', have_3d_coords='%d', x_3d='%lf', y_3d='%lf', z_3d='%lf'"
+#ifdef BUILD_NAGIOS_4X
+			", importance='%d'"
+#endif
 		    ,idi->dbinfo.instance_id
 		    ,idi->current_object_config_type
 		    ,object_id
@@ -3403,6 +3412,9 @@ int ndo2db_handle_hostdefinition(ndo2db_idi *idi){
 		    ,x_3d
 		    ,y_3d
 		    ,z_3d
+#ifdef BUILD_NAGIOS_4X
+			,importance
+#endif
 		   )==-1)
 		buf=NULL;
 	
@@ -3673,6 +3685,9 @@ int ndo2db_handle_servicedefinition(ndo2db_idi *idi){
 	ndo2db_mbuf mbuf;
 	char *cmdptr=NULL;
 	char *argptr=NULL;
+#ifdef BUILD_NAGIOS_4X
+	int	importance=0;
+#endif
 
 	if(idi==NULL)
 		return NDO_ERROR;
@@ -3719,6 +3734,9 @@ int ndo2db_handle_servicedefinition(ndo2db_idi *idi){
 	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_SERVICEFAILUREPREDICTIONENABLED],&failure_prediction_enabled);
 	result=ndo2db_convert_string_to_double(idi->buffered_input[NDO_DATA_LOWSERVICEFLAPTHRESHOLD],&low_flap_threshold);
 	result=ndo2db_convert_string_to_double(idi->buffered_input[NDO_DATA_HIGHSERVICEFLAPTHRESHOLD],&high_flap_threshold);
+#ifdef BUILD_NAGIOS_4X
+	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_IMPORTANCE],&importance);
+#endif
 
 	es[0]=ndo2db_db_escape_string(idi,idi->buffered_input[NDO_DATA_SERVICEFAILUREPREDICTIONOPTIONS]);
 
@@ -3754,6 +3772,9 @@ int ndo2db_handle_servicedefinition(ndo2db_idi *idi){
 
 	/* add definition to db */
 	if(asprintf(&buf,"instance_id='%lu', config_type='%d', host_object_id='%lu', service_object_id='%lu', display_name='%s', check_command_object_id='%lu', check_command_args='%s', eventhandler_command_object_id='%lu', eventhandler_command_args='%s', check_timeperiod_object_id='%lu', notification_timeperiod_object_id='%lu', failure_prediction_options='%s', check_interval='%lf', retry_interval='%lf', max_check_attempts='%d', first_notification_delay='%lf', notification_interval='%lf', notify_on_warning='%d', notify_on_unknown='%d', notify_on_critical='%d', notify_on_recovery='%d', notify_on_flapping='%d', notify_on_downtime='%d', stalk_on_ok='%d', stalk_on_warning='%d', stalk_on_unknown='%d', stalk_on_critical='%d', is_volatile='%d', flap_detection_enabled='%d', flap_detection_on_ok='%d', flap_detection_on_warning='%d', flap_detection_on_unknown='%d', flap_detection_on_critical='%d', low_flap_threshold='%lf', high_flap_threshold='%lf', process_performance_data='%d', freshness_checks_enabled='%d', freshness_threshold='%d', passive_checks_enabled='%d', event_handler_enabled='%d', active_checks_enabled='%d', retain_status_information='%d', retain_nonstatus_information='%d', notifications_enabled='%d', obsess_over_service='%d', failure_prediction_enabled='%d', notes='%s', notes_url='%s', action_url='%s', icon_image='%s', icon_image_alt='%s'"
+#ifdef BUILD_NAGIOS_4X
+			", importance='%d'"
+#endif
 		    ,idi->dbinfo.instance_id
 		    ,idi->current_object_config_type
 		    ,host_id
@@ -3805,6 +3826,9 @@ int ndo2db_handle_servicedefinition(ndo2db_idi *idi){
 		    ,(es[5]==NULL)?"":es[5]
 		    ,(es[6]==NULL)?"":es[6]
 		    ,(es[7]==NULL)?"":es[7]
+#ifdef BUILD_NAGIOS_4X
+			,importance
+#endif
 		   )==-1)
 		buf=NULL;
 	
@@ -4620,6 +4644,9 @@ int ndo2db_handle_contactdefinition(ndo2db_idi *idi){
 	int address_number=0;
 	char *cmdptr=NULL;
 	char *argptr=NULL;
+#ifdef BUILD_NAGIOS_4X
+	int minimum_importance=0;
+#endif
 
 	if(idi==NULL)
 		return NDO_ERROR;
@@ -4646,6 +4673,9 @@ int ndo2db_handle_contactdefinition(ndo2db_idi *idi){
 	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_NOTIFYHOSTRECOVERY],&notify_host_recovery);
 	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_NOTIFYHOSTFLAPPING],&notify_host_flapping);
 	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_NOTIFYHOSTDOWNTIME],&notify_host_downtime);
+#ifdef BUILD_NAGIOS_4X
+	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_MINIMUMIMPORTANCE],&minimum_importance);
+#endif
 
 	es[0]=ndo2db_db_escape_string(idi,idi->buffered_input[NDO_DATA_CONTACTALIAS]);
 	es[1]=ndo2db_db_escape_string(idi,idi->buffered_input[NDO_DATA_EMAILADDRESS]);
@@ -4663,6 +4693,9 @@ int ndo2db_handle_contactdefinition(ndo2db_idi *idi){
 
 	/* add definition to db */
 	if(asprintf(&buf,"instance_id='%lu', config_type='%d', contact_object_id='%lu', alias='%s', email_address='%s', pager_address='%s', host_timeperiod_object_id='%lu', service_timeperiod_object_id='%lu', host_notifications_enabled='%d', service_notifications_enabled='%d', can_submit_commands='%d', notify_service_recovery='%d', notify_service_warning='%d', notify_service_unknown='%d', notify_service_critical='%d', notify_service_flapping='%d', notify_service_downtime='%d', notify_host_recovery='%d', notify_host_down='%d', notify_host_unreachable='%d', notify_host_flapping='%d', notify_host_downtime='%d'"
+#ifdef BUILD_NAGIOS_4X
+			", minimum_importance='%d'"
+#endif
 		    ,idi->dbinfo.instance_id
 		    ,idi->current_object_config_type
 		    ,contact_id
@@ -4685,6 +4718,9 @@ int ndo2db_handle_contactdefinition(ndo2db_idi *idi){
 		    ,notify_host_unreachable
 		    ,notify_host_flapping
 		    ,notify_host_downtime
+#ifdef BUILD_NAGIOS_4X
+			,minimum_importance
+#endif
 		   )==-1)
 		buf=NULL;
 	
