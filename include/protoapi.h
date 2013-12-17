@@ -107,7 +107,7 @@
 
 /************** COMMON DATA ATTRIBUTES **************/
 
-#define NDO_MAX_DATA_TYPES                           266
+#define NDO_MAX_DATA_TYPES                           268
 
 #define NDO_DATA_NONE                                0
 
@@ -385,5 +385,10 @@
 #define NDO_DATA_HASBEENMODIFIED                     263
 #define NDO_DATA_CONTACT                             264
 #define NDO_DATA_LASTSTATE                           265
+
+#ifdef BUILD_NAGIOS_4X
+#define NDO_DATA_IMPORTANCE                          266
+#define NDO_DATA_MINIMUMIMPORTANCE                   267
+#endif
 
 #endif

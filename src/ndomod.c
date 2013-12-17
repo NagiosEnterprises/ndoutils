@@ -3824,7 +3824,11 @@ int ndomod_write_object_config(int config_type){
 #endif
 						}},
 				{ NDO_DATA_NOTIFYHOSTDOWNTIME, BD_INT, 
-						{ .integer = notify_on_host_downtime }}
+						{ .integer = notify_on_host_downtime }},
+#ifdef BUILD_NAGIOS_4X
+				{ NDO_DATA_MINIMUMIMPORTANCE, BD_INT, 
+						{ .integer = temp_contact->minimum_value }},
+#endif
 				};
 
 			ndomod_broker_data_serialize(&dbuf, NDO_API_CONTACTDEFINITION, 
@@ -4188,6 +4192,10 @@ int ndomod_write_object_config(int config_type){
 				{ NDO_DATA_X3D, BD_FLOAT, { .floating_point = x_3d }},
 				{ NDO_DATA_Y3D, BD_FLOAT, { .floating_point = y_3d }},
 				{ NDO_DATA_Z3D, BD_FLOAT, { .floating_point = z_3d }},
+#ifdef BUILD_NAGIOS_4X
+				{ NDO_DATA_IMPORTANCE, BD_INT, 
+						{ .integer = temp_host->hourly_value }},
+#endif
 				};
 
 			ndomod_broker_data_serialize(&dbuf, NDO_API_HOSTDEFINITION, 
@@ -4526,6 +4534,10 @@ int ndomod_write_object_config(int config_type){
 						{ .string = (es[10]==NULL) ? "" : es[10] }},
 				{ NDO_DATA_ICONIMAGEALT, BD_STRING, 
 						{ .string = (es[11]==NULL) ? "" : es[11] }},
+#ifdef BUILD_NAGIOS_4X
+				{ NDO_DATA_IMPORTANCE, BD_INT, 
+						{ .integer = temp_service->hourly_value }},
+#endif
 				};
 
 			ndomod_broker_data_serialize(&dbuf, NDO_API_SERVICEDEFINITION, 
