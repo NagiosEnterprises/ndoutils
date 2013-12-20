@@ -835,7 +835,7 @@ CREATE TABLE IF NOT EXISTS `nagios_logentries` (
   `realtime_data` smallint(6) NOT NULL default '0',
   `inferred_data_extracted` smallint(6) NOT NULL default '0',
   PRIMARY KEY  (`logentry_id`),
-  UNIQUE KEY `instance_id` (`logentry_time`)
+  UNIQUE KEY `instance_id` (`logentry_time`,`entry_time`,`entry_time_usec`)
 ) ENGINE=MyISAM COMMENT='Historical record of log entries';
 
 -- --------------------------------------------------------

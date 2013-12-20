@@ -53,8 +53,8 @@ if ($@) {
 
 # Get current database version
 my $version;
-my $thisversion="2.0.0";
-my $lastversion="1.5.2";
+my $thisversion="2.0.1";
+my $lastversion="2.0.0";
 my $legacyversion="1.5.2";
 
 $version = $dbh->selectrow_array("SELECT version FROM nagios_dbversion WHERE name='ndoutils'");
