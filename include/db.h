@@ -104,8 +104,9 @@ typedef struct ndo2db_dbconfig_struct{
 #define NDO2DB_DBTABLE_SERVICECONTACTGROUPS           65
 #define NDO2DB_DBTABLE_HOSTESCALATIONCONTACTGROUPS    66
 #define NDO2DB_DBTABLE_SERVICEESCALATIONCONTACTGROUPS 67
+#define NDO2DB_DBTABLE_SERVICEPARENTSERVICES          68
 
-#define NDO2DB_MAX_DBTABLES                           68
+#define NDO2DB_MAX_DBTABLES                           69
 
 
 /**************** Object types *****************/

@@ -1707,6 +1707,7 @@ int ndo2db_add_input_data_item(ndo2db_idi *idi, int type, char *buf){
 	case NDO_DATA_NOTESURL:
 	case NDO_DATA_CUSTOMVARIABLE:
 	case NDO_DATA_CONTACT:
+	case NDO_DATA_PARENTSERVICE:
 
 		/* strings are escaped when they arrive */
 		if(buf==NULL)
@@ -1779,6 +1780,9 @@ int ndo2db_add_input_data_item(ndo2db_idi *idi, int type, char *buf){
 		break;
 	case NDO_DATA_CONTACT:
 		ndo2db_add_input_data_mbuf(idi,type,NDO2DB_MBUF_CONTACT,newbuf);
+		break;
+	case NDO_DATA_PARENTSERVICE:
+		ndo2db_add_input_data_mbuf(idi,type,NDO2DB_MBUF_PARENTSERVICE,newbuf);
 		break;
 
 	/* NORMAL DATA */

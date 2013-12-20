@@ -4548,6 +4548,12 @@ int ndomod_write_object_config(int config_type){
 		free(es[0]);
 		es[0]=NULL;
 
+#ifdef BUILD_NAGIOS_4X
+		/* dump parent services */
+		ndomod_services_serialize(temp_service->parents, &dbuf, 
+				NDO_DATA_PARENTSERVICE);
+#endif
+
 		/* dump contactgroups */
 		ndomod_contactgroups_serialize(temp_service->contact_groups, &dbuf);
 
