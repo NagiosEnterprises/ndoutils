@@ -91,7 +91,8 @@ char *ndo2db_db_rawtablenames[NDO2DB_MAX_DBTABLES]={
 	"host_contactgroups",
 	"service_contactgroups",
 	"hostescalation_contactgroups",
-	"serviceescalation_contactgroups"
+	"serviceescalation_contactgroups",
+	"service_parentservices",
         };
 
 

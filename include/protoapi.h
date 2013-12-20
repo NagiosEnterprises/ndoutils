@@ -107,7 +107,7 @@
 
 /************** COMMON DATA ATTRIBUTES **************/
 
-#define NDO_MAX_DATA_TYPES                           268
+#define NDO_MAX_DATA_TYPES                           269
 
 #define NDO_DATA_NONE                                0
 
@@ -386,9 +386,9 @@
 #define NDO_DATA_CONTACT                             264
 #define NDO_DATA_LASTSTATE                           265
 
-#ifdef BUILD_NAGIOS_4X
+/* Nagios Core 4 additions */
 #define NDO_DATA_IMPORTANCE                          266
 #define NDO_DATA_MINIMUMIMPORTANCE                   267
-#endif
+#define NDO_DATA_PARENTSERVICE                       268
 
 #endif

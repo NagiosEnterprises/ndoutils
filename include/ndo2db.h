@@ -28,8 +28,9 @@
 #define NDO2DB_MBUF_RUNTIMEVARIABLE                     11
 #define NDO2DB_MBUF_CUSTOMVARIABLE                      12
 #define NDO2DB_MBUF_CONTACT                             13
+#define NDO2DB_MBUF_PARENTSERVICE                       14
 
-#define NDO2DB_MAX_MBUF_ITEMS                           14
+#define NDO2DB_MAX_MBUF_ITEMS                           15
 
 
 /***************** structures *****************/

@@ -248,15 +248,21 @@ int ndo2db_get_cached_object_ids(ndo2db_idi *idi){
 		case NDO2DB_DBSERVER_MYSQL:
 #ifdef USE_MYSQL
 			idi->dbinfo.mysql_result=mysql_store_result(&idi->dbinfo.mysql_conn);
-			while((idi->dbinfo.mysql_row=mysql_fetch_row(idi->dbinfo.mysql_result))!=NULL){
+			if(NULL != idi->dbinfo.mysql_result) {
+				while((idi->dbinfo.mysql_row=mysql_fetch_row(idi->dbinfo.mysql_result))!=NULL){
 
-				ndo2db_convert_string_to_unsignedlong(idi->dbinfo.mysql_row[0],&object_id);
-				ndo2db_convert_string_to_int(idi->dbinfo.mysql_row[1],&objecttype_id);
+					ndo2db_convert_string_to_unsignedlong(idi->dbinfo.mysql_row[0],&object_id);
+					ndo2db_convert_string_to_int(idi->dbinfo.mysql_row[1],&objecttype_id);
 
-				/* add object to cached list */
-				ndo2db_add_cached_object_id(idi,objecttype_id,idi->dbinfo.mysql_row[2],idi->dbinfo.mysql_row[3],object_id);
-			        }
-			mysql_free_result(idi->dbinfo.mysql_result);
+					/* add object to cached list */
+					ndo2db_add_cached_object_id(idi,objecttype_id,idi->dbinfo.mysql_row[2],idi->dbinfo.mysql_row[3],object_id);
+					}
+				mysql_free_result(idi->dbinfo.mysql_result);
+				}
+			else if(mysql_errno(&idi->dbinfo.mysql_conn) != 0) {
+				syslog(LOG_USER|LOG_INFO,
+						"Error: mysql_store_result() failed for '%s'\n", buf);
+				}
 			idi->dbinfo.mysql_result=NULL;
 #endif
 			break;
@@ -701,6 +707,9 @@ int ndo2db_handle_processdata(ndo2db_idi *idi){
 		ndo2db_db_clear_table(idi,ndo2db_db_tablenames[NDO2DB_DBTABLE_HOSTPARENTHOSTS]);
 		ndo2db_db_clear_table(idi,ndo2db_db_tablenames[NDO2DB_DBTABLE_HOSTCONTACTS]);
 		ndo2db_db_clear_table(idi,ndo2db_db_tablenames[NDO2DB_DBTABLE_SERVICES]);
+#ifdef BUILD_NAGIOS_4X
+		ndo2db_db_clear_table(idi,ndo2db_db_tablenames[NDO2DB_DBTABLE_SERVICEPARENTSERVICES]);
+#endif
 		ndo2db_db_clear_table(idi,ndo2db_db_tablenames[NDO2DB_DBTABLE_SERVICECONTACTS]);
 		ndo2db_db_clear_table(idi,ndo2db_db_tablenames[NDO2DB_DBTABLE_SERVICECONTACTGROUPS]);
 		ndo2db_db_clear_table(idi,ndo2db_db_tablenames[NDO2DB_DBTABLE_HOSTCONTACTGROUPS]);
@@ -3687,6 +3696,8 @@ int ndo2db_handle_servicedefinition(ndo2db_idi *idi){
 	char *argptr=NULL;
 #ifdef BUILD_NAGIOS_4X
 	int	importance=0;
+	char *hptr=NULL;
+	char *sptr=NULL;
 #endif
 
 	if(idi==NULL)
@@ -3855,6 +3866,39 @@ int ndo2db_handle_servicedefinition(ndo2db_idi *idi){
 
 	for(x=0;x<9;x++)
 		free(es[x]);
+
+#ifdef BUILD_NAGIOS_4X
+	/* save parent services to db */
+	mbuf = idi->mbuf[NDO2DB_MBUF_PARENTSERVICE];
+	for(x = 0; x < mbuf.used_lines; x++) {
+
+		if(mbuf.buffer[x] == NULL) continue;
+
+		/* split the host/service name */
+		hptr=strtok(mbuf.buffer[x],";");
+		sptr=strtok(NULL,"\x0");
+
+		/* get the object id of the member */
+		result = ndo2db_get_object_id_with_insert(idi, 
+				NDO2DB_OBJECTTYPE_SERVICE, hptr, sptr, &member_id);
+
+		if(asprintf(&buf,
+				"instance_id='%d', service_id='%lu', parent_service_object_id='%lu'",
+				idi->dbinfo.instance_id, service_id, member_id) == -1) {
+			buf = NULL;
+			}
+	
+		if(asprintf(&buf1, "INSERT INTO %s SET %s ON DUPLICATE KEY UPDATE %s",
+				ndo2db_db_tablenames[NDO2DB_DBTABLE_SERVICEPARENTSERVICES],
+				buf, buf) == -1) {
+			buf1=NULL;
+			}
+
+		result = ndo2db_db_query(idi, buf1);
+		free(buf);
+		free(buf1);
+		}
+#endif
 
 	/* save contact groups to db */
 	mbuf=idi->mbuf[NDO2DB_MBUF_CONTACTGROUP];
