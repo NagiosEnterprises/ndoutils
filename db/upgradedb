@@ -51,41 +51,67 @@ if ($@) {
 	$dbh->do("CREATE TABLE nagios_dbversion (name VARCHAR(10) NOT NULL, version VARCHAR(10) NOT NULL);");
 };
 
+# Schema version history
+#
+# Each new schema version should have a file named mysql-upgrade-<version>.sql
+# that contains the schema changes from the previous version. The schemaversions
+# array below should contain each schema version since 1.4b2, the last release
+# prior to the introduction of the dbversion table. Note that the schema
+# version is *not* necessarily the same as the software version. Also for
+# version prior to 2.0.1, the schema version was the same as the software
+# version and there may not be an upgrade file.
+my @schemaversions = ( "1.4b2", "1.4b3", "1.4b4", "1.4b5", "1.4b6", "1.4b7", "1.4b8", "1.4b2", "1.5", "1.5.1", "1.5.2", "2.0.0", "2.0.1" );
 # Get current database version
 my $version;
-my $thisversion="2.0.1";
-my $lastversion="2.0.0";
-my $legacyversion="1.5.2";
+my $legacyversion = $schemaversions[0];
+my $targetversion = $schemaversions[$#schemaversions];
 
 $version = $dbh->selectrow_array("SELECT version FROM nagios_dbversion WHERE name='ndoutils'");
 if ($version eq "") {
 	# Assume last legacy release (didn't have version table)
 	print "*** Assuming version $legacyversion of nodutils installed",$/;
 	$dbh->do("INSERT nagios_dbversion SET name='ndoutils', version='$legacyversion';");
-	$version = $legacyversion
+	$version = $legacyversion;
 };
 
 print "Current database version: $version",$/;
 
-if ($version eq $thisversion){
+if ($version eq $schemaversions[$#schemaversions]){
     print "Database already upgraded.",$/;
     exit 0;
 }
 
 
-# Read upgrade script in the directory containing this script
-my $file="mysql-upgrade-$thisversion.sql";
-if (-e $file){
-	print "** DB upgrade required for $thisversion",$/;
-	print "     Using $file for upgrade...",$/;
-	my $p = "-p$password" if $password;	# Not required if password is blank
-	system("mysql -u $username $p -D$database -h$hostname < $file") == 0 or die "Upgrade from $file failed";
-	print "** Upgrade to $thisversion complete",$/;
+# Find the location in the schema version history of the current version
+my $x = 0;
+for(; $x < @schemaversions; $x++) {
+	last if( $version eq $schemaversions[$x]);
 }
-else{
-	print "** No update script found for version $version - assuming none are required.",$/;
-	print "** Upgrade to $thisversion complete",$/;
+if($x == scalar(@schemaversions)) {
+	die "Unknown current version: $version. Unable to upgrade";
+}
+$x++; # Increment so we don't try to upgrade to the current version
+
+# Look for an upgrade script at each step on the way to the target
+# version and, if it exists, process it
+my $thisversion;
+for(; $x < @schemaversions; $x++) {
+	$thisversion = $schemaversions[$x];
+	# Read upgrade script in the directory containing this script
+	my $file="mysql-upgrade-$thisversion.sql";
+	if (-e $file){
+		print "** DB upgrade required for $thisversion",$/;
+		print "     Using $file for upgrade...",$/;
+		my $p = "-p$password" if $password;	# Not required if password is blank
+		system("mysql -u $username $p -D$database -h$hostname < $file") == 0 or die "Upgrade from $file failed";
+		print "** Upgrade to $thisversion complete",$/;
+	}
+	else{
+		print "** No update script found for version $version - assuming none is required.",$/;
+		print "** Upgrade to $thisversion complete",$/;
+	}
+	# Update db version record
+	$dbh->do("UPDATE nagios_dbversion SET version='$thisversion' WHERE name='ndoutils';");
+	last if($schemaversions[$x] eq $targetversion);
 }
 
-# Update db version record
-$dbh->do("UPDATE nagios_dbversion SET version='$thisversion' WHERE name='ndoutils';");
