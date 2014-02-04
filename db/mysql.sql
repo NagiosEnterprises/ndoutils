@@ -38,7 +38,7 @@ CREATE TABLE IF NOT EXISTS `nagios_acknowledgements` (
   `persistent_comment` smallint(6) NOT NULL default '0',
   `notify_contacts` smallint(6) NOT NULL default '0',
   PRIMARY KEY  (`acknowledgement_id`),
-  UNIQUE KEY `instance_id` (`entry_time`)
+  UNIQUE KEY `instance_id` (`instance_id`, `entry_time`, `entry_time_usec`)
 ) ENGINE=MyISAM COMMENT='Current and historical host and service acknowledgements';
 
 -- --------------------------------------------------------
@@ -835,7 +835,7 @@ CREATE TABLE IF NOT EXISTS `nagios_logentries` (
   `realtime_data` smallint(6) NOT NULL default '0',
   `inferred_data_extracted` smallint(6) NOT NULL default '0',
   PRIMARY KEY  (`logentry_id`),
-  UNIQUE KEY `instance_id` (`logentry_time`,`entry_time`,`entry_time_usec`)
+  UNIQUE KEY `instance_id` (`instance_id`, `logentry_time`,`entry_time`,`entry_time_usec`)
 ) ENGINE=MyISAM COMMENT='Historical record of log entries';
 
 -- --------------------------------------------------------
