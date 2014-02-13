@@ -8,6 +8,12 @@ ALTER TABLE `nagios_acknowledgements` ADD INDEX (`entry_time`);
 ALTER TABLE `nagios_contacts` ADD `minimum_importance` int(11) NOT NULL default '0';
 ALTER TABLE `nagios_hosts` ADD `importance` int(11) NOT NULL default '0';
 ALTER TABLE `nagios_services` ADD `importance` int(11) NOT NULL default '0';
+
+set @exist := (select count(*) from information_schema.statistics where table_name = 'nagios_logentries' and index_name = 'instance_id');
+set @sqlstmt := if( @exist > 0, 'ALTER TABLE `nagios_logentries` DROP KEY `instance_id`', 'select ''INFO: Index does not exists.''');
+PREPARE stmt FROM @sqlstmt;
+EXECUTE stmt;
+
 ALTER TABLE `nagios_logentries` ADD UNIQUE KEY `instance_id` (`instance_id`,`logentry_time`,`entry_time`,`entry_time_usec`);
 
 -- Table structure for table `nagios_service_parentservices`
