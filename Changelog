@@ -1,8 +1,15 @@
 ===================
 NDO Utils Changelog
 ===================
-2.0.0 - ???
+
+2.0.0 - 02/28/2014
 ------------------
+* Updated database schema upgrade script to support multiple updates (Eric Stanley, Scott Wilkerson)
+* Added data serialization functions (Eric Stanley)
+* Added new Nagios Core 4 attributes: importance values, service parents (Eric Stanley)
+* Resolved tracker items #374 and #118 by adding auto-trimming options (Mike Guthrie)
+* Replaced ndomod.cfg data_processing_options variable with single options (Mike Guthrie)
+* Updated to work with Nagios Core 4 (Eric Stanley)
 * Replaced ndomod.cfg data_processing_options variable with single options for easier customization (See README) (Mike Guthrie)
 * Added missing maintenance options for table trimming (Mike Guthrie)
 

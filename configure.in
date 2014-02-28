@@ -12,9 +12,9 @@ AC_DEFINE([DEFAULT_NAGIOS_USER], [nagios], [Default Nagios User])
 AC_DEFINE([DEFAULT_NAGIOS_GROUP], [nagios], [Default Nagios Group])
 
 PKG_NAME=ndoutils
-PKG_VERSION="1.5.2"
+PKG_VERSION="2.0.0"
 PKG_HOME_URL="http://www.nagios.org/"
-PKG_REL_DATE="06-08-2012"
+PKG_REL_DATE="02-28-2014"
 
 dnl Figure out how to invoke "install" and what install options to use.
 AC_PROG_INSTALL
