@@ -2,6 +2,10 @@
 NDO Utils Changelog
 ===================
 
+2.0.x - xx/xx/20xx
+------------------
+* Patch situation where db table nagios_logentries has items where `instance_id`,`logentry_time`,`entry_time`,`entry_time_usec` isn't unique enough. - (Scott Wilkerson)
+
 2.0.0 - 02/28/2014
 ------------------
 * Updated database schema upgrade script to support multiple updates (Eric Stanley, Scott Wilkerson)

@@ -14,7 +14,7 @@ set @sqlstmt := if( @exist > 0, 'ALTER TABLE `nagios_logentries` DROP KEY `insta
 PREPARE stmt FROM @sqlstmt;
 EXECUTE stmt;
 
-ALTER TABLE `nagios_logentries` ADD UNIQUE KEY `instance_id` (`instance_id`,`logentry_time`,`entry_time`,`entry_time_usec`);
+ALTER TABLE `nagios_logentries` ADD UNIQUE KEY `instance_id` (`instance_id`,`logentry_time`,`entry_time`,`entry_time_usec`,`logentry_id`);
 
 -- Table structure for table `nagios_service_parentservices`
 --
