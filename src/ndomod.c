@@ -406,6 +406,9 @@ int ndomod_init(void){
 	if(ndomod_register_callbacks()==NDO_ERROR)
 		return NDO_ERROR;
 
+#if defined(BUILD_NAGIOS_2X) || defined(BUILD_NAGIOS_3X)
+	/* See comment in ndomod_broker_process_data() about the Nagios Core 4
+		implementation */
 	if(ndomod_sink_type==NDO_SINK_FILE){
 
 		/* make sure we have a rotation command defined... */
@@ -428,6 +431,7 @@ int ndomod_init(void){
 		        }
 
 	        }
+#endif
 
 	return NDO_OK;
         }
@@ -1837,6 +1841,9 @@ static bd_result ndomod_broker_process_data(bd_phase phase,
 		unsigned long process_options, void *data, ndo_dbuf *dbufp) {
 
 	nebstruct_process_data *procdata = (nebstruct_process_data *)data;
+#ifdef BUILD_NAGIOS_4X
+	time_t current_time;
+#endif
 
 	struct ndo_broker_data process_data[] = {
 		{ NDO_DATA_TYPE, BD_INT, { .integer = procdata->type }},
@@ -1853,9 +1860,37 @@ static bd_result ndomod_broker_process_data(bd_phase phase,
 				{ .unsigned_long = (unsigned long)getpid() }}
 		};
 
-
+printf("ndomod_broker_process_data() start\n");
 	switch(phase) {
 	case bdp_preprocessing:
+printf("ndomod_broker_process_data() phase: Pre-Prossing Event Type: %d\n",
+		procdata->type);
+		switch(procdata->type) {
+		case NEBTYPE_PROCESS_START:
+#ifdef BUILD_NAGIOS_4X
+			/* In Core 4, the file rotation event is schedule upon receipt of
+				NEBTYPE_PROCESS_START because the scheduling queue is not
+				initialized when ndomod_init() is called, as it was in
+				previous versions of Core */
+			if(ndomod_sink_type == NDO_SINK_FILE) {
+				/* make sure we have a rotation command defined... */
+				if(ndomod_sink_rotation_command == NULL) {
+					/* log an error message to the Nagios log file */
+					ndomod_write_to_logs("ndomod: Warning - No file rotation command defined.\n", 
+							NSLOG_INFO_MESSAGE);
+					}
+				/* schedule a file rotation event */
+				else {
+					time(&current_time);
+					schedule_new_event(EVENT_USER_FUNCTION, TRUE,
+							current_time + ndomod_sink_rotation_interval, TRUE,
+							ndomod_sink_rotation_interval, NULL, TRUE,
+							(void *)ndomod_rotate_sink_file, NULL, 0);
+					}
+				}
+#endif
+			break;
+			}
 		if(!(process_options & NDOMOD_PROCESS_PROCESS_DATA))
 			return bdr_stop;
 		break;

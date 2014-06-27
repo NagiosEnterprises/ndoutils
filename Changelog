@@ -4,6 +4,7 @@ NDO Utils Changelog
 
 2.0.x - xx/xx/20xx
 ------------------
+* Fix failure to schedule file rotation when using file as data sync in ndomod (Eric Stanley)
 * Patch situation where db table nagios_logentries has items where `instance_id`,`logentry_time`,`entry_time`,`entry_time_usec` isn't unique enough. - (Scott Wilkerson)
 
 2.0.0 - 02/28/2014
