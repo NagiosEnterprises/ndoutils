@@ -434,28 +434,41 @@ int ndo2db_process_config_var(char *arg){
 		if((ndo2db_db_settings.dbprefix=strdup(val))==NULL)
 			return NDO_ERROR;
 	        }
+
 	else if(!strcmp(var,"max_timedevents_age"))
 		ndo2db_db_settings.max_timedevents_age=strtoul(val,NULL,0)*60;
+
 	else if(!strcmp(var,"max_systemcommands_age"))
 		ndo2db_db_settings.max_systemcommands_age=strtoul(val,NULL,0)*60;
+
 	else if(!strcmp(var,"max_servicechecks_age"))
 		ndo2db_db_settings.max_servicechecks_age=strtoul(val,NULL,0)*60;
+
 	else if(!strcmp(var,"max_hostchecks_age"))
 		ndo2db_db_settings.max_hostchecks_age=strtoul(val,NULL,0)*60;
+
 	else if(!strcmp(var,"max_eventhandlers_age"))
 		ndo2db_db_settings.max_eventhandlers_age=strtoul(val,NULL,0)*60;
+
 	else if(!strcmp(var,"max_externalcommands_age"))
 		ndo2db_db_settings.max_externalcommands_age=strtoul(val,NULL,0)*60;
+
 	else if(!strcmp(var,"max_logentries_age"))
-		ndo2db_db_settings.max_externalcommands_age=strtoul(val,NULL,0)*60;		
+		ndo2db_db_settings.max_logentries_age=strtoul(val,NULL,0)*60;
+
 	else if(!strcmp(var,"max_notifications_age"))
-		ndo2db_db_settings.max_externalcommands_age=strtoul(val,NULL,0)*60;			
-	else if(!strcmp(var,"max_contactnotifications_age"))
-		ndo2db_db_settings.max_externalcommands_age=strtoul(val,NULL,0)*60;	
-	else if(!strcmp(var,"max_contactnotificationmethods_age"))
-		ndo2db_db_settings.max_externalcommands_age=strtoul(val,NULL,0)*60;	
+		ndo2db_db_settings.max_notifications_age=strtoul(val,NULL,0)*60;
+
+	else if(!strcmp(var,"max_contactnotifications") || !strcmp(var,"max_contactnotifications_age"))
+		/* Accept max_contactnotifications too (a typo in old configs). */
+		ndo2db_db_settings.max_contactnotifications_age=strtoul(val,NULL,0)*60;
+
+	else if(!strcmp(var,"max_contactnotificationmethods") || !strcmp(var,"max_contactnotificationmethods_age"))
+		/* Accept max_contactnotificationmethods too (a typo in old configs). */
+		ndo2db_db_settings.max_contactnotificationmethods_age=strtoul(val,NULL,0)*60;
+
 	else if(!strcmp(var,"max_acknowledgements_age"))
-		ndo2db_db_settings.max_externalcommands_age=strtoul(val,NULL,0)*60;			
+		ndo2db_db_settings.max_acknowledgements_age=strtoul(val,NULL,0)*60;
 		
 	else if(!strcmp(var,"ndo2db_user"))
 		ndo2db_user=strdup(val);

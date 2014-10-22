@@ -152,10 +152,10 @@ max_externalcommands_age=44640
 max_notifications_age=44640
 
 # Keep contactnotifications for 31 days
-max_contactnotifications=44640
+max_contactnotifications_age=44640
 
 # Keep contactnotificationmethods for 31 days
-max_contactnotificationmethods=44640
+max_contactnotificationmethods_age=44640
 
 # Keep logentries for 90 days
 max_logentries_age=129600
