@@ -275,7 +275,6 @@ int ndomod_config_output_options=NDOMOD_CONFIG_DUMP_ALL;
 unsigned long ndomod_sink_buffer_slots=5000;
 ndomod_sink_buffer sinkbuf;
 
-extern int errno;
 
 /**** NAGIOS VARIABLES ****/
 extern command *command_list;
@@ -381,8 +380,10 @@ int ndomod_check_nagios_object_version(void){
 
 /* performs some initialization stuff */
 int ndomod_init(void){
+#if defined(BUILD_NAGIOS_2X) || defined(BUILD_NAGIOS_3X)
 	char temp_buffer[NDOMOD_MAX_BUFLEN];
 	time_t current_time;
+#endif
 
 	/* initialize some vars (needed for restarts of daemon - why, if the module gets reloaded ???) */
 	ndomod_sink_is_open=NDO_FALSE;
@@ -1493,7 +1494,6 @@ static void ndomod_enddata_serialize(ndo_dbuf *dbufp) {
 static void ndomod_broker_data_serialize(ndo_dbuf *dbufp, int datatype,
 		struct ndo_broker_data *bd, size_t bdsize, int add_enddata) {
 
-	size_t bufused = 0;
 	char temp[64];
 	int	x;
 	struct ndo_broker_data *bdp;
@@ -1760,8 +1760,6 @@ static void ndomod_commands_serialize(commandsmember *commands, ndo_dbuf *dbufp,
 	}
 
 int ndomod_broker_data(int event_type, void *data){
-	char temp_buffer[NDOMOD_MAX_BUFLEN];
-	size_t tbsize = sizeof(temp_buffer);
 	ndo_dbuf dbuf;
 	int write_to_sink=NDO_TRUE;
 	bd_result broker_data_result;
@@ -4191,11 +4189,8 @@ int ndomod_write_object_config(int config_type){
 	timeperiod *temp_timeperiod=NULL;
 	timerange *temp_timerange=NULL;
 	contact *temp_contact=NULL;
-	commandsmember *temp_commandsmember=NULL;
 	contactgroup *temp_contactgroup=NULL;
 	host *temp_host=NULL;
-	hostsmember *temp_hostsmember=NULL;
-	contactgroupsmember *temp_contactgroupsmember=NULL;
 	hostgroup *temp_hostgroup=NULL;
 	service *temp_service=NULL;
 	servicegroup *temp_servicegroup=NULL;
@@ -4206,9 +4201,6 @@ int ndomod_write_object_config(int config_type){
 #ifdef BUILD_NAGIOS_2X
 	hostextinfo *temp_hostextinfo=NULL;
 	serviceextinfo *temp_serviceextinfo=NULL;
-	contactgroupmember *temp_contactgroupmember=NULL;
-	hostgroupmember *temp_hostgroupmember=NULL;
-	servicegroupmember *temp_servicegroupmember=NULL;
 #endif
 	int have_2d_coords=FALSE;
 	int x_2d=0;
@@ -4231,11 +4223,6 @@ int ndomod_write_object_config(int config_type){
 	int flap_detection_on_warning=0;
 	int flap_detection_on_unknown=0;
 	int flap_detection_on_critical=0;
-#if ( defined( BUILD_NAGIOS_3X) || defined( BUILD_NAGIOS_4X))
-	customvariablesmember *temp_customvar=NULL;
-	contactsmember *temp_contactsmember=NULL;
-	servicesmember *temp_servicesmember=NULL;
-#endif
 
 
 	if(!(ndomod_process_options & NDOMOD_PROCESS_OBJECT_CONFIG_DATA))

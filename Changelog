@@ -4,9 +4,11 @@ NDO Utils Changelog
 
 2.0.x - xx/xx/20xx
 ------------------
-* Fixed bug #591: ndoutils 2.0.0 doesn't insert data to nagios_statehistory (Eric Stanley)
-* Fix failure to schedule file rotation when using file as data sync in ndomod (Eric Stanley)
-* Patch situation where db table nagios_logentries has items where `instance_id`,`logentry_time`,`entry_time`,`entry_time_usec` isn't unique enough. - (Scott Wilkerson)
+* Fixed Tracker #591: ndoutils 2.0.0 doesn't insert data to nagios_statehistory (Eric Stanley)
+* Fix failure to schedule file rotation when using file as data sink in ndomod (Eric Stanley)
+* Patch situation where db table nagios_logentries has items where `instance_id`,`logentry_time`,`entry_time`,`entry_time_usec` wasn't unique enough (Scott Wilkerson)
+* Fixed table trimming and related config options for notifications, contactnotifications, contactnotificationmethods, logentries and acknowledgements (Eric Mislivec)
+* Fixed Tracker #428: Uninitialized sleep_time in push_into_queue() (Eric Mislivec)
 
 2.0.0 - 02/28/2014
 ------------------

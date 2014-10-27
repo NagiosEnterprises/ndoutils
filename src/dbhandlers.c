@@ -37,8 +37,6 @@
 #endif
 
 
-extern int errno;
-
 extern char *ndo2db_db_tablenames[NDO2DB_MAX_DBTABLES];
 
 

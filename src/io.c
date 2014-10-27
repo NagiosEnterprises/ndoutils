@@ -147,7 +147,6 @@ int ndo_sink_open(char *name, int fd, int type, int port, int flags, int *nfd){
 	struct hostent *hp=NULL;
 	mode_t mode=S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP;
 	int newfd=0;
-	int rc=0;
 
 	/* use file */
 	if(type==NDO_SINK_FILE){

@@ -41,7 +41,6 @@ int allow_weak_random_seed = NDO_FALSE;
 #endif
 extern int use_ssl;
 
-extern int errno;
 
 char *ndo2db_config_file=NULL;
 char *lock_file=NULL;
@@ -1203,10 +1202,6 @@ int ndo2db_idi_init(ndo2db_idi *idi){
 
 /* checks for single lines of input from a client connection */
 int ndo2db_check_for_client_input(ndo2db_idi *idi,ndo_dbuf *dbuf){
-	char *buf=NULL;
-	register int x;
-
-
 	if(dbuf==NULL)
 		return NDO_OK;
 	if(dbuf->buf==NULL)

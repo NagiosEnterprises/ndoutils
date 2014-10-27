@@ -13,15 +13,15 @@ struct queue_msg
 };
 
 /* remove queue from system */
-void del_queue();
+int del_queue(void);
 
 /* initialize new queue or open existing */
-int get_queue_id();
+int get_queue_id(int id);
 
 /* insert into queue */
-void push_into_queue(char*);
+void push_into_queue(const char*);
 
 /* get and delete from queue */
-char* pop_from_queue();
+char* pop_from_queue(void);
 
 #endif /* _QUEUE_ */

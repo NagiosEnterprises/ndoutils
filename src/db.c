@@ -18,7 +18,6 @@
 #include "../include/dbhandlers.h"
 #include "../include/db.h"
 
-extern int errno;
 
 extern ndo2db_dbconfig ndo2db_db_settings;
 extern time_t ndo2db_db_last_checkin_time;
@@ -762,48 +761,48 @@ int ndo2db_db_perform_maintenance(ndo2db_idi *idi){
 
 	/* trim tables */
 	if ((current_time-(time_t)60)>idi->dbinfo.last_table_trim_time) {
-		if (idi->dbinfo.max_timedevents_age>0L) {
-			syslog(LOG_USER|LOG_INFO,"Trimming timedevents.");
+		if (idi->dbinfo.max_timedevents_age) {
+			syslog(LOG_USER|LOG_INFO, "Trimming timedevents.");
 			ndo2db_db_trim_data_table(idi,ndo2db_db_tablenames[NDO2DB_DBTABLE_TIMEDEVENTS],"scheduled_time",(time_t)((unsigned long)current_time-idi->dbinfo.max_timedevents_age));
 		}
-		if (idi->dbinfo.max_systemcommands_age>0L) {
-			syslog(LOG_USER|LOG_INFO,"Trimming systemcommands.");
+		if (idi->dbinfo.max_systemcommands_age) {
+			syslog(LOG_USER|LOG_INFO, "Trimming systemcommands.");
 			ndo2db_db_trim_data_table(idi,ndo2db_db_tablenames[NDO2DB_DBTABLE_SYSTEMCOMMANDS],"start_time",(time_t)((unsigned long)current_time-idi->dbinfo.max_systemcommands_age));
 		}
-		if (idi->dbinfo.max_servicechecks_age>0L) {
-			syslog(LOG_USER|LOG_INFO,"Trimming servicechecks.");
+		if (idi->dbinfo.max_servicechecks_age) {
+			syslog(LOG_USER|LOG_INFO, "Trimming servicechecks.");
 			ndo2db_db_trim_data_table(idi,ndo2db_db_tablenames[NDO2DB_DBTABLE_SERVICECHECKS],"start_time",(time_t)((unsigned long)current_time-idi->dbinfo.max_servicechecks_age));
 		}
-		if (idi->dbinfo.max_hostchecks_age>0L) {
-			syslog(LOG_USER|LOG_INFO,"Trimming hostchecks.");
+		if (idi->dbinfo.max_hostchecks_age) {
+			syslog(LOG_USER|LOG_INFO, "Trimming hostchecks.");
 			ndo2db_db_trim_data_table(idi,ndo2db_db_tablenames[NDO2DB_DBTABLE_HOSTCHECKS],"start_time",(time_t)((unsigned long)current_time-idi->dbinfo.max_hostchecks_age));
 		}
-		if (idi->dbinfo.max_eventhandlers_age>0L) {
-			syslog(LOG_USER|LOG_INFO,"Trimming eventhandlers.");
+		if (idi->dbinfo.max_eventhandlers_age) {
+			syslog(LOG_USER|LOG_INFO, "Trimming eventhandlers.");
 			ndo2db_db_trim_data_table(idi,ndo2db_db_tablenames[NDO2DB_DBTABLE_EVENTHANDLERS],"start_time",(time_t)((unsigned long)current_time-idi->dbinfo.max_eventhandlers_age));
 		}
-		if (idi->dbinfo.max_externalcommands_age>0L) {
-			syslog(LOG_USER|LOG_INFO,"Trimming externalcommands.");
+		if (idi->dbinfo.max_externalcommands_age) {
+			syslog(LOG_USER|LOG_INFO, "Trimming externalcommands.");
 			ndo2db_db_trim_data_table(idi,ndo2db_db_tablenames[NDO2DB_DBTABLE_EXTERNALCOMMANDS],"entry_time",(time_t)((unsigned long)current_time-idi->dbinfo.max_externalcommands_age));
 		}
-		if (idi->dbinfo.max_notifications_age>0L) {
-			syslog(LOG_USER|LOG_INFO,"Trimming notifications.");
+		if (idi->dbinfo.max_notifications_age) {
+			syslog(LOG_USER|LOG_INFO, "Trimming notifications.");
 			ndo2db_db_trim_data_table(idi,ndo2db_db_tablenames[NDO2DB_DBTABLE_NOTIFICATIONS],"start_time",(time_t)((unsigned long)current_time-idi->dbinfo.max_notifications_age));
 		}
-		if (idi->dbinfo.max_contactnotifications_age>0L) {
-			syslog(LOG_USER|LOG_INFO,"Trimming contactnotifications.");
+		if (idi->dbinfo.max_contactnotifications_age) {
+			syslog(LOG_USER|LOG_INFO, "Trimming contactnotifications.");
 			ndo2db_db_trim_data_table(idi,ndo2db_db_tablenames[NDO2DB_DBTABLE_CONTACTNOTIFICATIONS],"start_time",(time_t)((unsigned long)current_time-idi->dbinfo.max_contactnotifications_age));
 		}
-		if (idi->dbinfo.max_contactnotificationmethods_age>0L) {
-			syslog(LOG_USER|LOG_INFO,"Trimming contactnotificationmethods.");
+		if (idi->dbinfo.max_contactnotificationmethods_age) {
+			syslog(LOG_USER|LOG_INFO, "Trimming contactnotificationmethods.");
 			ndo2db_db_trim_data_table(idi,ndo2db_db_tablenames[NDO2DB_DBTABLE_CONTACTNOTIFICATIONMETHODS],"start_time",(time_t)((unsigned long)current_time-idi->dbinfo.max_contactnotificationmethods_age));
 		}
-		if (idi->dbinfo.max_logentries_age>0L) {
-			syslog(LOG_USER|LOG_INFO,"Trimming logentries.");
+		if (idi->dbinfo.max_logentries_age) {
+			syslog(LOG_USER|LOG_INFO, "Trimming logentries.");
 			ndo2db_db_trim_data_table(idi,ndo2db_db_tablenames[NDO2DB_DBTABLE_LOGENTRIES],"entry_time",(time_t)((unsigned long)current_time-idi->dbinfo.max_logentries_age));
 		}
-		if (idi->dbinfo.max_acknowledgements_age>0L) {
-			syslog(LOG_USER|LOG_INFO,"Trimming acknowledgements.");
+		if (idi->dbinfo.max_acknowledgements_age) {
+			syslog(LOG_USER|LOG_INFO, "Trimming acknowledgements.");
 			ndo2db_db_trim_data_table(idi,ndo2db_db_tablenames[NDO2DB_DBTABLE_ACKNOWLEDGEMENTS],"entry_time",(time_t)((unsigned long)current_time-idi->dbinfo.max_acknowledgements_age));
 		}
 		idi->dbinfo.last_table_trim_time=current_time;
