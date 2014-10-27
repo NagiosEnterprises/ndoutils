@@ -3459,7 +3459,7 @@ int ndo2db_handle_hostdefinition(ndo2db_idi *idi){
 		/* get the object id of the member */
 		result=ndo2db_get_object_id_with_insert(idi,NDO2DB_OBJECTTYPE_HOST,mbuf.buffer[x],NULL,&member_id);
 
-		if(asprintf(&buf,"instance_id='%d', host_id='%lu', parent_host_object_id='%lu'"
+		if(asprintf(&buf,"instance_id='%lu', host_id='%lu', parent_host_object_id='%lu'"
 			    ,idi->dbinfo.instance_id
 			    ,host_id
 			    ,member_id
@@ -3488,7 +3488,7 @@ int ndo2db_handle_hostdefinition(ndo2db_idi *idi){
 		/* get the object id of the member */
 		result=ndo2db_get_object_id_with_insert(idi,NDO2DB_OBJECTTYPE_CONTACTGROUP,mbuf.buffer[x],NULL,&member_id);
 
-		if(asprintf(&buf,"instance_id='%d', host_id='%lu', contactgroup_object_id='%lu'"
+		if(asprintf(&buf,"instance_id='%lu', host_id='%lu', contactgroup_object_id='%lu'"
 			    ,idi->dbinfo.instance_id
 			    ,host_id
 			    ,member_id
@@ -3517,7 +3517,7 @@ int ndo2db_handle_hostdefinition(ndo2db_idi *idi){
 		/* get the object id of the member */
 		result=ndo2db_get_object_id_with_insert(idi,NDO2DB_OBJECTTYPE_CONTACT,mbuf.buffer[x],NULL,&member_id);
 
-		if(asprintf(&buf,"instance_id='%d', host_id='%lu', contact_object_id='%lu'"
+		if(asprintf(&buf,"instance_id='%lu', host_id='%lu', contact_object_id='%lu'"
 			    ,idi->dbinfo.instance_id
 			    ,host_id
 			    ,member_id
@@ -3616,7 +3616,7 @@ int ndo2db_handle_hostgroupdefinition(ndo2db_idi *idi){
 		/* get the object id of the member */
 		result=ndo2db_get_object_id_with_insert(idi,NDO2DB_OBJECTTYPE_HOST,mbuf.buffer[x],NULL,&member_id);
 
-		if(asprintf(&buf,"instance_id='%d', hostgroup_id='%lu', host_object_id='%lu'"
+		if(asprintf(&buf,"instance_id='%lu', hostgroup_id='%lu', host_object_id='%lu'"
 			    ,idi->dbinfo.instance_id
 			    ,group_id
 			    ,member_id
@@ -3881,7 +3881,7 @@ int ndo2db_handle_servicedefinition(ndo2db_idi *idi){
 				NDO2DB_OBJECTTYPE_SERVICE, hptr, sptr, &member_id);
 
 		if(asprintf(&buf,
-				"instance_id='%d', service_id='%lu', parent_service_object_id='%lu'",
+				"instance_id='%lu', service_id='%lu', parent_service_object_id='%lu'",
 				idi->dbinfo.instance_id, service_id, member_id) == -1) {
 			buf = NULL;
 			}
@@ -3908,7 +3908,7 @@ int ndo2db_handle_servicedefinition(ndo2db_idi *idi){
 		/* get the object id of the member */
 		result=ndo2db_get_object_id_with_insert(idi,NDO2DB_OBJECTTYPE_CONTACTGROUP,mbuf.buffer[x],NULL,&member_id);
 
-		if(asprintf(&buf,"instance_id='%d', service_id='%lu', contactgroup_object_id='%lu'"
+		if(asprintf(&buf,"instance_id='%lu', service_id='%lu', contactgroup_object_id='%lu'"
 			    ,idi->dbinfo.instance_id
 			    ,service_id
 			    ,member_id
@@ -3937,7 +3937,7 @@ int ndo2db_handle_servicedefinition(ndo2db_idi *idi){
 		/* get the object id of the member */
 		result=ndo2db_get_object_id_with_insert(idi,NDO2DB_OBJECTTYPE_CONTACT,mbuf.buffer[x],NULL,&member_id);
 
-		if(asprintf(&buf,"instance_id='%d', service_id='%lu', contact_object_id='%lu'"
+		if(asprintf(&buf,"instance_id='%lu', service_id='%lu', contact_object_id='%lu'"
 			    ,idi->dbinfo.instance_id
 			    ,service_id
 			    ,member_id
@@ -4042,7 +4042,7 @@ int ndo2db_handle_servicegroupdefinition(ndo2db_idi *idi){
 		/* get the object id of the member */
 		result=ndo2db_get_object_id_with_insert(idi,NDO2DB_OBJECTTYPE_SERVICE,hptr,sptr,&member_id);
 
-		if(asprintf(&buf,"instance_id='%d', servicegroup_id='%lu', service_object_id='%lu'"
+		if(asprintf(&buf,"instance_id='%lu', servicegroup_id='%lu', service_object_id='%lu'"
 			    ,idi->dbinfo.instance_id
 			    ,group_id
 			    ,member_id
@@ -4291,7 +4291,7 @@ int ndo2db_handle_hostescalationdefinition(ndo2db_idi *idi){
 		/* get the object id of the member */
 		result=ndo2db_get_object_id_with_insert(idi,NDO2DB_OBJECTTYPE_CONTACTGROUP,mbuf.buffer[x],NULL,&member_id);
 
-		if(asprintf(&buf,"instance_id='%d', hostescalation_id='%lu', contactgroup_object_id='%lu'"
+		if(asprintf(&buf,"instance_id='%lu', hostescalation_id='%lu', contactgroup_object_id='%lu'"
 			    ,idi->dbinfo.instance_id
 			    ,escalation_id
 			    ,member_id
@@ -4320,7 +4320,7 @@ int ndo2db_handle_hostescalationdefinition(ndo2db_idi *idi){
 		/* get the object id of the member */
 		result=ndo2db_get_object_id_with_insert(idi,NDO2DB_OBJECTTYPE_CONTACT,mbuf.buffer[x],NULL,&member_id);
 
-		if(asprintf(&buf,"instance_id='%d', hostescalation_id='%lu', contact_object_id='%lu'"
+		if(asprintf(&buf,"instance_id='%lu', hostescalation_id='%lu', contact_object_id='%lu'"
 			    ,idi->dbinfo.instance_id
 			    ,escalation_id
 			    ,member_id
@@ -4435,7 +4435,7 @@ int ndo2db_handle_serviceescalationdefinition(ndo2db_idi *idi){
 		/* get the object id of the member */
 		result=ndo2db_get_object_id_with_insert(idi,NDO2DB_OBJECTTYPE_CONTACTGROUP,mbuf.buffer[x],NULL,&member_id);
 
-		if(asprintf(&buf,"instance_id='%d', serviceescalation_id='%lu', contactgroup_object_id='%lu'"
+		if(asprintf(&buf,"instance_id='%lu', serviceescalation_id='%lu', contactgroup_object_id='%lu'"
 			    ,idi->dbinfo.instance_id
 			    ,escalation_id
 			    ,member_id
@@ -4464,7 +4464,7 @@ int ndo2db_handle_serviceescalationdefinition(ndo2db_idi *idi){
 		/* get the object id of the member */
 		result=ndo2db_get_object_id_with_insert(idi,NDO2DB_OBJECTTYPE_CONTACT,mbuf.buffer[x],NULL,&member_id);
 
-		if(asprintf(&buf,"instance_id='%d', serviceescalation_id='%lu', contact_object_id='%lu'"
+		if(asprintf(&buf,"instance_id='%lu', serviceescalation_id='%lu', contact_object_id='%lu'"
 			    ,idi->dbinfo.instance_id
 			    ,escalation_id
 			    ,member_id
@@ -4629,7 +4629,7 @@ int ndo2db_handle_timeperiodefinition(ndo2db_idi *idi){
 		start_sec=strtoul(startptr,NULL,0);
 		end_sec=strtoul(endptr,NULL,0);
 
-		if(asprintf(&buf,"instance_id='%d', timeperiod_id='%lu', day='%d', start_sec='%lu', end_sec='%lu'"
+		if(asprintf(&buf,"instance_id='%lu', timeperiod_id='%lu', day='%d', start_sec='%lu', end_sec='%lu'"
 			    ,idi->dbinfo.instance_id
 			    ,timeperiod_id
 			    ,day
@@ -4806,7 +4806,7 @@ int ndo2db_handle_contactdefinition(ndo2db_idi *idi){
 		address_number=atoi(numptr);
 		es[0]=ndo2db_db_escape_string(idi,addressptr);
 
-		if(asprintf(&buf,"instance_id='%d', contact_id='%lu', address_number='%d', address='%s'"
+		if(asprintf(&buf,"instance_id='%lu', contact_id='%lu', address_number='%d', address='%s'"
 			    ,idi->dbinfo.instance_id
 			    ,contact_id
 			    ,address_number
@@ -4846,7 +4846,7 @@ int ndo2db_handle_contactdefinition(ndo2db_idi *idi){
 
 		es[0]=ndo2db_db_escape_string(idi,argptr);
 
-		if(asprintf(&buf,"instance_id='%d', contact_id='%lu', notification_type='%d', command_object_id='%lu', command_args='%s'"
+		if(asprintf(&buf,"instance_id='%lu', contact_id='%lu', notification_type='%d', command_object_id='%lu', command_args='%s'"
 			    ,idi->dbinfo.instance_id
 			    ,contact_id
 			    ,HOST_NOTIFICATION
@@ -4887,7 +4887,7 @@ int ndo2db_handle_contactdefinition(ndo2db_idi *idi){
 
 		es[0]=ndo2db_db_escape_string(idi,argptr);
 
-		if(asprintf(&buf,"instance_id='%d', contact_id='%lu', notification_type='%d', command_object_id='%lu', command_args='%s'"
+		if(asprintf(&buf,"instance_id='%lu', contact_id='%lu', notification_type='%d', command_object_id='%lu', command_args='%s'"
 			    ,idi->dbinfo.instance_id
 			    ,contact_id
 			    ,SERVICE_NOTIFICATION
@@ -4990,7 +4990,7 @@ int ndo2db_handle_contactgroupdefinition(ndo2db_idi *idi){
 		/* get the object id of the member */
 		result=ndo2db_get_object_id_with_insert(idi,NDO2DB_OBJECTTYPE_CONTACT,mbuf.buffer[x],NULL,&member_id);
 
-		if(asprintf(&buf,"instance_id='%d', contactgroup_id='%lu', contact_object_id='%lu'"
+		if(asprintf(&buf,"instance_id='%lu', contactgroup_id='%lu', contact_object_id='%lu'"
 			    ,idi->dbinfo.instance_id
 			    ,group_id
 			    ,member_id
@@ -5045,7 +5045,7 @@ int ndo2db_save_custom_variables(ndo2db_idi *idi,int table_idx, unsigned long o_
 		free(buf1);
 
 		if (table_idx==NDO2DB_DBTABLE_CUSTOMVARIABLES) {
-			if(asprintf(&buf,"instance_id='%d', object_id='%lu', config_type='%d', has_been_modified='%d', varname='%s', varvalue='%s'"
+			if(asprintf(&buf,"instance_id='%lu', object_id='%lu', config_type='%d', has_been_modified='%d', varname='%s', varvalue='%s'"
 					,idi->dbinfo.instance_id
 					,o_id
 					,idi->current_object_config_type
@@ -5056,7 +5056,7 @@ int ndo2db_save_custom_variables(ndo2db_idi *idi,int table_idx, unsigned long o_
 				buf=NULL;
 		}
 		if (table_idx==NDO2DB_DBTABLE_CUSTOMVARIABLESTATUS) {
-			if(asprintf(&buf,"instance_id='%d', object_id='%lu',status_update_time=%s, has_been_modified='%d', varname='%s', varvalue='%s'"
+			if(asprintf(&buf,"instance_id='%lu', object_id='%lu',status_update_time=%s, has_been_modified='%d', varname='%s', varvalue='%s'"
 					,idi->dbinfo.instance_id
 					,o_id
 					,(ts==NULL)?"NULL":ts

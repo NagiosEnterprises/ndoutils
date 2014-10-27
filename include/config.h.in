@@ -9,6 +9,9 @@
 #ifndef _CONFIG_H
 #define _CONFIG_H
 
+/* Get asprintf() declared. */
+#define _GNU_SOURCE 1
+
 #include <stdio.h>
 #include <stdlib.h>
 
