@@ -1,5 +1,5 @@
-autom4te.cache
 Makefile
+autom4te.cache/
 config.log
 config.status
 uninstall
@@ -11,6 +11,8 @@ include/io.h
 
 config/*.cfg
 config/*.cfg-sample
+
+docs/docbook/en-en/Makefile
 
 nbproject/
 CVS/

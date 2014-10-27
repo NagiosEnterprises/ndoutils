@@ -209,6 +209,7 @@ distclean: clean
 	rm -f startup/solaris-inetd.xml startup/tmpfile.conf startup/upstart-init
 	rm -f Makefile
 	rm -f tags
+	rm -rf autom4te.cache/
 
 devclean: distclean
 
