@@ -468,7 +468,12 @@ int ndo2db_process_config_var(char *arg){
 
 	else if(!strcmp(var,"max_acknowledgements_age"))
 		ndo2db_db_settings.max_acknowledgements_age=strtoul(val,NULL,0)*60;
-		
+
+
+	else if (!strcmp(var, "table_trim_interval"))
+		ndo2db_db_settings.table_trim_interval = strtoul(val, NULL, 0) * 60;
+
+
 	else if(!strcmp(var,"ndo2db_user"))
 		ndo2db_user=strdup(val);
 	else if(!strcmp(var,"ndo2db_group"))
@@ -518,6 +523,7 @@ int ndo2db_initialize_variables(void){
 	ndo2db_db_settings.max_contactnotificationmethods_age=0L;
 	ndo2db_db_settings.max_logentries_age=0L;
 	ndo2db_db_settings.max_acknowledgements_age=0L;
+	ndo2db_db_settings.table_trim_interval = NDO2DB_DEFAULT_TABLE_TRIM_INTERVAL;
 
 	return NDO_OK;
         }

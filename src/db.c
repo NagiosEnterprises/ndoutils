@@ -147,6 +147,7 @@ int ndo2db_db_init(ndo2db_idi *idi){
 	idi->dbinfo.max_contactnotificationmethods_age=ndo2db_db_settings.max_contactnotificationmethods_age;
 	idi->dbinfo.max_logentries_age=ndo2db_db_settings.max_logentries_age;
 	idi->dbinfo.max_acknowledgements_age=ndo2db_db_settings.max_acknowledgements_age;	
+	idi->dbinfo.table_trim_interval = ndo2db_db_settings.table_trim_interval;
 	idi->dbinfo.last_table_trim_time=(time_t)0L;
 	idi->dbinfo.last_logentry_time=(time_t)0L;
 	idi->dbinfo.last_logentry_data=NULL;
@@ -723,89 +724,101 @@ int ndo2db_db_get_latest_data_time(ndo2db_idi *idi, char *table_name, char *fiel
 
 	return result;
         }
-		
 
-/* trim/delete old data from a given table */
-int ndo2db_db_trim_data_table(ndo2db_idi *idi, char *table_name, char *field_name, unsigned long t){
-	char *buf=NULL;
-	char *ts[1];
-	int result=NDO_OK;
 
-	if(idi==NULL || table_name==NULL || field_name==NULL)
-		return NDO_ERROR;
+/**
+ * Delete old rows from a DB table.
+ * @param idi Input data interface handle.
+ * @param table_name Table name to delete from.
+ * @param field_name Time field name to delete by.
+ * @param t Delete rows older than this timestamp.
+ * @return NDO_OK if the operation succeeded, otherwise NDO_ERROR.
+ */
+static int ndo2db_db_trim_data_table(
+	ndo2db_idi *idi,
+	const char *table_name,
+	const char *field_name,
+	time_t t
+) {
+	char *buf;
+	char *ts;
+	int result = NDO_ERROR;
 
-	ts[0]=ndo2db_db_timet_to_sql(idi,(time_t)t);
+	if (!idi || !table_name || !field_name) return NDO_ERROR;
 
-	if(asprintf(&buf,"DELETE FROM %s WHERE instance_id='%lu' AND %s<%s"
-		    ,table_name
-		    ,idi->dbinfo.instance_id
-		    ,field_name
-		    ,ts[0]
-		   )==-1)
-		buf=NULL;
+	ts = ndo2db_db_timet_to_sql(idi, t);
+	if (!ts) return NDO_ERROR;
 
-	result=ndo2db_db_query(idi,buf);
-	free(buf);
-	free(ts[0]);
+	if (asprintf(&buf, "DELETE FROM %s WHERE instance_id='%lu' AND %s<%s",
+			table_name, idi->dbinfo.instance_id, field_name, ts) != -1
+	) {
+		result = ndo2db_db_query(idi, buf);
+		free(buf);
+	}
+
+	free(ts);
 
 	return result;
-        }
-		
+}
 
-/* performs some periodic table maintenance... */
-int ndo2db_db_perform_maintenance(ndo2db_idi *idi){
-	time_t current_time;
 
-	/* get the current time */
-	time(&current_time);
+/**
+ * Periodically removes old rows from tables that would otherwise grow without
+ * bound.
+ * @param idi Input data interface handle.
+ * @return NDO_OK.
+ */
+int ndo2db_db_perform_maintenance(ndo2db_idi *idi) {
+	time_t current_time = time(NULL);
+	time_t delta = current_time - (time_t)idi->dbinfo.last_table_trim_time;
 
-	/* trim tables */
-	if ((current_time-(time_t)60)>idi->dbinfo.last_table_trim_time) {
+	if (idi->dbinfo.table_trim_interval && delta > idi->dbinfo.table_trim_interval) {
 		if (idi->dbinfo.max_timedevents_age) {
 			syslog(LOG_USER|LOG_INFO, "Trimming timedevents.");
-			ndo2db_db_trim_data_table(idi,ndo2db_db_tablenames[NDO2DB_DBTABLE_TIMEDEVENTS],"scheduled_time",(time_t)((unsigned long)current_time-idi->dbinfo.max_timedevents_age));
+			ndo2db_db_trim_data_table(idi, ndo2db_db_tablenames[NDO2DB_DBTABLE_TIMEDEVENTS], "scheduled_time", current_time - (time_t)idi->dbinfo.max_timedevents_age);
 		}
 		if (idi->dbinfo.max_systemcommands_age) {
 			syslog(LOG_USER|LOG_INFO, "Trimming systemcommands.");
-			ndo2db_db_trim_data_table(idi,ndo2db_db_tablenames[NDO2DB_DBTABLE_SYSTEMCOMMANDS],"start_time",(time_t)((unsigned long)current_time-idi->dbinfo.max_systemcommands_age));
+			ndo2db_db_trim_data_table(idi, ndo2db_db_tablenames[NDO2DB_DBTABLE_SYSTEMCOMMANDS], "start_time", current_time - (time_t)idi->dbinfo.max_systemcommands_age);
 		}
 		if (idi->dbinfo.max_servicechecks_age) {
 			syslog(LOG_USER|LOG_INFO, "Trimming servicechecks.");
-			ndo2db_db_trim_data_table(idi,ndo2db_db_tablenames[NDO2DB_DBTABLE_SERVICECHECKS],"start_time",(time_t)((unsigned long)current_time-idi->dbinfo.max_servicechecks_age));
+			ndo2db_db_trim_data_table(idi, ndo2db_db_tablenames[NDO2DB_DBTABLE_SERVICECHECKS], "start_time", current_time - (time_t)idi->dbinfo.max_servicechecks_age);
 		}
 		if (idi->dbinfo.max_hostchecks_age) {
 			syslog(LOG_USER|LOG_INFO, "Trimming hostchecks.");
-			ndo2db_db_trim_data_table(idi,ndo2db_db_tablenames[NDO2DB_DBTABLE_HOSTCHECKS],"start_time",(time_t)((unsigned long)current_time-idi->dbinfo.max_hostchecks_age));
+			ndo2db_db_trim_data_table(idi, ndo2db_db_tablenames[NDO2DB_DBTABLE_HOSTCHECKS], "start_time", current_time - (time_t)idi->dbinfo.max_hostchecks_age);
 		}
 		if (idi->dbinfo.max_eventhandlers_age) {
 			syslog(LOG_USER|LOG_INFO, "Trimming eventhandlers.");
-			ndo2db_db_trim_data_table(idi,ndo2db_db_tablenames[NDO2DB_DBTABLE_EVENTHANDLERS],"start_time",(time_t)((unsigned long)current_time-idi->dbinfo.max_eventhandlers_age));
+			ndo2db_db_trim_data_table(idi, ndo2db_db_tablenames[NDO2DB_DBTABLE_EVENTHANDLERS], "start_time", current_time - (time_t)idi->dbinfo.max_eventhandlers_age);
 		}
 		if (idi->dbinfo.max_externalcommands_age) {
 			syslog(LOG_USER|LOG_INFO, "Trimming externalcommands.");
-			ndo2db_db_trim_data_table(idi,ndo2db_db_tablenames[NDO2DB_DBTABLE_EXTERNALCOMMANDS],"entry_time",(time_t)((unsigned long)current_time-idi->dbinfo.max_externalcommands_age));
+			ndo2db_db_trim_data_table(idi, ndo2db_db_tablenames[NDO2DB_DBTABLE_EXTERNALCOMMANDS], "entry_time", current_time - (time_t)idi->dbinfo.max_externalcommands_age);
 		}
 		if (idi->dbinfo.max_notifications_age) {
 			syslog(LOG_USER|LOG_INFO, "Trimming notifications.");
-			ndo2db_db_trim_data_table(idi,ndo2db_db_tablenames[NDO2DB_DBTABLE_NOTIFICATIONS],"start_time",(time_t)((unsigned long)current_time-idi->dbinfo.max_notifications_age));
+			ndo2db_db_trim_data_table(idi, ndo2db_db_tablenames[NDO2DB_DBTABLE_NOTIFICATIONS], "start_time", current_time - (time_t)idi->dbinfo.max_notifications_age);
 		}
 		if (idi->dbinfo.max_contactnotifications_age) {
 			syslog(LOG_USER|LOG_INFO, "Trimming contactnotifications.");
-			ndo2db_db_trim_data_table(idi,ndo2db_db_tablenames[NDO2DB_DBTABLE_CONTACTNOTIFICATIONS],"start_time",(time_t)((unsigned long)current_time-idi->dbinfo.max_contactnotifications_age));
+			ndo2db_db_trim_data_table(idi, ndo2db_db_tablenames[NDO2DB_DBTABLE_CONTACTNOTIFICATIONS], "start_time", current_time - (time_t)idi->dbinfo.max_contactnotifications_age);
 		}
 		if (idi->dbinfo.max_contactnotificationmethods_age) {
 			syslog(LOG_USER|LOG_INFO, "Trimming contactnotificationmethods.");
-			ndo2db_db_trim_data_table(idi,ndo2db_db_tablenames[NDO2DB_DBTABLE_CONTACTNOTIFICATIONMETHODS],"start_time",(time_t)((unsigned long)current_time-idi->dbinfo.max_contactnotificationmethods_age));
+			ndo2db_db_trim_data_table(idi, ndo2db_db_tablenames[NDO2DB_DBTABLE_CONTACTNOTIFICATIONMETHODS], "start_time", current_time - (time_t)idi->dbinfo.max_contactnotificationmethods_age);
 		}
 		if (idi->dbinfo.max_logentries_age) {
 			syslog(LOG_USER|LOG_INFO, "Trimming logentries.");
-			ndo2db_db_trim_data_table(idi,ndo2db_db_tablenames[NDO2DB_DBTABLE_LOGENTRIES],"entry_time",(time_t)((unsigned long)current_time-idi->dbinfo.max_logentries_age));
+			ndo2db_db_trim_data_table(idi, ndo2db_db_tablenames[NDO2DB_DBTABLE_LOGENTRIES], "entry_time", current_time - (time_t)idi->dbinfo.max_logentries_age);
 		}
 		if (idi->dbinfo.max_acknowledgements_age) {
 			syslog(LOG_USER|LOG_INFO, "Trimming acknowledgements.");
-			ndo2db_db_trim_data_table(idi,ndo2db_db_tablenames[NDO2DB_DBTABLE_ACKNOWLEDGEMENTS],"entry_time",(time_t)((unsigned long)current_time-idi->dbinfo.max_acknowledgements_age));
+			ndo2db_db_trim_data_table(idi, ndo2db_db_tablenames[NDO2DB_DBTABLE_ACKNOWLEDGEMENTS], "entry_time", current_time - (time_t)idi->dbinfo.max_acknowledgements_age);
 		}
-		idi->dbinfo.last_table_trim_time=current_time;
+
+		idi->dbinfo.last_table_trim_time = current_time;
 	}
 
 	return NDO_OK;

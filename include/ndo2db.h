@@ -51,7 +51,7 @@ typedef struct ndo2db_dbobject_struct{
         }ndo2db_dbobject;
 
 
-typedef struct ndo2db_dbconninfo_struct{
+typedef struct ndo2db_dbconninfo {
 	int server_type;
 	int connected;
 	int error;
@@ -87,11 +87,12 @@ typedef struct ndo2db_dbconninfo_struct{
 	unsigned long max_contactnotificationmethods_age;
 	unsigned long max_logentries_age;
 	unsigned long max_acknowledgements_age;
+	unsigned long table_trim_interval;
 	time_t last_table_trim_time;
 	time_t last_logentry_time;
 	char *last_logentry_data;
 	ndo2db_dbobject **object_hashlist;
-        }ndo2db_dbconninfo;
+} ndo2db_dbconninfo;
 
 
 typedef struct ndo2db_input_data_info_struct{
@@ -128,6 +129,8 @@ typedef struct ndo2db_input_data_info_struct{
 /*************** misc definitions **************/
 #define NDO2DB_INPUT_BUFFER                             1024
 #define NDO2DB_OBJECT_HASHSLOTS                         1024
+
+#define NDO2DB_DEFAULT_TABLE_TRIM_INTERVAL              60
 
 
 /*********** types of input sections ***********/

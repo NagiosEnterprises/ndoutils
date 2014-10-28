@@ -165,6 +165,16 @@ max_acknowledgements_age=44640
 
 
 
+## TABLE TRIMMING INTERVAL
+# This option specifies (in MINUTES) how often tables will be trimmed. A
+# default interval of 60 minutes will be used if no value is given for this
+# option. Using a value of zero (0) means that NO tables will be automatically
+# trimmed, even if a max age is set for a table above.
+
+table_trim_interval=60
+
+
+
 # DEBUG LEVEL
 # This option determines how much (if any) debugging information will
 # be written to the debug file.  OR values together to log multiple

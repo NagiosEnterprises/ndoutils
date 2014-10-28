@@ -12,7 +12,7 @@
 #include "config.h"
 #include "ndo2db.h"
 
-typedef struct ndo2db_dbconfig_struct{
+typedef struct ndo2db_dbconfig {
 	int server_type;
 	int port;
 	char *host;
@@ -30,8 +30,9 @@ typedef struct ndo2db_dbconfig_struct{
 	unsigned long max_contactnotifications_age;
 	unsigned long max_contactnotificationmethods_age;
 	unsigned long max_logentries_age;
-	unsigned long max_acknowledgements_age;	
-        }ndo2db_dbconfig;
+	unsigned long max_acknowledgements_age;
+	unsigned long table_trim_interval;
+} ndo2db_dbconfig;
 
 /*************** DB server types ***************/
 
@@ -146,7 +147,6 @@ int ndo2db_handle_db_error(ndo2db_idi *,int);
 int ndo2db_db_clear_table(ndo2db_idi *,char *);
 int ndo2db_db_get_latest_data_time(ndo2db_idi *,char *,char *,unsigned long *);
 int ndo2db_db_perform_maintenance(ndo2db_idi *);
-int ndo2db_db_trim_data_table(ndo2db_idi *,char *,char *,unsigned long);
 
 extern int ndo2db_log_debug_info(int, int, const char *, ...);
 #endif
