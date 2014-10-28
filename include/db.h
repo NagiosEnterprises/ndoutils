@@ -16,6 +16,7 @@ typedef struct ndo2db_dbconfig {
 	int server_type;
 	int port;
 	char *host;
+	char *socket;
 	char *username;
 	char *password;
 	char *dbname;

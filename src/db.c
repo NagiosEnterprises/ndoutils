@@ -212,17 +212,24 @@ int ndo2db_db_connect(ndo2db_idi *idi){
 	switch(idi->dbinfo.server_type){
 	case NDO2DB_DBSERVER_MYSQL:
 #ifdef USE_MYSQL
-		if(!mysql_real_connect(&idi->dbinfo.mysql_conn,ndo2db_db_settings.host,ndo2db_db_settings.username,ndo2db_db_settings.password,ndo2db_db_settings.dbname,ndo2db_db_settings.port,NULL,0)){
-
+		if (!mysql_real_connect(
+			&idi->dbinfo.mysql_conn,
+			ndo2db_db_settings.host,
+			ndo2db_db_settings.username,
+			ndo2db_db_settings.password,
+			ndo2db_db_settings.dbname,
+			ndo2db_db_settings.port,
+			ndo2db_db_settings.socket,
+			CLIENT_REMEMBER_OPTIONS
+		)) {
 			mysql_close(&idi->dbinfo.mysql_conn);
 			syslog(LOG_USER|LOG_INFO,"Error: Could not connect to MySQL database: %s",mysql_error(&idi->dbinfo.mysql_conn));
 			result=NDO_ERROR;
 			idi->disconnect_client=NDO_TRUE;
-		        }
-		else{
+		} else {
 			idi->dbinfo.connected=NDO_TRUE;
 			syslog(LOG_USER|LOG_DEBUG,"Successfully connected to MySQL database");
-		        }
+		}
 #endif
 		break;
 	case NDO2DB_DBSERVER_PGSQL:
