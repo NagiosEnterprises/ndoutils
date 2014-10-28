@@ -93,6 +93,21 @@ db_port=3306
 
 
 
+# DATABASE SOCKET
+# This option specifies the path to the socket to use for local DB connections.
+#
+# MySQL's default location is /tmp/mysql.sock, but /var/lib/mysql/mysql.sock
+# is common for RPM distributions, and /var/run/mysqld/mysqld.sock is seen on
+# Ubuntu...
+#
+# You normally do not need to set this option unless you experience connection
+# problems with messages in NDO2DB's log like:
+#   "Can't connect to local MySQL server through socket ..."
+
+#db_socket=/var/lib/mysql/mysql.sock
+
+
+
 # DATABASE NAME
 # This option specifies the name of the database that should be used.
 

@@ -441,6 +441,10 @@ int ndo2db_process_config_var(char *arg){
 	else if(!strcmp(var,"db_port")){
 		ndo2db_db_settings.port=atoi(val);
 	        }
+	else if (!strcmp(var, "db_socket")) {
+		if(!(ndo2db_db_settings.socket = strdup(val)))
+			return NDO_ERROR;
+	        }
 	else if(!strcmp(var,"db_user")){
 		if((ndo2db_db_settings.username=strdup(val))==NULL)
 			return NDO_ERROR;
@@ -514,6 +518,7 @@ int ndo2db_initialize_variables(void){
 	ndo2db_db_settings.server_type=NDO2DB_DBSERVER_NONE;
 	ndo2db_db_settings.host=NULL;
 	ndo2db_db_settings.port=0;
+	ndo2db_db_settings.socket = NULL;
 	ndo2db_db_settings.username=NULL;
 	ndo2db_db_settings.password=NULL;
 	ndo2db_db_settings.dbname=NULL;
@@ -561,6 +566,10 @@ int ndo2db_free_program_memory(void){
 	if(ndo2db_db_settings.host){
 		free(ndo2db_db_settings.host);
 		ndo2db_db_settings.host=NULL;
+		}
+	if(ndo2db_db_settings.socket){
+		free(ndo2db_db_settings.socket);
+		ndo2db_db_settings.socket=NULL;
 		}
 	if(ndo2db_db_settings.username){
 		free(ndo2db_db_settings.username);
