@@ -10,6 +10,7 @@ NDO Utils Changelog
 * Fixed table trimming and related config options for notifications, contactnotifications, contactnotificationmethods, logentries and acknowledgements (Eric Mislivec)
 * Fixed Tracker #428: Uninitialized sleep_time in push_into_queue(); cleanup other warnings (Eric Mislivec)
 * Tracker #373: Make the DB trim interval a configurable option (Eric Mislivec)
+* GitHub #1: Make the MySQL socket path a configurable option (Eric Mislivec)
 
 2.0.0 - 02/28/2014
 ------------------
