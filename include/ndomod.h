@@ -1,10 +1,24 @@
-/************************************************************************
+/**
+ * @file ndomod.h Nagios Data Output Event Broker Module declarations
+ */
+/*
+ * Copyright 2009-2014 Nagios Core Development Team and Community Contributors
+ * Copyright 2005-2009 Ethan Galstad
  *
- * NDOMOD.H - NDO NEB Module Include File
- * Copyright (c) 2005-2006 Ethan Galstad
- * Last Modified: 05-25-2006
+ * This file is part of NDOUtils.
  *
- ************************************************************************/
+ * NDOUtils is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ *
+ * NDOUtils is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with NDOUtils. If not, see <http://www.gnu.org/licenses/>.
+ */
 
 #ifndef _NDBXT_NDOMOD_H
 #define _NDBXT_NDOMOD_H

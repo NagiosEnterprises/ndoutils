@@ -1,12 +1,24 @@
-/***************************************************************
- * DB.C - Datatabase routines for NDO2DB daemon
+/**
+ * @file db.c Database routines for ndo2db daemon
+ */
+/*
+ * Copyright 2009-2014 Nagios Core Development Team and Community Contributors
+ * Copyright 2005-2009 Ethan Galstad
  *
- * Copyright (c) 2009 Nagios Core Development Team and Community Contributors
- * Copyright (c) 2005-2009 Ethan Galstad
+ * This file is part of NDOUtils.
  *
- * Last Modified: 07-11-2009
+ * NDOUtils is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
  *
- **************************************************************/
+ * NDOUtils is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with NDOUtils. If not, see <http://www.gnu.org/licenses/>.
+ */
 
 /* include our project's header files */
 #include "../include/config.h"
