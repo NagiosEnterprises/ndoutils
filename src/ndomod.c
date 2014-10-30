@@ -1,16 +1,35 @@
-/*****************************************************************************
+/**
+ * @file ndomod.c Nagios Data Output Event Broker Module
+ */
+/*
+ * Copyright 2009-2014 Nagios Core Development Team and Community Contributors
+ * Copyright 2005-2009 Ethan Galstad
  *
- * NDOMOD.C - Nagios Data Output Event Broker Module
+ * Last Modified: 02-28-2014
  *
- * Copyright (c) 2009-2012 Nagios Core Development Team and Community Contributors
- * Copyright (c) 2005-2009 Ethan Galstad
+ * This file is part of NDOUtils.
  *
  * First Written: 05-19-2005
  * Last Modified: 07-28-2016
  *
- * TO DO: Add service parents, hourly value (hosts / services),
- *        minimum value (contacts)
- *****************************************************************************/
+ *****************************************************************************
+ * NDOUtils is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ *
+ * NDOUtils is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with NDOUtils. If not, see <http://www.gnu.org/licenses/>.
+ */
+/**
+ * @todo Add service parents
+ * @todo hourly value (hosts / services)
+ * @todo minimum value (contacts)
+ */
 
 /* include our project's header files */
 #include "../include/common.h"

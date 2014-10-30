@@ -1,4 +1,21 @@
 dnl Process this -*-m4-*- file with autoconf to produce a configure script.
+dnl
+dnl Copyright 2009-2014 Nagios Core Development Team and Community Contributors
+dnl Copyright 2005-2009 Ethan Galstad
+dnl
+dnl This file is part of NDOUtils.
+dnl
+dnl NDOUtils is free software: you can redistribute it and/or modify
+dnl it under the terms of the GNU General Public License version 2 as
+dnl published by the Free Software Foundation.
+dnl
+dnl NDOUtils is distributed in the hope that it will be useful,
+dnl but WITHOUT ANY WARRANTY; without even the implied warranty of
+dnl MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+dnl GNU General Public License for more details.
+dnl
+dnl You should have received a copy of the GNU General Public License
+dnl along with NDOUtils. If not, see <http://www.gnu.org/licenses/>.
 
 dnl Disable caching
 define([AC_CACHE_LOAD],)
