@@ -90,6 +90,10 @@ NEB_API_VERSION(CURRENT_NEB_API_VERSION)
 #define BD_UNSIGNED_LONG	3
 #define BD_FLOAT			4
 
+#ifndef ARRAY_SIZE
+#define ARRAY_SIZE(x) (sizeof(x) / sizeof(x[0]))
+#endif
+
 struct ndo_broker_data {
 	int	key;
 	int datatype;
@@ -4253,62 +4257,52 @@ int ndomod_write_object_config(int config_type){
 	ndo_dbuf_init(&dbuf,2048);
 
 	/* initialize buffers */
-	for(x=0;x<OBJECTCONFIG_ES_ITEMS;x++)
-		es[x]=NULL;
+	for (x = 0; x < OBJECTCONFIG_ES_ITEMS; x++) es[x] = NULL;
 
 	/****** dump command config ******/
-	for(temp_command=command_list;temp_command!=NULL;temp_command=temp_command->next){
+	for (temp_command = command_list; temp_command; temp_command = temp_command->next) {
 
-		es[0]=ndo_escape_buffer(temp_command->name);
-		es[1]=ndo_escape_buffer(temp_command->command_line);
+		es[0] = ndo_escape_buffer(temp_command->name);
+		es[1] = ndo_escape_buffer(temp_command->command_line);
 
 		{
 			struct ndo_broker_data command_definition[] = {
-				{ NDO_DATA_TIMESTAMP, BD_TIMEVAL, 
-						{ .timestamp = now }},
-				{ NDO_DATA_COMMANDNAME, BD_STRING, 
-						{ .string = (es[0]==NULL) ? "" : es[0] }},
-				{ NDO_DATA_COMMANDLINE, BD_STRING, 
-						{ .string = (es[1]==NULL) ? "" : es[1] }},
-				};
+				{ NDO_DATA_TIMESTAMP, BD_TIMEVAL, { .timestamp = now }},
+				{ NDO_DATA_COMMANDNAME, BD_STRING, { .string = es[0] ? es[0] : "" }},
+				{ NDO_DATA_COMMANDLINE, BD_STRING, { .string = es[1] ? es[1] : "" }},
+			};
 
-			ndomod_broker_data_serialize(&dbuf, NDO_API_COMMANDDEFINITION, 
-					command_definition, 
-					sizeof(command_definition) / sizeof(command_definition[ 0]),
-					TRUE);
+			ndomod_broker_data_serialize(&dbuf, NDO_API_COMMANDDEFINITION,
+				command_definition, ARRAY_SIZE(command_definition), TRUE);
 		}
+
+		if (es[0]) free(es[0]);
+		if (es[1]) free(es[1]);
 
 		/* write data to sink */
 		ndomod_write_to_sink(dbuf.buf,NDO_TRUE,NDO_TRUE);
 		ndo_dbuf_free(&dbuf);
-	        }
-
-	/* free buffers */
-	for(x=0;x<OBJECTCONFIG_ES_ITEMS;x++){
-		free(es[x]);
-		es[x]=NULL;
-	        }
+	}
 
 	/****** dump timeperiod config ******/
-	for(temp_timeperiod=timeperiod_list;temp_timeperiod!=NULL;temp_timeperiod=temp_timeperiod->next){
+	for (temp_timeperiod = timeperiod_list; temp_timeperiod; temp_timeperiod = temp_timeperiod->next) {
 
-		es[0]=ndo_escape_buffer(temp_timeperiod->name);
-		es[1]=ndo_escape_buffer(temp_timeperiod->alias);
+		es[0] = ndo_escape_buffer(temp_timeperiod->name);
+		es[1] = ndo_escape_buffer(temp_timeperiod->alias);
 
 		{
 			struct ndo_broker_data timeperiod_definition[] = {
-				{ NDO_DATA_TIMESTAMP, BD_TIMEVAL, 
-						{ .timestamp = now }},
-				{ NDO_DATA_TIMEPERIODNAME, BD_STRING, 
-						{ .string = (es[0]==NULL) ? "" : es[0] }},
-				{ NDO_DATA_TIMEPERIODALIAS, BD_STRING, 
-						{ .string = (es[1]==NULL) ? "" : es[1] }},
-				};
+				{ NDO_DATA_TIMESTAMP, BD_TIMEVAL, { .timestamp = now }},
+				{ NDO_DATA_TIMEPERIODNAME, BD_STRING, { .string = es[0] ? es[0] : "" }},
+				{ NDO_DATA_TIMEPERIODALIAS, BD_STRING, { .string = es[1] ? es[1] : "" }},
+			};
 
-			ndomod_broker_data_serialize(&dbuf, NDO_API_TIMEPERIODDEFINITION, 
-					timeperiod_definition, sizeof(timeperiod_definition) / 
-					sizeof(timeperiod_definition[ 0]), FALSE);
+			ndomod_broker_data_serialize(&dbuf, NDO_API_TIMEPERIODDEFINITION,
+				timeperiod_definition, ARRAY_SIZE(timeperiod_definition), FALSE);
 		}
+
+		if (es[0]) free(es[0]);
+		if (es[1]) free(es[1]);
 
 		/* dump timeranges for each day */
 		for(x=0;x<7;x++){
@@ -4323,22 +4317,15 @@ int ndomod_write_object_config(int config_type){
 					);
 				temp_buffer[sizeof(temp_buffer)-1]='\x0';
 				ndo_dbuf_strcat(&dbuf,temp_buffer);
-			        }
-		        }
+			}
+		}
 
 		ndomod_enddata_serialize(&dbuf);
 
 		ndomod_write_to_sink(dbuf.buf,NDO_TRUE,NDO_TRUE);
-
 		ndo_dbuf_free(&dbuf);
-	        }
+	}
 
-
-	/* free buffers */
-	for(x=0;x<OBJECTCONFIG_ES_ITEMS;x++){
-		free(es[x]);
-		es[x]=NULL;
-	        }
 
 	/****** dump contact config ******/
 	for(temp_contact=contact_list;temp_contact!=NULL;temp_contact=temp_contact->next){
@@ -4485,26 +4472,26 @@ int ndomod_write_object_config(int config_type){
 					sizeof(contact_definition[ 0]), FALSE);
 		}
 
-		free(es[0]);
-		es[0]=NULL;
+		/* Free the memory we allocated on this iteration. */
+		for (x = 0; x < 6; x++) if (es[x]) free(es[x]);
 
 		/* dump addresses for each contact */
 		for(x=0;x<MAX_CONTACT_ADDRESSES;x++){
 
-			es[0]=ndo_escape_buffer(temp_contact->address[x]);
+			es[0] = ndo_escape_buffer(temp_contact->address[x]);
 
 			snprintf(temp_buffer,sizeof(temp_buffer)-1
 				 ,"\n%d=%d:%s"
 				 ,NDO_DATA_CONTACTADDRESS
 				 ,x+1
-				 ,(es[0]==NULL)?"":es[0]
-				);
+				 ,es[0] ? es[0] : ""
+			);
+
+			if (es[0]) free(es[0]);
+
 			temp_buffer[sizeof(temp_buffer)-1]='\x0';
 			ndo_dbuf_strcat(&dbuf,temp_buffer);
-
-			free(es[0]);
-			es[0]=NULL;
-		        }
+		}
 
 		/* dump host notification commands for each contact */
 		ndomod_commands_serialize(temp_contact->host_notification_commands, 
@@ -4522,22 +4509,15 @@ int ndomod_write_object_config(int config_type){
 		ndomod_enddata_serialize(&dbuf);
 
 		ndomod_write_to_sink(dbuf.buf,NDO_TRUE,NDO_TRUE);
-
 		ndo_dbuf_free(&dbuf);
-	        }
+	}
 
-
-	/* free buffers */
-	for(x=0;x<OBJECTCONFIG_ES_ITEMS;x++){
-		free(es[x]);
-		es[x]=NULL;
-	        }
 
 	/****** dump contactgroup config ******/
 	for(temp_contactgroup=contactgroup_list;temp_contactgroup!=NULL;temp_contactgroup=temp_contactgroup->next){
 
-		es[0]=ndo_escape_buffer(temp_contactgroup->group_name);
-		es[1]=ndo_escape_buffer(temp_contactgroup->alias);
+		es[0] = ndo_escape_buffer(temp_contactgroup->group_name);
+		es[1] = ndo_escape_buffer(temp_contactgroup->alias);
 
 		{
 			struct ndo_broker_data contactgroup_definition[] = {
@@ -4554,8 +4534,8 @@ int ndomod_write_object_config(int config_type){
 					sizeof(contactgroup_definition[ 0]), FALSE);
 		}
 
-		free(es[0]);
-		es[0]=NULL;
+		if (es[0]) free(es[0]);
+		if (es[1]) free(es[1]);
 
 		/* dump members for each contactgroup */
 		ndomod_contacts_serialize(temp_contactgroup->members, &dbuf, 
@@ -4566,14 +4546,8 @@ int ndomod_write_object_config(int config_type){
 		ndomod_write_to_sink(dbuf.buf,NDO_TRUE,NDO_TRUE);
 
 		ndo_dbuf_free(&dbuf);
-	        }
+	}
 
-
-	/* free buffers */
-	for(x=0;x<OBJECTCONFIG_ES_ITEMS;x++){
-		free(es[x]);
-		es[x]=NULL;
-	        }
 
 	/****** dump host config ******/
 	for(temp_host=host_list;temp_host!=NULL;temp_host=temp_host->next){
@@ -4852,8 +4826,7 @@ int ndomod_write_object_config(int config_type){
 					sizeof(host_definition[ 0]), FALSE);
 		}
 
-		free(es[0]);
-		es[0]=NULL;
+		for (x = 0; x < OBJECTCONFIG_ES_ITEMS; x++) my_free(es[x]);
 
 		/* dump parent hosts */
 		ndomod_hosts_serialize(temp_host->parent_hosts, &dbuf, 
@@ -4877,20 +4850,14 @@ int ndomod_write_object_config(int config_type){
 		ndomod_write_to_sink(dbuf.buf,NDO_TRUE,NDO_TRUE);
 
 		ndo_dbuf_free(&dbuf);
-	        }
+	}
 
-
-	/* free buffers */
-	for(x=0;x<OBJECTCONFIG_ES_ITEMS;x++){
-		free(es[x]);
-		es[x]=NULL;
-	        }
 
 	/****** dump hostgroup config ******/
 	for(temp_hostgroup=hostgroup_list;temp_hostgroup!=NULL;temp_hostgroup=temp_hostgroup->next){
 
-		es[0]=ndo_escape_buffer(temp_hostgroup->group_name);
-		es[1]=ndo_escape_buffer(temp_hostgroup->alias);
+		es[0] = ndo_escape_buffer(temp_hostgroup->group_name);
+		es[1] = ndo_escape_buffer(temp_hostgroup->alias);
 
 		{
 			struct ndo_broker_data hostgroup_definition[] = {
@@ -4907,8 +4874,8 @@ int ndomod_write_object_config(int config_type){
 					sizeof(hostgroup_definition[ 0]), FALSE);
 		}
 
-		free(es[0]);
-		es[0]=NULL;
+		if (es[0]) free(es[0]);
+		if (es[1]) free(es[1]);
 
 		/* dump members for each hostgroup */
 #ifdef BUILD_NAGIOS_2X
@@ -4924,14 +4891,8 @@ int ndomod_write_object_config(int config_type){
 		ndomod_write_to_sink(dbuf.buf,NDO_TRUE,NDO_TRUE);
 
 		ndo_dbuf_free(&dbuf);
-	        }
+	}
 
-
-	/* free buffers */
-	for(x=0;x<OBJECTCONFIG_ES_ITEMS;x++){
-		free(es[x]);
-		es[x]=NULL;
-	        }
 
 	/****** dump service config ******/
 	for(temp_service=service_list;temp_service!=NULL;temp_service=temp_service->next){
@@ -5003,7 +4964,7 @@ int ndomod_write_object_config(int config_type){
 			struct ndo_broker_data service_definition[] = {
 				{ NDO_DATA_TIMESTAMP, BD_TIMEVAL, 
 						{ .timestamp = now }},
-				{ NDO_DATA_HOSTNAME, BD_STRING, 
+				{ NDO_DATA_HOSTNAME, BD_STRING,
 						{ .string = (es[0]==NULL) ? "" : es[0] }},
 				{ NDO_DATA_DISPLAYNAME, BD_STRING, 
 						{ .string = (es[12]==NULL) ? "" : es[12] }},
@@ -5194,8 +5155,8 @@ int ndomod_write_object_config(int config_type){
 					sizeof(service_definition[ 0]), FALSE);
 		}
 
-		free(es[0]);
-		es[0]=NULL;
+		/* Free the memory we allocated on this iteration. */
+		for (x = 0; x < OBJECTCONFIG_ES_ITEMS; x++) my_free(es[x]);
 
 #ifdef BUILD_NAGIOS_4X
 		/* dump parent services */
@@ -5222,14 +5183,8 @@ int ndomod_write_object_config(int config_type){
 		ndomod_write_to_sink(dbuf.buf,NDO_TRUE,NDO_TRUE);
 
 		ndo_dbuf_free(&dbuf);
-	        }
+	}
 
-
-	/* free buffers */
-	for(x=0;x<OBJECTCONFIG_ES_ITEMS;x++){
-		free(es[x]);
-		es[x]=NULL;
-	        }
 
 	/****** dump servicegroup config ******/
 	for(temp_servicegroup=servicegroup_list;temp_servicegroup!=NULL;temp_servicegroup=temp_servicegroup->next){
@@ -5252,10 +5207,8 @@ int ndomod_write_object_config(int config_type){
 					sizeof(servicegroup_definition[ 0]), FALSE);
 		}
 
-		free(es[0]);
-		free(es[1]);
-		es[0]=NULL;
-		es[1]=NULL;
+		if (es[0]) free(es[0]);
+		if (es[1]) free(es[1]);
 
 		/* dump members for each servicegroup */
 		ndomod_services_serialize(temp_servicegroup->members, &dbuf, 
@@ -5266,14 +5219,8 @@ int ndomod_write_object_config(int config_type){
 		ndomod_write_to_sink(dbuf.buf,NDO_TRUE,NDO_TRUE);
 
 		ndo_dbuf_free(&dbuf);
-	        }
+	}
 
-
-	/* free buffers */
-	for(x=0;x<OBJECTCONFIG_ES_ITEMS;x++){
-		free(es[x]);
-		es[x]=NULL;
-	        }
 
 	/****** dump host escalation config ******/
 #ifdef BUILD_NAGIOS_4X
@@ -5336,8 +5283,8 @@ int ndomod_write_object_config(int config_type){
 					sizeof(hostescalation_definition[ 0]), FALSE);
 		}
 
-		free(es[0]);
-		es[0]=NULL;
+		if (es[0]) free(es[0]);
+		if (es[1]) free(es[1]);
 
 		/* dump contactgroups */
 		ndomod_contactgroups_serialize(temp_hostescalation->contact_groups, 
@@ -5354,14 +5301,8 @@ int ndomod_write_object_config(int config_type){
 		ndomod_write_to_sink(dbuf.buf,NDO_TRUE,NDO_TRUE);
 
 		ndo_dbuf_free(&dbuf);
-	        }
+	}
 
-
-	/* free buffers */
-	for(x=0;x<OBJECTCONFIG_ES_ITEMS;x++){
-		free(es[x]);
-		es[x]=NULL;
-	        }
 
 	/****** dump service escalation config ******/
 #ifdef BUILD_NAGIOS_4X
@@ -5440,8 +5381,9 @@ int ndomod_write_object_config(int config_type){
 					sizeof(serviceescalation_definition[ 0]), FALSE);
 		}
 
-		free(es[0]);
-		es[0]=NULL;
+		if (es[0]) free(es[0]);
+		if (es[1]) free(es[1]);
+		if (es[2]) free(es[2]);
 
 		/* dump contactgroups */
 		ndomod_contactgroups_serialize(temp_serviceescalation->contact_groups, 
@@ -5458,14 +5400,8 @@ int ndomod_write_object_config(int config_type){
 		ndomod_write_to_sink(dbuf.buf,NDO_TRUE,NDO_TRUE);
 
 		ndo_dbuf_free(&dbuf);
-	        }
+	}
 
-
-	/* free buffers */
-	for(x=0;x<OBJECTCONFIG_ES_ITEMS;x++){
-		free(es[x]);
-		es[x]=NULL;
-	        }
 
 	/****** dump host dependency config ******/
 #ifdef BUILD_NAGIOS_4X
@@ -5535,17 +5471,15 @@ int ndomod_write_object_config(int config_type){
 					sizeof(hostdependency_definition[ 0]), TRUE);
 		}
 
+		if (es[0]) free(es[0]);
+		if (es[1]) free(es[1]);
+		if (es[2]) free(es[2]);
+
 		ndomod_write_to_sink(dbuf.buf,NDO_TRUE,NDO_TRUE);
 
 		ndo_dbuf_free(&dbuf);
-	        }
+	}
 
-
-	/* free buffers */
-	for(x=0;x<OBJECTCONFIG_ES_ITEMS;x++){
-		free(es[x]);
-		es[x]=NULL;
-	        }
 
 	/****** dump service dependency config ******/
 #ifdef BUILD_NAGIOS_4X
@@ -5630,20 +5564,17 @@ int ndomod_write_object_config(int config_type){
 					sizeof(servicedependency_definition[ 0]), TRUE);
 		}
 
+		/* Free the memory we allocated on this iteration. */
+		for (x = 0; x < 5; x++) if (es[x]) free(es[x]);
+
 		ndomod_write_to_sink(dbuf.buf,NDO_TRUE,NDO_TRUE);
 
 		ndo_dbuf_free(&dbuf);
-	        }
+	}
 
-
-	/* free buffers */
-	for(x=0;x<OBJECTCONFIG_ES_ITEMS;x++){
-		free(es[x]);
-		es[x]=NULL;
-	        }
 
 	return NDO_OK;
-        }
+}
 
 
 
