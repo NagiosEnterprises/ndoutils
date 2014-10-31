@@ -1320,150 +1320,102 @@ int ndomod_sink_buffer_set_overflow(ndomod_sink_buffer *sbuf, unsigned long num)
 /* CALLBACK FUNCTIONS                                                       */
 /****************************************************************************/
 
-/* registers for callbacks */
-int ndomod_register_callbacks(void){
-	int priority=0;
-	int result=NDO_OK;
-	char *msg=NULL; 
+/* A handy macro to DRY out the callback registration. */
+#define NDO_REG_CALLBACK(dtc, dtn) \
+	do { \
+		int result = neb_register_callback(dtc, ndomod_module_handle, 0, ndomod_broker_data); \
+		if (result != NDO_OK) { \
+			ndomod_write_to_logs("ndomod: Error registering for " dtn " data.", NSLOG_INFO_MESSAGE); \
+			return result; \
+		} \
+		ndomod_write_to_logs("ndomod: Registered for " dtn " data.", NSLOG_INFO_MESSAGE); \
+	} while (0)
 
-	//only register for events that we're going to process 
-	if(result==NDO_OK && (ndomod_process_options & NDOMOD_PROCESS_PROCESS_DATA)) {
-		result=neb_register_callback(NEBCALLBACK_PROCESS_DATA,ndomod_module_handle,priority,ndomod_broker_data);
-		asprintf(&msg,"ndomod registered for process data\n");
-		ndomod_write_to_logs(msg,NSLOG_INFO_MESSAGE);
-		}	
-	if(result==NDO_OK && (ndomod_process_options & NDOMOD_PROCESS_TIMED_EVENT_DATA)) {
-		result=neb_register_callback(NEBCALLBACK_TIMED_EVENT_DATA,ndomod_module_handle,priority,ndomod_broker_data);
-		asprintf(&msg,"ndomod registered for timed event data\n");
-		ndomod_write_to_logs(msg,NSLOG_INFO_MESSAGE);
-		}	
-	if(result==NDO_OK && (ndomod_process_options & NDOMOD_PROCESS_LOG_DATA)){
-		result=neb_register_callback(NEBCALLBACK_LOG_DATA,ndomod_module_handle,priority,ndomod_broker_data);
-		asprintf(&msg,"ndomod registered for log data\'");
-		ndomod_write_to_logs(msg,NSLOG_INFO_MESSAGE);
-		}	
-	if(result==NDO_OK && (ndomod_process_options & NDOMOD_PROCESS_SYSTEM_COMMAND_DATA)) {
-		result=neb_register_callback(NEBCALLBACK_SYSTEM_COMMAND_DATA,ndomod_module_handle,priority,ndomod_broker_data);
-		asprintf(&msg,"ndomod registered for system command data\'");
-		ndomod_write_to_logs(msg,NSLOG_INFO_MESSAGE);
-		}	
-	if(result==NDO_OK && (ndomod_process_options & NDOMOD_PROCESS_EVENT_HANDLER_DATA)) {
-		result=neb_register_callback(NEBCALLBACK_EVENT_HANDLER_DATA,ndomod_module_handle,priority,ndomod_broker_data);
-		asprintf(&msg,"ndomod registered for event handler data\'");
-		ndomod_write_to_logs(msg,NSLOG_INFO_MESSAGE);
-		}	
-	if(result==NDO_OK && (ndomod_process_options & NDOMOD_PROCESS_NOTIFICATION_DATA)) {
-		result=neb_register_callback(NEBCALLBACK_NOTIFICATION_DATA,ndomod_module_handle,priority,ndomod_broker_data);
-		asprintf(&msg,"ndomod registered for notification data\'");
-		ndomod_write_to_logs(msg,NSLOG_INFO_MESSAGE);
-		}	
-	if(result==NDO_OK && (ndomod_process_options & NDOMOD_PROCESS_SERVICE_CHECK_DATA)){
-		result=neb_register_callback(NEBCALLBACK_SERVICE_CHECK_DATA,ndomod_module_handle,priority,ndomod_broker_data);
-		asprintf(&msg,"ndomod registered for service check data\'");
-		ndomod_write_to_logs(msg,NSLOG_INFO_MESSAGE);
-		}
-	if(result==NDO_OK && (ndomod_process_options & NDOMOD_PROCESS_HOST_CHECK_DATA)) {
-		result=neb_register_callback(NEBCALLBACK_HOST_CHECK_DATA,ndomod_module_handle,priority,ndomod_broker_data);
-		asprintf(&msg,"ndomod registered for host check data\'");
-		ndomod_write_to_logs(msg,NSLOG_INFO_MESSAGE);
-		}
-	if(result==NDO_OK && (ndomod_process_options & NDOMOD_PROCESS_COMMENT_DATA)) {
-		result=neb_register_callback(NEBCALLBACK_COMMENT_DATA,ndomod_module_handle,priority,ndomod_broker_data);
-		asprintf(&msg,"ndomod registered for comment data\'");
-		ndomod_write_to_logs(msg,NSLOG_INFO_MESSAGE);
-		}
-	if(result==NDO_OK && (ndomod_process_options & NDOMOD_PROCESS_DOWNTIME_DATA)) {
-		result=neb_register_callback(NEBCALLBACK_DOWNTIME_DATA,ndomod_module_handle,priority,ndomod_broker_data);
-		asprintf(&msg,"ndomod registered for downtime data\'");
-		ndomod_write_to_logs(msg,NSLOG_INFO_MESSAGE);
-		}
-	if(result==NDO_OK && (ndomod_process_options & NDOMOD_PROCESS_FLAPPING_DATA)) {
-		result=neb_register_callback(NEBCALLBACK_FLAPPING_DATA,ndomod_module_handle,priority,ndomod_broker_data);
-		asprintf(&msg,"ndomod registered for flapping data\'");
-		ndomod_write_to_logs(msg,NSLOG_INFO_MESSAGE);
-		}
-	if(result==NDO_OK && (ndomod_process_options & NDOMOD_PROCESS_PROGRAM_STATUS_DATA)) {
-		result=neb_register_callback(NEBCALLBACK_PROGRAM_STATUS_DATA,ndomod_module_handle,priority,ndomod_broker_data);
-		asprintf(&msg,"ndomod registered for program status data\'");
-		ndomod_write_to_logs(msg,NSLOG_INFO_MESSAGE);
-		}
-	if(result==NDO_OK && (ndomod_process_options & NDOMOD_PROCESS_HOST_STATUS_DATA)) {
-		result=neb_register_callback(NEBCALLBACK_HOST_STATUS_DATA,ndomod_module_handle,priority,ndomod_broker_data);
-		asprintf(&msg,"ndomod registered for host status data\'");
-		ndomod_write_to_logs(msg,NSLOG_INFO_MESSAGE);
-		}
-	if(result==NDO_OK && (ndomod_process_options & NDOMOD_PROCESS_SERVICE_STATUS_DATA)) {
-		result=neb_register_callback(NEBCALLBACK_SERVICE_STATUS_DATA,ndomod_module_handle,priority,ndomod_broker_data);
-		asprintf(&msg,"ndomod registered for service status data\'");
-		ndomod_write_to_logs(msg,NSLOG_INFO_MESSAGE);
-		}
-	if(result==NDO_OK && (ndomod_process_options & NDOMOD_PROCESS_ADAPTIVE_PROGRAM_DATA)) {
-		result=neb_register_callback(NEBCALLBACK_ADAPTIVE_PROGRAM_DATA,ndomod_module_handle,priority,ndomod_broker_data);
-		asprintf(&msg,"ndomod registered for adaptive program data\'");
-		ndomod_write_to_logs(msg,NSLOG_INFO_MESSAGE);
-		}
-	if(result==NDO_OK && (ndomod_process_options & NDOMOD_PROCESS_ADAPTIVE_HOST_DATA)) {
-		result=neb_register_callback(NEBCALLBACK_ADAPTIVE_HOST_DATA,ndomod_module_handle,priority,ndomod_broker_data);
-		asprintf(&msg,"ndomod registered for adaptive host data\'");
-		ndomod_write_to_logs(msg,NSLOG_INFO_MESSAGE);
-		}
-	if(result==NDO_OK && (ndomod_process_options & NDOMOD_PROCESS_ADAPTIVE_SERVICE_DATA)) {
-		result=neb_register_callback(NEBCALLBACK_ADAPTIVE_SERVICE_DATA,ndomod_module_handle,priority,ndomod_broker_data);
-		asprintf(&msg,"ndomod registered for adaptive service data\'");
-		ndomod_write_to_logs(msg,NSLOG_INFO_MESSAGE);
-		}
-	if(result==NDO_OK && (ndomod_process_options & NDOMOD_PROCESS_EXTERNAL_COMMAND_DATA)) {
-		result=neb_register_callback(NEBCALLBACK_EXTERNAL_COMMAND_DATA,ndomod_module_handle,priority,ndomod_broker_data);
-		asprintf(&msg,"ndomod registered for external command data\'");
-		ndomod_write_to_logs(msg,NSLOG_INFO_MESSAGE);
-		}
-	if(result==NDO_OK && (ndomod_process_options & NDOMOD_PROCESS_AGGREGATED_STATUS_DATA)) {
-		result=neb_register_callback(NEBCALLBACK_AGGREGATED_STATUS_DATA,ndomod_module_handle,priority,ndomod_broker_data);
-		asprintf(&msg,"ndomod registered for aggregated status data\'");
-		ndomod_write_to_logs(msg,NSLOG_INFO_MESSAGE);
-		}
-	if(result==NDO_OK && (ndomod_process_options & NDOMOD_PROCESS_RETENTION_DATA)) {
-		result=neb_register_callback(NEBCALLBACK_RETENTION_DATA,ndomod_module_handle,priority,ndomod_broker_data);
-		asprintf(&msg,"ndomod registered for retention data\'");
-		ndomod_write_to_logs(msg,NSLOG_INFO_MESSAGE);
-		}
-	if(result==NDO_OK) { //no current option for this
-		result=neb_register_callback(NEBCALLBACK_CONTACT_NOTIFICATION_DATA,ndomod_module_handle,priority,ndomod_broker_data);
-		asprintf(&msg,"ndomod registered for contact data\'");
-		ndomod_write_to_logs(msg,NSLOG_INFO_MESSAGE);
-		}
-	if(result==NDO_OK) { //no current option for this
-		result=neb_register_callback(NEBCALLBACK_CONTACT_NOTIFICATION_METHOD_DATA,ndomod_module_handle,priority,ndomod_broker_data);
-		asprintf(&msg,"ndomod registered for contact notification data\'");
-		ndomod_write_to_logs(msg,NSLOG_INFO_MESSAGE);
-		}
-	if(result==NDO_OK && (ndomod_process_options & NDOMOD_PROCESS_ACKNOWLEDGEMENT_DATA)) {
-		result=neb_register_callback(NEBCALLBACK_ACKNOWLEDGEMENT_DATA,ndomod_module_handle,priority,ndomod_broker_data);
-		asprintf(&msg,"ndomod registered for acknowledgement data\'");
-		ndomod_write_to_logs(msg,NSLOG_INFO_MESSAGE);
-		}
-	if(result==NDO_OK && (ndomod_process_options & NDOMOD_PROCESS_STATECHANGE_DATA)) {
-		result=neb_register_callback(NEBCALLBACK_STATE_CHANGE_DATA,ndomod_module_handle,priority,ndomod_broker_data);
-		asprintf(&msg,"ndomod registered for state change data\'");
-		ndomod_write_to_logs(msg,NSLOG_INFO_MESSAGE);
-		}
+/* Registers callbacks for the events we process. */
+int ndomod_register_callbacks(void) {
+	if (ndomod_process_options & NDOMOD_PROCESS_PROCESS_DATA) {
+		NDO_REG_CALLBACK(NEBCALLBACK_PROCESS_DATA, "process");
+	}
+	if (ndomod_process_options & NDOMOD_PROCESS_TIMED_EVENT_DATA) {
+		NDO_REG_CALLBACK(NEBCALLBACK_TIMED_EVENT_DATA, "timed event");
+	}
+	if (ndomod_process_options & NDOMOD_PROCESS_LOG_DATA) {
+		NDO_REG_CALLBACK(NEBCALLBACK_LOG_DATA, "log");
+	}
+	if (ndomod_process_options & NDOMOD_PROCESS_SYSTEM_COMMAND_DATA) {
+		NDO_REG_CALLBACK(NEBCALLBACK_SYSTEM_COMMAND_DATA, "system command");
+	}
+	if (ndomod_process_options & NDOMOD_PROCESS_EVENT_HANDLER_DATA) {
+		NDO_REG_CALLBACK(NEBCALLBACK_EVENT_HANDLER_DATA, "event handler");
+	}
+	if (ndomod_process_options & NDOMOD_PROCESS_NOTIFICATION_DATA) {
+		NDO_REG_CALLBACK(NEBCALLBACK_NOTIFICATION_DATA, "notification");
+	}
+	if (ndomod_process_options & NDOMOD_PROCESS_SERVICE_CHECK_DATA) {
+		NDO_REG_CALLBACK(NEBCALLBACK_SERVICE_CHECK_DATA, "service check");
+	}
+	if (ndomod_process_options & NDOMOD_PROCESS_HOST_CHECK_DATA) {
+		NDO_REG_CALLBACK(NEBCALLBACK_HOST_CHECK_DATA, "host check");
+	}
+	if (ndomod_process_options & NDOMOD_PROCESS_COMMENT_DATA) {
+		NDO_REG_CALLBACK(NEBCALLBACK_COMMENT_DATA, "comment");
+	}
+	if (ndomod_process_options & NDOMOD_PROCESS_DOWNTIME_DATA) {
+		NDO_REG_CALLBACK(NEBCALLBACK_DOWNTIME_DATA, "downtime");
+	}
+	if (ndomod_process_options & NDOMOD_PROCESS_FLAPPING_DATA) {
+		NDO_REG_CALLBACK(NEBCALLBACK_FLAPPING_DATA, "flapping");
+	}
+	if (ndomod_process_options & NDOMOD_PROCESS_PROGRAM_STATUS_DATA) {
+		NDO_REG_CALLBACK(NEBCALLBACK_PROGRAM_STATUS_DATA, "program status");
+	}
+	if (ndomod_process_options & NDOMOD_PROCESS_HOST_STATUS_DATA) {
+		NDO_REG_CALLBACK(NEBCALLBACK_HOST_STATUS_DATA, "host status");
+	}
+	if (ndomod_process_options & NDOMOD_PROCESS_SERVICE_STATUS_DATA) {
+		NDO_REG_CALLBACK(NEBCALLBACK_SERVICE_STATUS_DATA, "service status");
+	}
+	if (ndomod_process_options & NDOMOD_PROCESS_ADAPTIVE_PROGRAM_DATA) {
+		NDO_REG_CALLBACK(NEBCALLBACK_ADAPTIVE_PROGRAM_DATA, "adaptive program");
+	}
+	if (ndomod_process_options & NDOMOD_PROCESS_ADAPTIVE_HOST_DATA) {
+		NDO_REG_CALLBACK(NEBCALLBACK_ADAPTIVE_HOST_DATA, "adaptive host");
+	}
+	if (ndomod_process_options & NDOMOD_PROCESS_ADAPTIVE_SERVICE_DATA) {
+		NDO_REG_CALLBACK(NEBCALLBACK_ADAPTIVE_SERVICE_DATA, "adaptive service");
+	}
+	if (ndomod_process_options & NDOMOD_PROCESS_EXTERNAL_COMMAND_DATA) {
+		NDO_REG_CALLBACK(NEBCALLBACK_EXTERNAL_COMMAND_DATA, "external command");
+	}
+	if (ndomod_process_options & NDOMOD_PROCESS_AGGREGATED_STATUS_DATA) {
+		NDO_REG_CALLBACK(NEBCALLBACK_AGGREGATED_STATUS_DATA, "aggregated status");
+	}
+	if (ndomod_process_options & NDOMOD_PROCESS_RETENTION_DATA) {
+		NDO_REG_CALLBACK(NEBCALLBACK_RETENTION_DATA, "retention");
+	}
+	{ //no current option for this
+		NDO_REG_CALLBACK(NEBCALLBACK_CONTACT_NOTIFICATION_DATA, "contact notification");
+	}
+	{ //no current option for this
+		NDO_REG_CALLBACK(NEBCALLBACK_CONTACT_NOTIFICATION_METHOD_DATA, "contact notification method");
+	}
+	if (ndomod_process_options & NDOMOD_PROCESS_ACKNOWLEDGEMENT_DATA) {
+		NDO_REG_CALLBACK(NEBCALLBACK_ACKNOWLEDGEMENT_DATA, "acknowledgement");
+	}
+	if (ndomod_process_options & NDOMOD_PROCESS_STATECHANGE_DATA) {
+		NDO_REG_CALLBACK(NEBCALLBACK_STATE_CHANGE_DATA, "state change");
+	}
 #if ( defined( BUILD_NAGIOS_3X) || defined( BUILD_NAGIOS_4X))
-	if(result==NDO_OK && (ndomod_process_options & NDOMOD_PROCESS_CONTACT_STATUS_DATA)) {
-		result=neb_register_callback(NEBCALLBACK_CONTACT_STATUS_DATA,ndomod_module_handle,priority,ndomod_broker_data);
-		asprintf(&msg,"ndomod registered for contact status data\'");
-		ndomod_write_to_logs(msg,NSLOG_INFO_MESSAGE);
-		}
-	if(result==NDO_OK && (ndomod_process_options & NDOMOD_PROCESS_ADAPTIVE_CONTACT_DATA)) {
-		result=neb_register_callback(NEBCALLBACK_ADAPTIVE_CONTACT_DATA,ndomod_module_handle,priority,ndomod_broker_data);
-		asprintf(&msg,"ndomod registered for adaptive contact data\'");
-		ndomod_write_to_logs(msg,NSLOG_INFO_MESSAGE);
-		}
+	if (ndomod_process_options & NDOMOD_PROCESS_CONTACT_STATUS_DATA) {
+		NDO_REG_CALLBACK(NEBCALLBACK_CONTACT_STATUS_DATA, "contact status");
+	}
+	if (ndomod_process_options & NDOMOD_PROCESS_ADAPTIVE_CONTACT_DATA) {
+		NDO_REG_CALLBACK(NEBCALLBACK_ADAPTIVE_CONTACT_DATA, "adaptive contact");
+	}
 #endif
 
-	free(msg); 
-
-	return result;
-        }
+	return NDO_OK;
+}
 
 
 /* deregisters callbacks */
