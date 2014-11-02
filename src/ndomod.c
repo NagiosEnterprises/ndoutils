@@ -694,7 +694,7 @@ int ndomod_process_config_var(char *arg){
 	else if(!strcmp(var,"acknowledgement_data") && atoi(val)==1)
 		ndomod_process_options+=NDOMOD_PROCESS_ACKNOWLEDGEMENT_DATA;
 	else if(!strcmp(var,"state_change_data") && atoi(val)==1)
-		ndomod_process_options+=NDOMOD_PROCESS_STATECHANGE_DATA ;
+		ndomod_process_options+=NDOMOD_PROCESS_STATE_CHANGE_DATA ;
 	else if(!strcmp(var,"contact_status_data") && atoi(val)==1)
 		ndomod_process_options+=NDOMOD_PROCESS_CONTACT_STATUS_DATA;
 	else if(!strcmp(var,"adaptive_contact_data") && atoi(val)==1)
@@ -1323,99 +1323,60 @@ int ndomod_sink_buffer_set_overflow(ndomod_sink_buffer *sbuf, unsigned long num)
 /* A handy macro to DRY out the callback registration. */
 #define NDO_REG_CALLBACK(dtc, dtn) \
 	do { \
-		int result = neb_register_callback(dtc, ndomod_module_handle, 0, ndomod_broker_data); \
+		int result = neb_register_callback(dtc, \
+				ndomod_module_handle, 0, ndomod_broker_data); \
 		if (result != NDO_OK) { \
-			ndomod_write_to_logs("ndomod: Error registering for " dtn " data.", NSLOG_INFO_MESSAGE); \
+			char msg[] = "ndomod: Error registering for " dtn " data."; \
+			ndomod_write_to_logs(msg, NSLOG_INFO_MESSAGE); \
 			return result; \
+		} else { \
+			char msg[] = "ndomod: Registered for " dtn " data."; \
+			ndomod_write_to_logs(msg, NSLOG_INFO_MESSAGE); \
 		} \
-		ndomod_write_to_logs("ndomod: Registered for " dtn " data.", NSLOG_INFO_MESSAGE); \
 	} while (0)
+
+#define NDO_REG_OPTIONAL_CALLBACK(dtc, dtn) \
+	if (ndomod_process_options & NDOMOD_PROCESS_## dtc ##_DATA) \
+		NDO_REG_CALLBACK(NEBCALLBACK_## dtc ##_DATA, dtn)
 
 /* Registers callbacks for the events we process. */
 int ndomod_register_callbacks(void) {
-	if (ndomod_process_options & NDOMOD_PROCESS_PROCESS_DATA) {
-		NDO_REG_CALLBACK(NEBCALLBACK_PROCESS_DATA, "process");
-	}
-	if (ndomod_process_options & NDOMOD_PROCESS_TIMED_EVENT_DATA) {
-		NDO_REG_CALLBACK(NEBCALLBACK_TIMED_EVENT_DATA, "timed event");
-	}
-	if (ndomod_process_options & NDOMOD_PROCESS_LOG_DATA) {
-		NDO_REG_CALLBACK(NEBCALLBACK_LOG_DATA, "log");
-	}
-	if (ndomod_process_options & NDOMOD_PROCESS_SYSTEM_COMMAND_DATA) {
-		NDO_REG_CALLBACK(NEBCALLBACK_SYSTEM_COMMAND_DATA, "system command");
-	}
-	if (ndomod_process_options & NDOMOD_PROCESS_EVENT_HANDLER_DATA) {
-		NDO_REG_CALLBACK(NEBCALLBACK_EVENT_HANDLER_DATA, "event handler");
-	}
-	if (ndomod_process_options & NDOMOD_PROCESS_NOTIFICATION_DATA) {
-		NDO_REG_CALLBACK(NEBCALLBACK_NOTIFICATION_DATA, "notification");
-	}
-	if (ndomod_process_options & NDOMOD_PROCESS_SERVICE_CHECK_DATA) {
-		NDO_REG_CALLBACK(NEBCALLBACK_SERVICE_CHECK_DATA, "service check");
-	}
-	if (ndomod_process_options & NDOMOD_PROCESS_HOST_CHECK_DATA) {
-		NDO_REG_CALLBACK(NEBCALLBACK_HOST_CHECK_DATA, "host check");
-	}
-	if (ndomod_process_options & NDOMOD_PROCESS_COMMENT_DATA) {
-		NDO_REG_CALLBACK(NEBCALLBACK_COMMENT_DATA, "comment");
-	}
-	if (ndomod_process_options & NDOMOD_PROCESS_DOWNTIME_DATA) {
-		NDO_REG_CALLBACK(NEBCALLBACK_DOWNTIME_DATA, "downtime");
-	}
-	if (ndomod_process_options & NDOMOD_PROCESS_FLAPPING_DATA) {
-		NDO_REG_CALLBACK(NEBCALLBACK_FLAPPING_DATA, "flapping");
-	}
-	if (ndomod_process_options & NDOMOD_PROCESS_PROGRAM_STATUS_DATA) {
-		NDO_REG_CALLBACK(NEBCALLBACK_PROGRAM_STATUS_DATA, "program status");
-	}
-	if (ndomod_process_options & NDOMOD_PROCESS_HOST_STATUS_DATA) {
-		NDO_REG_CALLBACK(NEBCALLBACK_HOST_STATUS_DATA, "host status");
-	}
-	if (ndomod_process_options & NDOMOD_PROCESS_SERVICE_STATUS_DATA) {
-		NDO_REG_CALLBACK(NEBCALLBACK_SERVICE_STATUS_DATA, "service status");
-	}
-	if (ndomod_process_options & NDOMOD_PROCESS_ADAPTIVE_PROGRAM_DATA) {
-		NDO_REG_CALLBACK(NEBCALLBACK_ADAPTIVE_PROGRAM_DATA, "adaptive program");
-	}
-	if (ndomod_process_options & NDOMOD_PROCESS_ADAPTIVE_HOST_DATA) {
-		NDO_REG_CALLBACK(NEBCALLBACK_ADAPTIVE_HOST_DATA, "adaptive host");
-	}
-	if (ndomod_process_options & NDOMOD_PROCESS_ADAPTIVE_SERVICE_DATA) {
-		NDO_REG_CALLBACK(NEBCALLBACK_ADAPTIVE_SERVICE_DATA, "adaptive service");
-	}
-	if (ndomod_process_options & NDOMOD_PROCESS_EXTERNAL_COMMAND_DATA) {
-		NDO_REG_CALLBACK(NEBCALLBACK_EXTERNAL_COMMAND_DATA, "external command");
-	}
-	if (ndomod_process_options & NDOMOD_PROCESS_AGGREGATED_STATUS_DATA) {
-		NDO_REG_CALLBACK(NEBCALLBACK_AGGREGATED_STATUS_DATA, "aggregated status");
-	}
-	if (ndomod_process_options & NDOMOD_PROCESS_RETENTION_DATA) {
-		NDO_REG_CALLBACK(NEBCALLBACK_RETENTION_DATA, "retention");
-	}
-	{ //no current option for this
-		NDO_REG_CALLBACK(NEBCALLBACK_CONTACT_NOTIFICATION_DATA, "contact notification");
-	}
-	{ //no current option for this
-		NDO_REG_CALLBACK(NEBCALLBACK_CONTACT_NOTIFICATION_METHOD_DATA, "contact notification method");
-	}
-	if (ndomod_process_options & NDOMOD_PROCESS_ACKNOWLEDGEMENT_DATA) {
-		NDO_REG_CALLBACK(NEBCALLBACK_ACKNOWLEDGEMENT_DATA, "acknowledgement");
-	}
-	if (ndomod_process_options & NDOMOD_PROCESS_STATECHANGE_DATA) {
-		NDO_REG_CALLBACK(NEBCALLBACK_STATE_CHANGE_DATA, "state change");
-	}
+	NDO_REG_OPTIONAL_CALLBACK(PROCESS, "process");
+	NDO_REG_OPTIONAL_CALLBACK(TIMED_EVENT, "timed event");
+	NDO_REG_OPTIONAL_CALLBACK(LOG, "log");
+	NDO_REG_OPTIONAL_CALLBACK(SYSTEM_COMMAND, "system command");
+	NDO_REG_OPTIONAL_CALLBACK(EVENT_HANDLER, "event handler");
+	NDO_REG_OPTIONAL_CALLBACK(NOTIFICATION, "notification");
+	NDO_REG_OPTIONAL_CALLBACK(SERVICE_CHECK, "service check");
+	NDO_REG_OPTIONAL_CALLBACK(HOST_CHECK, "host check");
+	NDO_REG_OPTIONAL_CALLBACK(COMMENT, "comment");
+	NDO_REG_OPTIONAL_CALLBACK(DOWNTIME, "downtime");
+	NDO_REG_OPTIONAL_CALLBACK(FLAPPING, "flapping");
+	NDO_REG_OPTIONAL_CALLBACK(PROGRAM_STATUS, "program status");
+	NDO_REG_OPTIONAL_CALLBACK(HOST_STATUS, "host status");
+	NDO_REG_OPTIONAL_CALLBACK(SERVICE_STATUS, "service status");
+	NDO_REG_OPTIONAL_CALLBACK(ADAPTIVE_PROGRAM, "adaptive program");
+	NDO_REG_OPTIONAL_CALLBACK(ADAPTIVE_HOST, "adaptive host");
+	NDO_REG_OPTIONAL_CALLBACK(ADAPTIVE_SERVICE, "adaptive service");
+	NDO_REG_OPTIONAL_CALLBACK(EXTERNAL_COMMAND, "external command");
+	NDO_REG_OPTIONAL_CALLBACK(AGGREGATED_STATUS, "aggregated status");
+	NDO_REG_OPTIONAL_CALLBACK(RETENTION, "retention");
+	// No current options for these two.
+	NDO_REG_CALLBACK(NEBCALLBACK_CONTACT_NOTIFICATION_DATA, "contact notification");
+	NDO_REG_CALLBACK(NEBCALLBACK_CONTACT_NOTIFICATION_METHOD_DATA, "contact notification method");
+	NDO_REG_OPTIONAL_CALLBACK(ACKNOWLEDGEMENT, "acknowledgement");
+	NDO_REG_OPTIONAL_CALLBACK(STATE_CHANGE, "state change");
 #if ( defined( BUILD_NAGIOS_3X) || defined( BUILD_NAGIOS_4X))
-	if (ndomod_process_options & NDOMOD_PROCESS_CONTACT_STATUS_DATA) {
-		NDO_REG_CALLBACK(NEBCALLBACK_CONTACT_STATUS_DATA, "contact status");
-	}
-	if (ndomod_process_options & NDOMOD_PROCESS_ADAPTIVE_CONTACT_DATA) {
-		NDO_REG_CALLBACK(NEBCALLBACK_ADAPTIVE_CONTACT_DATA, "adaptive contact");
-	}
+	NDO_REG_OPTIONAL_CALLBACK(CONTACT_STATUS, "contact status");
+	NDO_REG_OPTIONAL_CALLBACK(ADAPTIVE_CONTACT, "adaptive contact");
 #endif
 
 	return NDO_OK;
 }
+
+/* Cleanup our macros after registering our callbacks. */
+#undef NDO_REG_OPTIONAL_CALLBACK
+#undef NDO_REG_CALLBACK
 
 
 /* deregisters callbacks */
@@ -3854,7 +3815,7 @@ static bd_result ndomod_broker_state_change_data(bd_phase phase,
 
 	switch(phase) {
 	case bdp_preprocessing:
-		if(!(process_options & NDOMOD_PROCESS_STATECHANGE_DATA))
+		if(!(process_options & NDOMOD_PROCESS_STATE_CHANGE_DATA))
 			return bdr_stop;
 		break;
 	case bdp_mainprocessing:
