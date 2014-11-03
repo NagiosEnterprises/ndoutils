@@ -471,7 +471,7 @@ int ndomod_deinit(void) {
 /****************************************************************************/
 
 /* process arguments that were passed to the module at startup */
-int ndomod_process_module_args(char *args){
+static int ndomod_process_module_args(char *args) {
 	char *ptr=NULL;
 	char **arglist=NULL;
 	char **newarglist=NULL;
@@ -535,7 +535,7 @@ int ndomod_process_module_args(char *args){
 
 
 /* process all config vars in a file */
-int ndomod_process_config_file(char *filename){
+static int ndomod_process_config_file(char *filename) {
 	ndo_mmapfile *thefile=NULL;
 	char *buf=NULL;
 	int result=NDO_OK;
@@ -576,149 +576,149 @@ int ndomod_process_config_file(char *filename){
         }
 
 
-/* process a single module config variable */
-int ndomod_process_config_var(char *arg){
-	char *var=NULL;
-	char *val=NULL;
+/* A macro to check and handle boolean processing options. */
+#define NDO_HANDLE_PROC_OPT(n, o) \
+	do if (!strcmp(var, n) && !strcmp(val, "1")) { \
+		ndomod_process_options |= NDOMOD_PROCESS_## o ##_DATA; \
+		return NDO_OK; \
+	} while (0)
 
-	/* split var/val */
-	var=strtok(arg,"=");
-	val=strtok(NULL,"\n");
+/* A macro to check and copy string options. Returns from the invoking context
+ * if the config var matches n. If successful, memory allocated
+ * for the value will need to be freed when the module is unloaded. */
+#define NDO_HANDLE_STRING_OPT(n, v) \
+	do if (!strcmp(var, n)) { \
+		if ((v = strdup(val))) { \
+			return NDO_OK; \
+		} else { \
+			char msg[] = "ndomod: Error copying option string '" n "'."; \
+			ndomod_write_to_logs(msg, NSLOG_INFO_MESSAGE); \
+			return NDO_ERROR; \
+		} \
+	} while (0)
 
-	/* skip incomplete var/val pairs */
-	if(var==NULL || val==NULL)
-		return NDO_OK;
+/* A macro to handle strtoul() with a return from invoking context on error. */
+#define NDO_HANDLE_STRTOUL_OPT_VAL(n, v) \
+	do { \
+		errno = 0; \
+		v = strtoul(val, NULL, 0); \
+		if (errno) { \
+			char msg[] = "ndomod: Error converting value for '" n "'."; \
+			ndomod_write_to_logs(msg, NSLOG_INFO_MESSAGE); \
+			return NDO_ERROR; \
+		} \
+	} while (0)
 
-	/* strip var/val */
-	ndomod_strip(var);
-	ndomod_strip(val);
+/* A macro to handle strtoul() with a return from invoking context on error. */
+#define NDO_HANDLE_STRTOUL_OPT(n, v) \
+	do if (!strcmp(var, n)) { \
+		NDO_HANDLE_STRTOUL_OPT_VAL(n, v); \
+		return NDO_OK; \
+	} while (0)
 
-	/* process the variable... */
+/* Process a single module config variable */
+static int ndomod_process_config_var(char *arg) {
+	char *var = NULL;
+	char *val = NULL;
 
-	if(!strcmp(var,"config_file"))
-		ndomod_process_config_file(val);
+	/* Split and strip var/val. */
+	ndomod_strip(var = strtok(arg,"="));
+	ndomod_strip(val = strtok(NULL,"\n"));
 
-	else if(!strcmp(var,"instance_name"))
-		ndomod_instance_name=strdup(val);
+	/* Skip empty var or val. */
+	if (!var || !*var || !val || !*val) return NDO_OK;
 
-	else if(!strcmp(var,"output"))
-		ndomod_sink_name=strdup(val);
+	/* Process the variable... */
 
-	else if(!strcmp(var,"output_type")){
-		if(!strcmp(val,"file"))
-			ndomod_sink_type=NDO_SINK_FILE;
-		else if(!strcmp(val,"tcpsocket"))
-			ndomod_sink_type=NDO_SINK_TCPSOCKET;
-		else
-			ndomod_sink_type=NDO_SINK_UNIXSOCKET;
-	        }
+	if (!strcmp(var, "config_file")) return ndomod_process_config_file(val);
 
-	else if(!strcmp(var,"tcp_port"))
-		ndomod_sink_tcp_port=atoi(val);
+	NDO_HANDLE_STRING_OPT("instance_name", ndomod_instance_name);
 
-	else if(!strcmp(var,"output_buffer_items"))
-		ndomod_sink_buffer_slots=strtoul(val,NULL,0);
+	NDO_HANDLE_STRING_OPT("output", ndomod_sink_name);
 
-	else if(!strcmp(var,"reconnect_interval"))
-		ndomod_sink_reconnect_interval=strtoul(val,NULL,0);
-
-	else if(!strcmp(var,"reconnect_warning_interval"))
-		ndomod_sink_reconnect_warning_interval=strtoul(val,NULL,0);
-
-	else if(!strcmp(var,"file_rotation_interval"))
-		ndomod_sink_rotation_interval=strtoul(val,NULL,0);
-
-	else if(!strcmp(var,"file_rotation_command"))
-		ndomod_sink_rotation_command=strdup(val);
-
-	else if(!strcmp(var,"file_rotation_timeout"))
-		ndomod_sink_rotation_timeout=atoi(val);
-
-	/* add bitwise processing opts */ 
-	else if(!strcmp(var,"process_data") && atoi(val)==1)
-		ndomod_process_options=ndomod_process_options + NDOMOD_PROCESS_PROCESS_DATA;
-	else if(!strcmp(var,"timed_event_data") && atoi(val)==1)
-		ndomod_process_options+=NDOMOD_PROCESS_TIMED_EVENT_DATA;
-	else if(!strcmp(var,"log_data") && atoi(val)==1)
-		ndomod_process_options+=NDOMOD_PROCESS_LOG_DATA;
-	else if(!strcmp(var,"system_command_data") && atoi(val)==1)
-		ndomod_process_options+=NDOMOD_PROCESS_SYSTEM_COMMAND_DATA;
-	else if(!strcmp(var,"event_handler_data") && atoi(val)==1)
-		ndomod_process_options+=NDOMOD_PROCESS_EVENT_HANDLER_DATA;
-	else if(!strcmp(var,"notification_data") && atoi(val)==1)
-		ndomod_process_options+=NDOMOD_PROCESS_NOTIFICATION_DATA;
-	else if(!strcmp(var,"service_check_data") && atoi(val)==1)
-		ndomod_process_options+=NDOMOD_PROCESS_SERVICE_CHECK_DATA ;
-	else if(!strcmp(var,"host_check_data") && atoi(val)==1)
-		ndomod_process_options+=NDOMOD_PROCESS_HOST_CHECK_DATA;
-	else if(!strcmp(var,"comment_data") && atoi(val)==1)
-		ndomod_process_options+=NDOMOD_PROCESS_COMMENT_DATA;
-	else if(!strcmp(var,"downtime_data") && atoi(val)==1)
-		ndomod_process_options+=NDOMOD_PROCESS_DOWNTIME_DATA;
-	else if(!strcmp(var,"flapping_data") && atoi(val)==1)
-		ndomod_process_options+=NDOMOD_PROCESS_FLAPPING_DATA;
-	else if(!strcmp(var,"program_status_data") && atoi(val)==1)
-		ndomod_process_options+=NDOMOD_PROCESS_PROGRAM_STATUS_DATA;
-	else if(!strcmp(var,"host_status_data") && atoi(val)==1)
-		ndomod_process_options+=NDOMOD_PROCESS_HOST_STATUS_DATA;
-	else if(!strcmp(var,"service_status_data") && atoi(val)==1)
-		ndomod_process_options+=NDOMOD_PROCESS_SERVICE_STATUS_DATA;
-	else if(!strcmp(var,"adaptive_program_data") && atoi(val)==1)
-		ndomod_process_options+=NDOMOD_PROCESS_ADAPTIVE_PROGRAM_DATA;
-	else if(!strcmp(var,"adaptive_host_data") && atoi(val)==1)
-		ndomod_process_options+=NDOMOD_PROCESS_ADAPTIVE_HOST_DATA;
-	else if(!strcmp(var,"adaptive_service_data") && atoi(val)==1)
-		ndomod_process_options+=NDOMOD_PROCESS_ADAPTIVE_SERVICE_DATA;
-	else if(!strcmp(var,"external_command_data") && atoi(val)==1)
-		ndomod_process_options+=NDOMOD_PROCESS_EXTERNAL_COMMAND_DATA;
-	else if(!strcmp(var,"object_config_data") && atoi(val)==1)
-		ndomod_process_options+=NDOMOD_PROCESS_OBJECT_CONFIG_DATA;
-	else if(!strcmp(var,"main_config_data") && atoi(val)==1)
-		ndomod_process_options+=NDOMOD_PROCESS_MAIN_CONFIG_DATA;
-	else if(!strcmp(var,"aggregated_status_data") && atoi(val)==1)
-		ndomod_process_options+=NDOMOD_PROCESS_AGGREGATED_STATUS_DATA;
-	else if(!strcmp(var,"retention_data") && atoi(val)==1)
-		ndomod_process_options+=NDOMOD_PROCESS_RETENTION_DATA;
-	else if(!strcmp(var,"acknowledgement_data") && atoi(val)==1)
-		ndomod_process_options+=NDOMOD_PROCESS_ACKNOWLEDGEMENT_DATA;
-	else if(!strcmp(var,"state_change_data") && atoi(val)==1)
-		ndomod_process_options+=NDOMOD_PROCESS_STATE_CHANGE_DATA ;
-	else if(!strcmp(var,"contact_status_data") && atoi(val)==1)
-		ndomod_process_options+=NDOMOD_PROCESS_CONTACT_STATUS_DATA;
-	else if(!strcmp(var,"adaptive_contact_data") && atoi(val)==1)
-		ndomod_process_options+=NDOMOD_PROCESS_ADAPTIVE_CONTACT_DATA ;
-		
-	/* data_processing_options will override individual values if set */ 
-	else if(!strcmp(var,"data_processing_options")){
-		if(!strcmp(val,"-1"))
-			ndomod_process_options=NDOMOD_PROCESS_EVERYTHING;
-		else
-			ndomod_process_options=strtoul(val,NULL,0);
-	    }
-
-	else if(!strcmp(var,"config_output_options"))
-		ndomod_config_output_options=atoi(val);
-
-	else if(!strcmp(var,"buffer_file"))
-		ndomod_buffer_file=strdup(val);
-
-	else if(!strcmp(var,"use_ssl")){
-		if (strlen(val) == 1) {
-			if (isdigit((int)val[strlen(val)-1]) != NDO_FALSE)
-				use_ssl = atoi(val);
-			else
-				use_ssl = 0;
+	if (!strcmp(var, "output_type")) {
+		if (!strcmp(val, "file")) {
+			ndomod_sink_type = NDO_SINK_FILE;
+		} else if (!strcmp(val, "tcpsocket")) {
+			ndomod_sink_type = NDO_SINK_TCPSOCKET;
+		} else {
+			ndomod_sink_type = NDO_SINK_UNIXSOCKET;
 		}
-	}	
+		return NDO_OK;
+	}
 
-	/* new processing options will be skipped if they're set to 0 
-	else {
-		printf("Invalid ndomod config option: %s\n",var);  
-		return NDO_ERROR;
-	} */ 	
-		
+	NDO_HANDLE_STRTOUL_OPT("tcp_port", ndomod_sink_tcp_port);
+
+	NDO_HANDLE_STRTOUL_OPT("output_buffer_items", ndomod_sink_buffer_slots);
+
+	NDO_HANDLE_STRTOUL_OPT("reconnect_interval", ndomod_sink_reconnect_interval);
+
+	NDO_HANDLE_STRTOUL_OPT("reconnect_warning_interval", ndomod_sink_reconnect_warning_interval);
+
+	NDO_HANDLE_STRTOUL_OPT("file_rotation_interval", ndomod_sink_rotation_interval);
+
+	NDO_HANDLE_STRING_OPT("file_rotation_command", ndomod_sink_rotation_command);
+
+	NDO_HANDLE_STRTOUL_OPT("file_rotation_timeout", ndomod_sink_rotation_timeout);
+
+	/* Add boolean processing opts */
+	NDO_HANDLE_PROC_OPT("process_data", PROCESS);
+	NDO_HANDLE_PROC_OPT("timed_event_data", TIMED_EVENT);
+	NDO_HANDLE_PROC_OPT("log_data", LOG);
+	NDO_HANDLE_PROC_OPT("system_command_data", SYSTEM_COMMAND);
+	NDO_HANDLE_PROC_OPT("event_handler_data", EVENT_HANDLER);
+	NDO_HANDLE_PROC_OPT("notification_data", NOTIFICATION);
+	NDO_HANDLE_PROC_OPT("service_check_data", SERVICE_CHECK);
+	NDO_HANDLE_PROC_OPT("host_check_data", HOST_CHECK);
+	NDO_HANDLE_PROC_OPT("comment_data", COMMENT);
+	NDO_HANDLE_PROC_OPT("downtime_data", DOWNTIME);
+	NDO_HANDLE_PROC_OPT("flapping_data", FLAPPING);
+	NDO_HANDLE_PROC_OPT("program_status_data", PROGRAM_STATUS);
+	NDO_HANDLE_PROC_OPT("host_status_data", HOST_STATUS);
+	NDO_HANDLE_PROC_OPT("service_status_data", SERVICE_STATUS);
+	NDO_HANDLE_PROC_OPT("adaptive_program_data", ADAPTIVE_PROGRAM);
+	NDO_HANDLE_PROC_OPT("adaptive_host_data", ADAPTIVE_HOST);
+	NDO_HANDLE_PROC_OPT("adaptive_service_data", ADAPTIVE_SERVICE);
+	NDO_HANDLE_PROC_OPT("external_command_data", EXTERNAL_COMMAND);
+	NDO_HANDLE_PROC_OPT("object_config_data", OBJECT_CONFIG);
+	NDO_HANDLE_PROC_OPT("main_config_data", MAIN_CONFIG);
+	NDO_HANDLE_PROC_OPT("aggregated_status_data", AGGREGATED_STATUS);
+	NDO_HANDLE_PROC_OPT("retention_data", RETENTION);
+	NDO_HANDLE_PROC_OPT("acknowledgement_data", ACKNOWLEDGEMENT);
+	NDO_HANDLE_PROC_OPT("state_change_data", STATE_CHANGE);
+	NDO_HANDLE_PROC_OPT("contact_status_data", CONTACT_STATUS);
+	NDO_HANDLE_PROC_OPT("adaptive_contact_data", ADAPTIVE_CONTACT);
+
+	/* data_processing_options overrides individual values previously set. */
+	if (!strcmp(var, "data_processing_options")) {
+		if (!strcmp(val, "-1")) {
+			ndomod_process_options = NDOMOD_PROCESS_EVERYTHING;
+		} else {
+			NDO_HANDLE_STRTOUL_OPT_VAL("data_processing_options", ndomod_process_options);
+		}
+		return NDO_OK;
+	}
+
+	NDO_HANDLE_STRTOUL_OPT("config_output_options", ndomod_config_output_options);
+
+	NDO_HANDLE_STRING_OPT("buffer_file", ndomod_buffer_file);
+
+	if (!strcmp(var, "use_ssl")) {
+		if (strlen(val) == 1) use_ssl = (val[0] == '1');
+		return NDO_OK;
+	}
+
+	/*
+	printf("ndomod: Invalid ndomod config option: %s\n", var);
+	*/
 	return NDO_OK;
 }
+
+/* Cleanup our macros after processing our config. */
+#undef NDO_HANDLE_PROC_OPT
+#undef NDO_HANDLE_STRING_OPT
+#undef NDO_HANDLE_STRTOUL_OPT_VAL
+#undef NDO_HANDLE_STRTOUL_OPT
 
 /* Frees any memory allocated for config options. */
 static void ndomod_free_config_memory(void) {
