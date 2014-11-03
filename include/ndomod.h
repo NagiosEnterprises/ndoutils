@@ -90,6 +90,7 @@ int ndomod_write_to_logs(char *,int);
 int ndomod_process_module_args(char *);
 int ndomod_process_config_var(char *);
 int ndomod_process_config_file(char *);
+static void ndomod_free_config_memory(void);
 
 int ndomod_open_sink(void);
 int ndomod_close_sink(void);

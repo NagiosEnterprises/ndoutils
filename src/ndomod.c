@@ -206,20 +206,13 @@ int nebmodule_init(int flags, char *args, void *handle){
         }
 
 
-/* this function gets called when the module is unloaded by the event broker */
-int nebmodule_deinit(int flags, int reason){
-	char temp_buffer[NDOMOD_MAX_BUFLEN];
-
-	/* do some shutdown stuff... */
+/* Shutdown and release our resources when the module is unloaded. */
+int nebmodule_deinit(int flags, int reason) {
+	char msg[] = "ndomod: Shutdown complete."; /* A message for the core log. */
 	ndomod_deinit();
-
-	/* log a message to the Nagios log file */
-	snprintf(temp_buffer,sizeof(temp_buffer)-1,"ndomod: Shutdown complete.\n");
-	temp_buffer[sizeof(temp_buffer)-1]='\x0';
-        ndomod_write_to_logs(temp_buffer,NSLOG_INFO_MESSAGE);
-
+	ndomod_write_to_logs(msg, NSLOG_INFO_MESSAGE);
 	return 0;
-        }
+}
 
 
 
@@ -303,24 +296,19 @@ int ndomod_init(void){
         }
 
 
-/* performs some shutdown stuff */
-int ndomod_deinit(void){
-
-	/* deregister callbacks */
+/* Shutdown and release our resources when the module is unloaded. */
+int ndomod_deinit(void) {
 	ndomod_deregister_callbacks();
 
-	/* save unprocessed data to buffer file */
 	ndomod_save_unprocessed_data(ndomod_buffer_file);
-
-	/* clear sink buffer */
 	ndomod_sink_buffer_deinit(&sinkbuf);
-
-	/* close data sink */
 	ndomod_goodbye_sink();
 	ndomod_close_sink();
 
+	ndomod_free_config_memory();
+
 	return NDO_OK;
-        }
+}
 
 
 
@@ -578,8 +566,15 @@ int ndomod_process_config_var(char *arg){
 	} */
 
 	return NDO_OK;
-        }
+}
 
+/* Frees any memory allocated for config options. */
+static void ndomod_free_config_memory(void) {
+	my_free(ndomod_instance_name);
+	my_free(ndomod_sink_name);
+	my_free(ndomod_sink_rotation_command);
+	my_free(ndomod_buffer_file);
+}
 
 
 /****************************************************************************/
