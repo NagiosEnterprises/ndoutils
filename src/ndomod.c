@@ -126,148 +126,93 @@ typedef enum bd_result_enum {
 	bdr_enoent		/* Entity (host, service, etc.) not found */
 	} bd_result;
 
-struct ndomod_broker_data_struct {
-	/*	The broker data function takes the following arguments:
-			1. The phase (bd_phase) which should be executed
-			2. The NDO module process options.
-			3. A pointer to the data to be handled.
-			4. A pointer to the ndo_dbuf structure into which the data should
-				be serialized.
-		The function should return one of the values in the bd_result
-		enumeration.
-	*/
-	bd_result (*broker_data)(bd_phase, unsigned long, void *, ndo_dbuf *);
-	};
+/**
+ * ndomod_broker_*_data() callback function type.
+ * @param p The processing phase to execute.
+ * @param o NDO module process options.
+ * @param d Data to be handled.
+ * @param b Dynamic string buffer to serialize data into.
+ * @return bdr_ok, bdr_stop, bdr_ephase or bdr_enoent.
+ */
+typedef bd_result (*bd_callback)(bd_phase p, unsigned long o, void *d, ndo_dbuf *b);
 
-static bd_result ndomod_broker_process_data(bd_phase, unsigned long, void *,
-		ndo_dbuf *);
-static bd_result ndomod_broker_timed_event_data(bd_phase, unsigned long, void *,
-		ndo_dbuf *);
-static bd_result ndomod_broker_log_data(bd_phase, unsigned long, void *,
-		ndo_dbuf *);
-static bd_result ndomod_broker_system_command_data(bd_phase, unsigned long,
-		void *, ndo_dbuf *);
-static bd_result ndomod_broker_event_handler_data(bd_phase, unsigned long,
-		void *, ndo_dbuf *);
-static bd_result ndomod_broker_notification_data(bd_phase, unsigned long,
-		void *, ndo_dbuf *);
-static bd_result ndomod_broker_service_check_data(bd_phase, unsigned long,
-		void *, ndo_dbuf *);
-static bd_result ndomod_broker_host_check_data(bd_phase, unsigned long, void *,
-		ndo_dbuf *);
-static bd_result ndomod_broker_comment_data(bd_phase, unsigned long, void *,
-		ndo_dbuf *);
-static bd_result ndomod_broker_downtime_data(bd_phase, unsigned long, void *,
-		ndo_dbuf *);
-static bd_result ndomod_broker_flapping_data(bd_phase, unsigned long, void *,
-		ndo_dbuf *);
-static bd_result ndomod_broker_program_status_data(bd_phase, unsigned long,
-		void *, ndo_dbuf *);
-static bd_result ndomod_broker_host_status_data(bd_phase, unsigned long, void *,
-		ndo_dbuf *);
-static bd_result ndomod_broker_service_status_data(bd_phase, unsigned long,
-		void *, ndo_dbuf *);
-static bd_result ndomod_broker_adaptive_program_data(bd_phase, unsigned long,
-		void *, ndo_dbuf *);
-static bd_result ndomod_broker_adaptive_host_data(bd_phase, unsigned long,
-		void *, ndo_dbuf *);
-static bd_result ndomod_broker_adaptive_service_data(bd_phase, unsigned long,
-		void *, ndo_dbuf *);
-static bd_result ndomod_broker_external_command_data(bd_phase, unsigned long,
-		void *, ndo_dbuf *);
-static bd_result ndomod_broker_aggregated_status_data(bd_phase, unsigned long,
-		void *, ndo_dbuf *);
-static bd_result ndomod_broker_retention_data(bd_phase, unsigned long, void *,
-		ndo_dbuf *);
-static bd_result ndomod_broker_contact_notification_data(bd_phase,
-		unsigned long, void *, ndo_dbuf *);
-static bd_result ndomod_broker_contact_notification_method_data(bd_phase,
-		unsigned long, void *, ndo_dbuf *);
-static bd_result ndomod_broker_acknowledgement_data(bd_phase, unsigned long,
-		void *, ndo_dbuf *);
-static bd_result ndomod_broker_state_change_data(bd_phase, unsigned long,
-		void *, ndo_dbuf *);
+#define NDO_DECLARE_BD_CALLBACK(f) \
+	static bd_result f(bd_phase p, unsigned long o, void *d, ndo_dbuf *b)
+
+NDO_DECLARE_BD_CALLBACK(ndomod_broker_process_data);
+NDO_DECLARE_BD_CALLBACK(ndomod_broker_timed_event_data);
+NDO_DECLARE_BD_CALLBACK(ndomod_broker_log_data);
+NDO_DECLARE_BD_CALLBACK(ndomod_broker_system_command_data);
+NDO_DECLARE_BD_CALLBACK(ndomod_broker_event_handler_data);
+NDO_DECLARE_BD_CALLBACK(ndomod_broker_notification_data);
+NDO_DECLARE_BD_CALLBACK(ndomod_broker_service_check_data);
+NDO_DECLARE_BD_CALLBACK(ndomod_broker_host_check_data);
+NDO_DECLARE_BD_CALLBACK(ndomod_broker_comment_data);
+NDO_DECLARE_BD_CALLBACK(ndomod_broker_downtime_data);
+NDO_DECLARE_BD_CALLBACK(ndomod_broker_flapping_data);
+NDO_DECLARE_BD_CALLBACK(ndomod_broker_program_status_data);
+NDO_DECLARE_BD_CALLBACK(ndomod_broker_host_status_data);
+NDO_DECLARE_BD_CALLBACK(ndomod_broker_service_status_data);
+NDO_DECLARE_BD_CALLBACK(ndomod_broker_adaptive_program_data);
+NDO_DECLARE_BD_CALLBACK(ndomod_broker_adaptive_host_data);
+NDO_DECLARE_BD_CALLBACK(ndomod_broker_adaptive_service_data);
+NDO_DECLARE_BD_CALLBACK(ndomod_broker_external_command_data);
+NDO_DECLARE_BD_CALLBACK(ndomod_broker_aggregated_status_data);
+NDO_DECLARE_BD_CALLBACK(ndomod_broker_retention_data);
+NDO_DECLARE_BD_CALLBACK(ndomod_broker_contact_notification_data);
+NDO_DECLARE_BD_CALLBACK(ndomod_broker_contact_notification_method_data);
+NDO_DECLARE_BD_CALLBACK(ndomod_broker_acknowledgement_data);
+NDO_DECLARE_BD_CALLBACK(ndomod_broker_state_change_data);
 #if defined(BUILD_NAGIOS_3X) || defined(BUILD_NAGIOS_4X)
-static bd_result ndomod_broker_contact_status_data(bd_phase, unsigned long,
-		void *, ndo_dbuf *);
-static bd_result ndomod_broker_adaptive_contact_data(bd_phase, unsigned long,
-		void *, ndo_dbuf *);
+NDO_DECLARE_BD_CALLBACK(ndomod_broker_contact_status_data);
+NDO_DECLARE_BD_CALLBACK(ndomod_broker_adaptive_contact_data);
 #endif
 
-struct ndomod_broker_data_struct ndomod_broker_data_funcs[] = {
+#undef NDO_DECLARE_BD_CALLBACK
+
+bd_callback ndomod_broker_data_funcs[] = {
 #if defined(BUILD_NAGIOS_2X) || defined(BUILD_NAGIOS_3X)
-	/* NEBCALLBACK_RESERVED0 */
-	{NULL},
-	/* NEBCALLBACK_RESERVED1 */
-	{NULL},
-	/* NEBCALLBACK_RESERVED2 */
-	{NULL},
-	/* NEBCALLBACK_RESERVED3 */
-	{NULL},
-	/* NEBCALLBACK_RESERVED4 */
-	{NULL},
-	/* NEBCALLBACK_RAW_DATA */
-	{NULL},
-	/* NEBCALLBACK_NEB_DATA */
-	{NULL},
+	NULL, /* NEBCALLBACK_RESERVED0 */
+	NULL, /* NEBCALLBACK_RESERVED1 */
+	NULL, /* NEBCALLBACK_RESERVED2 */
+	NULL, /* NEBCALLBACK_RESERVED3 */
+	NULL, /* NEBCALLBACK_RESERVED4 */
+	NULL, /* NEBCALLBACK_RAW_DATA */
+	NULL, /* NEBCALLBACK_NEB_DATA */
 #endif
-	/* NEBCALLBACK_PROCESS_DATA */
-	{ndomod_broker_process_data},
-	/* NEBCALLBACK_TIMED_EVENT_DATA */
-	{ndomod_broker_timed_event_data},
-	/* NEBCALLBACK_LOG_DATA */
-	{ndomod_broker_log_data},
-	/* NEBCALLBACK_SYSTEM_COMMAND_DATA */
-	{ndomod_broker_system_command_data},
-	/* NEBCALLBACK_EVENT_HANDLER_DATA */
-	{ndomod_broker_event_handler_data},
-	/* NEBCALLBACK_NOTIFICATION_DATA */
-	{ndomod_broker_notification_data},
-	/* NEBCALLBACK_SERVICE_CHECK_DATA */
-	{ndomod_broker_service_check_data},
-	/* NEBCALLBACK_HOST_CHECK_DATA */
-	{ndomod_broker_host_check_data},
-	/* NEBCALLBACK_COMMENT_DATA */
-	{ndomod_broker_comment_data},
-	/* NEBCALLBACK_DOWNTIME_DATA */
-	{ndomod_broker_downtime_data},
-	/* NEBCALLBACK_FLAPPING_DATA */
-	{ndomod_broker_flapping_data},
-	/* NEBCALLBACK_PROGRAM_STATUS_DATA */
-	{ndomod_broker_program_status_data},
-	/* NEBCALLBACK_HOST_STATUS_DATA */
-	{ndomod_broker_host_status_data},
-	/* NEBCALLBACK_SERVICE_STATUS_DATA */
-	{ndomod_broker_service_status_data},
-	/* NEBCALLBACK_ADAPTIVE_PROGRAM_DATA */
-	{ndomod_broker_adaptive_program_data},
-	/* NEBCALLBACK_ADAPTIVE_HOST_DATA */
-	{ndomod_broker_adaptive_host_data},
-	/* NEBCALLBACK_ADAPTIVE_SERVICE_DATA */
-	{ndomod_broker_adaptive_service_data},
-	/* NEBCALLBACK_EXTERNAL_COMMAND_DATA */
-	{ndomod_broker_external_command_data},
-	/* NEBCALLBACK_AGGREGATED_STATUS_DATA */
-	{ndomod_broker_aggregated_status_data},
-	/* NEBCALLBACK_RETENTION_DATA */
-	{ndomod_broker_retention_data},
-	/* NEBCALLBACK_CONTACT_NOTIFICATION_DATA */
-	{ndomod_broker_contact_notification_data},
-	/* NEBCALLBACK_CONTACT_NOTIFICATION_METHOD_DATA */
-	{ndomod_broker_contact_notification_method_data},
-	/* NEBCALLBACK_ACKNOWLEDGEMENT_DATA */
-	{ndomod_broker_acknowledgement_data},
-	/* NEBCALLBACK_STATE_CHANGE_DATA */
-	{ndomod_broker_state_change_data},
+	/* NEBCALLBACK_<ABC>_DATA => ndomod_broker_<abc>_data */
+	/* i.e NEBCALLBACK_PROCESS_DATA => ndomod_broker_process_data */
+	ndomod_broker_process_data,
+	ndomod_broker_timed_event_data,
+	ndomod_broker_log_data,
+	ndomod_broker_system_command_data,
+	ndomod_broker_event_handler_data,
+	ndomod_broker_notification_data,
+	ndomod_broker_service_check_data,
+	ndomod_broker_host_check_data,
+	ndomod_broker_comment_data,
+	ndomod_broker_downtime_data,
+	ndomod_broker_flapping_data,
+	ndomod_broker_program_status_data,
+	ndomod_broker_host_status_data,
+	ndomod_broker_service_status_data,
+	ndomod_broker_adaptive_program_data,
+	ndomod_broker_adaptive_host_data,
+	ndomod_broker_adaptive_service_data,
+	ndomod_broker_external_command_data,
+	ndomod_broker_aggregated_status_data,
+	ndomod_broker_retention_data,
+	ndomod_broker_contact_notification_data,
+	ndomod_broker_contact_notification_method_data,
+	ndomod_broker_acknowledgement_data,
+	ndomod_broker_state_change_data,
 #if defined(BUILD_NAGIOS_3X) || defined(BUILD_NAGIOS_4X)
-	/* NEBCALLBACK_CONTACT_STATUS_DATA */
-	{ndomod_broker_contact_status_data},
-	/* NEBCALLBACK_ADAPTIVE_CONTACT_DATA */
-	{ndomod_broker_adaptive_contact_data},
+	ndomod_broker_contact_status_data,
+	ndomod_broker_adaptive_contact_data,
 #endif
-	};
+};
 
-#define EVENT_HANDLER_COUNT (sizeof(ndomod_broker_data_funcs) / (sizeof(ndomod_broker_data_funcs[0])))
+#define EVENT_HANDLER_COUNT ARRAY_SIZE(ndomod_broker_data_funcs)
 
 
 /* handles brokered event data */
@@ -1686,44 +1631,30 @@ static void ndomod_commands_serialize(commandsmember *commands, ndo_dbuf *dbufp,
 		}
 	}
 
-int ndomod_broker_data(int event_type, void *data){
+int ndomod_broker_data(int event_type, void *data) {
 	ndo_dbuf dbuf;
-	int write_to_sink=NDO_TRUE;
-	bd_result broker_data_result;
-	bd_result (*broker_data_func)(bd_phase, unsigned long, void *, ndo_dbuf *);
+	bd_callback handler;
 
-	if(data==NULL)
-		return 0;
+	/* We need data to process and a function to process it. */
+	if (!data) return 0;
+	if (event_type < 0 || event_type >= EVENT_HANDLER_COUNT) return 0;
+	if (!(handler = ndomod_broker_data_funcs[event_type])) return 0;
 
-	/* Execute the pre-processing */
-	if((event_type < EVENT_HANDLER_COUNT) &&
-			(NULL != ndomod_broker_data_funcs[event_type].broker_data)) {
-		broker_data_func = ndomod_broker_data_funcs[event_type].broker_data;
-		broker_data_result = (*broker_data_func)(bdp_preprocessing,
-				ndomod_process_options, data, NULL);
-		switch(broker_data_result) {
+	/* Pre-processing. */
+	switch (handler(bdp_preprocessing, ndomod_process_options, data, NULL)) {
 		case bdr_ok:
 			break;
 		case bdr_stop:
-			return 0;
-			break;
 		case bdr_ephase:
 		case bdr_enoent:
 			return 0;
-			break;
-			}
-		}
+	}
 
-	/* initialize dynamic buffer (2KB chunk size) */
-	ndo_dbuf_init(&dbuf,2048);
+	/* A dynamic buffer, 2KB chunk size. */
+	ndo_dbuf_init(&dbuf, 2048);
 
-	/* Execute the main processing */
-	if((event_type < EVENT_HANDLER_COUNT) &&
-			(NULL != ndomod_broker_data_funcs[event_type].broker_data)) {
-		broker_data_func = ndomod_broker_data_funcs[event_type].broker_data;
-		broker_data_result = (*broker_data_func)(bdp_mainprocessing,
-				ndomod_process_options, data, &dbuf);
-		switch(broker_data_result) {
+	/* Main processing. */
+	switch(handler(bdp_mainprocessing, ndomod_process_options, data, &dbuf)) {
 		case bdr_ok:
 			break;
 		case bdr_stop:
@@ -1733,33 +1664,17 @@ int ndomod_broker_data(int event_type, void *data){
 		case bdr_enoent:
 			ndo_dbuf_free(&dbuf);
 			return 0;
-			break;
-			}
-		}
-	else {
-		ndo_dbuf_free(&dbuf);
-		return 0;
-		}
+	}
 
-	/* write data to sink */
-	if(write_to_sink==NDO_TRUE)
-		ndomod_write_to_sink(dbuf.buf,NDO_TRUE,NDO_TRUE);
-
-	/* free dynamic buffer */
+	/* Sink the buffer and then free its memory. */
+	ndomod_write_to_sink(dbuf.buf, NDO_TRUE, NDO_TRUE);
 	ndo_dbuf_free(&dbuf);
 
-	/* Execute the post-processing */
-	if((event_type < EVENT_HANDLER_COUNT) &&
-			(NULL != ndomod_broker_data_funcs[event_type].broker_data)) {
-		broker_data_func = ndomod_broker_data_funcs[event_type].broker_data;
-		(void)(*broker_data_func)(bdp_postprocessing,
-				ndomod_process_options, data, &dbuf);
-		/* We don't care about the results, at least when this code was
-			written */
-		}
+	/* Post-processing, ignore the return for now... */
+	(void)handler(bdp_postprocessing, ndomod_process_options, data, &dbuf);
 
 	return 0;
-	}
+}
 
 
 static bd_result ndomod_broker_process_data(bd_phase phase,
