@@ -38,7 +38,7 @@ int use_ssl=NDO_FALSE;
 /**************************************************************/
 
 /* open a file read-only via mmap() */
-ndo_mmapfile *ndo_mmap_fopen(char *filename){
+ndo_mmapfile *ndo_mmap_fopen(const char *filename){
 	ndo_mmapfile *new_mmapfile;
 	int fd;
 	void *mmap_buf;
@@ -153,7 +153,7 @@ char *ndo_mmap_fgets(ndo_mmapfile *temp_mmapfile){
 
 
 /* opens data sink */
-int ndo_sink_open(char *name, int fd, int type, int port, int flags, int *nfd){
+int ndo_sink_open(const char *name, int fd, int type, int port, int flags, int *nfd){
 	struct sockaddr_un server_address_u;
 	struct sockaddr_in server_address_i;
 	struct hostent *hp=NULL;
@@ -225,7 +225,7 @@ int ndo_sink_open(char *name, int fd, int type, int port, int flags, int *nfd){
 		if(!ndo_inet_aton(name,&server_address_i.sin_addr)){
 
 			/* else do a DNS lookup */
-			if((hp=gethostbyname((const char *)name))==NULL)
+			if((hp=gethostbyname(name))==NULL)
 				return NDO_ERROR;
 
 			memcpy(&server_address_i.sin_addr,hp->h_addr,hp->h_length);
@@ -276,7 +276,7 @@ int ndo_sink_open(char *name, int fd, int type, int port, int flags, int *nfd){
 
 
 /* writes to data sink */
-int ndo_sink_write(int fd, char *buf, int buflen){
+int ndo_sink_write(int fd, const char *buf, int buflen){
 	int tbytes=0;
 	int result=0;
 
@@ -471,7 +471,7 @@ void ndo_strip_buffer(char *buffer){
 
 
 /* escape special characters in string */
-char *ndo_escape_buffer(char *buffer){
+char *ndo_escape_buffer(const char *buffer){
 	char *newbuf;
 	register int x=0;
 	register int y=0;

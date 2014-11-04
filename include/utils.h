@@ -41,7 +41,7 @@ typedef struct ndo_dbuf_struct{
 
 int ndo_dbuf_init(ndo_dbuf *,int);
 int ndo_dbuf_free(ndo_dbuf *);
-int ndo_dbuf_strcat(ndo_dbuf *,char *);
+int ndo_dbuf_strcat(ndo_dbuf *, const char *);
 
 int my_rename(char *,char *);
 

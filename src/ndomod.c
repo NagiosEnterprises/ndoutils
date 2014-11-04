@@ -466,7 +466,7 @@ static int ndomod_process_module_args(char *args) {
 
 
 /* process all config vars in a file */
-static int ndomod_process_config_file(char *filename) {
+static int ndomod_process_config_file(const char *filename) {
 	ndo_mmapfile *thefile=NULL;
 	char *buf=NULL;
 	int result=NDO_OK;
@@ -861,7 +861,7 @@ int ndomod_rotate_sink_file(void *args){
 
 
 /* writes data to sink */
-int ndomod_write_to_sink(char *buf, int buffer_write, int flush_buffer){
+int ndomod_write_to_sink(const char *buf, int buffer_write, int flush_buffer){
 	char *sbuf=NULL;
 	int buflen=0;
 	int result=NDO_OK;
@@ -1024,7 +1024,7 @@ int ndomod_write_to_sink(char *buf, int buffer_write, int flush_buffer){
 
 
 /* save unprocessed data to buffer file */
-int ndomod_save_unprocessed_data(char *f){
+int ndomod_save_unprocessed_data(const char *f){
 	FILE *fp=NULL;
 	char *buf=NULL;
 	char *ebuf=NULL;
@@ -1065,7 +1065,7 @@ int ndomod_save_unprocessed_data(char *f){
 
 
 /* load unprocessed data from buffer file */
-int ndomod_load_unprocessed_data(char *f){
+int ndomod_load_unprocessed_data(const char *f){
 	ndo_mmapfile *thefile=NULL;
 	char *ebuf=NULL;
 	char *buf=NULL;
@@ -1141,7 +1141,7 @@ int ndomod_sink_buffer_deinit(ndomod_sink_buffer *sbuf){
 
 
 /* buffers output */
-int ndomod_sink_buffer_push(ndomod_sink_buffer *sbuf,char *buf){
+int ndomod_sink_buffer_push(ndomod_sink_buffer *sbuf, const char *buf){
 
 	if(sbuf==NULL || buf==NULL)
 		return NDO_ERROR;
@@ -5473,7 +5473,7 @@ int ndomod_write_resource_config_files(void){
 
 
 /* dumps a single resource config file to sink */
-int ndomod_write_resource_config_file(char *filename){
+int ndomod_write_resource_config_file(const char *filename){
 
 	/* TODO */
 	/* loop through main config file to find all resource config files, and then process them */

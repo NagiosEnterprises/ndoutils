@@ -63,7 +63,7 @@ int ndo_dbuf_free(ndo_dbuf *db){
 
 
 /* dynamically expands a string */
-int ndo_dbuf_strcat(ndo_dbuf *db, char *buf){
+int ndo_dbuf_strcat(ndo_dbuf *db, const char *buf){
 	char *newbuf=NULL;
 	unsigned long buflen=0L;
 	unsigned long new_size=0L;

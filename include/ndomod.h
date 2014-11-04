@@ -90,27 +90,27 @@ int ndomod_printf_to_logs(const char *fmt, ...);
 
 static int ndomod_process_module_args(char *);
 static int ndomod_process_config_var(char *);
-static int ndomod_process_config_file(char *);
+static int ndomod_process_config_file(const char *);
 static void ndomod_free_config_memory(void);
 
 int ndomod_open_sink(void);
 int ndomod_close_sink(void);
-int ndomod_write_to_sink(char *,int,int);
+int ndomod_write_to_sink(const char *,int,int);
 int ndomod_rotate_sink_file(void *);
 int ndomod_hello_sink(int,int);
 int ndomod_goodbye_sink(void);
 
 int ndomod_sink_buffer_init(ndomod_sink_buffer *sbuf,unsigned long);
 int ndomod_sink_buffer_deinit(ndomod_sink_buffer *sbuf);
-int ndomod_sink_buffer_push(ndomod_sink_buffer *sbuf,char *);
+int ndomod_sink_buffer_push(ndomod_sink_buffer *sbuf, const char *);
 char *ndomod_sink_buffer_peek(ndomod_sink_buffer *sbuf);
 char *ndomod_sink_buffer_pop(ndomod_sink_buffer *sbuf);
 int ndomod_sink_buffer_items(ndomod_sink_buffer *sbuf);
 unsigned long ndomod_sink_buffer_get_overflow(ndomod_sink_buffer *sbuf);
 int ndomod_sink_buffer_set_overflow(ndomod_sink_buffer *sbuf,unsigned long);
 
-int ndomod_load_unprocessed_data(char *);
-int ndomod_save_unprocessed_data(char *);
+int ndomod_load_unprocessed_data(const char *);
+int ndomod_save_unprocessed_data(const char *);
 
 int ndomod_register_callbacks(void);
 int ndomod_deregister_callbacks(void);
@@ -123,7 +123,7 @@ int ndomod_write_object_config(int);
 int ndomod_write_config_files(void);
 int ndomod_write_main_config_file(void);
 int ndomod_write_resource_config_files(void);
-int ndomod_write_resource_config_file(char *);
+int ndomod_write_resource_config_file(const char *);
 
 int ndomod_write_runtime_variables(void);
 

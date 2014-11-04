@@ -46,19 +46,19 @@ typedef struct ndo_mmapfile_struct{
         }ndo_mmapfile;
 
 
-ndo_mmapfile *ndo_mmap_fopen(char *);
+ndo_mmapfile *ndo_mmap_fopen(const char *);
 int ndo_mmap_fclose(ndo_mmapfile *);
 char *ndo_mmap_fgets(ndo_mmapfile *);
 
-int ndo_sink_open(char *,int,int,int,int,int *);
-int ndo_sink_write(int,char *,int);
+int ndo_sink_open(const char *,int,int,int,int,int *);
+int ndo_sink_write(int,const char *,int);
 int ndo_sink_write_newline(int);
 int ndo_sink_flush(int);
 int ndo_sink_close(int);
 int ndo_inet_aton(register const char *,struct in_addr *);
 
 void ndo_strip_buffer(char *);
-char *ndo_escape_buffer(char *);
+char *ndo_escape_buffer(const char *);
 char *ndo_unescape_buffer(char *);
 
 #endif
