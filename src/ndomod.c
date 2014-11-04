@@ -268,47 +268,42 @@ extern int __nagios_object_structure_version;
 extern int use_ssl;
 
 
-#define DEBUG_NDO 1
 
+/* Setup our module when loaded by the event broker. */
+int nebmodule_init(int flags, char *args, void *handle) {
+	/* Cache our NEB module handle */
+	ndomod_module_handle = handle;
 
+	/* Say hi to the Nagios Core log. */
+	ndomod_printf_to_logs("ndomod: "NDOMOD_NAME" "NDOMOD_VERSION" ("NDOMOD_DATE
+			") Copyright 2009-2014 Nagios Core Development Team and Community Contributors");
 
-/* this function gets called when the module is loaded by the event broker */
-int nebmodule_init(int flags, char *args, void *handle){
-	char temp_buffer[NDOMOD_MAX_BUFLEN];
-
-	/* save our handle */
-	ndomod_module_handle=handle;
-
-	/* log module info to the Nagios log file */
-	snprintf(temp_buffer,sizeof(temp_buffer)-1,"ndomod: %s %s (%s) Copyright (c) 2009 Nagios Core Development Team and Community Contributors",NDOMOD_NAME,NDOMOD_VERSION,NDOMOD_DATE);
-	temp_buffer[sizeof(temp_buffer)-1]='\x0';
-	ndomod_write_to_logs(temp_buffer,NSLOG_INFO_MESSAGE);
-
-	/* check Nagios object structure version */
-	if(ndomod_check_nagios_object_version()==NDO_ERROR)
+	/* Ensure our Nagios object structure version matches Core. */
+	if (ndomod_check_nagios_object_version() == NDO_ERROR) {
 		return -1;
+	}
 
-	/* process arguments */
-	if(ndomod_process_module_args(args)==NDO_ERROR){
-		ndomod_write_to_logs("ndomod: An error occurred while attempting to process module arguments.",NSLOG_INFO_MESSAGE);
+	/* Process our arguments (and configuration). */
+	if (ndomod_process_module_args(args) == NDO_ERROR) {
+		ndomod_printf_to_logs(
+				"ndomod: An error occurred while attempting to process module arguments.");
 		return -1;
-		}
+	}
 
 	/* do some initialization stuff... */
-	if(ndomod_init()==NDO_ERROR){
-		ndomod_write_to_logs("ndomod: An error occurred while attempting to initialize.",NSLOG_INFO_MESSAGE);
+	if (ndomod_init() == NDO_ERROR) {
+		ndomod_printf_to_logs("ndomod: An error occurred while attempting to initialize.");
 		return -1;
-		}
+	}
 
 	return 0;
-        }
+}
 
 
 /* Shutdown and release our resources when the module is unloaded. */
 int nebmodule_deinit(int flags, int reason) {
-	char msg[] = "ndomod: Shutdown complete."; /* A message for the core log. */
 	ndomod_deinit();
-	ndomod_write_to_logs(msg, NSLOG_INFO_MESSAGE);
+	ndomod_printf_to_logs("ndomod: Shutdown complete.");
 	return 0;
 }
 
@@ -318,29 +313,22 @@ int nebmodule_deinit(int flags, int reason) {
 /* INIT/DEINIT FUNCTIONS                                                    */
 /****************************************************************************/
 
-/* checks to make sure Nagios object version matches what we know about */
-int ndomod_check_nagios_object_version(void){
-	char temp_buffer[NDOMOD_MAX_BUFLEN];
+/* Checks to make sure Nagios object version matches what we know about. */
+int ndomod_check_nagios_object_version(void) {
 
-	if(__nagios_object_structure_version!=CURRENT_OBJECT_STRUCTURE_VERSION){
-
-		snprintf(temp_buffer,sizeof(temp_buffer)-1,"ndomod: I've been compiled with support for revision %d of the internal Nagios object structures, but the Nagios daemon is currently using revision %d.  I'm going to unload so I don't cause any problems...\n",CURRENT_OBJECT_STRUCTURE_VERSION,__nagios_object_structure_version);
-		temp_buffer[sizeof(temp_buffer)-1]='\x0';
-		ndomod_write_to_logs(temp_buffer,NSLOG_INFO_MESSAGE);
-
+	if (__nagios_object_structure_version == CURRENT_OBJECT_STRUCTURE_VERSION) {
+		return NDO_OK;
+	} else {
+		ndomod_printf_to_logs(
+				"ndomod: I've been compiled with support for revision %d of the internal Nagios object structures, but the Nagios daemon is currently using revision %d. I'm going to unload so I don't cause any problems...",
+				CURRENT_OBJECT_STRUCTURE_VERSION, __nagios_object_structure_version);
 		return NDO_ERROR;
-	        }
-
-	return NDO_OK;
-        }
+	}
+}
 
 
 /* performs some initialization stuff */
 int ndomod_init(void){
-#if defined(BUILD_NAGIOS_2X) || defined(BUILD_NAGIOS_3X)
-	char temp_buffer[NDOMOD_MAX_BUFLEN];
-	time_t current_time;
-#endif
 
 	/* initialize some vars (needed for restarts of daemon - why, if the module gets reloaded ???) */
 	ndomod_sink_is_open=NDO_FALSE;
@@ -373,14 +361,12 @@ int ndomod_init(void){
 		if(ndomod_sink_rotation_command==NULL){
 
 			/* log an error message to the Nagios log file */
-			snprintf(temp_buffer,sizeof(temp_buffer)-1,"ndomod: Warning - No file rotation command defined.\n");
-			temp_buffer[sizeof(temp_buffer)-1]='\x0';
-			ndomod_write_to_logs(temp_buffer,NSLOG_INFO_MESSAGE);
+			ndomod_printf_to_logs("ndomod: Warning - No file rotation command defined.");
 		        }
 
 		/* schedule a file rotation event */
 		else{
-			time(&current_time);
+			time_t current_time = time(NULL);
 #ifdef BUILD_NAGIOS_2X
 			schedule_new_event(EVENT_USER_FUNCTION,TRUE,current_time+ndomod_sink_rotation_interval,TRUE,ndomod_sink_rotation_interval,NULL,TRUE,(void *)ndomod_rotate_sink_file,NULL);
 #else
@@ -536,8 +522,7 @@ static int ndomod_process_config_file(char *filename) {
 		if ((v = strdup(val))) { \
 			return NDO_OK; \
 		} else { \
-			char msg[] = "ndomod: Error copying option string '" n "'."; \
-			ndomod_write_to_logs(msg, NSLOG_INFO_MESSAGE); \
+			ndomod_printf_to_logs("ndomod: Error copying option string for '%s'.", n); \
 			return NDO_ERROR; \
 		} \
 	} while (0)
@@ -548,8 +533,7 @@ static int ndomod_process_config_file(char *filename) {
 		errno = 0; \
 		v = strtoul(val, NULL, 0); \
 		if (errno) { \
-			char msg[] = "ndomod: Error converting value for '" n "'."; \
-			ndomod_write_to_logs(msg, NSLOG_INFO_MESSAGE); \
+			ndomod_printf_to_logs("ndomod: Error converting value for '%s'.", n); \
 			return NDO_ERROR; \
 		} \
 	} while (0)
@@ -678,14 +662,26 @@ static void ndomod_free_config_memory(void) {
 /* UTILITY FUNCTIONS                                                        */
 /****************************************************************************/
 
-/* writes a string to Nagios logs */
-int ndomod_write_to_logs(char *buf, int flags){
+/* Writes a string to Nagios Core logs. */
+int ndomod_write_to_logs(char *buf, int flags) {
+	return buf ? write_to_all_logs(buf, flags) : NDO_ERROR;
+}
 
-	if(buf==NULL)
-		return NDO_ERROR;
+int ndomod_printf_to_logs(const char *fmt, ...) {
+	char msg[NDOMOD_MAX_BUFLEN];
+	int n;
+	va_list ap;
 
-	return write_to_all_logs(buf,flags);
-	}
+	va_start(ap, fmt);
+	n = vsnprintf(msg, sizeof(msg), fmt, ap);
+	va_end(ap);
+
+	if (n < 0) return NDO_ERROR;
+	if (n >= (int)sizeof(msg)) strcpy(msg+sizeof(msg)-4, "...");
+	else msg[sizeof(msg)-1] = '\0';
+
+	return write_to_all_logs(msg, NSLOG_INFO_MESSAGE);
+}
 
 
 
@@ -866,7 +862,6 @@ int ndomod_rotate_sink_file(void *args){
 
 /* writes data to sink */
 int ndomod_write_to_sink(char *buf, int buffer_write, int flush_buffer){
-	char *temp_buffer=NULL;
 	char *sbuf=NULL;
 	int buflen=0;
 	int result=NDO_OK;
@@ -904,20 +899,16 @@ int ndomod_write_to_sink(char *buf, int buffer_write, int flush_buffer){
 			if(result==NDO_OK){
 
 				if(reconnect==NDO_TRUE){
-					asprintf(&temp_buffer,"ndomod: Successfully reconnected to data sink!  %lu items lost, %lu queued items to flush.",sinkbuf.overflow,sinkbuf.items);
 					ndomod_hello_sink(TRUE,TRUE);
+					ndomod_printf_to_logs("ndomod: Successfully reconnected to data sink! %lu items lost, %lu queued items to flush.",sinkbuf.overflow,sinkbuf.items);
 				        }
 				else{
-					if(sinkbuf.overflow==0L)
-						asprintf(&temp_buffer,"ndomod: Successfully connected to data sink.  %lu queued items to flush.",sinkbuf.items);
-					else
-						asprintf(&temp_buffer,"ndomod: Successfully connected to data sink.  %lu items lost, %lu queued items to flush.",sinkbuf.overflow,sinkbuf.items);
 					ndomod_hello_sink(FALSE,FALSE);
+					if(sinkbuf.overflow==0L)
+						ndomod_printf_to_logs("ndomod: Successfully connected to data sink. %lu queued items to flush.",sinkbuf.items);
+					else
+						ndomod_printf_to_logs("ndomod: Successfully connected to data sink. %lu items lost, %lu queued items to flush.",sinkbuf.overflow,sinkbuf.items);
 				        }
-
-				ndomod_write_to_logs(temp_buffer,NSLOG_INFO_MESSAGE);
-				free(temp_buffer);
-				temp_buffer=NULL;
 
 				/* reset sink overflow */
 				sinkbuf.overflow=0L;
@@ -928,14 +919,11 @@ int ndomod_write_to_sink(char *buf, int buffer_write, int flush_buffer){
 
 				if((unsigned long)((unsigned long)current_time-ndomod_sink_reconnect_warning_interval)>(unsigned long)ndomod_sink_last_reconnect_warning){
 					if(reconnect==NDO_TRUE)
-						asprintf(&temp_buffer,"ndomod: Still unable to reconnect to data sink.  %lu items lost, %lu queued items to flush.",sinkbuf.overflow,sinkbuf.items);
+						ndomod_printf_to_logs("ndomod: Still unable to reconnect to data sink. %lu items lost, %lu queued items to flush.",sinkbuf.overflow,sinkbuf.items);
 					else if(ndomod_sink_connect_attempt==1)
-						asprintf(&temp_buffer,"ndomod: Could not open data sink!  I'll keep trying, but some output may get lost...");
+						ndomod_printf_to_logs("ndomod: Could not open data sink! I'll keep trying, but some output may get lost...");
 					else
-						asprintf(&temp_buffer,"ndomod: Still unable to connect to data sink.  %lu items lost, %lu queued items to flush.",sinkbuf.overflow,sinkbuf.items);
-					ndomod_write_to_logs(temp_buffer,NSLOG_INFO_MESSAGE);
-					free(temp_buffer);
-					temp_buffer=NULL;
+						ndomod_printf_to_logs("ndomod: Still unable to connect to data sink. %lu items lost, %lu queued items to flush.",sinkbuf.overflow,sinkbuf.items);
 
 					ndomod_sink_last_reconnect_warning=current_time;
 					}
@@ -976,10 +964,7 @@ int ndomod_write_to_sink(char *buf, int buffer_write, int flush_buffer){
 					/* close the sink */
 					ndomod_close_sink();
 
-					asprintf(&temp_buffer,"ndomod: Error writing to data sink!  Some output may get lost.  %lu queued items to flush.",sinkbuf.items);
-					ndomod_write_to_logs(temp_buffer,NSLOG_INFO_MESSAGE);
-					free(temp_buffer);
-					temp_buffer=NULL;
+					ndomod_printf_to_logs("ndomod: Error writing to data sink! Some output may get lost. %lu queued items to flush.",sinkbuf.items);
 
 					time(&current_time);
 					ndomod_sink_last_reconnect_attempt=current_time;
@@ -998,10 +983,7 @@ int ndomod_write_to_sink(char *buf, int buffer_write, int flush_buffer){
 			ndomod_sink_buffer_pop(&sinkbuf);
 		        }
 
-		asprintf(&temp_buffer,"ndomod: Successfully flushed %lu queued items to data sink.",items_to_flush);
-		ndomod_write_to_logs(temp_buffer,NSLOG_INFO_MESSAGE);
-		free(temp_buffer);
-		temp_buffer=NULL;
+		ndomod_printf_to_logs("ndomod: Successfully flushed %lu queued items to data sink.",items_to_flush);
 	        }
 
 
@@ -1024,14 +1006,8 @@ int ndomod_write_to_sink(char *buf, int buffer_write, int flush_buffer){
 			ndomod_sink_last_reconnect_attempt=current_time;
 			ndomod_sink_last_reconnect_warning=current_time;
 
-			asprintf(&temp_buffer,"ndomod: Error writing to data sink!  Some output may get lost...");
-			ndomod_write_to_logs(temp_buffer,NSLOG_INFO_MESSAGE);
-			free(temp_buffer);
-			asprintf(&temp_buffer,"ndomod: Please check remote ndo2db log, database connection or SSL Parameters");
-			ndomod_write_to_logs(temp_buffer,NSLOG_INFO_MESSAGE);
-			free(temp_buffer);
-
-			temp_buffer=NULL;
+			ndomod_printf_to_logs("ndomod: Error writing to data sink! Some output may get lost...");
+			ndomod_printf_to_logs("ndomod: Please check remote ndo2db log, database connection or SSL parameters.");
 		        }
 
 		/***** BUFFER OUTPUT FOR LATER *****/
@@ -1266,12 +1242,10 @@ int ndomod_sink_buffer_set_overflow(ndomod_sink_buffer *sbuf, unsigned long num)
 		int result = neb_register_callback(dtc, \
 				ndomod_module_handle, 0, ndomod_broker_data); \
 		if (result != NDO_OK) { \
-			char msg[] = "ndomod: Error registering for " dtn " data."; \
-			ndomod_write_to_logs(msg, NSLOG_INFO_MESSAGE); \
+			ndomod_printf_to_logs("ndomod: Error registering for %s data.", dtn); \
 			return result; \
 		} else { \
-			char msg[] = "ndomod: Registered for " dtn " data."; \
-			ndomod_write_to_logs(msg, NSLOG_INFO_MESSAGE); \
+			ndomod_printf_to_logs("ndomod: Registered for %s data.", dtn); \
 		} \
 	} while (0)
 
@@ -1716,8 +1690,7 @@ printf("ndomod_broker_process_data() phase: Pre-Prossing Event Type: %d\n",
 				/* make sure we have a rotation command defined... */
 				if(ndomod_sink_rotation_command == NULL) {
 					/* log an error message to the Nagios log file */
-					ndomod_write_to_logs("ndomod: Warning - No file rotation command defined.\n", 
-							NSLOG_INFO_MESSAGE);
+					ndomod_printf_to_logs("ndomod: Warning - No file rotation command defined.");
 					}
 				/* schedule a file rotation event */
 				else {
