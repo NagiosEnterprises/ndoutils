@@ -23,6 +23,8 @@
 #ifndef _NDO_UTILS_H
 #define _NDO_UTILS_H
 
+#include <stddef.h>
+
 /* my_free has been freed from bondage as a function */
 #ifdef BUILD_NAGIOS_2X
 #define my_free(ptr) { if(ptr) { free(ptr); ptr = NULL; } }
@@ -31,19 +33,21 @@
 #endif
 
 
-typedef struct ndo_dbuf_struct{
+typedef struct ndo_dbuf {
 	char *buf;
-	unsigned long used_size;
-	unsigned long allocated_size;
-	unsigned long chunk_size;
-        }ndo_dbuf;
+	size_t used_size; /**< Strlen of used buffer. */
+	size_t alloc_size; /**< Allocated buffer byte size. */
+} ndo_dbuf;
 
 
-int ndo_dbuf_init(ndo_dbuf *,int);
+int ndo_dbuf_init(ndo_dbuf *, size_t);
 int ndo_dbuf_free(ndo_dbuf *);
+int ndo_dbuf_reset(ndo_dbuf *);
 int ndo_dbuf_strcat(ndo_dbuf *, const char *);
+int ndo_dbuf_strcat_escaped(ndo_dbuf *, const char *);
+int ndo_dbuf_printf(ndo_dbuf *db, const char *fmt, ...);
 
-int my_rename(char *,char *);
+int my_rename(char *, char *);
 
 void ndomod_strip(char *);
 

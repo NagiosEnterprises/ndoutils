@@ -84,19 +84,28 @@ NEB_API_VERSION(CURRENT_NEB_API_VERSION)
 #define NDOMOD_NAME "NDOMOD"
 #define NDOMOD_DATE "02-28-2014"
 
-#define BD_INT				0
-#define BD_TIMEVAL			1
-#define BD_STRING			2
-#define BD_UNSIGNED_LONG	3
-#define BD_FLOAT			4
 
 #ifndef ARRAY_SIZE
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof(x[0]))
 #endif
 
+#ifndef STRINGIFY
+#define STRINGIFY(s) #s
+#endif
+
+
+typedef enum bd_datatype {
+	BD_INT,
+	BD_TIMEVAL,
+	BD_STRING,
+	BD_STRING_ESCAPE,
+	BD_UNSIGNED_LONG,
+	BD_FLOAT,
+} bd_datatype;
+
 struct ndo_broker_data {
 	int	key;
-	int datatype;
+	bd_datatype datatype;
 	union {
 		int	integer;
 		struct timeval timestamp;
@@ -107,7 +116,7 @@ struct ndo_broker_data {
 };
 
 /* Phases that a ndomod_broker_*_data() function may process */
-typedef enum bd_phase_enum {
+typedef enum bd_phase {
 	bdp_preprocessing,		/* Pre-processing is the phase executed before
 								data serialization takes place. Usually this
 								is just to determine whether further
@@ -116,15 +125,15 @@ typedef enum bd_phase_enum {
 								serialization is executed */
 	bdp_postprocessing		/* Post-processing happens after data is
 								serialized */
-	} bd_phase;
+} bd_phase;
 
 /* Possible return codes from the ndomod_broker_*_data() functions */
-typedef enum bd_result_enum {
+typedef enum bd_result {
 	bdr_ok,			/* No error indicated, continue processing */
 	bdr_stop,		/* No error indicated, but stop processing */
 	bdr_ephase,		/* Bad phase passed */
 	bdr_enoent		/* Entity (host, service, etc.) not found */
-	} bd_result;
+} bd_result;
 
 /**
  * ndomod_broker_*_data() callback function type.
@@ -1328,120 +1337,71 @@ int ndomod_deregister_callbacks(void){
 	return NDO_OK;
         }
 
-static void ndomod_enddata_serialize(ndo_dbuf *dbufp) {
+static void ndomod_enddata_serialize(ndo_dbuf *dbuf) {
+	ndo_dbuf_strcat(dbuf, "\n"STRINGIFY(NDO_API_ENDDATA)"\n\n");
+}
 
-	char temp[64];
-
-	snprintf(temp, sizeof(temp)-1, "\n%d\n\n", NDO_API_ENDDATA);
-	temp[sizeof(temp)-1] = '\x0';
-	ndo_dbuf_strcat(dbufp, temp);
-	}
-
-static void ndomod_broker_data_serialize(ndo_dbuf *dbufp, int datatype,
+static void ndomod_broker_data_serialize(ndo_dbuf *dbuf, int datatype,
 		struct ndo_broker_data *bd, size_t bdsize, int add_enddata) {
 
-	char temp[64];
-	int	x;
-	struct ndo_broker_data *bdp;
+	/* Start out with the broker data type. */
+	ndo_dbuf_printf(dbuf, "\n%d:", datatype);
 
-	/* Start everything out with the broker data type */
-	snprintf(temp, sizeof(temp)-1, "\n%d:", datatype);
-	temp[sizeof(temp)-1]='\x0';
-	ndo_dbuf_strcat(dbufp, temp);
-
-	/* Add each value */
-	for(x = 0, bdp = bd; x < bdsize; x++, bdp++) {
-		switch(bdp->datatype) {
-		case BD_INT:
-			snprintf(temp, sizeof(temp)-1, "\n%d=%d", bdp->key, 
-					bdp->value.integer);
-			temp[sizeof(temp)-1]='\x0';
-			ndo_dbuf_strcat(dbufp, temp);
-			break;
-		case BD_TIMEVAL:
-			snprintf(temp, sizeof(temp)-1, "\n%d=%ld.%ld", bdp->key, 
-					bdp->value.timestamp.tv_sec, bdp->value.timestamp.tv_usec);
-			temp[sizeof(temp)-1]='\x0';
-			ndo_dbuf_strcat(dbufp, temp);
-			break;
-		case BD_STRING:
-			snprintf(temp, sizeof(temp)-1, "\n%d=", bdp->key);
-			temp[sizeof(temp)-1]='\x0';
-			ndo_dbuf_strcat(dbufp, temp);
-			ndo_dbuf_strcat(dbufp, bdp->value.string);
-			break;
-		case BD_UNSIGNED_LONG:
-			snprintf(temp, sizeof(temp)-1, "\n%d=%lu", bdp->key, 
-					bdp->value.unsigned_long);
-			temp[sizeof(temp)-1]='\x0';
-			ndo_dbuf_strcat(dbufp, temp);
-			break;
-		case BD_FLOAT:
-			snprintf(temp, sizeof(temp)-1, "\n%d=%.5lf", bdp->key, 
-					bdp->value.floating_point);
-			temp[sizeof(temp)-1]='\x0';
-			ndo_dbuf_strcat(dbufp, temp);
-			break;
-			}
+	/* Add each value from the input array. */
+	for (; bdsize--; bd++) {
+		switch (bd->datatype) {
+			case BD_INT:
+				ndo_dbuf_printf(dbuf, "\n%d=%d", bd->key, bd->value.integer);
+				break;
+			case BD_TIMEVAL:
+				ndo_dbuf_printf(dbuf, "\n%d=%ld.%ld", bd->key,
+						bd->value.timestamp.tv_sec, bd->value.timestamp.tv_usec);
+				break;
+			case BD_STRING:
+				ndo_dbuf_printf(dbuf, "\n%d=", bd->key);
+				ndo_dbuf_strcat(dbuf, bd->value.string);
+				break;
+			case BD_STRING_ESCAPE:
+				ndo_dbuf_printf(dbuf, "\n%d=", bd->key);
+				ndo_dbuf_strcat_escaped(dbuf, bd->value.string);
+				break;
+			case BD_UNSIGNED_LONG:
+				ndo_dbuf_printf(dbuf, "\n%d=%lu", bd->key, bd->value.unsigned_long);
+				break;
+			case BD_FLOAT:
+				ndo_dbuf_printf(dbuf, "\n%d=%.5lf", bd->key, bd->value.floating_point);
+				break;
 		}
-
-	/* Close everything out with an NDO_API_ENDDATA marker */
-	if(FALSE != add_enddata) {
-		ndomod_enddata_serialize(dbufp);
-		}
-
 	}
+
+	/* Close out with an NDO_API_ENDDATA marker if requested. */
+	if (add_enddata) ndomod_enddata_serialize(dbuf);
+}
 
 #if ( defined( BUILD_NAGIOS_3X) || defined( BUILD_NAGIOS_4X))
-static void ndomod_customvars_serialize(customvariablesmember *customvars,
-	ndo_dbuf *dbufp) {
+static void ndomod_customvars_serialize(customvariablesmember *c,
+		ndo_dbuf *dbuf) {
 
-	customvariablesmember *temp_customvar = NULL;
-	char * cvname;
-	char * cvvalue;
-	char temp_buffer[NDOMOD_MAX_BUFLEN];
-
-	for(temp_customvar = customvars; temp_customvar != NULL;
-			temp_customvar = temp_customvar->next) {
-
-		cvname = ndo_escape_buffer(temp_customvar->variable_name);
-		cvvalue = ndo_escape_buffer(temp_customvar->variable_value);
-
-		snprintf(temp_buffer, sizeof(temp_buffer)-1, "\n%d=%s:%d:%s",
-				NDO_DATA_CUSTOMVARIABLE, (NULL == cvname) ? "" : cvname,
-				temp_customvar->has_been_modified, 
-				(NULL == cvvalue ) ? "" : cvvalue);
-
-		temp_buffer[sizeof(temp_buffer)-1] = '\x0';
-		ndo_dbuf_strcat(dbufp, temp_buffer);
-
-		if(NULL != cvname) free(cvname);
-		if(NULL != cvvalue) free(cvvalue);
-		}
+	for (; c; c = c->next) {
+		char *name = c->variable_name;
+		char *value = c->variable_value;
+		ndo_dbuf_strcat(dbuf, "\n"STRINGIFY(NDO_DATA_CUSTOMVARIABLE)"=");
+		if (name && *name) ndo_dbuf_strcat_escaped(dbuf, name);
+		ndo_dbuf_strcat(dbuf, c->has_been_modified ? ":1:" : ":0:");
+		if (value && *value) ndo_dbuf_strcat_escaped(dbuf, value);
 	}
+}
 #endif
 
-static void ndomod_contactgroups_serialize(contactgroupsmember *contactgroups,
-	ndo_dbuf *dbufp) {
-		
-	contactgroupsmember *temp_contactgroupsmember = NULL;
-	char *groupname;
-	char temp_buffer[NDOMOD_MAX_BUFLEN];
+static void ndomod_contactgroups_serialize(contactgroupsmember *g,
+		ndo_dbuf *dbuf) {
 
-	for(temp_contactgroupsmember = contactgroups; 
-			temp_contactgroupsmember != NULL;
-			temp_contactgroupsmember = temp_contactgroupsmember->next) {
-
-		groupname = ndo_escape_buffer(temp_contactgroupsmember->group_name);
-
-		snprintf(temp_buffer, sizeof(temp_buffer)-1,"\n%d=%s", 
-				NDO_DATA_CONTACTGROUP ,(NULL == groupname) ? "" : groupname);
-		temp_buffer[sizeof(temp_buffer)-1] = '\x0';
-		ndo_dbuf_strcat(dbufp, temp_buffer);
-
-		if(NULL != groupname) free(groupname);
-		}
+	for (; g; g = g->next) {
+		char *name = g->group_name;
+		ndo_dbuf_strcat(dbuf, "\n"STRINGIFY(NDO_DATA_CONTACTGROUP)"=");
+		if (name && *name) ndo_dbuf_strcat_escaped(dbuf, name);
 	}
+}
 
 #ifdef BUILD_NAGIOS_2X
 static void ndomod_contacts_serialize(contactgroupmember *contacts,
@@ -1464,28 +1424,16 @@ static void ndomod_contacts_serialize(contactgroupmember *contacts,
 		if(NULL != contact_name) free(contact_name);
 		}
 	}
-
 #else
-static void ndomod_contacts_serialize(contactsmember *contacts,
-	ndo_dbuf *dbufp, int varnum) {
+static void ndomod_contacts_serialize(contactsmember *c, ndo_dbuf *dbuf,
+		int varnum) {
 
-	contactsmember *temp_contactsmember = NULL;
-	char *contact_name;
-	char temp_buffer[NDOMOD_MAX_BUFLEN];
-
-	for(temp_contactsmember = contacts; temp_contactsmember != NULL;
-			temp_contactsmember = temp_contactsmember->next) {
-
-		contact_name = ndo_escape_buffer(temp_contactsmember->contact_name);
-
-		snprintf(temp_buffer, sizeof(temp_buffer)-1, "\n%d=%s", varnum, 
-				(NULL == contact_name) ? "" : contact_name);
-		temp_buffer[sizeof(temp_buffer)-1] = '\x0';
-		ndo_dbuf_strcat(dbufp, temp_buffer);
-
-		if(NULL != contact_name) free(contact_name);
-		}
+	for (; c; c = c->next) {
+		char *name = c->contact_name;
+		ndo_dbuf_printf(dbuf, "\n%d=", varnum);
+		if (name && *name) ndo_dbuf_strcat_escaped(dbuf, name);
 	}
+}
 #endif
 
 #ifdef BUILD_NAGIOS_2X
@@ -1511,26 +1459,15 @@ static void ndomod_hosts_serialize_2x(hostgroupmember *hosts, ndo_dbuf *dbufp,
 	}
 #endif
 
-static void ndomod_hosts_serialize(hostsmember *hosts, ndo_dbuf *dbufp, 
+static void ndomod_hosts_serialize(hostsmember *h, ndo_dbuf *dbuf,
 		int varnum) {
 
-	hostsmember *temp_hostsmember = NULL;
-	char *host_name;
-	char temp_buffer[NDOMOD_MAX_BUFLEN];
-
-	for(temp_hostsmember = hosts; temp_hostsmember != NULL;
-			temp_hostsmember = temp_hostsmember->next) {
-
-		host_name = ndo_escape_buffer(temp_hostsmember->host_name);
-
-		snprintf(temp_buffer, sizeof(temp_buffer)-1, "\n%d=%s", varnum,
-				(NULL == host_name) ? "" : host_name);
-		temp_buffer[sizeof(temp_buffer)-1] =  '\x0';
-		ndo_dbuf_strcat(dbufp, temp_buffer);
-
-		if(NULL != host_name) free(host_name);
-		}
+	for (; h; h = h->next) {
+		char *name = h->host_name;
+		ndo_dbuf_printf(dbuf, "\n%d=", varnum);
+		if (name && *name) ndo_dbuf_strcat_escaped(dbuf, name);
 	}
+}
 
 #ifdef BUILD_NAGIOS_2X
 static void ndomod_services_serialize(servicegroupmember *services, 
@@ -1558,52 +1495,30 @@ static void ndomod_services_serialize(servicegroupmember *services,
 		}
 	}
 #else
-static void ndomod_services_serialize(servicesmember *services, ndo_dbuf *dbufp,
+static void ndomod_services_serialize(servicesmember *s, ndo_dbuf *dbuf,
 		int varnum) {
 
-	servicesmember *temp_servicesmember = NULL;
-	char *host_name;
-	char *service_description;
-	char temp_buffer[NDOMOD_MAX_BUFLEN];
-
-	for(temp_servicesmember = services; temp_servicesmember != NULL;
-			temp_servicesmember=temp_servicesmember->next) {
-
-		host_name = ndo_escape_buffer(temp_servicesmember->host_name);
-		service_description = ndo_escape_buffer(temp_servicesmember->service_description);
-
-		snprintf(temp_buffer, sizeof(temp_buffer)-1, "\n%d=%s;%s", varnum,
-				(NULL == host_name) ? "" : host_name,
-				(NULL == service_description) ? "" : service_description);
-		temp_buffer[sizeof(temp_buffer)-1] = '\x0';
-		ndo_dbuf_strcat(dbufp, temp_buffer);
-
-		if(NULL != host_name) free(host_name);
-		if(NULL != service_description) free(service_description);
-		}
+	for (; s; s = s->next) {
+		char *name = s->host_name;
+		char *desc = s->service_description;
+		ndo_dbuf_printf(dbuf, "\n%d=", varnum);
+		if (name && *name) ndo_dbuf_strcat_escaped(dbuf, name);
+		ndo_dbuf_strcat(dbuf, ";");
+		if (desc && *desc) ndo_dbuf_strcat_escaped(dbuf, desc);
 	}
+}
 #endif
 
-static void ndomod_commands_serialize(commandsmember *commands, ndo_dbuf *dbufp,
+static void ndomod_commands_serialize(commandsmember *c, ndo_dbuf *dbuf,
 		int varnum) {
 
-	commandsmember *temp_commandsmember = NULL;
-	char *command;
-	char temp_buffer[NDOMOD_MAX_BUFLEN];
-
-	for(temp_commandsmember = commands; temp_commandsmember != NULL;
-			temp_commandsmember=temp_commandsmember->next){
-
-		command = ndo_escape_buffer(temp_commandsmember->command);
-
-		snprintf(temp_buffer, sizeof(temp_buffer)-1, "\n%d=%s", varnum,
-				(command == NULL) ? "" : command);
-		temp_buffer[sizeof(temp_buffer)-1] = '\x0';
-		ndo_dbuf_strcat(dbufp, temp_buffer);
-
-		if(NULL != command) free(command);
-		}
+	for (; c; c = c->next) {
+		char *command = c->command;
+		ndo_dbuf_printf(dbuf, "\n%d=", varnum);
+		if (command && *command) ndo_dbuf_strcat_escaped(dbuf, command);
 	}
+}
+
 
 int ndomod_broker_data(int event_type, void *data) {
 	ndo_dbuf dbuf;
@@ -5447,13 +5362,7 @@ int ndomod_write_main_config_file(void){
 		fclose(fp);
 	        }
 
-	asprintf(&temp_buffer
-		 ,"%d\n\n"
-		 ,NDO_API_ENDDATA
-		);
-	ndomod_write_to_sink(temp_buffer,NDO_TRUE,NDO_TRUE);
-	free(temp_buffer);
-	temp_buffer=NULL;
+	ndomod_write_to_sink(STRINGIFY(NDO_API_ENDDATA)"\n\n", NDO_TRUE, NDO_TRUE);
 
 	return NDO_OK;
         }
@@ -5573,16 +5482,7 @@ int ndomod_write_runtime_variables(void){
 	free(temp_buffer);
 	temp_buffer=NULL;
 
-	asprintf(&temp_buffer
-		 ,"%d\n\n"
-		 ,NDO_API_ENDDATA
-		);
-	ndomod_write_to_sink(temp_buffer,NDO_TRUE,NDO_TRUE);
-	free(temp_buffer);
-	temp_buffer=NULL;
+	ndomod_write_to_sink(STRINGIFY(NDO_API_ENDDATA)"\n\n", NDO_TRUE, NDO_TRUE);
 
 	return NDO_OK;
-        }
-
-
-
+}
