@@ -150,8 +150,7 @@ int ndo2db_get_object_id(ndo2db_idi *idi, int object_type, char *n1, char *n2, u
 	free(buf1);
 	free(buf2);
 
-	for (x = 0; x < NAGIOS_SIZEOF_ARRAY(es); x++)
-		free(es[x]);
+	for (x = 0; x < (int)NAGIOS_SIZEOF_ARRAY(es); x++) free(es[x]);
 
 	if(found_object==NDO_FALSE)
 		result=NDO_ERROR;
@@ -232,8 +231,7 @@ int ndo2db_get_object_id_with_insert(ndo2db_idi *idi, int object_type, char *n1,
 	free(buf2);
 
         /* free memory */
-	for (x = 0; x < NAGIOS_SIZEOF_ARRAY(es); x++)
-		free(es[x]);
+	for (x = 0; x < (int)NAGIOS_SIZEOF_ARRAY(es); x++) free(es[x]);
 
 	return result;
         }
@@ -617,10 +615,8 @@ int ndo2db_handle_logentry(ndo2db_idi *idi){
 	idi->dbinfo.last_logentry_data=strdup((es[0]==NULL)?"":es[0]);
 
         /* free memory */
-	for (x = 0; x < NAGIOS_SIZEOF_ARRAY(ts); x++)
-		free(ts[x]);
-	for (x = 0; x < NAGIOS_SIZEOF_ARRAY(es); x++)
-		free(es[x]);
+	for (x = 0; x < (int)NAGIOS_SIZEOF_ARRAY(ts); x++) free(ts[x]);
+	for (x = 0; x < (int)NAGIOS_SIZEOF_ARRAY(es); x++) free(es[x]);
 
 	/* TODO - further processing of log entry to expand archived data... */
 
@@ -759,10 +755,8 @@ int ndo2db_handle_processdata(ndo2db_idi *idi){
 	        }
 
         /* free memory */
-	for (x = 0; x < NAGIOS_SIZEOF_ARRAY(ts); x++)
-		free(ts[x]);
-	for (x = 0; x < NAGIOS_SIZEOF_ARRAY(es); x++)
-		free(es[x]);
+	for (x = 0; x < (int)NAGIOS_SIZEOF_ARRAY(ts); x++) free(ts[x]);
+	for (x = 0; x < (int)NAGIOS_SIZEOF_ARRAY(es); x++) free(es[x]);
 
 	return NDO_OK;
         }
@@ -957,8 +951,7 @@ int ndo2db_handle_timedeventdata(ndo2db_idi *idi){
 	        }
 
         /* free memory */
-	for (x = 0; x < NAGIOS_SIZEOF_ARRAY(ts); x++)
-		free(ts[x]);
+	for (x = 0; x < (int)NAGIOS_SIZEOF_ARRAY(ts); x++) free(ts[x]);
 
 	return NDO_OK;
         }
@@ -1015,10 +1008,8 @@ int ndo2db_handle_logdata(ndo2db_idi *idi){
 	free(buf);
 
         /* free memory */
-	for (x = 0; x < NAGIOS_SIZEOF_ARRAY(ts); x++)
-		free(ts[x]);
-	for (x = 0; x < NAGIOS_SIZEOF_ARRAY(es); x++)
-		free(es[x]);
+	for (x = 0; x < (int)NAGIOS_SIZEOF_ARRAY(ts); x++) free(ts[x]);
+	for (x = 0; x < (int)NAGIOS_SIZEOF_ARRAY(es); x++) free(es[x]);
 
 	return NDO_OK;
         }
@@ -1090,10 +1081,8 @@ int ndo2db_handle_systemcommanddata(ndo2db_idi *idi){
 	free(buf1);
 
         /* free memory */
-	for (x = 0; x < NAGIOS_SIZEOF_ARRAY(ts); x++)
-		free(ts[x]);
-	for (x = 0; x < NAGIOS_SIZEOF_ARRAY(es); x++)
-		free(es[x]);
+	for (x = 0; x < (int)NAGIOS_SIZEOF_ARRAY(ts); x++) free(ts[x]);
+	for (x = 0; x < (int)NAGIOS_SIZEOF_ARRAY(es); x++) free(es[x]);
 
 	return NDO_OK;
         }
@@ -1189,10 +1178,8 @@ int ndo2db_handle_eventhandlerdata(ndo2db_idi *idi){
 	free(buf1);
 
         /* free memory */
-	for (x = 0; x < NAGIOS_SIZEOF_ARRAY(ts); x++)
-		free(ts[x]);
-	for (x = 0; x < NAGIOS_SIZEOF_ARRAY(es); x++)
-		free(es[x]);
+	for (x = 0; x < (int)NAGIOS_SIZEOF_ARRAY(ts); x++) free(ts[x]);
+	for (x = 0; x < (int)NAGIOS_SIZEOF_ARRAY(es); x++) free(es[x]);
 
 	return NDO_OK;
         }
@@ -1290,10 +1277,8 @@ int ndo2db_handle_notificationdata(ndo2db_idi *idi){
 	free(buf1);
 
         /* free memory */
-	for (x = 0; x < NAGIOS_SIZEOF_ARRAY(ts); x++)
-		free(ts[x]);
-	for (x = 0; x < NAGIOS_SIZEOF_ARRAY(es); x++)
-		free(es[x]);
+	for (x = 0; x < (int)NAGIOS_SIZEOF_ARRAY(ts); x++) free(ts[x]);
+	for (x = 0; x < (int)NAGIOS_SIZEOF_ARRAY(es); x++) free(es[x]);
 
 	return NDO_OK;
         }
@@ -1368,8 +1353,7 @@ int ndo2db_handle_contactnotificationdata(ndo2db_idi *idi){
 	free(buf1);
 
         /* free memory */
-	for (x = 0; x < NAGIOS_SIZEOF_ARRAY(ts); x++)
-		free(ts[x]);
+	for (x = 0; x < (int)NAGIOS_SIZEOF_ARRAY(ts); x++) free(ts[x]);
 
 	return NDO_OK;
         }
@@ -1434,10 +1418,8 @@ int ndo2db_handle_contactnotificationmethoddata(ndo2db_idi *idi){
 	free(buf1);
 
         /* free memory */
-	for (x = 0; x < NAGIOS_SIZEOF_ARRAY(ts); x++)
-		free(ts[x]);
-	for (x = 0; x < NAGIOS_SIZEOF_ARRAY(es); x++)
-		free(es[x]);
+	for (x = 0; x < (int)NAGIOS_SIZEOF_ARRAY(ts); x++) free(ts[x]);
+	for (x = 0; x < (int)NAGIOS_SIZEOF_ARRAY(es); x++) free(es[x]);
 
 	return NDO_OK;
         }
@@ -1554,10 +1536,8 @@ int ndo2db_handle_servicecheckdata(ndo2db_idi *idi){
 	free(buf1);
 
         /* free memory */
-	for (x = 0; x < NAGIOS_SIZEOF_ARRAY(ts); x++)
-		free(ts[x]);
-	for (x = 0; x < NAGIOS_SIZEOF_ARRAY(es); x++)
-		free(es[x]);
+	for (x = 0; x < (int)NAGIOS_SIZEOF_ARRAY(ts); x++) free(ts[x]);
+	for (x = 0; x < (int)NAGIOS_SIZEOF_ARRAY(es); x++) free(es[x]);
 
 	return NDO_OK;
         }
@@ -1684,10 +1664,8 @@ int ndo2db_handle_hostcheckdata(ndo2db_idi *idi){
 	free(buf1);
 
         /* free memory */
-	for (x = 0; x < NAGIOS_SIZEOF_ARRAY(ts); x++)
-		free(ts[x]);
-	for (x = 0; x < NAGIOS_SIZEOF_ARRAY(es); x++)
-		free(es[x]);
+	for (x = 0; x < (int)NAGIOS_SIZEOF_ARRAY(ts); x++) free(ts[x]);
+	for (x = 0; x < (int)NAGIOS_SIZEOF_ARRAY(es); x++) free(es[x]);
 
 	return NDO_OK;
         }
@@ -1845,10 +1823,8 @@ int ndo2db_handle_commentdata(ndo2db_idi *idi){
 	        }
 
         /* free memory */
-	for (x = 0; x < NAGIOS_SIZEOF_ARRAY(ts); x++)
-		free(ts[x]);
-	for (x = 0; x < NAGIOS_SIZEOF_ARRAY(es); x++)
-		free(es[x]);
+	for (x = 0; x < (int)NAGIOS_SIZEOF_ARRAY(ts); x++) free(ts[x]);
+	for (x = 0; x < (int)NAGIOS_SIZEOF_ARRAY(es); x++) free(es[x]);
 
 	return NDO_OK;
         }
@@ -2059,10 +2035,8 @@ int ndo2db_handle_downtimedata(ndo2db_idi *idi){
 	        }
 
         /* free memory */
-	for (x = 0; x < NAGIOS_SIZEOF_ARRAY(ts); x++)
-		free(ts[x]);
-	for (x = 0; x < NAGIOS_SIZEOF_ARRAY(es); x++)
-		free(es[x]);
+	for (x = 0; x < (int)NAGIOS_SIZEOF_ARRAY(ts); x++) free(ts[x]);
+	for (x = 0; x < (int)NAGIOS_SIZEOF_ARRAY(es); x++) free(es[x]);
 
 	return NDO_OK;
         }
@@ -2127,8 +2101,7 @@ int ndo2db_handle_flappingdata(ndo2db_idi *idi){
 	free(buf);
 
         /* free memory */
-	for (x = 0; x < NAGIOS_SIZEOF_ARRAY(ts); x++)
-		free(ts[x]);
+	for (x = 0; x < (int)NAGIOS_SIZEOF_ARRAY(ts); x++) free(ts[x]);
 
 	return NDO_OK;
         }
@@ -2240,10 +2213,8 @@ int ndo2db_handle_programstatusdata(ndo2db_idi *idi){
 	free(buf1);
 
         /* free memory */
-	for (x = 0; x < NAGIOS_SIZEOF_ARRAY(ts); x++)
-		free(ts[x]);
-	for (x = 0; x < NAGIOS_SIZEOF_ARRAY(es); x++)
-		free(es[x]);
+	for (x = 0; x < (int)NAGIOS_SIZEOF_ARRAY(ts); x++) free(ts[x]);
+	for (x = 0; x < (int)NAGIOS_SIZEOF_ARRAY(es); x++) free(es[x]);
 
 	return NDO_OK;
         }
@@ -2432,16 +2403,14 @@ int ndo2db_handle_hoststatusdata(ndo2db_idi *idi){
 	free(buf1);
 
         /* free memory */
-	for (x = 0; x < NAGIOS_SIZEOF_ARRAY(es); x++)
-		free(es[x]);
+	for (x = 0; x < (int)NAGIOS_SIZEOF_ARRAY(es); x++) free(es[x]);
 
 	/* save custom variables to db */
 	result=ndo2db_save_custom_variables(idi,NDO2DB_DBTABLE_CUSTOMVARIABLESTATUS,object_id,ts[0]);
 
 
         /* free memory */
-	for (x = 0; x < NAGIOS_SIZEOF_ARRAY(ts); x++)
-		free(ts[x]);
+	for (x = 0; x < (int)NAGIOS_SIZEOF_ARRAY(ts); x++) free(ts[x]);
 
 	return NDO_OK;
         }
@@ -2634,15 +2603,13 @@ int ndo2db_handle_servicestatusdata(ndo2db_idi *idi){
 	free(buf1);
 
         /* free memory */
-	for (x = 0; x < NAGIOS_SIZEOF_ARRAY(es); x++)
-		free(es[x]);
+	for (x = 0; x < (int)NAGIOS_SIZEOF_ARRAY(es); x++) free(es[x]);
 
 	/* save custom variables to db */
 	result=ndo2db_save_custom_variables(idi,NDO2DB_DBTABLE_CUSTOMVARIABLESTATUS,object_id,ts[0]);
 
         /* free memory */
-	for (x = 0; x < NAGIOS_SIZEOF_ARRAY(ts); x++)
-		free(ts[x]);
+	for (x = 0; x < (int)NAGIOS_SIZEOF_ARRAY(ts); x++) free(ts[x]);
 
 	return NDO_OK;
         }
@@ -2723,8 +2690,7 @@ int ndo2db_handle_contactstatusdata(ndo2db_idi *idi){
 
 
         /* free memory */
-	for (x = 0; x < NAGIOS_SIZEOF_ARRAY(ts); x++)
-		free(ts[x]);
+	for (x = 0; x < (int)NAGIOS_SIZEOF_ARRAY(ts); x++) free(ts[x]);
 
 	return NDO_OK;
         }
@@ -2818,8 +2784,7 @@ int ndo2db_handle_externalcommanddata(ndo2db_idi *idi){
 	free(buf);
 
         /* free memory */
-	for (x = 0; x < NAGIOS_SIZEOF_ARRAY(es); x++)
-		free(es[x]);
+	for (x = 0; x < (int)NAGIOS_SIZEOF_ARRAY(es); x++) free(es[x]);
 	free(ts);
 
 	return NDO_OK;
@@ -2916,10 +2881,8 @@ int ndo2db_handle_acknowledgementdata(ndo2db_idi *idi){
 	free(buf1);
 
         /* free memory */
-	for (x = 0; x < NAGIOS_SIZEOF_ARRAY(ts); x++)
-		free(ts[x]);
-	for (x = 0; x < NAGIOS_SIZEOF_ARRAY(es); x++)
-		free(es[x]);
+	for (x = 0; x < (int)NAGIOS_SIZEOF_ARRAY(ts); x++) free(ts[x]);
+	for (x = 0; x < (int)NAGIOS_SIZEOF_ARRAY(es); x++) free(es[x]);
 
 	return NDO_OK;
         }
@@ -2997,10 +2960,8 @@ int ndo2db_handle_statechangedata(ndo2db_idi *idi){
 	free(buf);
 
         /* free memory */
-	for (x = 0; x < NAGIOS_SIZEOF_ARRAY(ts); x++)
-		free(ts[x]);
-	for (x = 0; x < NAGIOS_SIZEOF_ARRAY(es); x++)
-		free(es[x]);
+	for (x = 0; x < (int)NAGIOS_SIZEOF_ARRAY(ts); x++) free(ts[x]);
+	for (x = 0; x < (int)NAGIOS_SIZEOF_ARRAY(es); x++) free(es[x]);
 
 	return NDO_OK;
         }
@@ -3218,7 +3179,7 @@ int ndo2db_handle_configdumpstart(ndo2db_idi *idi){
 
 
 int ndo2db_handle_configdumpend(ndo2db_idi *idi){
-
+	(void)idi; /* Unused, don't warn. */
 	return NDO_OK;
         }
 

@@ -109,7 +109,7 @@ struct ndo_broker_data {
 	union {
 		int	integer;
 		struct timeval timestamp;
-		char *string;
+		const char *string;
 		unsigned long unsigned_long;
 		double floating_point;
 	} value;
@@ -280,6 +280,8 @@ extern int use_ssl;
 
 /* Setup our module when loaded by the event broker. */
 int nebmodule_init(int flags, char *args, void *handle) {
+	(void)flags; /* Unused, don't warn. */
+
 	/* Cache our NEB module handle */
 	ndomod_module_handle = handle;
 
@@ -311,6 +313,9 @@ int nebmodule_init(int flags, char *args, void *handle) {
 
 /* Shutdown and release our resources when the module is unloaded. */
 int nebmodule_deinit(int flags, int reason) {
+	(void)flags; /* Unused, don't warn. */
+	(void)reason; /* Unused, don't warn. */
+
 	ndomod_deinit();
 	ndomod_printf_to_logs("ndomod: Shutdown complete.");
 	return 0;
@@ -452,7 +457,7 @@ static int ndomod_process_module_args(char *args) {
                 }
 
 	/* terminate the arg list */
-        arglist[argcount]='\x0';
+        arglist[argcount] = NULL;
 
 
 	/* process each argument */
@@ -745,8 +750,8 @@ int ndomod_close_sink(void){
 /* say hello */
 int ndomod_hello_sink(int reconnect, int problem_disconnect){
 	char temp_buffer[NDOMOD_MAX_BUFLEN];
-	char *connection_type=NULL;
-	char *connect_type=NULL;
+	const char *connection_type=NULL;
+	const char *connect_type=NULL;
 
 	/* get the connection type string */
 	if(ndomod_sink_type==NDO_SINK_FD || ndomod_sink_type==NDO_SINK_FILE)
@@ -814,6 +819,8 @@ int ndomod_goodbye_sink(void){
 
 /* used to rotate data sink file on a regular basis */
 int ndomod_rotate_sink_file(void *args){
+	(void)args; /* Unused, don't warn. */
+
 #ifdef BUILD_NAGIOS_2X
 	char raw_command_line[MAX_COMMAND_BUFFER];
 	char processed_command_line[MAX_COMMAND_BUFFER];
@@ -1526,7 +1533,7 @@ int ndomod_broker_data(int event_type, void *data) {
 
 	/* We need data to process and a function to process it. */
 	if (!data) return 0;
-	if (event_type < 0 || event_type >= EVENT_HANDLER_COUNT) return 0;
+	if (event_type < 0 || (size_t)event_type >= EVENT_HANDLER_COUNT) return 0;
 	if (!(handler = ndomod_broker_data_funcs[event_type])) return 0;
 
 	/* Pre-processing. */
@@ -4935,7 +4942,7 @@ int ndomod_write_object_config(int config_type){
 
 	/****** dump host escalation config ******/
 #ifdef BUILD_NAGIOS_4X
-	for(x=0; x<num_objects.hostescalations; x++) {
+	for(x=0; x<(int)num_objects.hostescalations; x++) {
 		temp_hostescalation=hostescalation_ary[ x];
 #else
 	for(temp_hostescalation=hostescalation_list;temp_hostescalation!=NULL;temp_hostescalation=temp_hostescalation->next){
@@ -5017,7 +5024,7 @@ int ndomod_write_object_config(int config_type){
 
 	/****** dump service escalation config ******/
 #ifdef BUILD_NAGIOS_4X
-	for(x=0; x<num_objects.serviceescalations; x++) {
+	for(x=0; x<(int)num_objects.serviceescalations; x++) {
 		temp_serviceescalation=serviceescalation_ary[ x];
 #else
 	for(temp_serviceescalation=serviceescalation_list;temp_serviceescalation!=NULL;temp_serviceescalation=temp_serviceescalation->next){
@@ -5116,7 +5123,7 @@ int ndomod_write_object_config(int config_type){
 
 	/****** dump host dependency config ******/
 #ifdef BUILD_NAGIOS_4X
-	for(x=0; x<num_objects.hostdependencies; x++) {
+	for(x=0; x<(int)num_objects.hostdependencies; x++) {
 		temp_hostdependency=hostdependency_ary[ x];
 #else
 	for(temp_hostdependency=hostdependency_list;temp_hostdependency!=NULL;temp_hostdependency=temp_hostdependency->next){
@@ -5194,7 +5201,7 @@ int ndomod_write_object_config(int config_type){
 
 	/****** dump service dependency config ******/
 #ifdef BUILD_NAGIOS_4X
-	for(x=0; x<num_objects.servicedependencies; x++) {
+	for(x=0; x<(int)num_objects.servicedependencies; x++) {
 		temp_servicedependency=servicedependency_ary[ x];
 #else
 	for(temp_servicedependency=servicedependency_list;temp_servicedependency!=NULL;temp_servicedependency=temp_servicedependency->next){
@@ -5383,6 +5390,7 @@ int ndomod_write_resource_config_files(void){
 
 /* dumps a single resource config file to sink */
 int ndomod_write_resource_config_file(const char *filename){
+	(void)filename; /* Unused, don't warn. */
 
 	/* TODO */
 	/* loop through main config file to find all resource config files, and then process them */

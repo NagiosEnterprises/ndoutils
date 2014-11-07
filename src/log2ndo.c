@@ -47,7 +47,7 @@ int show_help=NDO_FALSE;
 
 int main(int argc, char **argv){
 	ndo_mmapfile *thefile=NULL;
-	char *connection_type=NULL;
+	const char *connection_type=NULL;
 	char *input=NULL;
 	char *input2=NULL;
 	int sd=2;

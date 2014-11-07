@@ -161,6 +161,7 @@ int cleanup_socket(int s, char *f){
 
 
 void sighandler(int sig){
+	(void)sig; /* Unused, don't warn. */
 
 	/* close the socket */
 	shutdown(sd,2);

@@ -858,12 +858,10 @@ void ndo2db_parent_sighandler(int sig){
         }
 
 
-void ndo2db_child_sighandler(int sig){
-
+void ndo2db_child_sighandler(int sig) {
+	(void)sig; /* Unused, don't warn. */
 	_exit(0);
-
-	return;
-        }
+}
 
 
 /****************************************************************************/
@@ -1230,6 +1228,8 @@ int ndo2db_idi_init(ndo2db_idi *idi){
 
 /* checks for single lines of input from a client connection */
 int ndo2db_check_for_client_input(ndo2db_idi *idi,ndo_dbuf *dbuf){
+	(void)idi; /* Unused, don't warn. */
+
 	if(dbuf==NULL)
 		return NDO_OK;
 	if(dbuf->buf==NULL)
@@ -1279,7 +1279,7 @@ void ndo2db_async_client_handle() {
 			buf = qbuf;
 		}
 
-		for (i=0; i<=strlen(buf); i++) {
+		for (i=0; i<=(int)strlen(buf); i++) {
 			if (buf[i] == '\n') {
 				int size = i-start;
 				temp_buf = (char*)calloc(size+1, sizeof(char));
@@ -1297,7 +1297,7 @@ void ndo2db_async_client_handle() {
 			}
 		}
 
-		if (start <= strlen(buf)) {
+		if (start <= (int)strlen(buf)) {
 			old_buf = (char*)calloc(strlen(&buf[start])+1, sizeof(char));
 			strcpy(old_buf, &buf[start]);
 		}
@@ -1843,6 +1843,8 @@ int ndo2db_add_input_data_item(ndo2db_idi *idi, int type, char *buf){
 
 
 int ndo2db_add_input_data_mbuf(ndo2db_idi *idi, int type, int mbuf_slot, char *buf){
+	(void)type; /* Unused, don't warn. */
+
 	int allocation_chunk=80;
 	char **newbuffer=NULL;
 

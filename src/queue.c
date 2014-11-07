@@ -77,7 +77,6 @@ static void log_retry(void) {
 	time_t now;
 	struct msqid_ds queue_stats;
 	long msgmni;
-	char logmsg[1024];
 	char curstats[1024];
 	const char *logfmt = "Warning: Retrying message send. This can occur because you have too few messages allowed or too few total bytes allowed in message queues. %s See README for kernel tuning options.\n";
 #if defined(__linux__)
@@ -91,7 +90,7 @@ static void log_retry(void) {
 		/* Get the message queue statistics */
 		if (msgctl(queue_id, IPC_STAT, &queue_stats)) {
 			sprintf(curstats, "Unable to determine current message queue usage: error reading IPC_STAT: %d", errno);
-			sprintf(logmsg, logfmt, curstats);
+			syslog(LOG_ERR, logfmt, curstats);
 		} else {
 #if defined(__linux__)
 			/* Get the maximum number of messages allowed in a queue */
@@ -103,12 +102,11 @@ static void log_retry(void) {
 						(unsigned long)msgmni, queue_stats.__msg_cbytes, 
 						queue_stats.msg_qbytes);
 			}
-			sprintf(logmsg, logfmt, curstats);
+			syslog(LOG_ERR, logfmt, curstats);
 #else
-			sprintf(logmsg, logfmt, "");
+			syslog(LOG_ERR, logfmt, "");
 #endif
 		}
-		syslog(LOG_ERR, logmsg);
 
 		last_retry_log_time = now;
 	} else {
@@ -154,13 +152,13 @@ char* pop_from_queue(void) {
 	struct queue_msg msg;
 	char *buf;
 
-	size_t n = msgrcv(queue_id, &msg, NDO_MAX_MSG_SIZE, NDO_MSG_TYPE, MSG_NOERROR);
+	ssize_t n = msgrcv(queue_id, &msg, NDO_MAX_MSG_SIZE, NDO_MSG_TYPE, MSG_NOERROR);
 	if (n < 0) {
 		syslog(LOG_ERR,"Error: queue recv error.\n");
 		n = 0;
 	}
 
-	int size = strnlen(msg.text, n);
+	size_t size = strnlen(msg.text, (size_t)n);
 	buf = malloc(size+1);
 	strncpy(buf, msg.text, size);
 	buf[size] = '\0';

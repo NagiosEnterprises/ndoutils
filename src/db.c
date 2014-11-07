@@ -34,7 +34,7 @@
 extern ndo2db_dbconfig ndo2db_db_settings;
 extern time_t ndo2db_db_last_checkin_time;
 
-char *ndo2db_db_rawtablenames[NDO2DB_MAX_DBTABLES]={
+const char *ndo2db_db_rawtablenames[NDO2DB_MAX_DBTABLES]={
 	"instances",
 	"conninfo",
 	"objects",
@@ -542,7 +542,7 @@ char *ndo2db_db_timet_to_sql(ndo2db_idi *idi, time_t t){
 
 
 /* SQL query conversion of date/time format to time_t format */
-char *ndo2db_db_sql_to_timet(ndo2db_idi *idi, char *field){
+char *ndo2db_db_sql_to_timet(ndo2db_idi *idi, const char *field){
 	char *buf=NULL;
 
 	switch(idi->dbinfo.server_type){
@@ -567,7 +567,6 @@ char *ndo2db_db_sql_to_timet(ndo2db_idi *idi, char *field){
 /* executes a SQL statement */
 int ndo2db_db_query(ndo2db_idi *idi, char *buf){
 	int result=NDO_OK;
-	int query_result=0;
 
 	if(idi==NULL || buf==NULL)
 		return NDO_ERROR;
@@ -588,33 +587,32 @@ int ndo2db_db_query(ndo2db_idi *idi, char *buf){
 	switch(idi->dbinfo.server_type){
 	case NDO2DB_DBSERVER_MYSQL:
 #ifdef USE_MYSQL
-		if((query_result=mysql_query(&idi->dbinfo.mysql_conn,buf))){
+		if (mysql_query(&idi->dbinfo.mysql_conn,buf)) {
 			syslog(LOG_USER|LOG_INFO,"Error: mysql_query() failed for '%s'\n",buf);
 			syslog(LOG_USER|LOG_INFO,"mysql_error: '%s'\n", mysql_error(&idi->dbinfo.mysql_conn));
 			result=NDO_ERROR;
-		        }
+		}
 #endif
 		break;
 	case NDO2DB_DBSERVER_PGSQL:
 #ifdef USE_PGSQL
 		idi->dbinfo.pgsql_result==PQexec(idi->dbinfo.pgsql_conn,buf);
-		if((query_result=PQresultStatus(idi->dbinfo.pgsql_result))!=PGRES_COMMAND_OK){
+		if (PQresultStatus(idi->dbinfo.pgsql_result) != PGRES_COMMAND_OK) {
 			syslog(LOG_USER|LOG_INFO,"Error: PQexec() failed for '%s'\n",buf);
 			PQclear(idi->dbinfo.pgsql_result);
 			result=NDO_ERROR;
-	                }
+		}
 #endif
 		break;
 	default:
 		break;
-	        }
+	}
 
 	/* handle errors */
-	if(result==NDO_ERROR)
-		ndo2db_handle_db_error(idi,query_result);
+	if (result != NDO_OK) ndo2db_handle_db_error(idi);
 
 	return result;
-        }
+}
 
 
 /* frees memory associated with a query */
@@ -642,7 +640,7 @@ int ndo2db_db_free_query(ndo2db_idi *idi){
 
 
 /* handles SQL query errors */
-int ndo2db_handle_db_error(ndo2db_idi *idi, int query_result){
+int ndo2db_handle_db_error(ndo2db_idi *idi) {
 	int result=0;
 
 	if(idi==NULL)
@@ -703,7 +701,7 @@ int ndo2db_db_clear_table(ndo2db_idi *idi, char *table_name){
 		
 
 /* gets latest data time value from a given table */
-int ndo2db_db_get_latest_data_time(ndo2db_idi *idi, char *table_name, char *field_name, unsigned long *t){
+int ndo2db_db_get_latest_data_time(ndo2db_idi *idi, const char *table_name, const char *field_name, unsigned long *t){
 	char *buf=NULL;
 	char *ts[1];
 	int result=NDO_OK;
@@ -789,9 +787,9 @@ static int ndo2db_db_trim_data_table(
  */
 int ndo2db_db_perform_maintenance(ndo2db_idi *idi) {
 	time_t current_time = time(NULL);
-	time_t delta = current_time - (time_t)idi->dbinfo.last_table_trim_time;
+	time_t delta = current_time - idi->dbinfo.last_table_trim_time;
 
-	if (idi->dbinfo.table_trim_interval && delta > idi->dbinfo.table_trim_interval) {
+	if (idi->dbinfo.table_trim_interval && delta > (time_t)idi->dbinfo.table_trim_interval) {
 		if (idi->dbinfo.max_timedevents_age) {
 			syslog(LOG_USER|LOG_INFO, "Trimming timedevents.");
 			ndo2db_db_trim_data_table(idi, ndo2db_db_tablenames[NDO2DB_DBTABLE_TIMEDEVENTS], "scheduled_time", current_time - (time_t)idi->dbinfo.max_timedevents_age);

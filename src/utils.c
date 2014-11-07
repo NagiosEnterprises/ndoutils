@@ -177,7 +177,7 @@ int ndo_dbuf_printf(ndo_dbuf *db, const char *fmt, ...) {
 		if (ndo_dbuf_reserve_strlen(db, print_len) != NDO_OK) return NDO_ERROR;
 
 		free_size = db->alloc_size - db->used_size;
-		assert(free_size > print_len);
+		assert((int)free_size > print_len);
 		free_buf = db->buf + db->used_size;
 
 		va_start(ap, fmt);
@@ -185,7 +185,7 @@ int ndo_dbuf_printf(ndo_dbuf *db, const char *fmt, ...) {
 		 * [v]snprintf() returns the string length that would have been printed. */
 		print_len = vsnprintf(free_buf, free_size, fmt, ap);
 		va_end(ap);
-		assert(free_size > print_len);
+		assert((int)free_size > print_len);
 	}
 
 	/* Add the count of new characters. */
