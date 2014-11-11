@@ -5223,19 +5223,10 @@ int ndomod_write_object_config(int config_type){
 
 
 
-/* dumps config files to data sink */
-int ndomod_write_config_files(void){
-	int result=NDO_OK;
-
-	if((result=ndomod_write_main_config_file())==NDO_ERROR)
-		return NDO_ERROR;
-
-	if((result=ndomod_write_resource_config_files())==NDO_ERROR)
-		return NDO_ERROR;
-
-	return result;
-        }
-
+/* Dumps config files to the data sink. */
+int ndomod_write_config_files(void) {
+	return ndomod_write_main_config_file();
+}
 
 
 /* dumps main config file data to sink */
@@ -5303,30 +5294,6 @@ int ndomod_write_main_config_file(void){
 	ndomod_write_to_sink(temp_buffer,NDO_TRUE,NDO_TRUE);
 	free(temp_buffer);
 	temp_buffer=NULL;
-
-	return NDO_OK;
-        }
-
-
-
-/* dumps all resource config files to sink */
-int ndomod_write_resource_config_files(void){
-
-	/* TODO */
-	/* loop through main config file to find all resource config files, and then process them */
-	/* this should probably NOT be done, as the resource file is supposed to remain private... */
-
-	return NDO_OK;
-        }
-
-
-
-/* dumps a single resource config file to sink */
-int ndomod_write_resource_config_file(char *filename){
-
-	/* TODO */
-	/* loop through main config file to find all resource config files, and then process them */
-	/* this should probably NOT be done, as the resource file is supposed to remain private... */
 
 	return NDO_OK;
         }

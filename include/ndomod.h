@@ -107,8 +107,6 @@ int ndomod_write_object_config(int);
 
 int ndomod_write_config_files(void);
 int ndomod_write_main_config_file(void);
-int ndomod_write_resource_config_files(void);
-int ndomod_write_resource_config_file(char *);
 
 int ndomod_write_runtime_variables(void);
 
