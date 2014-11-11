@@ -89,9 +89,8 @@ NEB_API_VERSION(CURRENT_NEB_API_VERSION)
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof(x[0]))
 #endif
 
-#ifndef STRINGIFY
-#define STRINGIFY(s) #s
-#endif
+#define STRINGIFY_(s) #s
+#define STRINGIFY(s) STRINGIFY_(s)
 
 
 typedef enum bd_datatype {
