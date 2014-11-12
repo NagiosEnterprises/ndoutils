@@ -3574,163 +3574,129 @@ int ndomod_write_object_config(int config_type) {
 /* Dumps config files to the data sink. */
 int ndomod_write_config_files(void) {
 	return ndomod_write_main_config_file();
-	/* @note: Previously the stubs for sinking resource config files were called
-	 * here, with their implementations left todo.
-	 * THIS WILL NOT BE IMPLEMENTED. Resource files should remain private. */
+	/* @note: Previously a stub to sink resource config files was called here.
+	 * This wont be implemented since resource files should remain private. */
 }
 
 
 
 /* Dumps main config file data to the sink. */
 int ndomod_write_main_config_file(void) {
-	char fbuf[NDOMOD_MAX_BUFLEN];
-	char *temp_buffer;
+	ndo_dbuf dbuf;
 	struct timeval now;
 	FILE *fp;
 	char *var = NULL;
 	char *val = NULL;
 
-	/* get current time */
+	/* Get current time. */
 	gettimeofday(&now, NULL);
 
-	asprintf(&temp_buffer
-		 ,"\n%d:\n%d=%ld.%ld\n%d=%s\n"
-		 ,NDO_API_MAINCONFIGFILEVARIABLES
-		 ,NDO_DATA_TIMESTAMP
-		 ,now.tv_sec
-		 ,now.tv_usec
-		 ,NDO_DATA_CONFIGFILENAME
-		 ,config_file
-		);
-	ndomod_write_to_sink(temp_buffer, NDO_TRUE, NDO_TRUE);
-	free(temp_buffer);
-	temp_buffer = NULL;
+	/* Initialize our dynamic buffer (2KB chunk size). */
+	ndo_dbuf_init(&dbuf, 2048);
 
-	/* write each var/val pair from config file */
+	/* Start out the config variable dump. */
+	ndo_dbuf_printf(&dbuf, "\n%d:\n%d=%ld.%ld\n%d=%s\n",
+			NDO_API_MAINCONFIGFILEVARIABLES,
+			NDO_DATA_TIMESTAMP, now.tv_sec, now.tv_usec,
+			NDO_DATA_CONFIGFILENAME, config_file
+	);
+	ndomod_write_to_sink(dbuf.buf, NDO_TRUE, NDO_TRUE);
+
+	/* Write each var/val pair from config file. */
 	if ((fp = fopen(config_file, "r"))) {
 
+		char fbuf[NDOMOD_MAX_BUFLEN];
 		while ((fgets(fbuf, sizeof(fbuf), fp))) {
 
 			strip(fbuf);
+			switch (fbuf[0]) {
 
-			/* Skip blank lines and comments. */
-			if (fbuf[0] == '\x0' || fbuf[0] == '\n' || fbuf[0] == '\r' || fbuf[0] == '#' || fbuf[0] == ';')
-				continue;
+				/* Skip blank lines and comments. */
+				case '\0': case '\n': case '\r': case '#': case ';':
+					continue;
 
-			if (!(var = strtok(fbuf, "="))) continue;
-			val = strtok(NULL, "\n");
+				default:
+					if (!(var = strtok(fbuf, "="))) continue;
+					val = strtok(NULL, "\n");
 
-			asprintf(&temp_buffer
-				 ,"%d=%s=%s\n"
-				 ,NDO_DATA_CONFIGFILEVARIABLE
-				 ,var
-				 ,(val==NULL) ? "" : val
-			);
-			ndomod_write_to_sink(temp_buffer, NDO_TRUE, NDO_TRUE);
-			free(temp_buffer);
-			temp_buffer = NULL;
+					ndo_dbuf_reset(&dbuf);
+					ndo_dbuf_printf(&dbuf, "%d=%s=%s\n",
+							NDO_DATA_CONFIGFILEVARIABLE, var, val ? val : ""
+					);
+					ndomod_write_to_sink(dbuf.buf, NDO_TRUE, NDO_TRUE);
+					break;
+			}
 		}
 
 		fclose(fp);
 	}
 
+	/* End the config variable dump. */
 	ndomod_write_to_sink(STRINGIFY(NDO_API_ENDDATA)"\n\n", NDO_TRUE, NDO_TRUE);
+
+	ndo_dbuf_free(&dbuf);
 
 	return NDO_OK;
 }
 
 
 
-/* dumps runtime variables to sink */
-int ndomod_write_runtime_variables(void){
-	char *temp_buffer = NULL;
+/* Dumps runtime variables to the sink. */
+int ndomod_write_runtime_variables(void) {
 	struct timeval now;
+	ndo_dbuf dbuf;
 
-	/* get current time */
-	gettimeofday(&now,NULL);
+	/* Get current time. */
+	gettimeofday(&now, NULL);
 
-	asprintf(&temp_buffer
-		 ,"\n%d:\n%d=%ld.%ld\n"
-		 ,NDO_API_RUNTIMEVARIABLES
-		 ,NDO_DATA_TIMESTAMP
-		 ,now.tv_sec
-		 ,now.tv_usec
-		);
-	ndomod_write_to_sink(temp_buffer,NDO_TRUE,NDO_TRUE);
-	free(temp_buffer);
-	temp_buffer = NULL;
+	/* Initialize our dynamic buffer (2KB chunk size). */
+	ndo_dbuf_init(&dbuf, 2048);
 
-	/* write out main config file name */
-	asprintf(&temp_buffer
-		 ,"%d=%s=%s\n"
-		 ,NDO_DATA_RUNTIMEVARIABLE
-		 ,"config_file"
-		 ,config_file
-		);
-	ndomod_write_to_sink(temp_buffer,NDO_TRUE,NDO_TRUE);
-	free(temp_buffer);
-	temp_buffer = NULL;
+	/* Start out the variable dump. */
+	ndo_dbuf_printf(&dbuf, "\n%d:\n%d=%ld.%ld\n",
+			NDO_API_RUNTIMEVARIABLES,
+			NDO_DATA_TIMESTAMP, now.tv_sec, now.tv_usec
+	);
+	/* Add our main config file name. */
+	ndo_dbuf_printf(&dbuf, "%d=config_file=%s\n",
+			NDO_DATA_RUNTIMEVARIABLE, config_file
+	);
+	/* Sink the data and reset to an empty buffer. */
+	ndomod_write_to_sink(dbuf.buf, NDO_TRUE, NDO_TRUE);
+	ndo_dbuf_reset(&dbuf);
 
-	/* write out vars determined after startup */
-	asprintf(&temp_buffer
-		 ,"%d=%s=%d\n%d=%s=%d\n%d=%s=%d\n%d=%s=%d\n%d=%s=%lf\n%d=%s=%lf\n%d=%s=%lu\n%d=%s=%lu\n%d=%s=%lf\n%d=%s=%lf\n%d=%s=%lf\n%d=%s=%lf\n%d=%s=%lf\n%d=%s=%lf\n%d=%s=%d\n%d=%s=%d\n%d=%s=%d\n"
-		 ,NDO_DATA_RUNTIMEVARIABLE
-		 ,"total_services"
-		 ,scheduling_info.total_services
-		 ,NDO_DATA_RUNTIMEVARIABLE
-		 ,"total_scheduled_services"
-		 ,scheduling_info.total_scheduled_services
-		 ,NDO_DATA_RUNTIMEVARIABLE
-		 ,"total_hosts"
-		 ,scheduling_info.total_hosts
-		 ,NDO_DATA_RUNTIMEVARIABLE
-		 ,"total_scheduled_hosts"
-		 ,scheduling_info.total_scheduled_hosts
-		 ,NDO_DATA_RUNTIMEVARIABLE
-		 ,"average_services_per_host"
-		 ,scheduling_info.average_services_per_host
-		 ,NDO_DATA_RUNTIMEVARIABLE
-		 ,"average_scheduled_services_per_host"
-		 ,scheduling_info.average_scheduled_services_per_host
-		 ,NDO_DATA_RUNTIMEVARIABLE
-		 ,"service_check_interval_total"
-		 ,scheduling_info.service_check_interval_total
-		 ,NDO_DATA_RUNTIMEVARIABLE
-		 ,"host_check_interval_total"
-		 ,scheduling_info.host_check_interval_total
-		 ,NDO_DATA_RUNTIMEVARIABLE
-		 ,"average_service_check_interval"
-		 ,scheduling_info.average_service_check_interval
-		 ,NDO_DATA_RUNTIMEVARIABLE
-		 ,"average_host_check_interval"
-		 ,scheduling_info.average_host_check_interval
-		 ,NDO_DATA_RUNTIMEVARIABLE
-		 ,"average_service_inter_check_delay"
-		 ,scheduling_info.average_service_inter_check_delay
-		 ,NDO_DATA_RUNTIMEVARIABLE
-		 ,"average_host_inter_check_delay"
-		 ,scheduling_info.average_host_inter_check_delay
-		 ,NDO_DATA_RUNTIMEVARIABLE
-		 ,"service_inter_check_delay"
-		 ,scheduling_info.service_inter_check_delay
-		 ,NDO_DATA_RUNTIMEVARIABLE
-		 ,"host_inter_check_delay"
-		 ,scheduling_info.host_inter_check_delay
-		 ,NDO_DATA_RUNTIMEVARIABLE
-		 ,"service_interleave_factor"
-		 ,scheduling_info.service_interleave_factor
-		 ,NDO_DATA_RUNTIMEVARIABLE
-		 ,"max_service_check_spread"
-		 ,scheduling_info.max_service_check_spread
-		 ,NDO_DATA_RUNTIMEVARIABLE
-		 ,"max_host_check_spread"
-		 ,scheduling_info.max_host_check_spread
-		);
-	ndomod_write_to_sink(temp_buffer,NDO_TRUE,NDO_TRUE);
-	free(temp_buffer);
-	temp_buffer = NULL;
+	/* A macro to print scheduling_info variables to our dbuf. */
+	#define NDO_RUNVAR_SCHED_PRINT(f, v) \
+		ndo_dbuf_printf(&dbuf, "%d=%s=%" #f "\n", \
+				NDO_DATA_RUNTIMEVARIABLE, #v, scheduling_info.v)
 
-	ndomod_write_to_sink(STRINGIFY(NDO_API_ENDDATA)"\n\n", NDO_TRUE, NDO_TRUE);
+	/* Add our values determined after startup. */
+	NDO_RUNVAR_SCHED_PRINT(d, total_services);
+	NDO_RUNVAR_SCHED_PRINT(d, total_scheduled_services);
+	NDO_RUNVAR_SCHED_PRINT(d, total_hosts);
+	NDO_RUNVAR_SCHED_PRINT(d, total_scheduled_hosts);
+	NDO_RUNVAR_SCHED_PRINT(lf, average_services_per_host);
+	NDO_RUNVAR_SCHED_PRINT(lf, average_scheduled_services_per_host);
+	NDO_RUNVAR_SCHED_PRINT(lu, service_check_interval_total);
+	NDO_RUNVAR_SCHED_PRINT(lu, host_check_interval_total);
+	NDO_RUNVAR_SCHED_PRINT(lf, average_service_check_interval);
+	NDO_RUNVAR_SCHED_PRINT(lf, average_host_check_interval);
+	NDO_RUNVAR_SCHED_PRINT(lf, average_service_inter_check_delay);
+	NDO_RUNVAR_SCHED_PRINT(lf, average_host_inter_check_delay);
+	NDO_RUNVAR_SCHED_PRINT(lf, service_inter_check_delay);
+	NDO_RUNVAR_SCHED_PRINT(lf, host_inter_check_delay);
+	NDO_RUNVAR_SCHED_PRINT(d, service_interleave_factor);
+	NDO_RUNVAR_SCHED_PRINT(d, max_service_check_spread);
+	NDO_RUNVAR_SCHED_PRINT(d, max_host_check_spread);
+
+	/* We don't need this anymore. */
+	#undef NDO_RUNVAR_SCHED_PRINT
+
+	/* End the variable dump and sink the data. */
+	ndo_dbuf_strcat(&dbuf, STRINGIFY(NDO_API_ENDDATA)"\n\n");
+	ndomod_write_to_sink(dbuf.buf, NDO_TRUE, NDO_TRUE);
+
+	ndo_dbuf_free(&dbuf);
 
 	return NDO_OK;
 }
