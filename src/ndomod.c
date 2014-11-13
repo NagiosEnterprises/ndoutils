@@ -2531,7 +2531,7 @@ static bd_result ndomod_broker_state_change_data(bd_phase phase,
 				INIT_BD_SE(NDO_DATA_LONGOUTPUT, schangedata->output),
 			};
 			ndomod_broker_data_serialize(dbufp, NDO_API_STATECHANGEDATA,
-					state_change_data, sizeof(state_change_data), TRUE);
+					state_change_data, ARRAY_SIZE(state_change_data), TRUE);
 		}
 
 	} NDOMOD_BD_COMMON_SWITCH_POST;
