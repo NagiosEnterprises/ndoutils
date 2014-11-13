@@ -20,14 +20,14 @@
  * along with NDOUtils. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _NDBXT_NDOMOD_H
-#define _NDBXT_NDOMOD_H
+#ifndef NDOUTILS_INCLUDE_NDOMOD_H
+#define NDOUTILS_INCLUDE_NDOMOD_H
 
 
 /* this is needed for access to daemon's internal data */
 #define NSCORE 1
 
-typedef struct ndomod_sink_buffer_struct{
+typedef struct ndomod_sink_buffer {
 	char **buffer;
 	unsigned long size;
 	unsigned long head;
@@ -35,7 +35,7 @@ typedef struct ndomod_sink_buffer_struct{
 	unsigned long items;
 	unsigned long maxitems;
 	unsigned long overflow;
-        }ndomod_sink_buffer;
+} ndomod_sink_buffer;
 
 
 #define NDOMOD_MAX_BUFLEN   16384
@@ -77,52 +77,51 @@ typedef struct ndomod_sink_buffer_struct{
 #define NDOMOD_CONFIG_DUMP_ALL                        3
 
 
-int nebmodule_init(int,char *,void *);
-int nebmodule_deinit(int,int);
+int nebmodule_init(int flags, char *args, void *handle);
+int nebmodule_deinit(int flags, int reason);
 
-int ndomod_init(void);
-int ndomod_deinit(void);
+static int ndomod_init(void);
+static int ndomod_deinit(void);
 
-int ndomod_check_nagios_object_version(void);
+static int ndomod_check_nagios_object_version(void);
 
-int ndomod_write_to_logs(char *,int);
-int ndomod_printf_to_logs(const char *fmt, ...);
+static int ndomod_printf_to_logs(const char *fmt, ...);
 
-static int ndomod_process_module_args(char *);
-static int ndomod_process_config_var(char *);
-static int ndomod_process_config_file(const char *);
+static int ndomod_process_module_args(char *args);
+static int ndomod_process_config_file(const char *filename);
+static int ndomod_process_config_var(char *arg);
 static void ndomod_free_config_memory(void);
 
-int ndomod_open_sink(void);
-int ndomod_close_sink(void);
-int ndomod_write_to_sink(const char *,int,int);
-int ndomod_rotate_sink_file(void *);
-int ndomod_hello_sink(int,int);
-int ndomod_goodbye_sink(void);
+static int ndomod_open_sink(void);
+static int ndomod_close_sink(void);
+static int ndomod_write_to_sink(const char *buf, int buffer_write, int flush_buffer);
+static int ndomod_rotate_sink_file(void *args);
+static int ndomod_hello_sink(int reconnect, int problem_disconnect);
+static int ndomod_goodbye_sink(void);
 
-int ndomod_sink_buffer_init(ndomod_sink_buffer *sbuf,unsigned long);
-int ndomod_sink_buffer_deinit(ndomod_sink_buffer *sbuf);
-int ndomod_sink_buffer_push(ndomod_sink_buffer *sbuf, const char *);
-char *ndomod_sink_buffer_peek(ndomod_sink_buffer *sbuf);
-char *ndomod_sink_buffer_pop(ndomod_sink_buffer *sbuf);
-int ndomod_sink_buffer_items(ndomod_sink_buffer *sbuf);
-unsigned long ndomod_sink_buffer_get_overflow(ndomod_sink_buffer *sbuf);
-int ndomod_sink_buffer_set_overflow(ndomod_sink_buffer *sbuf,unsigned long);
+static int ndomod_sink_buffer_init(ndomod_sink_buffer *sbuf, unsigned long maxitems);
+static int ndomod_sink_buffer_deinit(ndomod_sink_buffer *sbuf);
+static int ndomod_sink_buffer_push(ndomod_sink_buffer *sbuf, const char *buf);
+static char *ndomod_sink_buffer_peek(ndomod_sink_buffer *sbuf);
+static char *ndomod_sink_buffer_pop(ndomod_sink_buffer *sbuf);
+static int ndomod_sink_buffer_items(ndomod_sink_buffer *sbuf);
+static unsigned long ndomod_sink_buffer_get_overflow(ndomod_sink_buffer *sbuf);
+static int ndomod_sink_buffer_set_overflow(ndomod_sink_buffer *sbuf, unsigned long num);
 
-int ndomod_load_unprocessed_data(const char *);
-int ndomod_save_unprocessed_data(const char *);
+static int ndomod_load_unprocessed_data(const char *f);
+static int ndomod_save_unprocessed_data(const char *f);
 
-int ndomod_register_callbacks(void);
-int ndomod_deregister_callbacks(void);
+static int ndomod_register_callbacks(void);
+static int ndomod_deregister_callbacks(void);
 
-int ndomod_broker_data(int,void *);
+static int ndomod_broker_data(int event_type, void *data);
 
-int ndomod_write_config(int);
-int ndomod_write_object_config(int);
+static int ndomod_write_config(int config_type);
+static int ndomod_write_object_config(int config_type);
 
-int ndomod_write_config_files(void);
-int ndomod_write_main_config_file(void);
+static int ndomod_write_config_files(void);
+static int ndomod_write_main_config_file(void);
 
-int ndomod_write_runtime_variables(void);
+static int ndomod_write_runtime_variables(void);
 
 #endif

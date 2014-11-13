@@ -27,14 +27,14 @@
  * @todo minimum value (contacts)
  */
 
-/* include our project's header files */
+/* Include headers from our project. */
 #include "../include/common.h"
 #include "../include/io.h"
 #include "../include/utils.h"
 #include "../include/protoapi.h"
 #include "../include/ndomod.h"
 
-/* include (minimum required) event broker header files */
+/* Include (minimum required) event broker header files. */
 #ifdef BUILD_NAGIOS_2X
 #include "../include/nagios-2x/nebstructs.h"
 #include "../include/nagios-2x/nebmodules.h"
@@ -54,7 +54,7 @@
 #include "../include/nagios-4x/broker.h"
 #endif
 
-/* include other Nagios header files for access to functions, data structs, etc. */
+/* Include other Nagios header files for access to functions, data structs, etc. */
 #ifdef BUILD_NAGIOS_2X
 #include "../include/nagios-2x/common.h"
 #include "../include/nagios-2x/nagios.h"
@@ -76,7 +76,7 @@
 #include "../include/nagios-4x/macros.h"
 #endif
 
-/* specify event broker API version (required) */
+/* Specify event broker API version (required). */
 NEB_API_VERSION(CURRENT_NEB_API_VERSION)
 
 
@@ -123,24 +123,23 @@ struct ndo_broker_data {
 #define INIT_BD_UL(K, V) INIT_BD_STRUCT(K, BD_UNSIGNED_LONG, .unsigned_long, V)
 #define INIT_BD_F(K, V)  INIT_BD_STRUCT(K, BD_FLOAT, .floating_point, V)
 
-/* Phases that a ndomod_broker_*_data() function may process */
+/** Phases that a ndomod_broker_*_data() function may process. */
 typedef enum bd_phase {
-	bdp_preprocessing,		/* Pre-processing is the phase executed before
-								data serialization takes place. Usually this
-								is just to determine whether further
-								processing should take place. */
-	bdp_mainprocessing,		/* Main processing is the phase where data
-								serialization is executed */
-	bdp_postprocessing		/* Post-processing happens after data is
-								serialized */
+	/** Pre processing executed before data serialization, usually just to
+	 * determine whether further processing should take place. */
+	bdp_preprocessing,
+	/** Main processing is where data is serialized. */
+	bdp_mainprocessing,
+	/** Post processing happens after data is serialized. */
+	bdp_postprocessing
 } bd_phase;
 
-/* Possible return codes from the ndomod_broker_*_data() functions */
+/** Possible return codes from the ndomod_broker_*_data() functions. */
 typedef enum bd_result {
-	bdr_ok,			/* No error indicated, continue processing */
-	bdr_stop,		/* No error indicated, but stop processing */
-	bdr_ephase,		/* Bad phase passed */
-	bdr_enoent		/* Entity (host, service, etc.) not found */
+	bdr_ok, /**< No error indicated, continue processing. */
+	bdr_stop, /**< No error indicated, but stop processing. */
+	bdr_ephase, /**< Bad phase passed. */
+	bdr_enoent /**< Entity (host, service, etc.) not found. */
 } bd_result;
 
 /**
@@ -232,32 +231,32 @@ bd_callback ndomod_broker_data_funcs[] = {
 #define EVENT_HANDLER_COUNT ARRAY_SIZE(ndomod_broker_data_funcs)
 
 
-/* handles brokered event data */
-void *ndomod_module_handle=NULL;
-char *ndomod_instance_name=NULL;
-char *ndomod_buffer_file=NULL;
-char *ndomod_sink_name=NULL;
-int ndomod_sink_type=NDO_SINK_UNIXSOCKET;
-int ndomod_sink_tcp_port=NDO_DEFAULT_TCP_PORT;
-int ndomod_sink_is_open=NDO_FALSE;
-int ndomod_sink_previously_open=NDO_FALSE;
-int ndomod_sink_fd=-1;
-time_t ndomod_sink_last_reconnect_attempt=0L;
-time_t ndomod_sink_last_reconnect_warning=0L;
-unsigned long ndomod_sink_connect_attempt=0L;
-unsigned long ndomod_sink_reconnect_interval=15;
-unsigned long ndomod_sink_reconnect_warning_interval=900;
-unsigned long ndomod_sink_rotation_interval=3600;
-char *ndomod_sink_rotation_command=NULL;
-int ndomod_sink_rotation_timeout=60;
-int ndomod_allow_sink_activity=NDO_TRUE;
-unsigned long ndomod_process_options=0;
-int ndomod_config_output_options=NDOMOD_CONFIG_DUMP_ALL;
-unsigned long ndomod_sink_buffer_slots=5000;
+/* Our NEB module handle. */
+void *ndomod_module_handle = NULL;
+char *ndomod_instance_name = NULL;
+char *ndomod_buffer_file = NULL;
+char *ndomod_sink_name = NULL;
+int ndomod_sink_type = NDO_SINK_UNIXSOCKET;
+int ndomod_sink_tcp_port = NDO_DEFAULT_TCP_PORT;
+int ndomod_sink_is_open = NDO_FALSE;
+int ndomod_sink_previously_open = NDO_FALSE;
+int ndomod_sink_fd = -1;
+time_t ndomod_sink_last_reconnect_attempt = 0L;
+time_t ndomod_sink_last_reconnect_warning = 0L;
+unsigned long ndomod_sink_connect_attempt = 0L;
+unsigned long ndomod_sink_reconnect_interval = 15;
+unsigned long ndomod_sink_reconnect_warning_interval = 900;
+unsigned long ndomod_sink_rotation_interval = 3600;
+char *ndomod_sink_rotation_command = NULL;
+int ndomod_sink_rotation_timeout = 60;
+int ndomod_allow_sink_activity = NDO_TRUE;
+unsigned long ndomod_process_options = 0;
+int ndomod_config_output_options = NDOMOD_CONFIG_DUMP_ALL;
+unsigned long ndomod_sink_buffer_slots = 5000;
 ndomod_sink_buffer sinkbuf;
 
 
-/**** NAGIOS VARIABLES ****/
+/* Nagios Core variables, READ ONLY!!! */
 extern command *command_list;
 extern timeperiod *timeperiod_list;
 extern contact *contact_list;
@@ -282,6 +281,7 @@ extern char *global_service_event_handler;
 
 extern int __nagios_object_structure_version;
 
+/* This one lives in ndoutils io.c. */
 extern int use_ssl;
 
 
@@ -336,7 +336,7 @@ int nebmodule_deinit(int flags, int reason) {
 /****************************************************************************/
 
 /* Checks to make sure Nagios object version matches what we know about. */
-int ndomod_check_nagios_object_version(void) {
+static int ndomod_check_nagios_object_version(void) {
 
 	if (__nagios_object_structure_version == CURRENT_OBJECT_STRUCTURE_VERSION) {
 		return NDO_OK;
@@ -349,62 +349,54 @@ int ndomod_check_nagios_object_version(void) {
 }
 
 
-/* performs some initialization stuff */
-int ndomod_init(void){
+/* Initialize our data sink and callbacks after we have our module config. */
+static int ndomod_init(void) {
 
-	/* initialize some vars (needed for restarts of daemon - why, if the module gets reloaded ???) */
-	ndomod_sink_is_open=NDO_FALSE;
-	ndomod_sink_previously_open=NDO_FALSE;
-	ndomod_sink_fd=-1;
-	ndomod_sink_last_reconnect_attempt=0L;
-	ndomod_sink_last_reconnect_warning=0L;
-	ndomod_allow_sink_activity=NDO_TRUE;
+	/* (Re)initialize some vars (needed for restarts of daemon - why, if the module gets reloaded ???) */
+	ndomod_sink_is_open = NDO_FALSE;
+	ndomod_sink_previously_open = NDO_FALSE;
+	ndomod_sink_fd = -1;
+	ndomod_sink_last_reconnect_attempt = 0L;
+	ndomod_sink_last_reconnect_warning = 0L;
+	ndomod_allow_sink_activity = NDO_TRUE;
 
-	/* initialize data sink buffer */
-	ndomod_sink_buffer_init(&sinkbuf,ndomod_sink_buffer_slots);
-
-	/* read unprocessed data from buffer file */
+	/* Initialize our data sink buffer and load unprocessed data. */
+	ndomod_sink_buffer_init(&sinkbuf, ndomod_sink_buffer_slots);
 	ndomod_load_unprocessed_data(ndomod_buffer_file);
+	/* The sink will be opened on first write. Here we flush items that may have
+	 * been read from the buffer file, but don't buffer this 'line'. */
+	ndomod_write_to_sink("\n", NDO_FALSE, NDO_TRUE);
 
-	/* open data sink and say hello */
-	/* 05/04/06 - modified to flush buffer items that may have been read in from file */
-	ndomod_write_to_sink("\n",NDO_FALSE,NDO_TRUE);
-
-	/* register callbacks */
-	if(ndomod_register_callbacks()==NDO_ERROR)
-		return NDO_ERROR;
+	/* Register our callbacks. */
+	if (ndomod_register_callbacks() != NDO_OK) return NDO_ERROR;
 
 #if defined(BUILD_NAGIOS_2X) || defined(BUILD_NAGIOS_3X)
-	/* See comment in ndomod_broker_process_data() about the Nagios Core 4
-		implementation */
-	if(ndomod_sink_type==NDO_SINK_FILE){
-
-		/* make sure we have a rotation command defined... */
-		if(ndomod_sink_rotation_command==NULL){
-
-			/* log an error message to the Nagios log file */
+	/* See ndomod_broker_process_data() for Nagios Core 4 implementation. */
+	if (ndomod_sink_type == NDO_SINK_FILE) {
+		if (!ndomod_sink_rotation_command) {
+			/* Log an error if we don't have a rotation command... */
 			ndomod_printf_to_logs("ndomod: Warning - No file rotation command defined.");
-		        }
-
-		/* schedule a file rotation event */
-		else{
+		} else {
+			/* ...otherwise schedule a file rotation event. */
 			time_t current_time = time(NULL);
-#ifdef BUILD_NAGIOS_2X
-			schedule_new_event(EVENT_USER_FUNCTION,TRUE,current_time+ndomod_sink_rotation_interval,TRUE,ndomod_sink_rotation_interval,NULL,TRUE,(void *)ndomod_rotate_sink_file,NULL);
-#else
-			schedule_new_event(EVENT_USER_FUNCTION,TRUE,current_time+ndomod_sink_rotation_interval,TRUE,ndomod_sink_rotation_interval,NULL,TRUE,(void *)ndomod_rotate_sink_file,NULL,0);
+			schedule_new_event(EVENT_USER_FUNCTION, TRUE,
+					time(NULL) + ndomod_sink_rotation_interval,
+					TRUE, ndomod_sink_rotation_interval, NULL,
+					TRUE, ndomod_rotate_sink_file, NULL
+#ifndef BUILD_NAGIOS_2X
+					, 0
 #endif
-		        }
-
-	        }
+			);
+		}
+	}
 #endif
 
 	return NDO_OK;
-        }
+}
 
 
 /* Shutdown and release our resources when the module is unloaded. */
-int ndomod_deinit(void) {
+static int ndomod_deinit(void) {
 	ndomod_deregister_callbacks();
 
 	ndomod_save_unprocessed_data(ndomod_buffer_file);
@@ -423,110 +415,46 @@ int ndomod_deinit(void) {
 /* CONFIG FUNCTIONS                                                         */
 /****************************************************************************/
 
-/* process arguments that were passed to the module at startup */
+/* Process arguments that were passed to the module at startup. */
 static int ndomod_process_module_args(char *args) {
-	char *ptr=NULL;
-	char **arglist=NULL;
-	char **newarglist=NULL;
-	int argcount=0;
-	int memblocks=64;
-	int arg=0;
+	char *s = NULL;
+	char *lasts = NULL;
 
-	if(args==NULL)
-		return NDO_OK;
+	if (!args) return NDO_OK;
 
-
-	/* get all the var/val argument pairs */
-
-	/* allocate some memory */
-        if((arglist=(char **)malloc(memblocks*sizeof(char **)))==NULL)
-                return NDO_ERROR;
-
-	/* process all args */
-        ptr=strtok(args,",");
-        while(ptr){
-
-		/* save the argument */
-                arglist[argcount++]=strdup(ptr);
-
-		/* allocate more memory if needed */
-                if(!(argcount%memblocks)){
-                        if((newarglist=(char **)realloc(arglist,(argcount+memblocks)*sizeof(char **)))==NULL){
-				for(arg=0;arg<argcount;arg++)
-					free(arglist[argcount]);
-				free(arglist);
-				return NDO_ERROR;
-			        }
-			else
-				arglist=newarglist;
-                        }
-
-                ptr=strtok(NULL,",");
-                }
-
-	/* terminate the arg list */
-        arglist[argcount] = NULL;
-
-
-	/* process each argument */
-	for(arg=0;arg<argcount;arg++){
-		if(ndomod_process_config_var(arglist[arg])==NDO_ERROR){
-			for(arg=0;arg<argcount;arg++)
-				free(arglist[arg]);
-			free(arglist);
-			return NDO_ERROR;
-		        }
-	        }
-
-	/* free allocated memory */
-	for(arg=0;arg<argcount;arg++)
-		free(arglist[arg]);
-	free(arglist);
+	/* Process all arguments, hopefully in the form of valid var=val pairs. */
+	for (s = strtok_r(args, ",", &lasts); s; s = strtok_r(NULL, ",", &lasts)) {
+		int result = ndomod_process_config_var(s);
+		if (result != NDO_OK) return result;
+	}
 
 	return NDO_OK;
-        }
+}
 
 
-/* process all config vars in a file */
+/* Process all config vars in a file. */
 static int ndomod_process_config_file(const char *filename) {
-	ndo_mmapfile *thefile=NULL;
-	char *buf=NULL;
-	int result=NDO_OK;
+	ndo_mmapfile *thefile = NULL;
+	char *buf = NULL;
+	int result = NDO_OK;
 
-	/* open the file */
-	if((thefile=ndo_mmap_fopen(filename))==NULL)
-		return NDO_ERROR;
+	/* Open our file. */
+	if (!(thefile = ndo_mmap_fopen(filename))) return NDO_ERROR;
 
-	/* process each line of the file */
-	while((buf=ndo_mmap_fgets(thefile))){
+	/* Read, process, and free each line. */
+	for  (; result == NDO_OK && (buf = ndo_mmap_fgets(thefile)); free(buf)) {
+		/* Skip comments and lank lines... */
+		if (buf[0] != '\0' && buf[0] != '#') {
+			/* ...otherwise process the variable. */
+			result = ndomod_process_config_var(buf);
+		}
+	}
 
-		/* skip comments */
-		if(buf[0]=='#'){
-			free(buf);
-			continue;
-		        }
-
-		/* skip blank lines */
-		if(!strcmp(buf,"")){
-			free(buf);
-			continue;
-		        }
-
-		/* process the variable */
-		result=ndomod_process_config_var(buf);
-
-		/* free memory */
-		free(buf);
-
-		if(result!=NDO_OK)
-			break;
-	        }
-
-	/* close the file */
+	/* Close the file. */
 	ndo_mmap_fclose(thefile);
-	
+
 	return result;
-        }
+}
 
 
 /* A macro to check and handle boolean processing options. */
@@ -680,16 +608,13 @@ static void ndomod_free_config_memory(void) {
 }
 
 
+
 /****************************************************************************/
 /* UTILITY FUNCTIONS                                                        */
 /****************************************************************************/
 
-/* Writes a string to Nagios Core logs. */
-int ndomod_write_to_logs(char *buf, int flags) {
-	return buf ? write_to_all_logs(buf, flags) : NDO_ERROR;
-}
-
-int ndomod_printf_to_logs(const char *fmt, ...) {
+/* Print to Nagios Core logs via a temporary static buffer. */
+static int ndomod_printf_to_logs(const char *fmt, ...) {
 	char msg[NDOMOD_MAX_BUFLEN];
 	int n;
 	va_list ap;
@@ -711,52 +636,45 @@ int ndomod_printf_to_logs(const char *fmt, ...) {
 /* DATA SINK FUNCTIONS                                                      */
 /****************************************************************************/
 
-/* (re)open data sink */
-int ndomod_open_sink(void){
-	int flags=0;
+/* (Re)opens our data sink. */
+static int ndomod_open_sink(void) {
+	int result;
 
-	/* sink is already open... */
-	if(ndomod_sink_is_open==NDO_TRUE)
-		return ndomod_sink_fd;
+	if (ndomod_sink_is_open) return ndomod_sink_fd;
 
-	/* try and open sink */
-	if(ndomod_sink_type==NDO_SINK_FILE)
-		flags=O_WRONLY|O_CREAT|O_APPEND;
-	if(ndo_sink_open(ndomod_sink_name,0,ndomod_sink_type,ndomod_sink_tcp_port,flags,&ndomod_sink_fd)==NDO_ERROR)
-		return NDO_ERROR;
+	/* Try and open the sink. */
+	result = ndo_sink_open(ndomod_sink_name,
+			0,
+			ndomod_sink_type,
+			ndomod_sink_tcp_port,
+			(ndomod_sink_type == NDO_SINK_FILE) ? O_WRONLY|O_CREAT|O_APPEND : 0,
+			&ndomod_sink_fd
+	);
+	if (result != NDO_OK) return NDO_ERROR;
 
-	/* mark the sink as being open */
-	ndomod_sink_is_open=NDO_TRUE;
-
-	/* mark the sink as having once been open */
-	ndomod_sink_previously_open=NDO_TRUE;
+	ndomod_sink_is_open = NDO_TRUE; /* We've opened the sink. */
+	ndomod_sink_previously_open = NDO_TRUE; /* The sink has been open once. */
 
 	return NDO_OK;
-        }
+}
 
 
-/* (re)open data sink */
-int ndomod_close_sink(void){
+/* Closes our data sink. */
+static int ndomod_close_sink(void) {
 
-	/* sink is already closed... */
-	if(ndomod_sink_is_open==NDO_FALSE)
-		return NDO_OK;
+	if (!ndomod_sink_is_open) return NDO_OK;
 
-	/* flush sink */
+	/* Flush and close the sink. */
 	ndo_sink_flush(ndomod_sink_fd);
-
-	/* close sink */
 	ndo_sink_close(ndomod_sink_fd);
-
-	/* mark the sink as being closed */
-	ndomod_sink_is_open=NDO_FALSE;
+	ndomod_sink_is_open = NDO_FALSE;
 
 	return NDO_OK;
-        }
+}
 
 
 /* say hello */
-int ndomod_hello_sink(int reconnect, int problem_disconnect){
+static int ndomod_hello_sink(int reconnect, int problem_disconnect) {
 	char temp_buffer[NDOMOD_MAX_BUFLEN];
 	const char *connection_type=NULL;
 	const char *connect_type=NULL;
@@ -802,11 +720,11 @@ int ndomod_hello_sink(int reconnect, int problem_disconnect){
 	ndomod_write_to_sink(temp_buffer,NDO_FALSE,NDO_FALSE);
 
 	return NDO_OK;
-        }
+}
 
 
 /* say goodbye */
-int ndomod_goodbye_sink(void){
+static int ndomod_goodbye_sink(void) {
 	char temp_buffer[NDOMOD_MAX_BUFLEN];
 
 	snprintf(temp_buffer,sizeof(temp_buffer)-1
@@ -822,11 +740,11 @@ int ndomod_goodbye_sink(void){
 	ndomod_write_to_sink(temp_buffer,NDO_FALSE,NDO_TRUE);
 
 	return NDO_OK;
-        }
+}
 
 
 /* used to rotate data sink file on a regular basis */
-int ndomod_rotate_sink_file(void *args){
+static int ndomod_rotate_sink_file(void *args) {
 	(void)args; /* Unused, don't warn. */
 
 #ifdef BUILD_NAGIOS_2X
@@ -881,11 +799,11 @@ int ndomod_rotate_sink_file(void *args){
 	ndomod_hello_sink(TRUE,FALSE);
 
 	return NDO_OK;
-        }
+}
 
 
 /* writes data to sink */
-int ndomod_write_to_sink(const char *buf, int buffer_write, int flush_buffer){
+static int ndomod_write_to_sink(const char *buf, int buffer_write, int flush_buffer) {
 	char *sbuf=NULL;
 	int buflen=0;
 	int result=NDO_OK;
@@ -1043,12 +961,12 @@ int ndomod_write_to_sink(const char *buf, int buffer_write, int flush_buffer){
 	        }
 
 	return NDO_OK;
-        }
+}
 
 
 
 /* save unprocessed data to buffer file */
-int ndomod_save_unprocessed_data(const char *f){
+static int ndomod_save_unprocessed_data(const char *f) {
 	FILE *fp=NULL;
 	char *buf=NULL;
 	char *ebuf=NULL;
@@ -1084,12 +1002,11 @@ int ndomod_save_unprocessed_data(const char *f){
 	fclose(fp);
 
 	return NDO_OK;
-	}
-
+}
 
 
 /* load unprocessed data from buffer file */
-int ndomod_load_unprocessed_data(const char *f){
+static int ndomod_load_unprocessed_data(const char *f) {
 	ndo_mmapfile *thefile=NULL;
 	char *ebuf=NULL;
 	char *buf=NULL;
@@ -1118,12 +1035,12 @@ int ndomod_load_unprocessed_data(const char *f){
 	unlink(f);
 
 	return NDO_OK;
-	}
+}
 
 
 
 /* initializes sink buffer */
-int ndomod_sink_buffer_init(ndomod_sink_buffer *sbuf,unsigned long maxitems){
+static int ndomod_sink_buffer_init(ndomod_sink_buffer *sbuf, unsigned long maxitems) {
 	unsigned long x;
 
 	if(sbuf==NULL || maxitems<=0)
@@ -1147,7 +1064,7 @@ int ndomod_sink_buffer_init(ndomod_sink_buffer *sbuf,unsigned long maxitems){
 
 
 /* deinitializes sink buffer */
-int ndomod_sink_buffer_deinit(ndomod_sink_buffer *sbuf){
+static int ndomod_sink_buffer_deinit(ndomod_sink_buffer *sbuf){
 	unsigned long x;
 
 	if(sbuf==NULL)
@@ -1165,7 +1082,7 @@ int ndomod_sink_buffer_deinit(ndomod_sink_buffer *sbuf){
 
 
 /* buffers output */
-int ndomod_sink_buffer_push(ndomod_sink_buffer *sbuf, const char *buf){
+static int ndomod_sink_buffer_push(ndomod_sink_buffer *sbuf, const char *buf){
 
 	if(sbuf==NULL || buf==NULL)
 		return NDO_ERROR;
@@ -1186,7 +1103,7 @@ int ndomod_sink_buffer_push(ndomod_sink_buffer *sbuf, const char *buf){
 
 
 /* gets and removes next item from buffer */
-char *ndomod_sink_buffer_pop(ndomod_sink_buffer *sbuf){
+static char *ndomod_sink_buffer_pop(ndomod_sink_buffer *sbuf){
 	char *buf=NULL;
 
 	if(sbuf==NULL)
@@ -1209,7 +1126,7 @@ char *ndomod_sink_buffer_pop(ndomod_sink_buffer *sbuf){
 
 
 /* gets next items from buffer */
-char *ndomod_sink_buffer_peek(ndomod_sink_buffer *sbuf){
+static char *ndomod_sink_buffer_peek(ndomod_sink_buffer *sbuf){
 	char *buf=NULL;
 
 	if(sbuf==NULL)
@@ -1225,7 +1142,7 @@ char *ndomod_sink_buffer_peek(ndomod_sink_buffer *sbuf){
 
 
 /* returns number of items buffered */
-int ndomod_sink_buffer_items(ndomod_sink_buffer *sbuf){
+static int ndomod_sink_buffer_items(ndomod_sink_buffer *sbuf){
 
 	if(sbuf==NULL)
 		return 0;
@@ -1235,7 +1152,7 @@ int ndomod_sink_buffer_items(ndomod_sink_buffer *sbuf){
 
 
 /* gets number of items lost due to buffer overflow */
-unsigned long ndomod_sink_buffer_get_overflow(ndomod_sink_buffer *sbuf){
+static unsigned long ndomod_sink_buffer_get_overflow(ndomod_sink_buffer *sbuf){
 
 	if(sbuf==NULL)
 		return 0;
@@ -1245,7 +1162,7 @@ unsigned long ndomod_sink_buffer_get_overflow(ndomod_sink_buffer *sbuf){
 
 
 /* sets number of items lost due to buffer overflow */
-int ndomod_sink_buffer_set_overflow(ndomod_sink_buffer *sbuf, unsigned long num){
+static int ndomod_sink_buffer_set_overflow(ndomod_sink_buffer *sbuf, unsigned long num){
 
 	if(sbuf==NULL)
 		return 0;
@@ -1254,6 +1171,7 @@ int ndomod_sink_buffer_set_overflow(ndomod_sink_buffer *sbuf, unsigned long num)
 
 	return sbuf->overflow;
         }
+
 
 
 /****************************************************************************/
@@ -1278,7 +1196,7 @@ int ndomod_sink_buffer_set_overflow(ndomod_sink_buffer *sbuf, unsigned long num)
 		NDO_REG_CALLBACK(NEBCALLBACK_## dtc ##_DATA, dtn)
 
 /* Registers callbacks for the events we process. */
-int ndomod_register_callbacks(void) {
+static int ndomod_register_callbacks(void) {
 	NDO_REG_OPTIONAL_CALLBACK(PROCESS, "process");
 	NDO_REG_OPTIONAL_CALLBACK(TIMED_EVENT, "timed event");
 	NDO_REG_OPTIONAL_CALLBACK(LOG, "log");
@@ -1318,39 +1236,40 @@ int ndomod_register_callbacks(void) {
 
 
 /* deregisters callbacks */
-int ndomod_deregister_callbacks(void){
+static int ndomod_deregister_callbacks(void) {
 
-	neb_deregister_callback(NEBCALLBACK_PROCESS_DATA,ndomod_broker_data);
-	neb_deregister_callback(NEBCALLBACK_TIMED_EVENT_DATA,ndomod_broker_data);
-	neb_deregister_callback(NEBCALLBACK_LOG_DATA,ndomod_broker_data);
-	neb_deregister_callback(NEBCALLBACK_SYSTEM_COMMAND_DATA,ndomod_broker_data);
-	neb_deregister_callback(NEBCALLBACK_EVENT_HANDLER_DATA,ndomod_broker_data);
-	neb_deregister_callback(NEBCALLBACK_NOTIFICATION_DATA,ndomod_broker_data);
-	neb_deregister_callback(NEBCALLBACK_SERVICE_CHECK_DATA,ndomod_broker_data);
-	neb_deregister_callback(NEBCALLBACK_HOST_CHECK_DATA,ndomod_broker_data);
-	neb_deregister_callback(NEBCALLBACK_COMMENT_DATA,ndomod_broker_data);
-	neb_deregister_callback(NEBCALLBACK_DOWNTIME_DATA,ndomod_broker_data);
-	neb_deregister_callback(NEBCALLBACK_FLAPPING_DATA,ndomod_broker_data);
-	neb_deregister_callback(NEBCALLBACK_PROGRAM_STATUS_DATA,ndomod_broker_data);
-	neb_deregister_callback(NEBCALLBACK_HOST_STATUS_DATA,ndomod_broker_data);
-	neb_deregister_callback(NEBCALLBACK_SERVICE_STATUS_DATA,ndomod_broker_data);
-	neb_deregister_callback(NEBCALLBACK_ADAPTIVE_PROGRAM_DATA,ndomod_broker_data);
-	neb_deregister_callback(NEBCALLBACK_ADAPTIVE_HOST_DATA,ndomod_broker_data);
-	neb_deregister_callback(NEBCALLBACK_ADAPTIVE_SERVICE_DATA,ndomod_broker_data);
-	neb_deregister_callback(NEBCALLBACK_EXTERNAL_COMMAND_DATA,ndomod_broker_data);
-	neb_deregister_callback(NEBCALLBACK_AGGREGATED_STATUS_DATA,ndomod_broker_data);
-	neb_deregister_callback(NEBCALLBACK_RETENTION_DATA,ndomod_broker_data);
-	neb_deregister_callback(NEBCALLBACK_CONTACT_NOTIFICATION_DATA,ndomod_broker_data);
-	neb_deregister_callback(NEBCALLBACK_CONTACT_NOTIFICATION_METHOD_DATA,ndomod_broker_data);
-	neb_deregister_callback(NEBCALLBACK_ACKNOWLEDGEMENT_DATA,ndomod_broker_data);
-	neb_deregister_callback(NEBCALLBACK_STATE_CHANGE_DATA,ndomod_broker_data);
+	neb_deregister_callback(NEBCALLBACK_PROCESS_DATA, ndomod_broker_data);
+	neb_deregister_callback(NEBCALLBACK_TIMED_EVENT_DATA, ndomod_broker_data);
+	neb_deregister_callback(NEBCALLBACK_LOG_DATA, ndomod_broker_data);
+	neb_deregister_callback(NEBCALLBACK_SYSTEM_COMMAND_DATA, ndomod_broker_data);
+	neb_deregister_callback(NEBCALLBACK_EVENT_HANDLER_DATA, ndomod_broker_data);
+	neb_deregister_callback(NEBCALLBACK_NOTIFICATION_DATA, ndomod_broker_data);
+	neb_deregister_callback(NEBCALLBACK_SERVICE_CHECK_DATA, ndomod_broker_data);
+	neb_deregister_callback(NEBCALLBACK_HOST_CHECK_DATA, ndomod_broker_data);
+	neb_deregister_callback(NEBCALLBACK_COMMENT_DATA, ndomod_broker_data);
+	neb_deregister_callback(NEBCALLBACK_DOWNTIME_DATA, ndomod_broker_data);
+	neb_deregister_callback(NEBCALLBACK_FLAPPING_DATA, ndomod_broker_data);
+	neb_deregister_callback(NEBCALLBACK_PROGRAM_STATUS_DATA, ndomod_broker_data);
+	neb_deregister_callback(NEBCALLBACK_HOST_STATUS_DATA, ndomod_broker_data);
+	neb_deregister_callback(NEBCALLBACK_SERVICE_STATUS_DATA, ndomod_broker_data);
+	neb_deregister_callback(NEBCALLBACK_ADAPTIVE_PROGRAM_DATA, ndomod_broker_data);
+	neb_deregister_callback(NEBCALLBACK_ADAPTIVE_HOST_DATA, ndomod_broker_data);
+	neb_deregister_callback(NEBCALLBACK_ADAPTIVE_SERVICE_DATA, ndomod_broker_data);
+	neb_deregister_callback(NEBCALLBACK_EXTERNAL_COMMAND_DATA, ndomod_broker_data);
+	neb_deregister_callback(NEBCALLBACK_AGGREGATED_STATUS_DATA, ndomod_broker_data);
+	neb_deregister_callback(NEBCALLBACK_RETENTION_DATA, ndomod_broker_data);
+	neb_deregister_callback(NEBCALLBACK_CONTACT_NOTIFICATION_DATA, ndomod_broker_data);
+	neb_deregister_callback(NEBCALLBACK_CONTACT_NOTIFICATION_METHOD_DATA, ndomod_broker_data);
+	neb_deregister_callback(NEBCALLBACK_ACKNOWLEDGEMENT_DATA, ndomod_broker_data);
+	neb_deregister_callback(NEBCALLBACK_STATE_CHANGE_DATA, ndomod_broker_data);
 #if ( defined( BUILD_NAGIOS_3X) || defined( BUILD_NAGIOS_4X))
-	neb_deregister_callback(NEBCALLBACK_CONTACT_STATUS_DATA,ndomod_broker_data);
-	neb_deregister_callback(NEBCALLBACK_ADAPTIVE_CONTACT_DATA,ndomod_broker_data);
+	neb_deregister_callback(NEBCALLBACK_CONTACT_STATUS_DATA, ndomod_broker_data);
+	neb_deregister_callback(NEBCALLBACK_ADAPTIVE_CONTACT_DATA, ndomod_broker_data);
 #endif
 
 	return NDO_OK;
-        }
+}
+
 
 static void ndomod_enddata_serialize(ndo_dbuf *dbuf) {
 	ndo_dbuf_strcat(dbuf, "\n"STRINGIFY(NDO_API_ENDDATA)"\n\n");
@@ -1370,7 +1289,7 @@ static void ndomod_broker_data_serialize(ndo_dbuf *dbuf, int datatype,
 				break;
 			case BD_TIMEVAL:
 				ndo_dbuf_printf(dbuf, "\n%d=%ld.%ld", bd->key,
-						bd->value.timestamp.tv_sec, bd->value.timestamp.tv_usec);
+						(long)bd->value.timestamp.tv_sec, (long)bd->value.timestamp.tv_usec);
 				break;
 			case BD_STRING:
 				ndo_dbuf_printf(dbuf, "\n%d=", bd->key);
@@ -1539,7 +1458,7 @@ static void ndomod_commands_serialize(commandsmember *c, ndo_dbuf *dbuf,
 }
 
 
-int ndomod_broker_data(int event_type, void *data) {
+static int ndomod_broker_data(int event_type, void *data) {
 	ndo_dbuf dbuf;
 	bd_callback handler;
 
@@ -2691,9 +2610,14 @@ static bd_result ndomod_broker_adaptive_contact_data(bd_phase phase,
 /****************************************************************************/
 
 /* Dumps all configuration data to the sink. */
-int ndomod_write_config(int config_type) {
+static int ndomod_write_config(int config_type) {
 	char temp_buffer[NDOMOD_MAX_BUFLEN];
 	struct timeval now;
+#ifdef DEBUG_TIME_CONFIG_DUMP
+	struct timeval start;
+	struct timeval stop;
+	struct timeval elapsed;
+#endif
 	int result;
 
 	if (!(ndomod_config_output_options & config_type)) return NDO_OK;
@@ -2716,7 +2640,25 @@ int ndomod_write_config(int config_type) {
 	ndomod_write_to_sink(temp_buffer, NDO_TRUE, NDO_TRUE);
 
 	/* Dump the object config. */
+#ifdef DEBUG_TIME_CONFIG_DUMP
+	gettimeofday(&start, NULL);
+#endif
+
 	result = ndomod_write_object_config(config_type);
+
+#ifdef DEBUG_TIME_CONFIG_DUMP
+	gettimeofday(&stop, NULL);
+	elapsed.tv_sec = stop.tv_sec - start.tv_sec;
+	elapsed.tv_usec = stop.tv_usec - start.tv_usec;
+	if (elapsed.tv_usec < 0) elapsed.tv_sec--, elapsed.tv_usec += 1000000;
+	printf("%s: start: %ld.%06ld, stop: %ld.%06ld, elapsed: %ld.%06ld sec.\n",
+			__func__,
+			(long)start.tv_sec, (long)start.tv_usec,
+			(long)stop.tv_sec, (long)stop.tv_usec,
+			(long)elapsed.tv_sec, (long)elapsed.tv_usec
+	);
+#endif
+
 	if (result != NDO_OK) return result;
 
 	/* End the config dump. */
@@ -2736,7 +2678,7 @@ int ndomod_write_config(int config_type) {
 
 
 /* Dumps object configuration data to the sink. */
-int ndomod_write_object_config(int config_type) {
+static int ndomod_write_object_config(int config_type) {
 	char temp_buffer[NDOMOD_MAX_BUFLEN];
 	ndo_dbuf dbuf;
 	struct timeval now;
@@ -3572,7 +3514,7 @@ int ndomod_write_object_config(int config_type) {
 
 
 /* Dumps config files to the data sink. */
-int ndomod_write_config_files(void) {
+static int ndomod_write_config_files(void) {
 	return ndomod_write_main_config_file();
 	/* @note: Previously a stub to sink resource config files was called here.
 	 * This wont be implemented since resource files should remain private. */
@@ -3581,7 +3523,7 @@ int ndomod_write_config_files(void) {
 
 
 /* Dumps main config file data to the sink. */
-int ndomod_write_main_config_file(void) {
+static int ndomod_write_main_config_file(void) {
 	ndo_dbuf dbuf;
 	struct timeval now;
 	FILE *fp;
@@ -3642,7 +3584,7 @@ int ndomod_write_main_config_file(void) {
 
 
 /* Dumps runtime variables to the sink. */
-int ndomod_write_runtime_variables(void) {
+static int ndomod_write_runtime_variables(void) {
 	struct timeval now;
 	ndo_dbuf dbuf;
 
