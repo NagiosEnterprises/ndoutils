@@ -1362,7 +1362,7 @@ static void ndomod_broker_data_serialize(ndo_dbuf *dbufp, int datatype,
 			ndo_dbuf_strcat(dbufp, temp);
 			break;
 		case BD_TIMEVAL:
-			snprintf(temp, sizeof(temp)-1, "\n%d=%ld.%ld", bdp->key,
+			snprintf(temp, sizeof(temp)-1, "\n%d=%ld.%06ld", bdp->key,
 					bdp->value.timestamp.tv_sec, bdp->value.timestamp.tv_usec);
 			temp[sizeof(temp)-1]='\x0';
 			ndo_dbuf_strcat(dbufp, temp);
@@ -3528,7 +3528,7 @@ int ndomod_write_config(int config_type){
 
 	/* record start of config dump */
 	snprintf(temp_buffer,sizeof(temp_buffer)-1
-		 ,"\n\n%d:\n%d=%s\n%d=%ld.%ld\n%d\n\n"
+		 ,"\n\n%d:\n%d=%s\n%d=%ld.%06ld\n%d\n\n"
 		 ,NDO_API_STARTCONFIGDUMP
 		 ,NDO_DATA_CONFIGDUMPTYPE
 		 ,(config_type==NDOMOD_CONFIG_DUMP_ORIGINAL)?NDO_API_CONFIGDUMP_ORIGINAL:NDO_API_CONFIGDUMP_RETAINED
@@ -3549,7 +3549,7 @@ int ndomod_write_config(int config_type){
 
 	/* record end of config dump */
 	snprintf(temp_buffer,sizeof(temp_buffer)-1
-		 ,"\n\n%d:\n%d=%ld.%ld\n%d\n\n"
+		 ,"\n\n%d:\n%d=%ld.%06ld\n%d\n\n"
 		 ,NDO_API_ENDCONFIGDUMP
 		 ,NDO_DATA_TIMESTAMP
 		 ,now.tv_sec
@@ -5251,7 +5251,7 @@ int ndomod_write_main_config_file(void){
 	gettimeofday(&now,NULL);
 
 	asprintf(&temp_buffer
-		 ,"\n%d:\n%d=%ld.%ld\n%d=%s\n"
+		 ,"\n%d:\n%d=%ld.%06ld\n%d=%s\n"
 		 ,NDO_API_MAINCONFIGFILEVARIABLES
 		 ,NDO_DATA_TIMESTAMP
 		 ,now.tv_sec
@@ -5342,7 +5342,7 @@ int ndomod_write_runtime_variables(void){
 	gettimeofday(&now,NULL);
 
 	asprintf(&temp_buffer
-		 ,"\n%d:\n%d=%ld.%ld\n"
+		 ,"\n%d:\n%d=%ld.%06ld\n"
 		 ,NDO_API_RUNTIMEVARIABLES
 		 ,NDO_DATA_TIMESTAMP
 		 ,now.tv_sec
