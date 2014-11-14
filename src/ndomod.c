@@ -2213,8 +2213,6 @@ static bd_result ndomod_broker_adaptive_program_data(bd_phase phase,
 	NDOMOD_BD_COMMON_SWITCH_PRE(NDOMOD_PROCESS_ADAPTIVE_PROGRAM_DATA) {
 
 		nebstruct_adaptive_program_data *apdata = data;
-		const char *global_host_event_handler = NULL; /* @todo ??? */
-		const char *global_service_event_handler = NULL; /* @todo ??? */
 
 		struct ndo_broker_data adaptive_program_data[] = {
 			INIT_BD_TYPE_FLAGS_ATTRIBUTES_TIMESTAMP(apdata),
@@ -2223,8 +2221,8 @@ static bd_result ndomod_broker_adaptive_program_data(bd_phase phase,
 			INIT_BD_UL(NDO_DATA_MODIFIEDHOSTATTRIBUTES, apdata->modified_host_attributes),
 			INIT_BD_UL(NDO_DATA_MODIFIEDSERVICEATTRIBUTE, apdata->modified_service_attribute),
 			INIT_BD_UL(NDO_DATA_MODIFIEDSERVICEATTRIBUTES, apdata->modified_service_attributes),
-			INIT_BD_SE(NDO_DATA_GLOBALHOSTEVENTHANDLER, global_host_event_handler), /* ??? */
-			INIT_BD_SE(NDO_DATA_GLOBALSERVICEEVENTHANDLER, global_service_event_handler), /* ??? */
+			INIT_BD_SE(NDO_DATA_GLOBALHOSTEVENTHANDLER, global_host_event_handler),
+			INIT_BD_SE(NDO_DATA_GLOBALSERVICEEVENTHANDLER, global_service_event_handler),
 		};
 		ndomod_broker_data_serialize(dbufp, NDO_API_ADAPTIVEPROGRAMDATA,
 				adaptive_program_data, ARRAY_SIZE(adaptive_program_data), TRUE);
