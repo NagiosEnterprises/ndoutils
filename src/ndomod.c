@@ -1894,12 +1894,6 @@ static bd_result ndomod_broker_comment_data(bd_phase phase,
 	NDOMOD_BD_COMMON_SWITCH_PRE(NDOMOD_PROCESS_COMMENT_DATA) {
 
 		nebstruct_comment_data *comdata = data;
-		char *comment_text = NULL;
-		/* @todo This assignment to data (preserved from before refactoring) is
-		* never referenced later, and should likely be an assignment to
-		* comment_text to be used as NDO_DATA_COMMENT, otherwise we never pass the
-		* actual comment_data! Resolve this later as a separate bug. */
-		data = comdata->comment_data;
 
 		struct ndo_broker_data comment_data[] = {
 			INIT_BD_TYPE_FLAGS_ATTRIBUTES_TIMESTAMP(comdata),
@@ -1908,7 +1902,7 @@ static bd_result ndomod_broker_comment_data(bd_phase phase,
 			INIT_BD_SE(NDO_DATA_SERVICE, comdata->service_description),
 			INIT_BD_UL(NDO_DATA_ENTRYTIME, (unsigned long)comdata->entry_time),
 			INIT_BD_SE(NDO_DATA_AUTHORNAME, comdata->author_name),
-			INIT_BD_SE(NDO_DATA_COMMENT, comment_text), /* !!! comdata->comment_data ??? */
+			INIT_BD_SE(NDO_DATA_COMMENT, comdata->comment_data),
 			INIT_BD_I(NDO_DATA_PERSISTENT, comdata->persistent),
 			INIT_BD_I(NDO_DATA_SOURCE, comdata->source),
 			INIT_BD_I(NDO_DATA_ENTRYTYPE, comdata->entry_type),
