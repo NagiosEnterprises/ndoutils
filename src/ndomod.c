@@ -93,18 +93,18 @@ NEB_API_VERSION(CURRENT_NEB_API_VERSION)
 #define STRINGIFY(s) STRINGIFY_(s)
 
 
-typedef enum bd_datatype {
+enum bd_datatype {
 	BD_INT,
 	BD_TIMEVAL,
 	BD_STRING,
 	BD_STRING_ESCAPE,
 	BD_UNSIGNED_LONG,
 	BD_FLOAT,
-} bd_datatype;
+};
 
 struct ndo_broker_data {
 	int	key;
-	bd_datatype datatype;
+	enum bd_datatype datatype;
 	union {
 		int	integer;
 		struct timeval timestamp;
@@ -238,18 +238,18 @@ char *ndomod_buffer_file = NULL;
 char *ndomod_sink_name = NULL;
 int ndomod_sink_type = NDO_SINK_UNIXSOCKET;
 int ndomod_sink_tcp_port = NDO_DEFAULT_TCP_PORT;
-int ndomod_sink_is_open = NDO_FALSE;
-int ndomod_sink_previously_open = NDO_FALSE;
+int ndomod_sink_is_open = FALSE;
+int ndomod_sink_previously_open = FALSE;
 int ndomod_sink_fd = -1;
-time_t ndomod_sink_last_reconnect_attempt = 0L;
-time_t ndomod_sink_last_reconnect_warning = 0L;
-unsigned long ndomod_sink_connect_attempt = 0L;
+time_t ndomod_sink_last_reconnect_attempt = 0;
+time_t ndomod_sink_last_reconnect_warning = 0;
+unsigned long ndomod_sink_connect_attempt = 0;
 unsigned long ndomod_sink_reconnect_interval = 15;
 unsigned long ndomod_sink_reconnect_warning_interval = 900;
 unsigned long ndomod_sink_rotation_interval = 3600;
 char *ndomod_sink_rotation_command = NULL;
 int ndomod_sink_rotation_timeout = 60;
-int ndomod_allow_sink_activity = NDO_TRUE;
+int ndomod_allow_sink_activity = TRUE;
 unsigned long ndomod_process_options = 0;
 int ndomod_config_output_options = NDOMOD_CONFIG_DUMP_ALL;
 unsigned long ndomod_sink_buffer_slots = 5000;
@@ -304,14 +304,13 @@ int nebmodule_init(int flags, char *args, void *handle) {
 
 	/* Process our arguments (and configuration). */
 	if (ndomod_process_module_args(args) == NDO_ERROR) {
-		ndomod_printf_to_logs(
-				"ndomod: An error occurred while attempting to process module arguments.");
+		ndomod_printf_to_logs("ndomod: Error processing module arguments.");
 		return -1;
 	}
 
-	/* do some initialization stuff... */
+	/* Initialize our data sink and event callbacks. */
 	if (ndomod_init() == NDO_ERROR) {
-		ndomod_printf_to_logs("ndomod: An error occurred while attempting to initialize.");
+		ndomod_printf_to_logs("ndomod: Error initializing module.");
 		return -1;
 	}
 
@@ -353,19 +352,19 @@ static int ndomod_check_nagios_object_version(void) {
 static int ndomod_init(void) {
 
 	/* (Re)initialize some vars (needed for restarts of daemon - why, if the module gets reloaded ???) */
-	ndomod_sink_is_open = NDO_FALSE;
-	ndomod_sink_previously_open = NDO_FALSE;
+	ndomod_sink_is_open = FALSE;
+	ndomod_sink_previously_open = FALSE;
 	ndomod_sink_fd = -1;
-	ndomod_sink_last_reconnect_attempt = 0L;
-	ndomod_sink_last_reconnect_warning = 0L;
-	ndomod_allow_sink_activity = NDO_TRUE;
+	ndomod_sink_last_reconnect_attempt = 0;
+	ndomod_sink_last_reconnect_warning = 0;
+	ndomod_allow_sink_activity = TRUE;
 
 	/* Initialize our data sink buffer and load unprocessed data. */
 	ndomod_sink_buffer_init(&sinkbuf, ndomod_sink_buffer_slots);
 	ndomod_load_unprocessed_data(ndomod_buffer_file);
 	/* The sink will be opened on first write. Here we flush items that may have
 	 * been read from the buffer file, but don't buffer this 'line'. */
-	ndomod_write_to_sink("\n", NDO_FALSE, NDO_TRUE);
+	ndomod_write_to_sink("\n", FALSE, TRUE);
 
 	/* Register our callbacks. */
 	if (ndomod_register_callbacks() != NDO_OK) return NDO_ERROR;
@@ -378,11 +377,10 @@ static int ndomod_init(void) {
 			ndomod_printf_to_logs("ndomod: Warning - No file rotation command defined.");
 		} else {
 			/* ...otherwise schedule a file rotation event. */
-			time_t current_time = time(NULL);
-			schedule_new_event(EVENT_USER_FUNCTION, TRUE,
-					time(NULL) + ndomod_sink_rotation_interval,
-					TRUE, ndomod_sink_rotation_interval, NULL,
-					TRUE, ndomod_rotate_sink_file, NULL
+			time_t rotate_at_time = time(NULL) + ndomod_sink_rotation_interval;
+			schedule_new_event(EVENT_USER_FUNCTION, TRUE, rotate_at_time, TRUE,
+					ndomod_sink_rotation_interval, NULL, TRUE,
+					ndomod_rotate_sink_file, NULL
 #ifndef BUILD_NAGIOS_2X
 					, 0
 #endif
@@ -599,6 +597,7 @@ static int ndomod_process_config_var(char *arg) {
 #undef NDO_HANDLE_STRTOUL_OPT_VAL
 #undef NDO_HANDLE_STRTOUL_OPT
 
+
 /* Frees any memory allocated for config options. */
 static void ndomod_free_config_memory(void) {
 	my_free(ndomod_instance_name);
@@ -613,7 +612,7 @@ static void ndomod_free_config_memory(void) {
 /* UTILITY FUNCTIONS                                                        */
 /****************************************************************************/
 
-/* Print to Nagios Core logs via a temporary static buffer. */
+/* Formatted print to Nagios Core logs via a temporary static buffer. */
 static int ndomod_printf_to_logs(const char *fmt, ...) {
 	char msg[NDOMOD_MAX_BUFLEN];
 	int n;
@@ -652,8 +651,8 @@ static int ndomod_open_sink(void) {
 	);
 	if (result != NDO_OK) return NDO_ERROR;
 
-	ndomod_sink_is_open = NDO_TRUE; /* We've opened the sink. */
-	ndomod_sink_previously_open = NDO_TRUE; /* The sink has been open once. */
+	ndomod_sink_is_open = TRUE; /* We've opened the sink. */
+	ndomod_sink_previously_open = TRUE; /* The sink has been open once. */
 
 	return NDO_OK;
 }
@@ -667,83 +666,83 @@ static int ndomod_close_sink(void) {
 	/* Flush and close the sink. */
 	ndo_sink_flush(ndomod_sink_fd);
 	ndo_sink_close(ndomod_sink_fd);
-	ndomod_sink_is_open = NDO_FALSE;
+	ndomod_sink_is_open = FALSE;
 
 	return NDO_OK;
 }
 
 
-/* say hello */
+/* Say hello to our sink. */
 static int ndomod_hello_sink(int reconnect, int problem_disconnect) {
 	char temp_buffer[NDOMOD_MAX_BUFLEN];
-	const char *connection_type=NULL;
-	const char *connect_type=NULL;
+	const char *connection_type = NULL;
+	const char *connect_type = NULL;
 
-	/* get the connection type string */
-	if(ndomod_sink_type==NDO_SINK_FD || ndomod_sink_type==NDO_SINK_FILE)
-		connection_type=NDO_API_CONNECTION_FILE;
-	else if(ndomod_sink_type==NDO_SINK_TCPSOCKET)
-		connection_type=NDO_API_CONNECTION_TCPSOCKET;
-	else
-		connection_type=NDO_API_CONNECTION_UNIXSOCKET;
+	/* The connection FD type string. */
+	if (ndomod_sink_type == NDO_SINK_FD || ndomod_sink_type == NDO_SINK_FILE) {
+		connection_type = NDO_API_CONNECTION_FILE;
+	} else if (ndomod_sink_type == NDO_SINK_TCPSOCKET) {
+		connection_type = NDO_API_CONNECTION_TCPSOCKET;
+	} else {
+		connection_type = NDO_API_CONNECTION_UNIXSOCKET;
+	}
 
-	/* get the connect type string */
-	if(reconnect==TRUE && problem_disconnect==TRUE)
-		connect_type=NDO_API_CONNECTTYPE_RECONNECT;
-	else
-		connect_type=NDO_API_CONNECTTYPE_INITIAL;
+	/* The (re)connect type string. */
+	if (reconnect && problem_disconnect) {
+		connect_type = NDO_API_CONNECTTYPE_RECONNECT;
+	} else {
+		connect_type = NDO_API_CONNECTTYPE_INITIAL;
+	}
 
-	snprintf(temp_buffer,sizeof(temp_buffer)-1
-		 ,"\n\n%s\n%s: %d\n%s: %s\n%s: %s\n%s: %lu\n%s: %s\n%s: %s\n%s: %s\n%s: %s\n%s\n\n"
-		 ,NDO_API_HELLO
-		 ,NDO_API_PROTOCOL
-		 ,NDO_API_PROTOVERSION
-		 ,NDO_API_AGENT
-		 ,NDOMOD_NAME
-		 ,NDO_API_AGENTVERSION
-		 ,NDOMOD_VERSION
-		 ,NDO_API_STARTTIME
-		 ,(unsigned long)time(NULL)
-		 ,NDO_API_DISPOSITION
-		 ,NDO_API_DISPOSITION_REALTIME
-		 ,NDO_API_CONNECTION
-		 ,connection_type
-		 ,NDO_API_CONNECTTYPE
-		 ,connect_type
-		 ,NDO_API_INSTANCENAME
-		 ,(ndomod_instance_name==NULL)?"default":ndomod_instance_name
-		 ,NDO_API_STARTDATADUMP
-		);
+	snprintf(temp_buffer, sizeof(temp_buffer),
+			"\n\n%s\n%s: %d\n%s: %s\n%s: %s\n%s: %lu\n%s: %s\n%s: %s\n%s: %s\n%s: %s\n%s\n\n",
+			NDO_API_HELLO,
+			NDO_API_PROTOCOL,
+			NDO_API_PROTOVERSION,
+			NDO_API_AGENT,
+			NDOMOD_NAME,
+			NDO_API_AGENTVERSION,
+			NDOMOD_VERSION,
+			NDO_API_STARTTIME,
+			(unsigned long)time(NULL),
+			NDO_API_DISPOSITION,
+			NDO_API_DISPOSITION_REALTIME,
+			NDO_API_CONNECTION,
+			connection_type,
+			NDO_API_CONNECTTYPE,
+			connect_type,
+			NDO_API_INSTANCENAME,
+			ndomod_instance_name ? ndomod_instance_name : "default",
+			NDO_API_STARTDATADUMP
+	);
+	temp_buffer[sizeof(temp_buffer)-1] = '\0';
 
-	temp_buffer[sizeof(temp_buffer)-1]='\x0';
-
-	ndomod_write_to_sink(temp_buffer,NDO_FALSE,NDO_FALSE);
+	ndomod_write_to_sink(temp_buffer, FALSE, FALSE);
 
 	return NDO_OK;
 }
 
 
-/* say goodbye */
+/* Say goodbye to our sink. */
 static int ndomod_goodbye_sink(void) {
 	char temp_buffer[NDOMOD_MAX_BUFLEN];
 
-	snprintf(temp_buffer,sizeof(temp_buffer)-1
-		 ,"\n%d\n%s: %lu\n%s\n\n"
-		 ,NDO_API_ENDDATADUMP
-		 ,NDO_API_ENDTIME
-		 ,(unsigned long)time(NULL)
-		 ,NDO_API_GOODBYE
-		 );
+	snprintf(temp_buffer, sizeof(temp_buffer),
+			"\n%d\n%s: %lu\n%s\n\n",
+			NDO_API_ENDDATADUMP,
+			NDO_API_ENDTIME,
+			(unsigned long)time(NULL),
+			NDO_API_GOODBYE
+	);
+	temp_buffer[sizeof(temp_buffer)-1] = '\0';
 
-	temp_buffer[sizeof(temp_buffer)-1]='\x0';
-
-	ndomod_write_to_sink(temp_buffer,NDO_FALSE,NDO_TRUE);
+	ndomod_write_to_sink(temp_buffer, FALSE, TRUE);
 
 	return NDO_OK;
 }
 
 
-/* used to rotate data sink file on a regular basis */
+/* Rotates the data sink file on a regular basis. */
 static int ndomod_rotate_sink_file(void *args) {
 	(void)args; /* Unused, don't warn. */
 
@@ -751,253 +750,219 @@ static int ndomod_rotate_sink_file(void *args) {
 	char raw_command_line[MAX_COMMAND_BUFFER];
 	char processed_command_line[MAX_COMMAND_BUFFER];
 #else
-	char *raw_command_line_3x=NULL;
-	char *processed_command_line_3x=NULL;
+	char *raw_command_line = NULL;
+	char *processed_command_line = NULL;
 #endif
-	int early_timeout=FALSE;
+	int early_timeout = FALSE;
 	double exectime;
 
-	/* close sink */
+	/* Close sink and mark it inactive while we rotate the file. */
 	ndomod_goodbye_sink();
 	ndomod_close_sink();
-
-	/* we shouldn't write any data to the sink while we're rotating it... */
-	ndomod_allow_sink_activity=NDO_FALSE;
+	ndomod_allow_sink_activity = FALSE;
 
 
-	/****** ROTATE THE FILE *****/
-
-	/* get the raw command line */
+	/* Get the raw command line... */
+	get_raw_command_line(
 #ifdef BUILD_NAGIOS_2X
-	get_raw_command_line(ndomod_sink_rotation_command,raw_command_line,sizeof(raw_command_line),STRIP_ILLEGAL_MACRO_CHARS|ESCAPE_MACRO_CHARS);
+			ndomod_sink_rotation_command,
+			raw_command_line,
+			sizeof(raw_command_line),
+#else
+			find_command(ndomod_sink_rotation_command),
+			ndomod_sink_rotation_command,
+			&raw_command_line,
+#endif
+			STRIP_ILLEGAL_MACRO_CHARS|ESCAPE_MACRO_CHARS
+	);
 	strip(raw_command_line);
-#else
-	get_raw_command_line(find_command(ndomod_sink_rotation_command),ndomod_sink_rotation_command,&raw_command_line_3x,STRIP_ILLEGAL_MACRO_CHARS|ESCAPE_MACRO_CHARS);
-	strip(raw_command_line_3x);
-#endif
 
-	/* process any macros in the raw command line */
+	/* ...process any macros in the raw command line... */
+	process_macros(
+			raw_command_line,
 #ifdef BUILD_NAGIOS_2X
-	process_macros(raw_command_line,processed_command_line,(int)sizeof(processed_command_line),STRIP_ILLEGAL_MACRO_CHARS|ESCAPE_MACRO_CHARS);
+			processed_command_line,
+			(int)sizeof(processed_command_line),
 #else
-	process_macros(raw_command_line_3x,&processed_command_line_3x,STRIP_ILLEGAL_MACRO_CHARS|ESCAPE_MACRO_CHARS);
+			&processed_command_line,
 #endif
+			STRIP_ILLEGAL_MACRO_CHARS|ESCAPE_MACRO_CHARS
+	);
 
-	/* run the command */
-#ifdef BUILD_NAGIOS_2X
-	my_system(processed_command_line,ndomod_sink_rotation_timeout,&early_timeout,&exectime,NULL,0);
-#else
-	my_system(processed_command_line_3x,ndomod_sink_rotation_timeout,&early_timeout,&exectime,NULL,0);
-#endif
+	/* ...and run the command. */
+	my_system(processed_command_line, ndomod_sink_rotation_timeout,
+			&early_timeout, &exectime, NULL, 0);
 
 
-	/* allow data to be written to the sink */
-	ndomod_allow_sink_activity=NDO_TRUE;
-
-	/* re-open sink */
+	/* Allow data to be written to the sink again, and re-open the sink. */
+	ndomod_allow_sink_activity = TRUE;
 	ndomod_open_sink();
-	ndomod_hello_sink(TRUE,FALSE);
+	ndomod_hello_sink(TRUE, FALSE);
 
 	return NDO_OK;
 }
 
 
-/* writes data to sink */
+/* Peeks at the item at the tail of the buffer. We can assume (sb != NULL). */
+#define ndomod_sink_buffer_peek(sb) \
+	((sb)->buffer && (sb)->items ? (sb)->buffer[(sb)->tail] : NULL)
+
+
+/* Writes a string to the sink. */
 static int ndomod_write_to_sink(const char *buf, int buffer_write, int flush_buffer) {
-	char *sbuf=NULL;
-	int buflen=0;
-	int result=NDO_OK;
+	char *sbuf = NULL;
+	int result = NDO_OK;
 	time_t current_time;
-	int reconnect=NDO_FALSE;
-	unsigned long items_to_flush=0L;
+	unsigned long delta;
+	int reconnect = ndomod_sink_previously_open; /* Are we opening the first time? */
+	unsigned long items_to_flush = 0;
 
-	/* we have nothing to write... */
-	if(buf==NULL)
-		return NDO_OK;
+	/* We have nothing to write... */
+	if (!buf) return NDO_OK;
+	/* We shouldn't be messing with things... */
+	if (!ndomod_allow_sink_activity) return NDO_ERROR;
 
-	/* we shouldn't be messing with things... */
-	if(ndomod_allow_sink_activity==NDO_FALSE)
-		return NDO_ERROR;
-
-	/* open the sink if necessary... */
-	if(ndomod_sink_is_open==NDO_FALSE){
+	/* Open the sink if needed... */
+	if (!ndomod_sink_is_open) {
 
 		time(&current_time);
 
-		/* are we reopening the sink? */
-		if(ndomod_sink_previously_open==NDO_TRUE)
-			reconnect=NDO_TRUE;
+		/* (Re)connect to the sink if its time to do so. */
+		delta = (unsigned long)current_time - (unsigned long)ndomod_sink_last_reconnect_attempt;
+		if (delta > ndomod_sink_reconnect_interval) {
 
-		/* (re)connect to the sink if its time */
-		if((unsigned long)((unsigned long)current_time-ndomod_sink_reconnect_interval)>(unsigned long)ndomod_sink_last_reconnect_attempt){
+			result = ndomod_open_sink();
 
-			result=ndomod_open_sink();
-
-			ndomod_sink_last_reconnect_attempt=current_time;
-
+			ndomod_sink_last_reconnect_attempt = current_time;
 			ndomod_sink_connect_attempt++;
 
-			/* sink was (re)opened... */
-			if(result==NDO_OK){
+			if (result == NDO_OK) {
+				/* Sink was (re)opened, say hi! */
+				ndomod_hello_sink(reconnect, reconnect);
 
-				if(reconnect==NDO_TRUE){
-					ndomod_hello_sink(TRUE,TRUE);
-					ndomod_printf_to_logs("ndomod: Successfully reconnected to data sink! %lu items lost, %lu queued items to flush.",sinkbuf.overflow,sinkbuf.items);
-				        }
-				else{
-					ndomod_hello_sink(FALSE,FALSE);
-					if(sinkbuf.overflow==0L)
-						ndomod_printf_to_logs("ndomod: Successfully connected to data sink. %lu queued items to flush.",sinkbuf.items);
-					else
-						ndomod_printf_to_logs("ndomod: Successfully connected to data sink. %lu items lost, %lu queued items to flush.",sinkbuf.overflow,sinkbuf.items);
-				        }
-
-				/* reset sink overflow */
-				sinkbuf.overflow=0L;
+				if (reconnect) {
+					ndomod_printf_to_logs("ndomod: Successfully reconnected to data sink! %lu items lost, %lu queued items to flush.", sinkbuf.overflow, sinkbuf.items);
+				} else if (sinkbuf.overflow) {
+					ndomod_printf_to_logs("ndomod: Successfully connected to data sink. %lu items lost, %lu queued items to flush.", sinkbuf.overflow, sinkbuf.items);
+				} else {
+					ndomod_printf_to_logs("ndomod: Successfully connected to data sink. %lu queued items to flush.", sinkbuf.items);
 				}
 
-			/* sink could not be (re)opened... */
-			else{
+				/* Reset the sink overflow count. */
+				sinkbuf.overflow = 0;
 
-				if((unsigned long)((unsigned long)current_time-ndomod_sink_reconnect_warning_interval)>(unsigned long)ndomod_sink_last_reconnect_warning){
-					if(reconnect==NDO_TRUE)
-						ndomod_printf_to_logs("ndomod: Still unable to reconnect to data sink. %lu items lost, %lu queued items to flush.",sinkbuf.overflow,sinkbuf.items);
-					else if(ndomod_sink_connect_attempt==1)
+			} else {
+				/* Sink could not be (re)opened, log a warning. */
+				delta = (unsigned long)current_time - (unsigned long)ndomod_sink_last_reconnect_warning;
+				if (delta > ndomod_sink_reconnect_warning_interval) {
+					if (reconnect) {
+						ndomod_printf_to_logs("ndomod: Still unable to reconnect to data sink. %lu items lost, %lu queued items to flush.", sinkbuf.overflow, sinkbuf.items);
+					} else if (ndomod_sink_connect_attempt == 1) {
 						ndomod_printf_to_logs("ndomod: Could not open data sink! I'll keep trying, but some output may get lost...");
-					else
-						ndomod_printf_to_logs("ndomod: Still unable to connect to data sink. %lu items lost, %lu queued items to flush.",sinkbuf.overflow,sinkbuf.items);
-
-					ndomod_sink_last_reconnect_warning=current_time;
+					} else {
+						ndomod_printf_to_logs("ndomod: Still unable to connect to data sink. %lu items lost, %lu queued items to flush.", sinkbuf.overflow, sinkbuf.items);
 					}
+
+					ndomod_sink_last_reconnect_warning = current_time;
 				}
 			}
-	        }
+		}
+	}
 
-	/* we weren't able to (re)connect */
-	if(ndomod_sink_is_open==NDO_FALSE){
-
-		/***** BUFFER OUTPUT FOR LATER *****/
-
-		if(buffer_write==NDO_TRUE)
-			ndomod_sink_buffer_push(&sinkbuf,buf);
-
+	/* We weren't able to (re)connect. */
+	if (!ndomod_sink_is_open) {
+		/* Buffer the new output item for later if asked. */
+		if (buffer_write) ndomod_sink_buffer_push(&sinkbuf, buf);
 		return NDO_ERROR;
-	        }
+	}
 
 
-	/***** FLUSH BUFFERED DATA FIRST *****/
+	/* We're connected! Flush any buffered data first if asked. */
+	if (flush_buffer && (items_to_flush = sinkbuf.items) > 0) {
 
-	if(flush_buffer==NDO_TRUE && (items_to_flush=ndomod_sink_buffer_items(&sinkbuf))>0){
+		while ((sbuf = ndomod_sink_buffer_peek(&sinkbuf))) {
+			/* Try to write the item at the head of the buffer. */
+			result = ndo_sink_write(ndomod_sink_fd, sbuf, strlen(sbuf));
 
-		while(ndomod_sink_buffer_items(&sinkbuf)>0){
-
-			/* get next item from buffer */
-			sbuf=ndomod_sink_buffer_peek(&sinkbuf);
-
-			buflen=strlen(sbuf);
-			result=ndo_sink_write(ndomod_sink_fd,sbuf,buflen);
-
-			/* an error occurred... */
-			if(result<0){
-
-				/* sink problem! */
-				if(errno!=EAGAIN){
-
-					/* close the sink */
+			/* An error occurred... */
+			if (result < 0) {
+				if (errno != EAGAIN && errno != EWOULDBLOCK) {
+					/* Sink problem! Close the sink and log an error message. */
 					ndomod_close_sink();
 
-					ndomod_printf_to_logs("ndomod: Error writing to data sink! Some output may get lost. %lu queued items to flush.",sinkbuf.items);
-
 					time(&current_time);
-					ndomod_sink_last_reconnect_attempt=current_time;
-					ndomod_sink_last_reconnect_warning=current_time;
-		                        }
+					ndomod_sink_last_reconnect_attempt = current_time;
+					ndomod_sink_last_reconnect_warning = current_time;
 
-				/***** BUFFER ORIGINAL OUTPUT FOR LATER *****/
+					ndomod_printf_to_logs("ndomod: Error writing to data sink! Some output may get lost. %lu queued items to flush.", sinkbuf.items);
+				}
 
-				if(buffer_write==NDO_TRUE)
-					ndomod_sink_buffer_push(&sinkbuf,buf);
-
+				/* Buffer the new output item for later if asked. */
+				if (buffer_write) ndomod_sink_buffer_push(&sinkbuf, buf);
 				return NDO_ERROR;
-	                        }
+			}
 
-			/* buffer was written okay, so remove it from buffer */
+			/* Buffered item was written okay, so remove it from buffer. */
 			ndomod_sink_buffer_pop(&sinkbuf);
-		        }
+		}
 
-		ndomod_printf_to_logs("ndomod: Successfully flushed %lu queued items to data sink.",items_to_flush);
-	        }
+		ndomod_printf_to_logs("ndomod: Successfully flushed %lu queued items to data sink.", items_to_flush);
+	}
 
 
-	/***** WRITE ORIGINAL DATA *****/
+	/* Write the new output item. */
+	result = ndo_sink_write(ndomod_sink_fd, buf, strlen(buf));
 
-	/* write the data */
-	buflen=strlen(buf);
-	result=ndo_sink_write(ndomod_sink_fd,buf,buflen);
-
-	/* an error occurred... */
-	if(result<0){
-
-		/* sink problem! */
-		if(errno!=EAGAIN){
-
-			/* close the sink */
+	/* An error occurred... */
+	if (result < 0) {
+		if (errno != EAGAIN && errno != EWOULDBLOCK) {
+			/* Sink problem! Close the sink and log an error message. */
 			ndomod_close_sink();
 
 			time(&current_time);
-			ndomod_sink_last_reconnect_attempt=current_time;
-			ndomod_sink_last_reconnect_warning=current_time;
+			ndomod_sink_last_reconnect_attempt = current_time;
+			ndomod_sink_last_reconnect_warning = current_time;
 
 			ndomod_printf_to_logs("ndomod: Error writing to data sink! Some output may get lost...");
 			ndomod_printf_to_logs("ndomod: Please check remote ndo2db log, database connection or SSL parameters.");
-		        }
+		}
 
-		/***** BUFFER OUTPUT FOR LATER *****/
-
-		if(buffer_write==NDO_TRUE)
-			ndomod_sink_buffer_push(&sinkbuf,buf);
-
+		/* Buffer the new output item for later if asked. */
+		if (buffer_write) ndomod_sink_buffer_push(&sinkbuf, buf);
 		return NDO_ERROR;
-	        }
+	}
 
 	return NDO_OK;
 }
 
+/* We don't need this anymore. */
+#undef ndomod_sink_buffer_peek
 
 
-/* save unprocessed data to buffer file */
+
+/* Saves unprocessed data to our buffer file. */
 static int ndomod_save_unprocessed_data(const char *f) {
-	FILE *fp=NULL;
-	char *buf=NULL;
-	char *ebuf=NULL;
+	FILE *fp = NULL;
+	char *buf = NULL;
+	char *ebuf = NULL;
 
-	/* no file */
-	if(f==NULL)
-		return NDO_OK;
+	/* No file, nothing to do. */
+	if (!f || !*f) return NDO_OK;
 
-	/* open the file for writing */
-	if((fp=fopen(f,"w"))==NULL)
-		return NDO_ERROR;
+	/* Open the buffer file for writing. */
+	if (!(fp = fopen(f, "w"))) return NDO_ERROR;
 
-	/* save all buffered items */
-	while(ndomod_sink_buffer_items(&sinkbuf)>0){
-
-		/* get next item from buffer */
-		buf=ndomod_sink_buffer_pop(&sinkbuf);
-
-		/* escape the string */
-		ebuf=ndo_escape_buffer(buf);
-
-		/* write string to file */
-		fputs(ebuf,fp);
-		fputs("\n",fp);
-
-		/* free memory */
-		free(buf);
-		buf=NULL;
+	/* Save all buffered items. */
+	while ((buf = ndomod_sink_buffer_pop(&sinkbuf))) {
+		/* Escape the buffered item... */
+		ebuf = ndo_escape_buffer(buf);
+		/* ...write it to our buffer file... */
+		fputs(ebuf, fp);
+		fputs("\n", fp);
+		/* ...and free our allocated memory. */
 		free(ebuf);
-		ebuf=NULL;
-		}
+		free(buf);
+	}
 
 	fclose(fp);
 
@@ -1005,33 +970,26 @@ static int ndomod_save_unprocessed_data(const char *f) {
 }
 
 
-/* load unprocessed data from buffer file */
+/* Loads unprocessed data from our buffer file. */
 static int ndomod_load_unprocessed_data(const char *f) {
-	ndo_mmapfile *thefile=NULL;
-	char *ebuf=NULL;
-	char *buf=NULL;
+	ndo_mmapfile *mmf = NULL;
+	char *buf = NULL;
 
-	/* open the file */
-	if((thefile=ndo_mmap_fopen(f))==NULL)
-		return NDO_ERROR;
+	/* Open our buffer file for mmapped input. */
+	if (!(mmf = ndo_mmap_fopen(f))) return NDO_ERROR;
 
-	/* process each line of the file */
-	while((ebuf=ndo_mmap_fgets(thefile))){
+	/* Read and sink each line from the buffer file. */
+	while ((buf = ndo_mmap_fgets(mmf))) {
+		/* Unescape the input item line (in-place)... */
+		ndo_unescape_buffer(buf);
+		/* ...save it to the sink buffer... */
+		ndomod_sink_buffer_push(&sinkbuf, buf);
+		/* ...and free our allocated memory. */
+		free(buf);
+	}
 
-		/* unescape string */
-		buf=ndo_unescape_buffer(ebuf);
-
-		/* save the data to the sink buffer */
-		ndomod_sink_buffer_push(&sinkbuf,buf);
-
-		/* free memory */
-		free(ebuf);
-	        }
-
-	/* close the file */
-	ndo_mmap_fclose(thefile);
-
-	/* remove the file so we don't process it again in the future */
+	/* Close and remove the file so we don't process it again in the future. */
+	ndo_mmap_fclose(mmf);
 	unlink(f);
 
 	return NDO_OK;
@@ -1039,138 +997,75 @@ static int ndomod_load_unprocessed_data(const char *f) {
 
 
 
-/* initializes sink buffer */
+/* Initializes the sink buffer. */
 static int ndomod_sink_buffer_init(ndomod_sink_buffer *sbuf, unsigned long maxitems) {
+
+	if (!sbuf) return NDO_ERROR;
+
+	/* Allocate memory for the buffer: maxitems == 0 is an error condition. */
+	sbuf->buffer = maxitems ? calloc(maxitems, sizeof(char *)) : NULL;
+	sbuf->maxitems = sbuf->buffer ? maxitems : 0;
+
+	sbuf->head = 0;
+	sbuf->tail = 0;
+	sbuf->items = 0;
+	sbuf->overflow = 0;
+
+	return sbuf->buffer ? NDO_OK : NDO_ERROR; /* Success if we have a buffer. */
+}
+
+
+/* Deinitializes the sink buffer. */
+static int ndomod_sink_buffer_deinit(ndomod_sink_buffer *sbuf) {
 	unsigned long x;
 
-	if(sbuf==NULL || maxitems<=0)
-		return NDO_ERROR;
+	if (!sbuf) return NDO_ERROR;
 
-	/* allocate memory for the buffer */
-	if((sbuf->buffer=(char **)malloc(sizeof(char *)*maxitems))){
-		for(x=0;x<maxitems;x++)
-			sbuf->buffer[x]=NULL;
-	        }
-
-	sbuf->size=0L;
-	sbuf->head=0L;
-	sbuf->tail=0L;
-	sbuf->items=0L;
-	sbuf->maxitems=maxitems;
-	sbuf->overflow=0L;
-
-	return NDO_OK;
-        }
-
-
-/* deinitializes sink buffer */
-static int ndomod_sink_buffer_deinit(ndomod_sink_buffer *sbuf){
-	unsigned long x;
-
-	if(sbuf==NULL)
-		return NDO_ERROR;
-
-	/* free any allocated memory */
-	for(x=0;x<sbuf->maxitems;x++)
-		free(sbuf->buffer[x]);
+	/* Free any remaining allocated memory in the buffer. */
+	for (x = 0; x < sbuf->maxitems; x++) if (sbuf->buffer[x]) free(sbuf->buffer[x]);
 
 	free(sbuf->buffer);
-	sbuf->buffer=NULL;
+	sbuf->buffer = NULL;
 
 	return NDO_OK;
-        }
+}
 
 
-/* buffers output */
-static int ndomod_sink_buffer_push(ndomod_sink_buffer *sbuf, const char *buf){
+/* Buffers output items for later. */
+static int ndomod_sink_buffer_push(ndomod_sink_buffer *sbuf, const char *buf) {
 
-	if(sbuf==NULL || buf==NULL)
-		return NDO_ERROR;
+	/* Missing buffer(s). */
+	if (!sbuf || !buf) return NDO_ERROR;
 
-	/* no space to store buffer */
-	if(sbuf->buffer==NULL || sbuf->items==sbuf->maxitems){
+	/* No space to buffer new item. */
+	if (!sbuf->buffer || sbuf->items == sbuf->maxitems) {
 		sbuf->overflow++;
 		return NDO_ERROR;
-	        }
+	}
 
-	/* store buffer */
-	sbuf->buffer[sbuf->head]=strdup(buf);
-	sbuf->head=(sbuf->head+1)%sbuf->maxitems;
+	/* Good to store the new item, do so. */
+	sbuf->buffer[sbuf->head] = strdup(buf);
+	sbuf->head = (sbuf->head + 1) % sbuf->maxitems;
 	sbuf->items++;
 
 	return NDO_OK;
-        }
+}
 
 
-/* gets and removes next item from buffer */
-static char *ndomod_sink_buffer_pop(ndomod_sink_buffer *sbuf){
-	char *buf=NULL;
+/* Removes and returns the next buffered item. */
+static char *ndomod_sink_buffer_pop(ndomod_sink_buffer *sbuf) {
+	char *buf = NULL;
 
-	if(sbuf==NULL)
-		return NULL;
+	if (!sbuf || !sbuf->buffer || !sbuf->items) return NULL;
 
-	if(sbuf->buffer==NULL)
-		return NULL;
-
-	if(sbuf->items==0)
-		return NULL;
-
-	/* remove item from buffer */
-	buf=sbuf->buffer[sbuf->tail];
-	sbuf->buffer[sbuf->tail]=NULL;
-	sbuf->tail=(sbuf->tail+1)%sbuf->maxitems;
+	/* Remove the tail item from the buffer. */
+	buf = sbuf->buffer[sbuf->tail];
+	sbuf->buffer[sbuf->tail] = NULL;
+	sbuf->tail = (sbuf->tail + 1) % sbuf->maxitems;
 	sbuf->items--;
 
 	return buf;
-        }
-
-
-/* gets next items from buffer */
-static char *ndomod_sink_buffer_peek(ndomod_sink_buffer *sbuf){
-	char *buf=NULL;
-
-	if(sbuf==NULL)
-		return NULL;
-
-	if(sbuf->buffer==NULL)
-		return NULL;
-
-	buf=sbuf->buffer[sbuf->tail];
-
-	return buf;
-        }
-
-
-/* returns number of items buffered */
-static int ndomod_sink_buffer_items(ndomod_sink_buffer *sbuf){
-
-	if(sbuf==NULL)
-		return 0;
-	else
-		return sbuf->items;
-        }
-
-
-/* gets number of items lost due to buffer overflow */
-static unsigned long ndomod_sink_buffer_get_overflow(ndomod_sink_buffer *sbuf){
-
-	if(sbuf==NULL)
-		return 0;
-	else
-		return sbuf->overflow;
-        }
-
-
-/* sets number of items lost due to buffer overflow */
-static int ndomod_sink_buffer_set_overflow(ndomod_sink_buffer *sbuf, unsigned long num){
-
-	if(sbuf==NULL)
-		return 0;
-	else
-		sbuf->overflow=num;
-
-	return sbuf->overflow;
-        }
+}
 
 
 
@@ -1349,17 +1244,17 @@ static void ndomod_contacts_serialize(contactgroupmember *contacts,
 	char *contact_name;
 	char temp_buffer[NDOMOD_MAX_BUFLEN];
 
-	for(temp_contactgroupmember = contacts; temp_contactgroupmember != NULL;
+	for (temp_contactgroupmember = contacts; temp_contactgroupmember != NULL;
 			temp_contactgroupmember=temp_contactgroupmember->next) {
 
 		contact_name = ndo_escape_buffer(temp_contactgroupmember->contact_name);
 
 		snprintf(temp_buffer, sizeof(temp_buffer)-1, "\n%d=%s", varnum, 
 				(NULL == contact_name) ? "" : contact_name);
-		temp_buffer[sizeof(temp_buffer)-1] = '\x0';
+		temp_buffer[sizeof(temp_buffer)-1] = '\0';
 		ndo_dbuf_strcat(dbufp, temp_buffer);
 
-		if(NULL != contact_name) free(contact_name);
+		if (NULL != contact_name) free(contact_name);
 		}
 	}
 #else
@@ -1382,17 +1277,17 @@ static void ndomod_hosts_serialize_2x(hostgroupmember *hosts, ndo_dbuf *dbufp,
 	char *host_name;
 	char temp_buffer[NDOMOD_MAX_BUFLEN];
 
-	for(temp_hostgroupmember = hosts; temp_hostgroupmember != NULL;
+	for (temp_hostgroupmember = hosts; temp_hostgroupmember != NULL;
 			temp_hostgroupmember = temp_hostgroupmember->next) {
 
 		host_name = ndo_escape_buffer(temp_hostgroupmember->host_name);
 
 		snprintf(temp_buffer, sizeof(temp_buffer)-1, "\n%d=%s", varnum,
 				(NULL == host_name) ? "" : host_name);
-		temp_buffer[sizeof(temp_buffer)-1] =  '\x0';
+		temp_buffer[sizeof(temp_buffer)-1] =  '\0';
 		ndo_dbuf_strcat(dbufp, temp_buffer);
 
-		if(NULL != host_name) free(host_name);
+		if (NULL != host_name) free(host_name);
 		}
 	}
 #endif
@@ -1416,7 +1311,7 @@ static void ndomod_services_serialize(servicegroupmember *services,
 	char *service_description;
 	char temp_buffer[NDOMOD_MAX_BUFLEN];
 
-	for(temp_servicegroupmember = services; temp_servicegroupmember != NULL;
+	for (temp_servicegroupmember = services; temp_servicegroupmember != NULL;
 			temp_servicegroupmember = temp_servicegroupmember->next) {
 
 		host_name = ndo_escape_buffer(temp_servicegroupmember->host_name);
@@ -1425,11 +1320,11 @@ static void ndomod_services_serialize(servicegroupmember *services,
 		snprintf(temp_buffer, sizeof(temp_buffer)-1, "\n%d=%s;%s", varnum,
 				(NULL == host_name) ? "" : host_name,
 				(NULL == service_description) ? "" : service_description);
-		temp_buffer[sizeof(temp_buffer)-1] = '\x0';
+		temp_buffer[sizeof(temp_buffer)-1] = '\0';
 		ndo_dbuf_strcat(dbufp, temp_buffer);
 
-		if(NULL != host_name) free(host_name);
-		if(NULL != service_description) free(service_description);
+		if (NULL != host_name) free(host_name);
+		if (NULL != service_description) free(service_description);
 		}
 	}
 #else
@@ -1494,7 +1389,7 @@ static int ndomod_broker_data(int event_type, void *data) {
 	}
 
 	/* Sink the buffer and then free its memory. */
-	ndomod_write_to_sink(dbuf.buf, NDO_TRUE, NDO_TRUE);
+	ndomod_write_to_sink(dbuf.buf, TRUE, TRUE);
 	ndo_dbuf_free(&dbuf);
 
 	/* Post-processing, ignore the return for now... */
@@ -1963,7 +1858,7 @@ static bd_result ndomod_broker_flapping_data(bd_phase phase,
 			INIT_BD_F(NDO_DATA_PERCENTSTATECHANGE, flapdata->percent_change),
 			INIT_BD_F(NDO_DATA_HIGHTHRESHOLD, flapdata->high_threshold),
 			INIT_BD_F(NDO_DATA_LOWTHRESHOLD, flapdata->low_threshold),
-			INIT_BD_UL(NDO_DATA_COMMENTTIME, (temp_comment) ? (unsigned long)temp_comment->entry_time : 0L),
+			INIT_BD_UL(NDO_DATA_COMMENTTIME, (temp_comment) ? (unsigned long)temp_comment->entry_time : 0),
 			INIT_BD_UL(NDO_DATA_COMMENTID, flapdata->comment_id)
 		};
 		ndomod_broker_data_serialize(dbufp, NDO_API_FLAPPINGDATA,
@@ -1985,7 +1880,7 @@ static bd_result ndomod_broker_program_status_data(bd_phase phase,
 			INIT_BD_I(NDO_DATA_PROCESSID, psdata->pid),
 			INIT_BD_I(NDO_DATA_DAEMONMODE, psdata->daemon_mode),
 #ifdef BUILD_NAGIOS_4X
-			INIT_BD_UL(NDO_DATA_LASTCOMMANDCHECK, 0L),
+			INIT_BD_UL(NDO_DATA_LASTCOMMANDCHECK, 0),
 #else
 			INIT_BD_UL(NDO_DATA_LASTCOMMANDCHECK, (unsigned long)psdata->last_command_check),
 #endif
@@ -2629,7 +2524,7 @@ static int ndomod_write_config(int config_type) {
 			,NDO_API_ENDDATA
 	);
 	temp_buffer[sizeof(temp_buffer)-1] = '\0';
-	ndomod_write_to_sink(temp_buffer, NDO_TRUE, NDO_TRUE);
+	ndomod_write_to_sink(temp_buffer, TRUE, TRUE);
 
 	/* Dump the object config. */
 #ifdef DEBUG_TIME_CONFIG_DUMP
@@ -2663,7 +2558,7 @@ static int ndomod_write_config(int config_type) {
 			,NDO_API_ENDDATA
 	);
 	temp_buffer[sizeof(temp_buffer)-1] = '\0';
-	ndomod_write_to_sink(temp_buffer, NDO_TRUE, NDO_TRUE);
+	ndomod_write_to_sink(temp_buffer, TRUE, TRUE);
 
 	return NDO_OK;
 }
@@ -2671,7 +2566,6 @@ static int ndomod_write_config(int config_type) {
 
 /* Dumps object configuration data to the sink. */
 static int ndomod_write_object_config(int config_type) {
-	char temp_buffer[NDOMOD_MAX_BUFLEN];
 	ndo_dbuf dbuf;
 	struct timeval now;
 	int x = 0;
@@ -2712,7 +2606,7 @@ static int ndomod_write_object_config(int config_type) {
 					command_definition, ARRAY_SIZE(command_definition), TRUE);
 		}
 
-		ndomod_write_to_sink(dbuf.buf, NDO_TRUE, NDO_TRUE); /* Sink the data... */
+		ndomod_write_to_sink(dbuf.buf, TRUE, TRUE); /* Sink the data... */
 		ndo_dbuf_reset(&dbuf); /* ...and reset our dynamic buffer to empty. */
 
 	} /* Command config. */
@@ -2743,7 +2637,7 @@ static int ndomod_write_object_config(int config_type) {
 		}
 		ndomod_enddata_serialize(&dbuf);
 
-		ndomod_write_to_sink(dbuf.buf, NDO_TRUE, NDO_TRUE); /* Sink the data... */
+		ndomod_write_to_sink(dbuf.buf, TRUE, TRUE); /* Sink the data... */
 		ndo_dbuf_reset(&dbuf); /* ...and reset our dynamic buffer to empty. */
 
 	} /* Timeperiod config. */
@@ -2849,7 +2743,7 @@ static int ndomod_write_object_config(int config_type) {
 
 		ndomod_enddata_serialize(&dbuf);
 
-		ndomod_write_to_sink(dbuf.buf, NDO_TRUE, NDO_TRUE);
+		ndomod_write_to_sink(dbuf.buf, TRUE, TRUE);
 		ndo_dbuf_reset(&dbuf);
 
 	} /* Contact config. */
@@ -2873,7 +2767,7 @@ static int ndomod_write_object_config(int config_type) {
 
 		ndomod_enddata_serialize(&dbuf);
 
-		ndomod_write_to_sink(dbuf.buf, NDO_TRUE, NDO_TRUE);
+		ndomod_write_to_sink(dbuf.buf, TRUE, TRUE);
 		ndo_dbuf_reset(&dbuf);
 
 	} /* Contactgroup config. */
@@ -2962,10 +2856,10 @@ static int ndomod_write_object_config(int config_type) {
 		const char *vrml_image = NULL;
 		const char *statusmap_image = NULL;
 
-		int have_2d_coords = NDO_FALSE;
+		int have_2d_coords = FALSE;
 		double x_2d = 0.0;
 		double y_2d = 0.0;
-		int have_3d_coords = NDO_FALSE;
+		int have_3d_coords = FALSE;
 		double x_3d = 0.0;
 		double y_3d = 0.0;
 		double z_3d = 0.0;
@@ -3072,7 +2966,7 @@ static int ndomod_write_object_config(int config_type) {
 
 		ndomod_enddata_serialize(&dbuf);
 
-		ndomod_write_to_sink(dbuf.buf, NDO_TRUE, NDO_TRUE);
+		ndomod_write_to_sink(dbuf.buf, TRUE, TRUE);
 		ndo_dbuf_reset(&dbuf);
 
 	} /* Host config. */
@@ -3101,7 +2995,7 @@ static int ndomod_write_object_config(int config_type) {
 
 		ndomod_enddata_serialize(&dbuf);
 
-		ndomod_write_to_sink(dbuf.buf, NDO_TRUE, NDO_TRUE);
+		ndomod_write_to_sink(dbuf.buf, TRUE, TRUE);
 		ndo_dbuf_reset(&dbuf);
 
 	} /* Hostgroup config. */
@@ -3274,7 +3168,7 @@ static int ndomod_write_object_config(int config_type) {
 
 		ndomod_enddata_serialize(&dbuf);
 
-		ndomod_write_to_sink(dbuf.buf, NDO_TRUE, NDO_TRUE);
+		ndomod_write_to_sink(dbuf.buf, TRUE, TRUE);
 		ndo_dbuf_reset(&dbuf);
 
 	} /* Service config. */
@@ -3298,7 +3192,7 @@ static int ndomod_write_object_config(int config_type) {
 
 		ndomod_enddata_serialize(&dbuf);
 
-		ndomod_write_to_sink(dbuf.buf, NDO_TRUE, NDO_TRUE);
+		ndomod_write_to_sink(dbuf.buf, TRUE, TRUE);
 		ndo_dbuf_reset(&dbuf);
 
 	} /* Servicegroup config. */
@@ -3346,7 +3240,7 @@ static int ndomod_write_object_config(int config_type) {
 
 		ndomod_enddata_serialize(&dbuf);
 
-		ndomod_write_to_sink(dbuf.buf, NDO_TRUE, NDO_TRUE);
+		ndomod_write_to_sink(dbuf.buf, TRUE, TRUE);
 		ndo_dbuf_reset(&dbuf);
 
 	} /* Host escalation config. */
@@ -3398,7 +3292,7 @@ static int ndomod_write_object_config(int config_type) {
 
 		ndomod_enddata_serialize(&dbuf);
 
-		ndomod_write_to_sink(dbuf.buf, NDO_TRUE, NDO_TRUE);
+		ndomod_write_to_sink(dbuf.buf, TRUE, TRUE);
 		ndo_dbuf_reset(&dbuf);
 
 	} /* Service escalation config. */
@@ -3442,7 +3336,7 @@ static int ndomod_write_object_config(int config_type) {
 					hostdependency_definition, ARRAY_SIZE(hostdependency_definition), TRUE);
 		}
 
-		ndomod_write_to_sink(dbuf.buf, NDO_TRUE, NDO_TRUE);
+		ndomod_write_to_sink(dbuf.buf, TRUE, TRUE);
 		ndo_dbuf_reset(&dbuf);
 
 	} /* Host dependency config. */
@@ -3491,7 +3385,7 @@ static int ndomod_write_object_config(int config_type) {
 					servicedependency_definition, ARRAY_SIZE(servicedependency_definition), TRUE);
 		}
 
-		ndomod_write_to_sink(dbuf.buf, NDO_TRUE, NDO_TRUE);
+		ndomod_write_to_sink(dbuf.buf, TRUE, TRUE);
 		ndo_dbuf_reset(&dbuf);
 
 	} /* Service dependency config. */
@@ -3534,7 +3428,7 @@ static int ndomod_write_main_config_file(void) {
 			NDO_DATA_TIMESTAMP, now.tv_sec, now.tv_usec,
 			NDO_DATA_CONFIGFILENAME, config_file
 	);
-	ndomod_write_to_sink(dbuf.buf, NDO_TRUE, NDO_TRUE);
+	ndomod_write_to_sink(dbuf.buf, TRUE, TRUE);
 
 	/* Write each var/val pair from config file. */
 	if ((fp = fopen(config_file, "r"))) {
@@ -3557,7 +3451,7 @@ static int ndomod_write_main_config_file(void) {
 					ndo_dbuf_printf(&dbuf, "%d=%s=%s\n",
 							NDO_DATA_CONFIGFILEVARIABLE, var, val ? val : ""
 					);
-					ndomod_write_to_sink(dbuf.buf, NDO_TRUE, NDO_TRUE);
+					ndomod_write_to_sink(dbuf.buf, TRUE, TRUE);
 					break;
 			}
 		}
@@ -3566,7 +3460,7 @@ static int ndomod_write_main_config_file(void) {
 	}
 
 	/* End the config variable dump. */
-	ndomod_write_to_sink(STRINGIFY(NDO_API_ENDDATA)"\n\n", NDO_TRUE, NDO_TRUE);
+	ndomod_write_to_sink(STRINGIFY(NDO_API_ENDDATA)"\n\n", TRUE, TRUE);
 
 	ndo_dbuf_free(&dbuf);
 
@@ -3596,7 +3490,7 @@ static int ndomod_write_runtime_variables(void) {
 			NDO_DATA_RUNTIMEVARIABLE, config_file
 	);
 	/* Sink the data and reset to an empty buffer. */
-	ndomod_write_to_sink(dbuf.buf, NDO_TRUE, NDO_TRUE);
+	ndomod_write_to_sink(dbuf.buf, TRUE, TRUE);
 	ndo_dbuf_reset(&dbuf);
 
 	/* A macro to print scheduling_info variables to our dbuf. */
@@ -3628,7 +3522,7 @@ static int ndomod_write_runtime_variables(void) {
 
 	/* End the variable dump and sink the data. */
 	ndo_dbuf_strcat(&dbuf, STRINGIFY(NDO_API_ENDDATA)"\n\n");
-	ndomod_write_to_sink(dbuf.buf, NDO_TRUE, NDO_TRUE);
+	ndomod_write_to_sink(dbuf.buf, TRUE, TRUE);
 
 	ndo_dbuf_free(&dbuf);
 

@@ -29,7 +29,6 @@
 
 typedef struct ndomod_sink_buffer {
 	char **buffer;
-	unsigned long size;
 	unsigned long head;
 	unsigned long tail;
 	unsigned long items;
@@ -102,11 +101,7 @@ static int ndomod_goodbye_sink(void);
 static int ndomod_sink_buffer_init(ndomod_sink_buffer *sbuf, unsigned long maxitems);
 static int ndomod_sink_buffer_deinit(ndomod_sink_buffer *sbuf);
 static int ndomod_sink_buffer_push(ndomod_sink_buffer *sbuf, const char *buf);
-static char *ndomod_sink_buffer_peek(ndomod_sink_buffer *sbuf);
 static char *ndomod_sink_buffer_pop(ndomod_sink_buffer *sbuf);
-static int ndomod_sink_buffer_items(ndomod_sink_buffer *sbuf);
-static unsigned long ndomod_sink_buffer_get_overflow(ndomod_sink_buffer *sbuf);
-static int ndomod_sink_buffer_set_overflow(ndomod_sink_buffer *sbuf, unsigned long num);
 
 static int ndomod_load_unprocessed_data(const char *f);
 static int ndomod_save_unprocessed_data(const char *f);
