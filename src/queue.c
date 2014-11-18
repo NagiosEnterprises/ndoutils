@@ -20,20 +20,12 @@
  */
 
 #include "../include/config.h"
-#include <sys/types.h>
+#include "../include/queue.h"
 #include <sys/ipc.h>
 #include <sys/msg.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <syslog.h>
-#include <errno.h>
-#include <time.h>
-#include <unistd.h>
-#include "../include/queue.h"
 
-#define RETRY_LOG_INTERVAL	600		/* Seconds */
-#define MAX_RETRIES	20				/* Max number of times to retry sending message */
+#define RETRY_LOG_INTERVAL 600 /* Seconds */
+#define MAX_RETRIES	20 /* Max number of times to retry sending message. */
 
 static time_t last_retry_log_time = 0;
 static int queue_id = -1;
@@ -60,7 +52,7 @@ int get_queue_id(int id) {
 		return -1;
 	}
 
-	/* Reegister our message send timeout signal handler. */
+	/* Register our message send timeout signal handler. */
 	signal(SIGALRM, queue_alarm_handler);
 	return 0;
 }
