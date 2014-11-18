@@ -164,7 +164,7 @@ int ndo_dbuf_printf(ndo_dbuf *db, const char *fmt, ...) {
 	/* If we don't have a buffer allocated yet, the free size is zero. */
 	free_size = db->buf ? db->alloc_size - db->used_size : 0;
 	/* A pointer to the start of data, or NULL if no buffer yet. */
-	free_buf = db->buf + db->used_size;
+	free_buf = db->buf ? db->buf + db->used_size : NULL;
 
 	va_start(ap, fmt);
 	/* Try to print to our buffer. If free_size is zero db->buf can be null and
