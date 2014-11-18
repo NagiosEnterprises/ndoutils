@@ -163,5 +163,5 @@ int ndo2db_db_clear_table(ndo2db_idi *,char *);
 int ndo2db_db_get_latest_data_time(ndo2db_idi *,const char *,const char *,unsigned long *);
 int ndo2db_db_perform_maintenance(ndo2db_idi *);
 
-extern int ndo2db_log_debug_info(int, int, const char *, ...);
+extern int ndo2db_log_debug_info(int, int, const char *, ...) __attribute__((format(printf, 3, 4)));
 #endif
