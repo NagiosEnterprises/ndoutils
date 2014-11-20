@@ -339,7 +339,8 @@ static int ndomod_check_nagios_object_version(void) {
 
 	if (__nagios_object_structure_version == CURRENT_OBJECT_STRUCTURE_VERSION) {
 		return NDO_OK;
-	} else {
+	}
+	else {
 		ndomod_printf_to_logs(
 				"ndomod: I've been compiled with support for revision %d of the internal Nagios object structures, but the Nagios daemon is currently using revision %d. I'm going to unload so I don't cause any problems...",
 				CURRENT_OBJECT_STRUCTURE_VERSION, __nagios_object_structure_version);
@@ -375,7 +376,8 @@ static int ndomod_init(void) {
 		if (!ndomod_sink_rotation_command) {
 			/* Log an error if we don't have a rotation command... */
 			ndomod_printf_to_logs("ndomod: Warning - No file rotation command defined.");
-		} else {
+		}
+		else {
 			/* ...otherwise schedule a file rotation event. */
 			time_t rotate_at_time = time(NULL) + ndomod_sink_rotation_interval;
 			schedule_new_event(EVENT_USER_FUNCTION, TRUE, rotate_at_time, TRUE,
@@ -440,8 +442,8 @@ static int ndomod_process_config_file(const char *filename) {
 	if (!(thefile = ndo_mmap_fopen(filename))) return NDO_ERROR;
 
 	/* Read, process, and free each line. */
-	for  (; result == NDO_OK && (buf = ndo_mmap_fgets(thefile)); free(buf)) {
-		/* Skip comments and lank lines... */
+	for (; result == NDO_OK && (buf = ndo_mmap_fgets(thefile)); free(buf)) {
+		/* Skip comments and blank lines... */
 		if (buf[0] != '\0' && buf[0] != '#') {
 			/* ...otherwise process the variable. */
 			result = ndomod_process_config_var(buf);
@@ -457,7 +459,7 @@ static int ndomod_process_config_file(const char *filename) {
 
 /* A macro to check and handle boolean processing options. */
 #define NDO_HANDLE_PROC_OPT(n, o) \
-	do if (!strcmp(var, n) && !strcmp(val, "1")) { \
+	do if (strcmp(var, n) == 0 && strcmp(val, "1") == 0) { \
 		ndomod_process_options |= NDOMOD_PROCESS_## o ##_DATA; \
 		return NDO_OK; \
 	} while (0)
@@ -466,10 +468,11 @@ static int ndomod_process_config_file(const char *filename) {
  * if the config var matches n. If successful, memory allocated
  * for the value will need to be freed when the module is unloaded. */
 #define NDO_HANDLE_STRING_OPT(n, v) \
-	do if (!strcmp(var, n)) { \
+	do if (strcmp(var, n) == 0) { \
 		if ((v = strdup(val))) { \
 			return NDO_OK; \
-		} else { \
+		} \
+		else { \
 			ndomod_printf_to_logs("ndomod: Error copying option string for '%s'.", n); \
 			return NDO_ERROR; \
 		} \
@@ -488,7 +491,7 @@ static int ndomod_process_config_file(const char *filename) {
 
 /* A macro to handle strtoul() with a return from invoking context on error. */
 #define NDO_HANDLE_STRTOUL_OPT(n, v) \
-	do if (!strcmp(var, n)) { \
+	do if (strcmp(var, n) == 0) { \
 		NDO_HANDLE_STRTOUL_OPT_VAL(n, v); \
 		return NDO_OK; \
 	} while (0)
@@ -499,26 +502,28 @@ static int ndomod_process_config_var(char *arg) {
 	char *val = NULL;
 
 	/* Split and strip var/val. */
-	ndomod_strip(var = strtok(arg,"="));
-	ndomod_strip(val = strtok(NULL,"\n"));
+	ndomod_strip(var = strtok(arg, "="));
+	ndomod_strip(val = strtok(NULL, "\n"));
 
 	/* Skip empty var or val. */
 	if (!var || !*var || !val || !*val) return NDO_OK;
 
 	/* Process the variable... */
 
-	if (!strcmp(var, "config_file")) return ndomod_process_config_file(val);
+	if (strcmp(var, "config_file") == 0) return ndomod_process_config_file(val);
 
 	NDO_HANDLE_STRING_OPT("instance_name", ndomod_instance_name);
 
 	NDO_HANDLE_STRING_OPT("output", ndomod_sink_name);
 
-	if (!strcmp(var, "output_type")) {
-		if (!strcmp(val, "file")) {
+	if (strcmp(var, "output_type") == 0) {
+		if (strcmp(val, "file") == 0) {
 			ndomod_sink_type = NDO_SINK_FILE;
-		} else if (!strcmp(val, "tcpsocket")) {
+		}
+		else if (strcmp(val, "tcpsocket") == 0) {
 			ndomod_sink_type = NDO_SINK_TCPSOCKET;
-		} else {
+		}
+		else {
 			ndomod_sink_type = NDO_SINK_UNIXSOCKET;
 		}
 		return NDO_OK;
@@ -567,10 +572,11 @@ static int ndomod_process_config_var(char *arg) {
 	NDO_HANDLE_PROC_OPT("adaptive_contact_data", ADAPTIVE_CONTACT);
 
 	/* data_processing_options overrides individual values previously set. */
-	if (!strcmp(var, "data_processing_options")) {
-		if (!strcmp(val, "-1")) {
+	if (strcmp(var, "data_processing_options") == 0) {
+		if (strcmp(val, "-1") == 0) {
 			ndomod_process_options = NDOMOD_PROCESS_EVERYTHING;
-		} else {
+		}
+		else {
 			NDO_HANDLE_STRTOUL_OPT_VAL("data_processing_options", ndomod_process_options);
 		}
 		return NDO_OK;
@@ -580,7 +586,7 @@ static int ndomod_process_config_var(char *arg) {
 
 	NDO_HANDLE_STRING_OPT("buffer_file", ndomod_buffer_file);
 
-	if (!strcmp(var, "use_ssl")) {
+	if (strcmp(var, "use_ssl") == 0) {
 		if (strlen(val) == 1) use_ssl = (val[0] == '1');
 		return NDO_OK;
 	}
@@ -681,16 +687,19 @@ static int ndomod_hello_sink(int reconnect, int problem_disconnect) {
 	/* The connection FD type string. */
 	if (ndomod_sink_type == NDO_SINK_FD || ndomod_sink_type == NDO_SINK_FILE) {
 		connection_type = NDO_API_CONNECTION_FILE;
-	} else if (ndomod_sink_type == NDO_SINK_TCPSOCKET) {
+	}
+	else if (ndomod_sink_type == NDO_SINK_TCPSOCKET) {
 		connection_type = NDO_API_CONNECTION_TCPSOCKET;
-	} else {
+	}
+	else {
 		connection_type = NDO_API_CONNECTION_UNIXSOCKET;
 	}
 
 	/* The (re)connect type string. */
 	if (reconnect && problem_disconnect) {
 		connect_type = NDO_API_CONNECTTYPE_RECONNECT;
-	} else {
+	}
+	else {
 		connect_type = NDO_API_CONNECTTYPE_INITIAL;
 	}
 
@@ -842,24 +851,28 @@ static int ndomod_write_to_sink(const char *buf, int buffer_write, int flush_buf
 
 				if (reconnect) {
 					ndomod_printf_to_logs("ndomod: Successfully reconnected to data sink! %lu items lost, %lu queued items to flush.", sinkbuf.overflow, sinkbuf.items);
-				} else if (sinkbuf.overflow) {
+				}
+				else if (sinkbuf.overflow) {
 					ndomod_printf_to_logs("ndomod: Successfully connected to data sink. %lu items lost, %lu queued items to flush.", sinkbuf.overflow, sinkbuf.items);
-				} else {
+				}
+				else {
 					ndomod_printf_to_logs("ndomod: Successfully connected to data sink. %lu queued items to flush.", sinkbuf.items);
 				}
 
 				/* Reset the sink overflow count. */
 				sinkbuf.overflow = 0;
-
-			} else {
+			}
+			else {
 				/* Sink could not be (re)opened, log a warning. */
 				delta = (unsigned long)current_time - (unsigned long)ndomod_sink_last_reconnect_warning;
 				if (delta > ndomod_sink_reconnect_warning_interval) {
 					if (reconnect) {
 						ndomod_printf_to_logs("ndomod: Still unable to reconnect to data sink. %lu items lost, %lu queued items to flush.", sinkbuf.overflow, sinkbuf.items);
-					} else if (ndomod_sink_connect_attempt == 1) {
+					}
+					else if (ndomod_sink_connect_attempt == 1) {
 						ndomod_printf_to_logs("ndomod: Could not open data sink! I'll keep trying, but some output may get lost...");
-					} else {
+					}
+					else {
 						ndomod_printf_to_logs("ndomod: Still unable to connect to data sink. %lu items lost, %lu queued items to flush.", sinkbuf.overflow, sinkbuf.items);
 					}
 
@@ -1081,7 +1094,8 @@ static char *ndomod_sink_buffer_pop(ndomod_sink_buffer *sbuf) {
 		if (result != NDO_OK) { \
 			ndomod_printf_to_logs("ndomod: Error registering for %s data.", dtn); \
 			return result; \
-		} else { \
+		} \
+		else { \
 			ndomod_printf_to_logs("ndomod: Registered for %s data.", dtn); \
 		} \
 	} while (0)
@@ -1427,7 +1441,8 @@ printf("ndomod_broker_process_data() preprocessing event type: %d\n", procdata->
 				if (!ndomod_sink_rotation_command) {
 					/* Log an error to Core if we don't have a rotation command... */
 					ndomod_printf_to_logs("ndomod: Warning - No file rotation command defined.");
-				} else {
+				}
+				else {
 					/* ...otherwise, schedule a file rotation event. */
 					time_t rotate_at_time = time(NULL) + ndomod_sink_rotation_interval;
 					schedule_new_event(EVENT_USER_FUNCTION, TRUE, rotate_at_time, TRUE,
@@ -2373,7 +2388,8 @@ static bd_result ndomod_broker_state_change_data(bd_phase phase,
 			}
 			last_state = temp_host->last_state;
 			last_hard_state = temp_host->last_hard_state;
-		} else {
+		}
+		else {
 			service *temp_service = find_service(schangedata->host_name,
 					schangedata->service_description);
 			if (!temp_service) {
@@ -2391,7 +2407,8 @@ static bd_result ndomod_broker_state_change_data(bd_phase phase,
 			}
 			last_state = temp_host->last_state;
 			last_hard_state = temp_host->last_hard_state;
-		} else {
+		}
+		else {
 			service *temp_service = schangedata->object_ptr;
 			if (!temp_service) {
 				return bdr_enoent;

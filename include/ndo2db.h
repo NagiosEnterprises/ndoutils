@@ -235,7 +235,7 @@ typedef struct ndo2db_input_data_info_struct{
 int ndo2db_process_arguments(int,char **);
 
 int ndo2db_process_config_var(char *);
-int ndo2db_process_config_file(char *);
+int ndo2db_process_config_file(const char *filename);
 
 int ndo2db_initialize_variables(void);
 
