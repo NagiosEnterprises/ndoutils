@@ -254,7 +254,6 @@ int ndo2db_free_connection_memory(ndo2db_idi *);
 int ndo2db_wait_for_connections(void);
 int ndo2db_handle_client_connection(int);
 int ndo2db_idi_init(ndo2db_idi *);
-int ndo2db_check_for_client_input(ndo2db_idi *,ndo_dbuf *);
 int ndo2db_handle_client_input(ndo2db_idi *,char *);
 
 int ndo2db_start_input_data(ndo2db_idi *);

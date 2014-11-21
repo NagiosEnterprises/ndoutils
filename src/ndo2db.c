@@ -949,10 +949,9 @@ int ndo2db_wait_for_connections(void) {
 
 
 int ndo2db_handle_client_connection(int sd) {
-	ndo_dbuf dbuf;
-	int dbuf_chunk = 2048;
+	pid_t chpid;
+	struct ndo2db_queue_msg msg;
 	ndo2db_idi idi;
-	char buf[1024];
 	int result = 0;
 	int error = NDO_FALSE;
 
@@ -974,14 +973,15 @@ int ndo2db_handle_client_connection(int sd) {
 	signal(SIGSEGV, ndo2db_child_sighandler);
 	signal(SIGFPE, ndo2db_child_sighandler);
 
-	pid_t chpid = fork();
+	/* Initialize our message queue for sending data to the DB writer. */
+	ndo2db_queue_init(getpid());
+
+	/* Start our DB writer child process. */
+	chpid = fork();
 	if (chpid == 0) ndo2db_async_client_handle();
 
 	/* initialize input data information */
 	ndo2db_idi_init(&idi);
-
-	/* initialize dynamic buffer (2KB chunk size) */
-	ndo_dbuf_init(&dbuf, dbuf_chunk);
 
 	/* initialize database connection */
 	ndo2db_db_init(&idi);
@@ -1007,16 +1007,16 @@ int ndo2db_handle_client_connection(int sd) {
 	while (1) {
 #ifdef HAVE_SSL
 		if (!use_ssl) {
-			result = read(sd, buf, sizeof(buf)-1);
+			result = read(sd, msg.text, sizeof(msg.text)-1);
 		}
 		else {
-			result = SSL_read(ssl, buf, sizeof(buf)-1);
+			result = SSL_read(ssl, msg.text, sizeof(msg.text)-1);
 			if (result == -1 && (SSL_get_error(ssl, result) == SSL_ERROR_WANT_READ)) {
 				syslog(LOG_ERR, "SSL read error.");
 			}
 		}
 #else
-		result = read(sd, buf, sizeof(buf)-1);
+		result = read(sd, msg.text, sizeof(msg.text)-1);
 #endif
 
 		/* bail out on hard errors */
@@ -1049,18 +1049,19 @@ int ndo2db_handle_client_connection(int sd) {
 			break;
 		}
 
+		/* Make the buffer null-terminated. */
+		msg.text[result] = '\0';
+
 #ifdef DEBUG_NDO2DB2
 		printf("BYTESREAD: %d\n", result);
+		printf("RAWBUF: %s\n", msg.text);
+		printf("  PROCESSED BYTES: %lu, LINES: %lu\n",
+					 result, idi->bytes_processed, idi->lines_processed);
 #endif
 
-		/* append data we just read to dynamic buffer */
-		buf[result] = '\0';
-		ndo_dbuf_strcat(&dbuf, buf);
-
-		/* check for completed lines of input */
-		ndo2db_check_for_client_input(&idi, &dbuf);
-		/* reinitialize buffer */
-		ndo_dbuf_reset(&dbuf);
+		/* Send the new data to the DB handler. We send result = strlen(msg.text)
+		 * bytes, we don't send the null byte.  */
+		ndo2db_queue_send(&msg, (ssize_t)result);
 
 		/* should we disconnect the client? */
 		if (idi.disconnect_client) {
@@ -1075,9 +1076,6 @@ int ndo2db_handle_client_connection(int sd) {
 	printf("BYTES: %lu, LINES: %lu\n", idi.bytes_processed, idi.lines_processed);
 #endif
 
-	/* free memory allocated to dynamic buffer */
-	ndo_dbuf_free(&dbuf);
-
 	/* disconnect from database */
 	ndo2db_db_disconnect(&idi);
 	ndo2db_db_deinit(&idi);
@@ -1086,8 +1084,8 @@ int ndo2db_handle_client_connection(int sd) {
 	ndo2db_free_input_memory(&idi);
 	ndo2db_free_connection_memory(&idi);
 
-	/* clean queue */
-	del_queue();
+	/* Destruct our message queue. */
+	ndo2db_queue_free();
 
 	/* wait for child to end work */
 	waitpid(chpid, NULL, 0);
@@ -1135,24 +1133,6 @@ int ndo2db_idi_init(ndo2db_idi *idi) {
 }
 
 
-/* checks for single lines of input from a client connection */
-int ndo2db_check_for_client_input(ndo2db_idi *idi, ndo_dbuf *dbuf) {
-	(void)idi; /* Unused, don't warn. */
-
-	if (!dbuf || !dbuf->buf) return NDO_OK;
-
-#ifdef DEBUG_NDO2DB2
-	printf("RAWBUF: %s\n", dbuf->buf);
-	printf("  USED1: %lu, BYTES: %lu, LINES: %lu\n",
-			dbuf->used_size, idi->bytes_processed, idi->lines_processed);
-#endif
-
-	get_queue_id(getpid());
-	push_into_queue(dbuf->buf);
-
-	return NDO_OK;
-}
-
 /* asynchronous handle clients events */
 void ndo2db_async_client_handle() {
 	ndo2db_idi idi;
@@ -1164,7 +1144,7 @@ void ndo2db_async_client_handle() {
 	ndo2db_db_init(&idi);
 	ndo2db_db_connect(&idi);
 
-	get_queue_id(getppid());
+// 	get_queue_id(getppid());
 
 	char *old_buf = NULL;
 

@@ -33,22 +33,11 @@ static int queue_id = -1;
 static void queue_alarm_handler(int sig);
 
 
-int del_queue(void) {
-	struct msqid_ds buf;
-
-	if (msgctl(queue_id, IPC_RMID, &buf) < 0) {
-		syslog(LOG_ERR, "Error: queue remove error.\n");
-		return -1;
-	}
-
-	return 0;
-}
-
-int get_queue_id(int id) {
+int ndo2db_queue_init(int id) {
 	key_t key = ftok(NDO_QUEUE_PATH, NDO_QUEUE_ID+id);
 
 	if ((queue_id = msgget(key, IPC_CREAT | 0600)) < 0) {
-		syslog(LOG_ERR, "Error: queue init error.\n");
+		syslog(LOG_ERR, "Error: queue init error: %s", strerror(errno));
 		return -1;
 	}
 
@@ -56,6 +45,18 @@ int get_queue_id(int id) {
 	signal(SIGALRM, queue_alarm_handler);
 	return 0;
 }
+
+int ndo2db_queue_free(void) {
+	struct msqid_ds buf;
+
+	if (msgctl(queue_id, IPC_RMID, &buf) < 0) {
+		syslog(LOG_ERR, "Error: queue remove error: %s", strerror(errno));
+		return -1;
+	}
+
+	return 0;
+}
+
 
 static long get_msgmni(void) {
 	FILE *fp;
@@ -112,7 +113,7 @@ static void log_retry(void) {
 		last_retry_log_time = now;
 	}
 	else {
-		syslog(LOG_ERR, "Warning: queue send error, retrying...\n");
+		syslog(LOG_ERR, "Warning: queue send error, retrying...");
 	}
 }
 
@@ -120,47 +121,55 @@ static void queue_alarm_handler(int sig) {
 	(void)sig;
 }
 
-void push_into_queue(const char* buf) {
-	struct queue_msg msg;
-	size_t size = strlen(buf);
-	size = size < NDO_MAX_MSG_SIZE ? size : NDO_MAX_MSG_SIZE;
-	strncpy(msg.text, buf, size);
-	msg.type = NDO_MSG_TYPE;
+int ndo2db_queue_send(struct ndo2db_queue_msg *msg, size_t msgsz) {
+	int errno_save = 0;
+	int result = 0;
+
+	msg->type = NDO_MSG_TYPE;
 
 	alarm(1);
-	if (msgsnd(queue_id, &msg, size, 0) < 0) {
-		if (errno == EINTR) {
-			unsigned retrynum = 0;
+	result = msgsnd(queue_id, msg, msgsz, 0);
+	if (result < 0 && errno == EINTR) {
+		unsigned retrynum = 0;
 
-			log_retry();
+		log_retry();
 
-			while (errno == EINTR && (retrynum++ < MAX_RETRIES)) {
-				alarm(1);
-				if (msgsnd(queue_id, &msg, size, 0) == 0) break;
-			}
-			if (retrynum < MAX_RETRIES) {
-				syslog(LOG_ERR,"Message sent to queue after %u retries.\n", retrynum);
-			}
-			else {
-				syslog(LOG_ERR,"Error: max retries exceeded sending message to queue. Kernel queue parameters may neeed to be tuned. See README.\n");
-			}
+		do {
+			alarm(1);
+			result = msgsnd(queue_id, msg, msgsz, 0);
+			++retrynum;
+		} while (result < 0 && errno == EINTR && retrynum < MAX_RETRIES);
+
+		if (result == 0) {
+			syslog(LOG_ERR, "Message sent to queue after %u retries.", retrynum);
 		}
-		else {
-			syslog(LOG_ERR,"Error: queue send error.\n");
+		else if (result < 0 && errno == EINTR) {
+			syslog(LOG_ERR, "Error: max retries exceeded sending message to queue. Kernel queue parameters may neeed to be tuned. See README.");
+			errno = EINTR; /* Preserve errno == EINTR. */
+		}
+	}
+
+	if (result < 0) {
+		errno_save = errno;
+		if (errno != EINTR) {
+			syslog(LOG_ERR, "Error: queue send error: %s", strerror(errno));
 		}
 	}
 	alarm(0);
+
+	errno = errno_save;
+	return result;
 }
 
 char* pop_from_queue(void) {
-	struct queue_msg msg;
+	struct ndo2db_queue_msg msg;
 	char *buf;
 	ssize_t received;
 	size_t buf_size;
 
 	received = msgrcv(queue_id, &msg, NDO_MAX_MSG_SIZE, NDO_MSG_TYPE, MSG_NOERROR);
 	if (received < 0) {
-		syslog(LOG_ERR,"Error: queue recv error.\n");
+		syslog(LOG_ERR, "Error: queue recv error.");
 		received = 0;
 	}
 
@@ -170,4 +179,15 @@ char* pop_from_queue(void) {
 	buf[buf_size] = '\0';
 
 	return buf;
+}
+ssize_t ndo2db_queue_recv(struct ndo2db_queue_msg *msg) {
+
+	ssize_t received = msgrcv(queue_id, &msg, NDO_MAX_MSG_SIZE, NDO_MSG_TYPE, MSG_NOERROR);
+	if (received < 0) {
+		int errno_save = errno;
+		syslog(LOG_ERR, "Error: queue recv error: %s", strerror(errno));
+		errno = errno_save;
+	}
+
+	return received;
 }
