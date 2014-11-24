@@ -296,6 +296,4 @@ typedef int int32_t;
 #include <rand.h>
 #endif
 
-#undef USE_NANOSLEEP
-
 #endif
