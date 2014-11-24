@@ -152,16 +152,18 @@ int ndo2db_db_hello(ndo2db_idi *);
 int ndo2db_db_goodbye(ndo2db_idi *);
 int ndo2db_db_checkin(ndo2db_idi *);
 
-char *ndo2db_db_escape_string(ndo2db_idi *,char *);
-char *ndo2db_db_timet_to_sql(ndo2db_idi *,time_t);
-char *ndo2db_db_sql_to_timet(ndo2db_idi *,const char *);
-int ndo2db_db_query(ndo2db_idi *,char *);
+char *ndo2db_db_escape_string(ndo2db_idi *, char *);
+char *ndo2db_db_timet_to_sql(ndo2db_idi *, time_t);
+char *ndo2db_db_sql_to_timet(ndo2db_idi *, const char *);
+
+int ndo2db_db_query(ndo2db_idi *, char *);
 int ndo2db_db_free_query(ndo2db_idi *);
 int ndo2db_handle_db_error(ndo2db_idi *);
 
-int ndo2db_db_clear_table(ndo2db_idi *,char *);
-int ndo2db_db_get_latest_data_time(ndo2db_idi *,const char *,const char *,unsigned long *);
+int ndo2db_db_clear_table(ndo2db_idi *, char *);
+int ndo2db_db_get_latest_data_time(ndo2db_idi *, const char *, const char *, unsigned long *);
 int ndo2db_db_perform_maintenance(ndo2db_idi *);
 
 extern int ndo2db_log_debug_info(int, int, const char *, ...) __attribute__((format(printf, 3, 4)));
+
 #endif

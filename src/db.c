@@ -20,7 +20,7 @@
  * along with NDOUtils. If not, see <http://www.gnu.org/licenses/>.
  */
 
-/* include our project's header files */
+/* Headers from our project. */
 #include "../include/config.h"
 #include "../include/common.h"
 #include "../include/io.h"
@@ -31,10 +31,12 @@
 #include "../include/db.h"
 
 
+/* Our program-wide DB settings (ndo2db.c). */
 extern ndo2db_dbconfig ndo2db_db_settings;
+/* Last time we updated our connection status in the DB (ndo2db.c). */
 extern time_t ndo2db_db_last_checkin_time;
 
-const char *ndo2db_db_rawtablenames[NDO2DB_MAX_DBTABLES]={
+const char *ndo2db_db_rawtablenames[NDO2DB_MAX_DBTABLES] = {
 	"instances",
 	"conninfo",
 	"objects",
@@ -104,108 +106,100 @@ const char *ndo2db_db_rawtablenames[NDO2DB_MAX_DBTABLES]={
 	"hostescalation_contactgroups",
 	"serviceescalation_contactgroups",
 	"service_parentservices",
-        };
+};
 
-
+/* Our prefixed table names. */
 char *ndo2db_db_tablenames[NDO2DB_MAX_DBTABLES];
 
-/*
-#define DEBUG_NDO2DB_QUERIES 1
-*/
+
+/* #define DEBUG_NDO2DB_QUERIES 1 */
 
 /****************************************************************************/
 /* CONNECTION FUNCTIONS                                                     */
 /****************************************************************************/
 
-/* initialize database structures */
-int ndo2db_db_init(ndo2db_idi *idi){
-	register int x;
+/* Initialize database structures. */
+int ndo2db_db_init(ndo2db_idi *idi) {
+	int x;
 
-	if(idi==NULL)
-		return NDO_ERROR;
+	if (!idi) return NDO_ERROR;
 
-	/* initialize db server type */
-	idi->dbinfo.server_type=ndo2db_db_settings.server_type;
+	/* Set our DB server type. */
+	idi->dbinfo.server_type = ndo2db_db_settings.server_type;
 
-	/* initialize table names */
-	for(x=0;x<NDO2DB_MAX_DBTABLES;x++){
-		if((ndo2db_db_tablenames[x]=(char *)malloc(strlen(ndo2db_db_rawtablenames[x])+((ndo2db_db_settings.dbprefix==NULL)?0:strlen(ndo2db_db_settings.dbprefix))+1))==NULL)
-			return NDO_ERROR;
-		sprintf(ndo2db_db_tablenames[x],"%s%s",(ndo2db_db_settings.dbprefix==NULL)?"":ndo2db_db_settings.dbprefix,ndo2db_db_rawtablenames[x]);
-	        }
+	/* Prepare prefixed table names. */
+	for (x = 0; x < NDO2DB_MAX_DBTABLES; x++) {
+		int r = asprintf(ndo2db_db_tablenames + x, "%s%s",
+				ndo2db_db_settings.dbprefix ? ndo2db_db_settings.dbprefix : "",
+				ndo2db_db_rawtablenames[x]);
+		if (r == -1) return NDO_ERROR;
+	}
 
-	/* initialize other variables */
-	idi->dbinfo.connected=NDO_FALSE;
-	idi->dbinfo.error=NDO_FALSE;
-	idi->dbinfo.instance_id=0L;
-	idi->dbinfo.conninfo_id=0L;
-	idi->dbinfo.latest_program_status_time=(time_t)0L;
-	idi->dbinfo.latest_host_status_time=(time_t)0L;
-	idi->dbinfo.latest_service_status_time=(time_t)0L;
-	idi->dbinfo.latest_queued_event_time=(time_t)0L;
-	idi->dbinfo.latest_realtime_data_time=(time_t)0L;
-	idi->dbinfo.latest_comment_time=(time_t)0L;
-	idi->dbinfo.clean_event_queue=NDO_FALSE;
-	idi->dbinfo.last_notification_id=0L;
-	idi->dbinfo.last_contact_notification_id=0L;
-	idi->dbinfo.max_timedevents_age=ndo2db_db_settings.max_timedevents_age;
-	idi->dbinfo.max_systemcommands_age=ndo2db_db_settings.max_systemcommands_age;
-	idi->dbinfo.max_servicechecks_age=ndo2db_db_settings.max_servicechecks_age;
-	idi->dbinfo.max_hostchecks_age=ndo2db_db_settings.max_hostchecks_age;
-	idi->dbinfo.max_eventhandlers_age=ndo2db_db_settings.max_eventhandlers_age;
-	idi->dbinfo.max_externalcommands_age=ndo2db_db_settings.max_externalcommands_age;
-	idi->dbinfo.max_notifications_age=ndo2db_db_settings.max_notifications_age;
-	idi->dbinfo.max_contactnotifications_age=ndo2db_db_settings.max_contactnotifications_age;
-	idi->dbinfo.max_contactnotificationmethods_age=ndo2db_db_settings.max_contactnotificationmethods_age;
-	idi->dbinfo.max_logentries_age=ndo2db_db_settings.max_logentries_age;
-	idi->dbinfo.max_acknowledgements_age=ndo2db_db_settings.max_acknowledgements_age;	
+	/* Initialize scalar variables. */
+	idi->dbinfo.connected = NDO_FALSE;
+	idi->dbinfo.error = NDO_FALSE;
+	idi->dbinfo.instance_id = 0;
+	idi->dbinfo.conninfo_id = 0;
+	idi->dbinfo.latest_program_status_time = 0;
+	idi->dbinfo.latest_host_status_time = 0;
+	idi->dbinfo.latest_service_status_time = 0;
+	idi->dbinfo.latest_queued_event_time = 0;
+	idi->dbinfo.latest_realtime_data_time = 0;
+	idi->dbinfo.latest_comment_time = 0;
+	idi->dbinfo.clean_event_queue = NDO_FALSE;
+	idi->dbinfo.last_notification_id = 0;
+	idi->dbinfo.last_contact_notification_id = 0;
+	idi->dbinfo.max_timedevents_age = ndo2db_db_settings.max_timedevents_age;
+	idi->dbinfo.max_systemcommands_age = ndo2db_db_settings.max_systemcommands_age;
+	idi->dbinfo.max_servicechecks_age = ndo2db_db_settings.max_servicechecks_age;
+	idi->dbinfo.max_hostchecks_age = ndo2db_db_settings.max_hostchecks_age;
+	idi->dbinfo.max_eventhandlers_age = ndo2db_db_settings.max_eventhandlers_age;
+	idi->dbinfo.max_externalcommands_age = ndo2db_db_settings.max_externalcommands_age;
+	idi->dbinfo.max_notifications_age = ndo2db_db_settings.max_notifications_age;
+	idi->dbinfo.max_contactnotifications_age = ndo2db_db_settings.max_contactnotifications_age;
+	idi->dbinfo.max_contactnotificationmethods_age = ndo2db_db_settings.max_contactnotificationmethods_age;
+	idi->dbinfo.max_logentries_age = ndo2db_db_settings.max_logentries_age;
+	idi->dbinfo.max_acknowledgements_age = ndo2db_db_settings.max_acknowledgements_age;
 	idi->dbinfo.table_trim_interval = ndo2db_db_settings.table_trim_interval;
-	idi->dbinfo.last_table_trim_time=(time_t)0L;
-	idi->dbinfo.last_logentry_time=(time_t)0L;
-	idi->dbinfo.last_logentry_data=NULL;
-	idi->dbinfo.object_hashlist=NULL;
+	idi->dbinfo.last_table_trim_time = 0;
+	idi->dbinfo.last_logentry_time = 0;
+	idi->dbinfo.last_logentry_data = NULL;
+	idi->dbinfo.object_hashlist = NULL;
 
-	/* initialize db structures, etc. */
-	if(!mysql_init(&idi->dbinfo.mysql_conn)){
-		syslog(LOG_USER|LOG_INFO,"Error: mysql_init() failed\n");
+	/* Initialize our low level DB interface. */
+	if (!mysql_init(&idi->dbinfo.mysql_conn)) {
+		syslog(LOG_USER|LOG_INFO, "Error: mysql_init() failed.");
 		return NDO_ERROR;
 	}
 
 	return NDO_OK;
-        }
+}
 
 
-/* clean up database structures */
-int ndo2db_db_deinit(ndo2db_idi *idi){
-	register int x;
+/* Clean up database structures. */
+int ndo2db_db_deinit(ndo2db_idi *idi) {
+	int x;
 
-	if(idi==NULL)
-		return NDO_ERROR;
+	if (!idi) return NDO_ERROR;
 
-	/* free table names */
-	for(x=0;x<NDO2DB_MAX_DBTABLES;x++){
-		if(ndo2db_db_tablenames[x])
-			free(ndo2db_db_tablenames[x]);
-		ndo2db_db_tablenames[x]=NULL;
-	        }
+	/* Free our prefixed table names. */
+	for (x = 0; x < NDO2DB_MAX_DBTABLES; x++) my_free(ndo2db_db_tablenames[x]);
 
-	/* free cached object ids */
+	/* Free our object id cache. */
 	ndo2db_free_cached_object_ids(idi);
 
 	return NDO_OK;
-        }
+}
 
 
-/* connects to the database server */
-int ndo2db_db_connect(ndo2db_idi *idi){
-	int result=NDO_OK;
+/* Connects to the database server. */
+int ndo2db_db_connect(ndo2db_idi *idi) {
+	int result = NDO_OK;
 
-	if(idi==NULL)
-		return NDO_ERROR;
+	if (!idi) return NDO_ERROR;
 
-	/* we're already connected... */
-	if(idi->dbinfo.connected==NDO_TRUE)
-		return NDO_OK;
+	/* Okay if we're already connected... */
+	if (idi->dbinfo.connected) return NDO_OK;
 
 	if (!mysql_real_connect(
 			&idi->dbinfo.mysql_conn,
@@ -218,89 +212,92 @@ int ndo2db_db_connect(ndo2db_idi *idi){
 			CLIENT_REMEMBER_OPTIONS
 	)) {
 		mysql_close(&idi->dbinfo.mysql_conn);
-		syslog(LOG_USER|LOG_INFO,"Error: Could not connect to MySQL database: %s",mysql_error(&idi->dbinfo.mysql_conn));
-		result=NDO_ERROR;
-		idi->disconnect_client=NDO_TRUE;
-	} else {
-		idi->dbinfo.connected=NDO_TRUE;
-		syslog(LOG_USER|LOG_DEBUG,"Successfully connected to MySQL database");
+		syslog(LOG_USER|LOG_INFO, "Error: Could not connect to MySQL database: %s",
+				mysql_error(&idi->dbinfo.mysql_conn));
+		result = NDO_ERROR;
+		idi->disconnect_client = NDO_TRUE;
+	}
+	else {
+		idi->dbinfo.connected = NDO_TRUE;
+		syslog(LOG_USER|LOG_DEBUG, "Successfully connected to MySQL database");
 	}
 
 	return result;
-        }
+}
 
 
-/* disconnects from the database server */
-int ndo2db_db_disconnect(ndo2db_idi *idi){
+/* Disconnects from the database server. */
+int ndo2db_db_disconnect(ndo2db_idi *idi) {
 
-	if(idi==NULL)
-		return NDO_ERROR;
+	if (!idi) return NDO_ERROR;
 
-	/* we're not connected... */
-	if(idi->dbinfo.connected==NDO_FALSE)
-		return NDO_OK;
+	/* Okay if we're not connected... */
+	if (!idi->dbinfo.connected) return NDO_OK;
 
-	/* close the connection to the database server */
 	mysql_close(&idi->dbinfo.mysql_conn);
-	idi->dbinfo.connected=NDO_FALSE;
-	syslog(LOG_USER|LOG_DEBUG,"Successfully disconnected from MySQL database");
+	idi->dbinfo.connected = NDO_FALSE;
+	syslog(LOG_USER|LOG_DEBUG, "Successfully disconnected from MySQL database");
 
 	return NDO_OK;
-        }
+}
 
 
-/* post-connect routines */
-int ndo2db_db_hello(ndo2db_idi *idi){
-	char *buf=NULL;
-	char *ts=NULL;
-	int result=NDO_OK;
-	int have_instance=NDO_FALSE;
+/* Post-connect routines. */
+int ndo2db_db_hello(ndo2db_idi *idi) {
+	char *buf = NULL;
+	char *ts = NULL;
+	int result = NDO_OK;
+	int have_instance = NDO_FALSE;
 	time_t current_time;
 
-	/* make sure we have an instance name */
-	if(idi->instance_name==NULL)
-		idi->instance_name=strdup("default");
+	/* Make sure we have an instance name. */
+	if (!idi->instance_name) idi->instance_name = strdup("default");
 
-	/* get existing instance */
-	if(asprintf(&buf,"SELECT instance_id FROM %s WHERE instance_name='%s'",ndo2db_db_tablenames[NDO2DB_DBTABLE_INSTANCES],idi->instance_name)==-1)
-		buf=NULL;
-	if((result=ndo2db_db_query(idi,buf))==NDO_OK){
-		idi->dbinfo.mysql_result=mysql_store_result(&idi->dbinfo.mysql_conn);
-		if((idi->dbinfo.mysql_row=mysql_fetch_row(idi->dbinfo.mysql_result))!=NULL){
-			ndo2db_convert_string_to_unsignedlong(idi->dbinfo.mysql_row[0],&idi->dbinfo.instance_id);
-			have_instance=NDO_TRUE;
+	/* Try to get existing instance id for our instance name. */
+	if (asprintf(&buf, "SELECT instance_id FROM %s WHERE instance_name='%s'",
+			ndo2db_db_tablenames[NDO2DB_DBTABLE_INSTANCES], idi->instance_name) == -1) {
+		buf = NULL;
+	}
+	if ((result = ndo2db_db_query(idi, buf)) == NDO_OK) {
+		idi->dbinfo.mysql_result = mysql_store_result(&idi->dbinfo.mysql_conn);
+		idi->dbinfo.mysql_row = mysql_fetch_row(idi->dbinfo.mysql_result);
+		if (idi->dbinfo.mysql_row) {
+			ndo2db_convert_string_to_unsignedlong(idi->dbinfo.mysql_row[0], &idi->dbinfo.instance_id);
+			have_instance = NDO_TRUE;
 		}
 		mysql_free_result(idi->dbinfo.mysql_result);
-		idi->dbinfo.mysql_result=NULL;
+		idi->dbinfo.mysql_result = NULL;
 	}
 	free(buf);
 
-	/* insert new instance if necessary */
-	if(have_instance==NDO_FALSE){
-		if(asprintf(&buf,"INSERT INTO %s SET instance_name='%s'",ndo2db_db_tablenames[NDO2DB_DBTABLE_INSTANCES],idi->instance_name)==-1)
-			buf=NULL;
-		if((result=ndo2db_db_query(idi,buf))==NDO_OK){
-			idi->dbinfo.instance_id=mysql_insert_id(&idi->dbinfo.mysql_conn);
+	/* Insert a new instance if needed. */
+	if (!have_instance) {
+		if (asprintf(&buf, "INSERT INTO %s SET instance_name='%s'",
+				ndo2db_db_tablenames[NDO2DB_DBTABLE_INSTANCES], idi->instance_name) == -1) {
+			buf = NULL;
+		}
+		if ((result = ndo2db_db_query(idi, buf)) == NDO_OK) {
+			idi->dbinfo.instance_id = mysql_insert_id(&idi->dbinfo.mysql_conn);
 		}
 		free(buf);
-	        }
+	}
 	
-	ts=ndo2db_db_timet_to_sql(idi,idi->data_start_time);
+	ts = ndo2db_db_timet_to_sql(idi, idi->data_start_time);
 
-	/* record initial connection information */
-	if(asprintf(&buf,"INSERT INTO %s SET instance_id='%lu', connect_time=NOW(), last_checkin_time=NOW(), bytes_processed='0', lines_processed='0', entries_processed='0', agent_name='%s', agent_version='%s', disposition='%s', connect_source='%s', connect_type='%s', data_start_time=%s"
-		    ,ndo2db_db_tablenames[NDO2DB_DBTABLE_CONNINFO]
-		    ,idi->dbinfo.instance_id
-		    ,idi->agent_name
-		    ,idi->agent_version
-		    ,idi->disposition
-		    ,idi->connect_source
-		    ,idi->connect_type
-		    ,ts
-		   )==-1)
-		buf=NULL;
-	if((result=ndo2db_db_query(idi,buf))==NDO_OK){
-		idi->dbinfo.conninfo_id=mysql_insert_id(&idi->dbinfo.mysql_conn);
+	/* Record initial connection information. */
+	if (asprintf(&buf, "INSERT INTO %s SET instance_id='%lu', connect_time=NOW(), last_checkin_time=NOW(), bytes_processed='0', lines_processed='0', entries_processed='0', agent_name='%s', agent_version='%s', disposition='%s', connect_source='%s', connect_type='%s', data_start_time=%s",
+			ndo2db_db_tablenames[NDO2DB_DBTABLE_CONNINFO],
+			idi->dbinfo.instance_id,
+			idi->agent_name,
+			idi->agent_version,
+			idi->disposition,
+			idi->connect_source,
+			idi->connect_type,
+			ts) == -1) {
+		buf = NULL;
+	}
+	if ((result = ndo2db_db_query(idi, buf)) == NDO_OK) {
+		idi->dbinfo.conninfo_id = mysql_insert_id(&idi->dbinfo.mysql_conn);
 	}
 	free(buf);
 	free(ts);
@@ -309,91 +306,97 @@ int ndo2db_db_hello(ndo2db_idi *idi){
 	ndo2db_get_cached_object_ids(idi);
 
 	/* get latest times from various tables... */
-	ndo2db_db_get_latest_data_time(idi,ndo2db_db_tablenames[NDO2DB_DBTABLE_PROGRAMSTATUS],"status_update_time",(unsigned long *)&idi->dbinfo.latest_program_status_time);
-	ndo2db_db_get_latest_data_time(idi,ndo2db_db_tablenames[NDO2DB_DBTABLE_HOSTSTATUS],"status_update_time",(unsigned long *)&idi->dbinfo.latest_host_status_time);
-	ndo2db_db_get_latest_data_time(idi,ndo2db_db_tablenames[NDO2DB_DBTABLE_SERVICESTATUS],"status_update_time",(unsigned long *)&idi->dbinfo.latest_service_status_time);
-	ndo2db_db_get_latest_data_time(idi,ndo2db_db_tablenames[NDO2DB_DBTABLE_CONTACTSTATUS],"status_update_time",(unsigned long *)&idi->dbinfo.latest_contact_status_time);
-	ndo2db_db_get_latest_data_time(idi,ndo2db_db_tablenames[NDO2DB_DBTABLE_TIMEDEVENTQUEUE],"queued_time",(unsigned long *)&idi->dbinfo.latest_queued_event_time);
-	ndo2db_db_get_latest_data_time(idi,ndo2db_db_tablenames[NDO2DB_DBTABLE_COMMENTS],"entry_time",(unsigned long *)&idi->dbinfo.latest_comment_time);
+	ndo2db_db_get_latest_data_time(idi, ndo2db_db_tablenames[NDO2DB_DBTABLE_PROGRAMSTATUS], "status_update_time", (unsigned long *)&idi->dbinfo.latest_program_status_time);
+	ndo2db_db_get_latest_data_time(idi, ndo2db_db_tablenames[NDO2DB_DBTABLE_HOSTSTATUS], "status_update_time", (unsigned long *)&idi->dbinfo.latest_host_status_time);
+	ndo2db_db_get_latest_data_time(idi, ndo2db_db_tablenames[NDO2DB_DBTABLE_SERVICESTATUS], "status_update_time", (unsigned long *)&idi->dbinfo.latest_service_status_time);
+	ndo2db_db_get_latest_data_time(idi, ndo2db_db_tablenames[NDO2DB_DBTABLE_CONTACTSTATUS], "status_update_time", (unsigned long *)&idi->dbinfo.latest_contact_status_time);
+	ndo2db_db_get_latest_data_time(idi, ndo2db_db_tablenames[NDO2DB_DBTABLE_TIMEDEVENTQUEUE], "queued_time", (unsigned long *)&idi->dbinfo.latest_queued_event_time);
+	ndo2db_db_get_latest_data_time(idi, ndo2db_db_tablenames[NDO2DB_DBTABLE_COMMENTS], "entry_time", (unsigned long *)&idi->dbinfo.latest_comment_time);
 
 	/* calculate time of latest realtime data */
-	idi->dbinfo.latest_realtime_data_time=(time_t)0L;
-	if(idi->dbinfo.latest_program_status_time>idi->dbinfo.latest_realtime_data_time)
-		idi->dbinfo.latest_realtime_data_time=idi->dbinfo.latest_program_status_time;
-	if(idi->dbinfo.latest_host_status_time>idi->dbinfo.latest_realtime_data_time)
-		idi->dbinfo.latest_realtime_data_time=idi->dbinfo.latest_host_status_time;
-	if(idi->dbinfo.latest_service_status_time>idi->dbinfo.latest_realtime_data_time)
-		idi->dbinfo.latest_realtime_data_time=idi->dbinfo.latest_service_status_time;
-	if(idi->dbinfo.latest_contact_status_time>idi->dbinfo.latest_realtime_data_time)
-		idi->dbinfo.latest_realtime_data_time=idi->dbinfo.latest_contact_status_time;
-	if(idi->dbinfo.latest_queued_event_time>idi->dbinfo.latest_realtime_data_time)
-		idi->dbinfo.latest_realtime_data_time=idi->dbinfo.latest_queued_event_time;
+	idi->dbinfo.latest_realtime_data_time = 0;
+	if (idi->dbinfo.latest_realtime_data_time < idi->dbinfo.latest_program_status_time) {
+		idi->dbinfo.latest_realtime_data_time = idi->dbinfo.latest_program_status_time;
+	}
+	if (idi->dbinfo.latest_realtime_data_time < idi->dbinfo.latest_host_status_time) {
+		idi->dbinfo.latest_realtime_data_time = idi->dbinfo.latest_host_status_time;
+	}
+	if (idi->dbinfo.latest_realtime_data_time < idi->dbinfo.latest_service_status_time) {
+		idi->dbinfo.latest_realtime_data_time = idi->dbinfo.latest_service_status_time;
+	}
+	if (idi->dbinfo.latest_realtime_data_time < idi->dbinfo.latest_contact_status_time) {
+		idi->dbinfo.latest_realtime_data_time = idi->dbinfo.latest_contact_status_time;
+	}
+	if (idi->dbinfo.latest_realtime_data_time < idi->dbinfo.latest_queued_event_time) {
+		idi->dbinfo.latest_realtime_data_time = idi->dbinfo.latest_queued_event_time;
+	}
 
 	/* get current time */
 	/* make sure latest time stamp isn't in the future - this will cause problems if a backwards system time change occurs */
 	time(&current_time);
-	if(idi->dbinfo.latest_realtime_data_time>current_time)
-		idi->dbinfo.latest_realtime_data_time=current_time;
+	if (idi->dbinfo.latest_realtime_data_time > current_time) {
+		idi->dbinfo.latest_realtime_data_time = current_time;
+	}
 
 	/* set flags to clean event queue, etc. */
-	idi->dbinfo.clean_event_queue=NDO_TRUE;
+	idi->dbinfo.clean_event_queue = NDO_TRUE;
 
 	/* set misc data */
-	idi->dbinfo.last_notification_id=0L;
-	idi->dbinfo.last_contact_notification_id=0L;
+	idi->dbinfo.last_notification_id = 0;
+	idi->dbinfo.last_contact_notification_id = 0;
 
 	return result;
-        }
+}
 
 
 /* pre-disconnect routines */
-int ndo2db_db_goodbye(ndo2db_idi *idi){
-	int result=NDO_OK;
-	char *buf=NULL;
-	char *ts=NULL;
+int ndo2db_db_goodbye(ndo2db_idi *idi) {
+	int result = NDO_OK;
+	char *buf = NULL;
+	char *ts = NULL;
 
-	ts=ndo2db_db_timet_to_sql(idi,idi->data_end_time);
+	ts = ndo2db_db_timet_to_sql(idi, idi->data_end_time);
 
 	/* record last connection information */
-	if(asprintf(&buf,"UPDATE %s SET disconnect_time=NOW(), last_checkin_time=NOW(), data_end_time=%s, bytes_processed='%lu', lines_processed='%lu', entries_processed='%lu' WHERE conninfo_id='%lu'"
-		    ,ndo2db_db_tablenames[NDO2DB_DBTABLE_CONNINFO]
-		    ,ts
-		    ,idi->bytes_processed
-		    ,idi->lines_processed
-		    ,idi->entries_processed
-		    ,idi->dbinfo.conninfo_id
-		   )==-1)
-		buf=NULL;
-	result=ndo2db_db_query(idi,buf);
+	if (asprintf(&buf, "UPDATE %s SET disconnect_time=NOW(), last_checkin_time=NOW(), data_end_time=%s, bytes_processed='%lu', lines_processed='%lu', entries_processed='%lu' WHERE conninfo_id='%lu'",
+			ndo2db_db_tablenames[NDO2DB_DBTABLE_CONNINFO],
+			ts,
+			idi->bytes_processed,
+			idi->lines_processed,
+			idi->entries_processed,
+			idi->dbinfo.conninfo_id) == -1) {
+		buf = NULL;
+	}
+	result = ndo2db_db_query(idi, buf);
 	free(buf);
 
 	free(ts);
 
 	return result;
-        }
+}
 
 
 /* checking routines */
-int ndo2db_db_checkin(ndo2db_idi *idi){
-	int result=NDO_OK;
-	char *buf=NULL;
+int ndo2db_db_checkin(ndo2db_idi *idi) {
+	int result = NDO_OK;
+	char *buf = NULL;
 
 	/* record last connection information */
-	if(asprintf(&buf,"UPDATE %s SET last_checkin_time=NOW(), bytes_processed='%lu', lines_processed='%lu', entries_processed='%lu' WHERE conninfo_id='%lu'"
-		    ,ndo2db_db_tablenames[NDO2DB_DBTABLE_CONNINFO]
-		    ,idi->bytes_processed
-		    ,idi->lines_processed
-		    ,idi->entries_processed
-		    ,idi->dbinfo.conninfo_id
-		   )==-1)
-		buf=NULL;
-	result=ndo2db_db_query(idi,buf);
+	if (asprintf(&buf, "UPDATE %s SET last_checkin_time=NOW(), bytes_processed='%lu', lines_processed='%lu', entries_processed='%lu' WHERE conninfo_id='%lu'",
+			ndo2db_db_tablenames[NDO2DB_DBTABLE_CONNINFO],
+			idi->bytes_processed,
+			idi->lines_processed,
+			idi->entries_processed,
+			idi->dbinfo.conninfo_id) == -1) {
+		buf = NULL;
+	}
+	result = ndo2db_db_query(idi, buf);
 	free(buf);
 
 	time(&ndo2db_db_last_checkin_time);
 
 	return result;
-        }
+}
 
 
 
@@ -402,81 +405,83 @@ int ndo2db_db_checkin(ndo2db_idi *idi){
 /****************************************************************************/
 
 /* escape a string for a SQL statement */
-char *ndo2db_db_escape_string(ndo2db_idi *idi, char *buf){
-	register int x,y,z;
-	char *newbuf=NULL;
+char *ndo2db_db_escape_string(ndo2db_idi *idi, char *buf) {
+	int x;
+	int y;
+	int z;
+	char *newbuf = NULL;
 
-	if(idi==NULL || buf==NULL)
-		return NULL;
+	if (!idi || !buf) return NULL;
 
-	z=strlen(buf);
+	z = strlen(buf);
 
 	/* allocate space for the new string */
-	if((newbuf=(char *)malloc((z*2)+1))==NULL)
-		return NULL;
+	newbuf = malloc((z * 2) + 1);
+	if (newbuf) return NULL;
 
 	/* escape characters */
-	for(x=0,y=0;x<z;x++){
+	for (x = 0, y = 0; x < z; x++) {
 
-		if(buf[x]=='\'' || buf[x]=='\"' || buf[x]=='*' || buf[x]=='\\' || buf[x]=='$' || buf[x]=='?' || buf[x]=='.' || buf[x]=='^' || buf[x]=='+' || buf[x]=='[' || buf[x]==']' || buf[x]=='(' || buf[x]==')')
-			newbuf[y++]='\\';
-
-		newbuf[y++]=buf[x];
-	        }
+		if (buf[x] == '\'' || buf[x] == '\"' || buf[x] == '*' || buf[x] == '\\'
+				|| buf[x] == '$' || buf[x] == '?' || buf[x] == '.' || buf[x] == '^'
+				|| buf[x] == '+' || buf[x] == '[' || buf[x] == ']' || buf[x] == '('
+				|| buf[x] == ')') {
+			newbuf[y++] = '\\';
+		}
+		newbuf[y++] = buf[x];
+	}
 
 	/* terminate escape string */
-	newbuf [y]='\0';
+	newbuf [y] = '\0';
 
 	return newbuf;
-        }
+}
 
 
 /* SQL query conversion of time_t format to date/time format */
-char *ndo2db_db_timet_to_sql(ndo2db_idi *idi, time_t t){
-	char *buf=NULL;
+char *ndo2db_db_timet_to_sql(ndo2db_idi *idi, time_t t) {
+	char *buf = NULL;
 	(void)idi; /* Unused, don't warn. */
 
-	asprintf(&buf,"FROM_UNIXTIME(%lu)",(unsigned long)t);
+	asprintf(&buf, "FROM_UNIXTIME(%lu)", (unsigned long)t);
 
 	return buf;
-        }
+}
 
 
 /* SQL query conversion of date/time format to time_t format */
-char *ndo2db_db_sql_to_timet(ndo2db_idi *idi, const char *field){
-	char *buf=NULL;
+char *ndo2db_db_sql_to_timet(ndo2db_idi *idi, const char *field) {
+	char *buf = NULL;
 	(void)idi; /* Unused, don't warn. */
-	
-	asprintf(&buf,"UNIX_TIMESTAMP(%s)",(field==NULL)?"":field);
+
+	asprintf(&buf, "UNIX_TIMESTAMP(%s)", field ? field : "");
 
 	return buf;
-        }
+}
 
 
 /* executes a SQL statement */
-int ndo2db_db_query(ndo2db_idi *idi, char *buf){
-	int result=NDO_OK;
+int ndo2db_db_query(ndo2db_idi *idi, char *buf) {
+	int result = NDO_OK;
 
-	if(idi==NULL || buf==NULL)
-		return NDO_ERROR;
+	if (!idi || !buf) return NDO_ERROR;
 
-	/* if we're not connected, try and reconnect... */
-	if(idi->dbinfo.connected==NDO_FALSE){
-		if(ndo2db_db_connect(idi)==NDO_ERROR)
-			return NDO_ERROR;
+	/* If we're not connected, try and reconnect... */
+	if (!idi->dbinfo.connected) {
+		if (ndo2db_db_connect(idi) == NDO_ERROR) return NDO_ERROR;
 		ndo2db_db_hello(idi);
-	        }
+	}
 
 #ifdef DEBUG_NDO2DB_QUERIES
-	printf("%s\n\n",buf);
+	printf("%s\n\n", buf);
 #endif
 
-	ndo2db_log_debug_info(NDO2DB_DEBUGL_SQL,0,"%s\n",buf);
+	ndo2db_log_debug_info(NDO2DB_DEBUGL_SQL, 0, "%s\n", buf);
 
-	if (mysql_query(&idi->dbinfo.mysql_conn,buf)) {
-		syslog(LOG_USER|LOG_INFO,"Error: mysql_query() failed for '%s'\n",buf);
-		syslog(LOG_USER|LOG_INFO,"mysql_error: '%s'\n", mysql_error(&idi->dbinfo.mysql_conn));
-		result=NDO_ERROR;
+	if (mysql_query(&idi->dbinfo.mysql_conn, buf)) {
+		syslog(LOG_USER|LOG_INFO, "Error: mysql_query() failed for '%s'\n", buf);
+		syslog(LOG_USER|LOG_INFO, "mysql_error: '%s'\n", mysql_error(&idi->dbinfo.mysql_conn));
+		result = NDO_ERROR;
 	}
 
 	/* handle errors */
@@ -487,91 +492,90 @@ int ndo2db_db_query(ndo2db_idi *idi, char *buf){
 
 
 /* frees memory associated with a query */
-int ndo2db_db_free_query(ndo2db_idi *idi){
+int ndo2db_db_free_query(ndo2db_idi *idi) {
 
-	if(idi==NULL)
-		return NDO_ERROR;
+	if (!idi) return NDO_ERROR;
 
 	return NDO_OK;
-        }
+}
 
 
 /* handles SQL query errors */
 int ndo2db_handle_db_error(ndo2db_idi *idi) {
-	int result=0;
+	int result = 0;
 
-	if(idi==NULL)
-		return NDO_ERROR;
+	if (!idi) return NDO_ERROR;
 
 	/* we're not currently connected... */
-	if(idi->dbinfo.connected==NDO_FALSE)
-		return NDO_OK;
+	if (!idi->dbinfo.connected) return NDO_OK;
 
-	result=mysql_errno(&idi->dbinfo.mysql_conn);
-	if(result==CR_SERVER_LOST || result==CR_SERVER_GONE_ERROR){
-		syslog(LOG_USER|LOG_INFO,"Error: Connection to MySQL database has been lost!\n");
+	result = mysql_errno(&idi->dbinfo.mysql_conn);
+	if (result == CR_SERVER_LOST || result == CR_SERVER_GONE_ERROR) {
+		syslog(LOG_USER|LOG_INFO, "Error: Connection to MySQL database has been lost!\n");
 		ndo2db_db_disconnect(idi);
-		idi->disconnect_client=NDO_TRUE;
+		idi->disconnect_client = NDO_TRUE;
 	}
 
 	return NDO_OK;
-        }
+}
 
 
 /* clears data from a given table (current instance only) */
-int ndo2db_db_clear_table(ndo2db_idi *idi, char *table_name){
-	char *buf=NULL;
-	int result=NDO_OK;
+int ndo2db_db_clear_table(ndo2db_idi *idi, char *table_name) {
+	char *buf = NULL;
+	int result = NDO_OK;
 
-	if(idi==NULL || table_name==NULL)
-		return NDO_ERROR;
+	if (!idi || !table_name) return NDO_ERROR;
 
-	if(asprintf(&buf,"DELETE FROM %s WHERE instance_id='%lu'"
-		    ,table_name
-		    ,idi->dbinfo.instance_id
-		   )==-1)
-		buf=NULL;
-
-	result=ndo2db_db_query(idi,buf);
+	if (asprintf(&buf, "DELETE FROM %s WHERE instance_id='%lu'",
+			table_name,
+			idi->dbinfo.instance_id) == -1) {
+		buf = NULL;
+	}
+	result = ndo2db_db_query(idi, buf);
 	free(buf);
 
 	return result;
-        }
-		
+}
+
 
 /* gets latest data time value from a given table */
-int ndo2db_db_get_latest_data_time(ndo2db_idi *idi, const char *table_name, const char *field_name, unsigned long *t){
-	char *buf=NULL;
-	char *ts[1];
-	int result=NDO_OK;
+int ndo2db_db_get_latest_data_time(
+		ndo2db_idi *idi,
+		const char *table_name,
+		const char *field_name,
+		unsigned long *t
+) {
+	char *buf = NULL;
+	char *ts;
+	int result = NDO_OK;
 
-	if(idi==NULL || table_name==NULL || field_name==NULL || t==NULL)
-		return NDO_ERROR;
+	if (!idi || !table_name || !field_name || !t) return NDO_ERROR;
 
-	*t=(time_t)0L;
-	ts[0]=ndo2db_db_sql_to_timet(idi,field_name);
+	*t = 0;
+	ts = ndo2db_db_sql_to_timet(idi, field_name);
 
-	if(asprintf(&buf,"SELECT %s AS latest_time FROM %s WHERE instance_id='%lu' ORDER BY %s DESC LIMIT 0,1"
-		    ,ts[0]
-		    ,table_name
-		    ,idi->dbinfo.instance_id
-		    ,field_name
-		   )==-1)
-		buf=NULL;
-
-	if((result=ndo2db_db_query(idi,buf))==NDO_OK){
-		idi->dbinfo.mysql_result=mysql_store_result(&idi->dbinfo.mysql_conn);
-		if((idi->dbinfo.mysql_row=mysql_fetch_row(idi->dbinfo.mysql_result))!=NULL){
-			ndo2db_convert_string_to_unsignedlong(idi->dbinfo.mysql_row[0],t);
+	if (asprintf(&buf, "SELECT %s AS latest_time FROM %s WHERE instance_id='%lu' ORDER BY %s DESC LIMIT 0,1",
+			ts,
+			table_name,
+			idi->dbinfo.instance_id,
+			field_name) == -1) {
+		buf = NULL;
+	}
+	if ((result = ndo2db_db_query(idi, buf)) == NDO_OK) {
+		idi->dbinfo.mysql_result = mysql_store_result(&idi->dbinfo.mysql_conn);
+		idi->dbinfo.mysql_row = mysql_fetch_row(idi->dbinfo.mysql_result);
+		if (idi->dbinfo.mysql_row) {
+			ndo2db_convert_string_to_unsignedlong(idi->dbinfo.mysql_row[0], t);
 		}
 		mysql_free_result(idi->dbinfo.mysql_result);
-		idi->dbinfo.mysql_result=NULL;
+		idi->dbinfo.mysql_result = NULL;
 	}
 	free(buf);
-	free(ts[0]);
+	free(ts);
 
 	return result;
-        }
+}
 
 
 /**

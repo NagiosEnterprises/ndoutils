@@ -549,5 +549,3 @@ char *ndo_unescape_buffer(char *buffer){
 
 	return buffer;
         }
-
-
