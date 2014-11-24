@@ -128,22 +128,14 @@ int ndo2db_get_object_id(ndo2db_idi *idi, int object_type, char *n1, char *n2, u
 		   )==-1)
 		buf=NULL;
 	if((result=ndo2db_db_query(idi,buf))==NDO_OK){
-		switch(idi->dbinfo.server_type){
-		case NDO2DB_DBSERVER_MYSQL:
-#ifdef USE_MYSQL
-			idi->dbinfo.mysql_result=mysql_store_result(&idi->dbinfo.mysql_conn);
-			if((idi->dbinfo.mysql_row=mysql_fetch_row(idi->dbinfo.mysql_result))!=NULL){
-				ndo2db_convert_string_to_unsignedlong(idi->dbinfo.mysql_row[0],object_id);
-				found_object=NDO_TRUE;
-			        }
-			mysql_free_result(idi->dbinfo.mysql_result);
-			idi->dbinfo.mysql_result=NULL;
-#endif
-			break;
-		default:
-			break;
-	                }
-	        }
+		idi->dbinfo.mysql_result=mysql_store_result(&idi->dbinfo.mysql_conn);
+		if((idi->dbinfo.mysql_row=mysql_fetch_row(idi->dbinfo.mysql_result))!=NULL){
+			ndo2db_convert_string_to_unsignedlong(idi->dbinfo.mysql_row[0],object_id);
+			found_object=NDO_TRUE;
+		}
+		mysql_free_result(idi->dbinfo.mysql_result);
+		idi->dbinfo.mysql_result=NULL;
+	}
 	free(buf);
 
 	/* free memory */
@@ -211,16 +203,8 @@ int ndo2db_get_object_id_with_insert(ndo2db_idi *idi, int object_type, char *n1,
 		   )==-1)
 		buf=NULL;
 	if((result=ndo2db_db_query(idi,buf))==NDO_OK){
-		switch(idi->dbinfo.server_type){
-		case NDO2DB_DBSERVER_MYSQL:
-#ifdef USE_MYSQL
-			*object_id=mysql_insert_id(&idi->dbinfo.mysql_conn);
-#endif
-			break;
-		default:
-			break;
-	                }
-	        }
+		*object_id=mysql_insert_id(&idi->dbinfo.mysql_conn);
+	}
 	free(buf);
 
 	/* cache object id for later lookups */
@@ -252,32 +236,24 @@ int ndo2db_get_cached_object_ids(ndo2db_idi *idi){
 		buf=NULL;
 
 	if((result=ndo2db_db_query(idi,buf))==NDO_OK){
-		switch(idi->dbinfo.server_type){
-		case NDO2DB_DBSERVER_MYSQL:
-#ifdef USE_MYSQL
-			idi->dbinfo.mysql_result=mysql_store_result(&idi->dbinfo.mysql_conn);
-			if(NULL != idi->dbinfo.mysql_result) {
-				while((idi->dbinfo.mysql_row=mysql_fetch_row(idi->dbinfo.mysql_result))!=NULL){
+		idi->dbinfo.mysql_result=mysql_store_result(&idi->dbinfo.mysql_conn);
+		if(NULL != idi->dbinfo.mysql_result) {
+			while((idi->dbinfo.mysql_row=mysql_fetch_row(idi->dbinfo.mysql_result))!=NULL){
 
-					ndo2db_convert_string_to_unsignedlong(idi->dbinfo.mysql_row[0],&object_id);
-					ndo2db_convert_string_to_int(idi->dbinfo.mysql_row[1],&objecttype_id);
+				ndo2db_convert_string_to_unsignedlong(idi->dbinfo.mysql_row[0],&object_id);
+				ndo2db_convert_string_to_int(idi->dbinfo.mysql_row[1],&objecttype_id);
 
-					/* add object to cached list */
-					ndo2db_add_cached_object_id(idi,objecttype_id,idi->dbinfo.mysql_row[2],idi->dbinfo.mysql_row[3],object_id);
-					}
-				mysql_free_result(idi->dbinfo.mysql_result);
+				/* add object to cached list */
+				ndo2db_add_cached_object_id(idi,objecttype_id,idi->dbinfo.mysql_row[2],idi->dbinfo.mysql_row[3],object_id);
 				}
-			else if(mysql_errno(&idi->dbinfo.mysql_conn) != 0) {
-				syslog(LOG_USER|LOG_INFO,
-						"Error: mysql_store_result() failed for '%s'\n", buf);
-				}
-			idi->dbinfo.mysql_result=NULL;
-#endif
-			break;
-		default:
-			break;
-	                }
-	        }
+			mysql_free_result(idi->dbinfo.mysql_result);
+			}
+		else if(mysql_errno(&idi->dbinfo.mysql_conn) != 0) {
+			syslog(LOG_USER|LOG_INFO,
+					"Error: mysql_store_result() failed for '%s'\n", buf);
+		}
+		idi->dbinfo.mysql_result=NULL;
+	}
 	free(buf);
 
 	return result;
@@ -568,20 +544,12 @@ int ndo2db_handle_logentry(ndo2db_idi *idi){
 		   )==-1)
 		buf=NULL;
 	if((result=ndo2db_db_query(idi,buf))==NDO_OK){
-		switch(idi->dbinfo.server_type){
-		case NDO2DB_DBSERVER_MYSQL:
-#ifdef USE_MYSQL
-			idi->dbinfo.mysql_result=mysql_store_result(&idi->dbinfo.mysql_conn);
-			if((idi->dbinfo.mysql_row=mysql_fetch_row(idi->dbinfo.mysql_result))!=NULL)
-				duplicate_record=NDO_TRUE;
-			mysql_free_result(idi->dbinfo.mysql_result);
-			idi->dbinfo.mysql_result=NULL;
-#endif
-			break;
-		default:
-			break;
-	                }
-	        }
+		idi->dbinfo.mysql_result=mysql_store_result(&idi->dbinfo.mysql_conn);
+		if((idi->dbinfo.mysql_row=mysql_fetch_row(idi->dbinfo.mysql_result))!=NULL)
+			duplicate_record=NDO_TRUE;
+		mysql_free_result(idi->dbinfo.mysql_result);
+		idi->dbinfo.mysql_result=NULL;
+	}
 	free(buf);
 
 	/*if(duplicate_record==NDO_TRUE && idi->last_logentry_time!=etime){*/
@@ -1263,16 +1231,8 @@ int ndo2db_handle_notificationdata(ndo2db_idi *idi){
 	if(type==NEBTYPE_NOTIFICATION_START)
 		idi->dbinfo.last_notification_id=0L;
 	if(result==NDO_OK && type==NEBTYPE_NOTIFICATION_START){
-		switch(idi->dbinfo.server_type){
-		case NDO2DB_DBSERVER_MYSQL:
-#ifdef USE_MYSQL
-			idi->dbinfo.last_notification_id=mysql_insert_id(&idi->dbinfo.mysql_conn);
-#endif
-			break;
-		default:
-			break;
-	                }
-	        }
+		idi->dbinfo.last_notification_id=mysql_insert_id(&idi->dbinfo.mysql_conn);
+	}
 	free(buf);
 	free(buf1);
 
@@ -1339,16 +1299,8 @@ int ndo2db_handle_contactnotificationdata(ndo2db_idi *idi){
 	if(type==NEBTYPE_CONTACTNOTIFICATION_START)
 		idi->dbinfo.last_contact_notification_id=0L;
 	if(result==NDO_OK && type==NEBTYPE_CONTACTNOTIFICATION_START){
-		switch(idi->dbinfo.server_type){
-		case NDO2DB_DBSERVER_MYSQL:
-#ifdef USE_MYSQL
-			idi->dbinfo.last_contact_notification_id=mysql_insert_id(&idi->dbinfo.mysql_conn);
-#endif
-			break;
-		default:
-			break;
-	                }
-	        }
+		idi->dbinfo.last_contact_notification_id=mysql_insert_id(&idi->dbinfo.mysql_conn);
+	}
 	free(buf);
 	free(buf1);
 
@@ -3020,16 +2972,8 @@ int ndo2db_handle_configfilevariables(ndo2db_idi *idi, int configfile_type){
 		buf1=NULL;
 
 	if((result=ndo2db_db_query(idi,buf1))==NDO_OK){
-		switch(idi->dbinfo.server_type){
-		case NDO2DB_DBSERVER_MYSQL:
-#ifdef USE_MYSQL
-			configfile_id=mysql_insert_id(&idi->dbinfo.mysql_conn);
-#endif
-			break;
-		default:
-			break;
-	                }
-	        }
+		configfile_id=mysql_insert_id(&idi->dbinfo.mysql_conn);
+	}
 	free(buf);
 	free(buf1);
 
@@ -3406,16 +3350,8 @@ int ndo2db_handle_hostdefinition(ndo2db_idi *idi){
 		buf1=NULL;
 
 	if((result=ndo2db_db_query(idi,buf1))==NDO_OK){
-		switch(idi->dbinfo.server_type){
-		case NDO2DB_DBSERVER_MYSQL:
-#ifdef USE_MYSQL
-			host_id=mysql_insert_id(&idi->dbinfo.mysql_conn);
-#endif
-			break;
-		default:
-			break;
-	                }
-	        }
+		host_id=mysql_insert_id(&idi->dbinfo.mysql_conn);
+	}
 	free(buf);
 	free(buf1);
 
@@ -3564,16 +3500,8 @@ int ndo2db_handle_hostgroupdefinition(ndo2db_idi *idi){
 		buf1=NULL;
 
 	if((result=ndo2db_db_query(idi,buf1))==NDO_OK){
-		switch(idi->dbinfo.server_type){
-		case NDO2DB_DBSERVER_MYSQL:
-#ifdef USE_MYSQL
-			group_id=mysql_insert_id(&idi->dbinfo.mysql_conn);
-#endif
-			break;
-		default:
-			break;
-	                }
-	        }
+		group_id=mysql_insert_id(&idi->dbinfo.mysql_conn);
+	}
 	free(buf);
 	free(buf1);
 
@@ -3822,16 +3750,8 @@ int ndo2db_handle_servicedefinition(ndo2db_idi *idi){
 		buf1=NULL;
 
 	if((result=ndo2db_db_query(idi,buf1))==NDO_OK){
-		switch(idi->dbinfo.server_type){
-		case NDO2DB_DBSERVER_MYSQL:
-#ifdef USE_MYSQL
-			service_id=mysql_insert_id(&idi->dbinfo.mysql_conn);
-#endif
-			break;
-		default:
-			break;
-	                }
-	        }
+		service_id=mysql_insert_id(&idi->dbinfo.mysql_conn);
+	}
 	free(buf);
 	free(buf1);
 
@@ -3986,16 +3906,8 @@ int ndo2db_handle_servicegroupdefinition(ndo2db_idi *idi){
 		buf1=NULL;
 
 	if((result=ndo2db_db_query(idi,buf1))==NDO_OK){
-		switch(idi->dbinfo.server_type){
-		case NDO2DB_DBSERVER_MYSQL:
-#ifdef USE_MYSQL
-			group_id=mysql_insert_id(&idi->dbinfo.mysql_conn);
-#endif
-			break;
-		default:
-			break;
-	                }
-	        }
+		group_id=mysql_insert_id(&idi->dbinfo.mysql_conn);
+	}
 	free(buf);
 	free(buf1);
 
@@ -4241,16 +4153,8 @@ int ndo2db_handle_hostescalationdefinition(ndo2db_idi *idi){
 		buf1=NULL;
 
 	if((result=ndo2db_db_query(idi,buf1))==NDO_OK){
-		switch(idi->dbinfo.server_type){
-		case NDO2DB_DBSERVER_MYSQL:
-#ifdef USE_MYSQL
-			escalation_id=mysql_insert_id(&idi->dbinfo.mysql_conn);
-#endif
-			break;
-		default:
-			break;
-	                }
-	        }
+		escalation_id=mysql_insert_id(&idi->dbinfo.mysql_conn);
+	}
 	free(buf);
 	free(buf1);
 
@@ -4385,16 +4289,8 @@ int ndo2db_handle_serviceescalationdefinition(ndo2db_idi *idi){
 		buf1=NULL;
 
 	if((result=ndo2db_db_query(idi,buf1))==NDO_OK){
-		switch(idi->dbinfo.server_type){
-		case NDO2DB_DBSERVER_MYSQL:
-#ifdef USE_MYSQL
-			escalation_id=mysql_insert_id(&idi->dbinfo.mysql_conn);
-#endif
-			break;
-		default:
-			break;
-	                }
-	        }
+		escalation_id=mysql_insert_id(&idi->dbinfo.mysql_conn);
+	}
 	free(buf);
 	free(buf1);
 
@@ -4568,16 +4464,8 @@ int ndo2db_handle_timeperiodefinition(ndo2db_idi *idi){
 		buf1=NULL;
 
 	if((result=ndo2db_db_query(idi,buf1))==NDO_OK){
-		switch(idi->dbinfo.server_type){
-		case NDO2DB_DBSERVER_MYSQL:
-#ifdef USE_MYSQL
-			timeperiod_id=mysql_insert_id(&idi->dbinfo.mysql_conn);
-#endif
-			break;
-		default:
-			break;
-	                }
-	        }
+		timeperiod_id=mysql_insert_id(&idi->dbinfo.mysql_conn);
+	}
 	free(buf);
 	free(buf1);
 
@@ -4747,16 +4635,8 @@ int ndo2db_handle_contactdefinition(ndo2db_idi *idi){
 		buf1=NULL;
 
 	if((result=ndo2db_db_query(idi,buf1))==NDO_OK){
-		switch(idi->dbinfo.server_type){
-		case NDO2DB_DBSERVER_MYSQL:
-#ifdef USE_MYSQL
-			contact_id=mysql_insert_id(&idi->dbinfo.mysql_conn);
-#endif
-			break;
-		default:
-			break;
-	                }
-	        }
+		contact_id=mysql_insert_id(&idi->dbinfo.mysql_conn);
+	}
 	free(buf);
 	free(buf1);
 
@@ -4938,16 +4818,8 @@ int ndo2db_handle_contactgroupdefinition(ndo2db_idi *idi){
 		buf1=NULL;
 
 	if((result=ndo2db_db_query(idi,buf1))==NDO_OK){
-		switch(idi->dbinfo.server_type){
-		case NDO2DB_DBSERVER_MYSQL:
-#ifdef USE_MYSQL
-			group_id=mysql_insert_id(&idi->dbinfo.mysql_conn);
-#endif
-			break;
-		default:
-			break;
-	                }
-	        }
+		group_id=mysql_insert_id(&idi->dbinfo.mysql_conn);
+	}
 	free(buf);
 	free(buf1);
 

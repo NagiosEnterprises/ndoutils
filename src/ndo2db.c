@@ -205,13 +205,6 @@ int main(int argc, char **argv) {
 		db_supported = NDO_TRUE;
 	}
 #endif
-#ifdef USE_PGSQL
-	/* PostgreSQL support is not yet done... */
-	/*
-	 *	if (ndo2db_db_settings.server_type == NDO2DB_DBSERVER_PGSQL)
-	 *		db_supported = NDO_TRUE;
-	 */
-#endif
 
 	if (!db_supported) {
 		printf("Support for the specified database server is either not yet supported, or was not found on your system.\n");
@@ -433,9 +426,6 @@ int ndo2db_process_config_var(char *arg) {
 	if (strcmp(var, "db_servertype") == 0) {
 		if (strcmp(val, "mysql") == 0) {
 			ndo2db_db_settings.server_type = NDO2DB_DBSERVER_MYSQL;
-		}
-		else if (strcmp(val, "pgsql") == 0) {
-			ndo2db_db_settings.server_type = NDO2DB_DBSERVER_PGSQL;
 		}
 		else {
 			return NDO_ERROR;
