@@ -1053,10 +1053,7 @@ int ndo2db_handle_client_connection(int sd) {
 		msg.text[result] = '\0';
 
 #ifdef DEBUG_NDO2DB2
-		printf("BYTESREAD: %d\n", result);
-		printf("RAWBUF: %s\n", msg.text);
-		printf("  PROCESSED BYTES: %lu, LINES: %lu\n",
-					 result, idi->bytes_processed, idi->lines_processed);
+		printf("BYTESREAD: %d, RAWBUF: %s\n", result, msg.text);
 #endif
 
 		/* Send the new data to the DB handler. We send result = strlen(msg.text)
@@ -1071,10 +1068,6 @@ int ndo2db_handle_client_connection(int sd) {
 			break;
 		}
 	}
-
-#ifdef DEBUG_NDO2DB2
-	printf("BYTES: %lu, LINES: %lu\n", idi.bytes_processed, idi.lines_processed);
-#endif
 
 	/* disconnect from database */
 	ndo2db_db_disconnect(&idi);
@@ -1193,6 +1186,10 @@ void ndo2db_async_client_handle() {
 	}
 
 	if (old_buf) free(old_buf);
+
+#ifdef DEBUG_NDO2DB2
+	printf("IDI processed bytes: %lu, lines: %lu\n", idi.bytes_processed, idi.lines_processed);
+#endif
 
 	/* disconnect from database */
 	ndo2db_db_disconnect(&idi);
