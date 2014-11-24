@@ -60,10 +60,6 @@ typedef struct ndo2db_dbconninfo_struct{
 	MYSQL_RES *mysql_result;
 	MYSQL_ROW mysql_row;
 #endif
-#ifdef USE_PGSQL
-	PGconn *pgsql_conn;
-	PGresult *pgsql_result;
-#endif
 	unsigned long instance_id;
 	unsigned long conninfo_id;
 	time_t latest_program_status_time;
@@ -122,7 +118,6 @@ typedef struct ndo2db_input_data_info_struct{
 /*************** DB server types ***************/
 #define NDO2DB_DBSERVER_NONE                            0
 #define NDO2DB_DBSERVER_MYSQL                           1
-#define NDO2DB_DBSERVER_PGSQL                           2
 
 
 /*************** misc definitions **************/

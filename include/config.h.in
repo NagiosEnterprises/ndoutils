@@ -261,13 +261,6 @@ typedef int int32_t;
 #include <errmsg.h>
 #endif
 
-#undef USE_PGSQL
-#undef HAVE_PGSQL
-#ifdef USE_PGSQL
-#define HAVE_PGSQL 1
-#include <libpq-fe.h>
-#endif
-
 #undef HAVE_SYSTEMD
 
 #undef HAVE_SSL

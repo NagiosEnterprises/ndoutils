@@ -129,7 +129,7 @@
     <title>Initializing the database</title>
 
     <para>Currently, the NDOUtils addon only supports MySQL as a database
-    backed. Support for PostgresQL will likely be added in the future.</para>
+    backed.</para>
 
     <note>
       <para>If you aren't already using it, I would suggest installing
