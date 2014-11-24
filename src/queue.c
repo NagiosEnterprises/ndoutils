@@ -61,14 +61,20 @@ int ndo2db_queue_free(void) {
 static long get_msgmni(void) {
 	FILE *fp;
 	char buf[1024];
-	char *endptr;
+	char *s = NULL;
+	char *endptr = NULL;
+	long l = 0;
 
-	if (!(fp = fopen("/proc/sys/kernel/msgmni", "r")))
-		return -1;
+	fp = fopen("/proc/sys/kernel/msgmni", "r");
+	if (!fp) return -1;
 
-	fgets(buf, sizeof(buf), fp);
+	s = fgets(buf, sizeof(buf), fp);
 	fclose(fp);
-	return strtol(buf, &endptr, 10);
+	if (!s) return -1;
+
+	errno = 0;
+	l = strtol(buf, &endptr, 10);
+	return (errno == 0 && endptr && endptr != buf) ? l : -1;
 }
 
 static void log_retry(void) {

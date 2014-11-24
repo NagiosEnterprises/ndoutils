@@ -1144,8 +1144,6 @@ void ndo2db_async_client_handle() {
 	ndo2db_db_init(&idi);
 	ndo2db_db_connect(&idi);
 
-// 	get_queue_id(getppid());
-
 	char *old_buf = NULL;
 
 	for (;;) {

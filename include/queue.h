@@ -28,16 +28,14 @@
 #define NDO_MSG_TYPE 1
 
 struct ndo2db_queue_msg {
-    long type;
-    char text[NDO_MAX_MSG_SIZE];
+	long type;
+	char text[NDO_MAX_MSG_SIZE];
 };
 
 /* initialize new queue or open existing */
-int get_queue_id(int id);
 int ndo2db_queue_init(int id);
 
 /* Releases the queue's system resources. */
-int del_queue(void);
 int ndo2db_queue_free(void);
 
 /* Inserts a message into the queue. */
