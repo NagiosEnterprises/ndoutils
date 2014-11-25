@@ -417,7 +417,7 @@ char *ndo2db_db_escape_string(ndo2db_idi *idi, char *buf) {
 
 	/* allocate space for the new string */
 	newbuf = malloc((z * 2) + 1);
-	if (newbuf) return NULL;
+	if (!newbuf) return NULL;
 
 	/* escape characters */
 	for (x = 0, y = 0; x < z; x++) {
