@@ -504,9 +504,8 @@ int ndo2db_set_object_as_active(ndo2db_idi *idi, int object_type, unsigned long 
 int ndo2db_handle_logentry(ndo2db_idi *idi) {
 	char *ptr=NULL;
 	char *buf=NULL;
-	char *es[1];
-	time_t etime=0L;
-	char *ts[1];
+	char *es = NULL;
+	unsigned long etime = 0;
 	unsigned long type=0L;
 	int result=NDO_OK;
 	int duplicate_record=NDO_FALSE;
@@ -519,18 +518,17 @@ int ndo2db_handle_logentry(ndo2db_idi *idi) {
 	/* break log entry in pieces */
 	if ((ptr=strtok(idi->buffered_input[NDO_DATA_LOGENTRY],"]"))==NULL)
 		return NDO_ERROR;
-	if ((ndo2db_convert_string_to_unsignedlong(ptr+1,(unsigned long *)&etime))==NDO_ERROR)
+	if (ndo2db_convert_string_to_unsignedlong(ptr+1, &etime) == NDO_ERROR)
 		return NDO_ERROR;
-	ts[0]=ndo2db_db_timet_to_sql(idi,etime);
 	if ((ptr=strtok(NULL,"\x0"))==NULL)
 		return NDO_ERROR;
-	es[0]=ndo2db_db_escape_string(idi,(ptr+1));
+	es = ndo2db_db_escape_string(idi, ptr+1);
 
 	/* strip newline chars from end */
-	len=strlen(es[0]);
+	len = strlen(es);
 	for (x=len-1;x>=0;x--) {
-		if (es[0][x]=='\n')
-			es[0][x]='\x0';
+		if (es[x]=='\n')
+			es[x]='\x0';
 		else
 			break;
 	}
@@ -539,13 +537,14 @@ int ndo2db_handle_logentry(ndo2db_idi *idi) {
 	type=0;
 
 	/* make sure we aren't importing a duplicate log entry... */
-	if (asprintf(&buf,"SELECT * FROM %s WHERE instance_id='%lu' AND logentry_time=%s AND logentry_data='%s'"
-		    ,ndo2db_db_tablenames[NDO2DB_DBTABLE_LOGENTRIES]
-		    ,idi->dbinfo.instance_id
-		    ,ts[0]
-		    ,es[0]
-		   )==-1)
-		buf=NULL;
+	if (asprintf(&buf,"SELECT * FROM %s WHERE instance_id=%lu AND "
+					"logentry_time="NDO2DB_PRI_TIME_AS_DATE" AND logentry_data='%s'",
+			ndo2db_db_tablenames[NDO2DB_DBTABLE_LOGENTRIES],
+			idi->dbinfo.instance_id,
+			etime,
+			(es ? es : "")) == -1) {
+		buf = NULL;
+	}
 	if ((result=ndo2db_db_query(idi,buf))==NDO_OK) {
 		idi->dbinfo.mysql_result=mysql_store_result(&idi->dbinfo.mysql_conn);
 		if ((idi->dbinfo.mysql_row=mysql_fetch_row(idi->dbinfo.mysql_result))!=NULL)
@@ -556,24 +555,29 @@ int ndo2db_handle_logentry(ndo2db_idi *idi) {
 	free(buf);
 
 	/*if (duplicate_record==NDO_TRUE && idi->last_logentry_time!=etime) {*/
-	/*if (duplicate_record==NDO_TRUE && strcmp((es[0]==NULL)?"":es[0],idi->dbinfo.last_logentry_data)) {*/
+	/*if (duplicate_record==NDO_TRUE && strcmp((es==NULL)?"":es,idi->dbinfo.last_logentry_data)) {*/
 	if (duplicate_record==NDO_TRUE) {
 #ifdef NDO2DB_DEBUG
 		printf("IGNORING DUPLICATE LOG RECORD!\n");
 #endif
+		if (es) free(es);
 		return NDO_OK;
 	}
 
 	/* save entry to db */
-	if (asprintf(&buf,"INSERT INTO %s SET instance_id='%lu', logentry_time=%s, entry_time=%s, entry_time_usec='0', logentry_type='%lu', logentry_data='%s', realtime_data='0', inferred_data_extracted='0'"
-		    ,ndo2db_db_tablenames[NDO2DB_DBTABLE_LOGENTRIES]
-		    ,idi->dbinfo.instance_id
-		    ,ts[0]
-		    ,ts[0]
-		    ,type
-		    ,(es[0]==NULL)?"":es[0]
-		   )==-1)
-		buf=NULL;
+	if (asprintf(&buf,"INSERT INTO %s SET instance_id=%lu, "
+					"logentry_time="NDO2DB_PRI_TIME_AS_DATE", "
+					"entry_time="NDO2DB_PRI_TIME_AS_DATE", "
+					"entry_time_usec=0, logentry_type=%lu, logentry_data='%s', "
+					"realtime_data=0, inferred_data_extracted=0",
+			ndo2db_db_tablenames[NDO2DB_DBTABLE_LOGENTRIES],
+			idi->dbinfo.instance_id,
+			etime,
+			etime,
+			type,
+			(es ? es : "")) == -1) {
+		buf = NULL;
+	}
 	result=ndo2db_db_query(idi,buf);
 	free(buf);
 
@@ -581,16 +585,10 @@ int ndo2db_handle_logentry(ndo2db_idi *idi) {
 	idi->dbinfo.last_logentry_time=etime;
 
 	/* save last log entry (for detecting duplicates) */
-	if (idi->dbinfo.last_logentry_data)
-		free(idi->dbinfo.last_logentry_data);
-	idi->dbinfo.last_logentry_data=strdup((es[0]==NULL)?"":es[0]);
+	if (idi->dbinfo.last_logentry_data) free(idi->dbinfo.last_logentry_data);
+	idi->dbinfo.last_logentry_data = es ? es : strdup("");
 
-        /* free memory */
-	for (x = 0; x < (int)NAGIOS_SIZEOF_ARRAY(ts); x++) free(ts[x]);
-	for (x = 0; x < (int)NAGIOS_SIZEOF_ARRAY(es); x++) free(es[x]);
-
-	/* TODO - further processing of log entry to expand archived data... */
-
+	/* @todo: - further processing of log entry to expand archived data... */
 
 	return result;
 }
