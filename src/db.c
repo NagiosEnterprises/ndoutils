@@ -245,7 +245,6 @@ int ndo2db_db_disconnect(ndo2db_idi *idi) {
 /* Post-connect routines. */
 int ndo2db_db_hello(ndo2db_idi *idi) {
 	char *buf = NULL;
-	char *ts = NULL;
 	int result = NDO_OK;
 	int have_instance = NDO_FALSE;
 	time_t current_time;
@@ -281,11 +280,13 @@ int ndo2db_db_hello(ndo2db_idi *idi) {
 		}
 		free(buf);
 	}
-	
-	ts = ndo2db_db_timet_to_sql(idi, idi->data_start_time);
 
 	/* Record initial connection information. */
-	if (asprintf(&buf, "INSERT INTO %s SET instance_id='%lu', connect_time=NOW(), last_checkin_time=NOW(), bytes_processed='0', lines_processed='0', entries_processed='0', agent_name='%s', agent_version='%s', disposition='%s', connect_source='%s', connect_type='%s', data_start_time=%s",
+	if (asprintf(&buf, "INSERT INTO %s SET instance_id=%lu, connect_time=NOW(), "
+					"last_checkin_time=NOW(), bytes_processed=0, lines_processed=0, "
+					"entries_processed=0, agent_name='%s', agent_version='%s', "
+					"disposition='%s', connect_source='%s', connect_type='%s', "
+					"data_start_time="NDO2DB_PRI_TIME_AS_DATE,
 			ndo2db_db_tablenames[NDO2DB_DBTABLE_CONNINFO],
 			idi->dbinfo.instance_id,
 			idi->agent_name,
@@ -293,14 +294,13 @@ int ndo2db_db_hello(ndo2db_idi *idi) {
 			idi->disposition,
 			idi->connect_source,
 			idi->connect_type,
-			ts) == -1) {
+			idi->data_start_time) == -1) {
 		buf = NULL;
 	}
 	if ((result = ndo2db_db_query(idi, buf)) == NDO_OK) {
 		idi->dbinfo.conninfo_id = mysql_insert_id(&idi->dbinfo.mysql_conn);
 	}
 	free(buf);
-	free(ts);
 
 	/* get cached object ids... */
 	ndo2db_get_cached_object_ids(idi);
@@ -353,14 +353,14 @@ int ndo2db_db_hello(ndo2db_idi *idi) {
 int ndo2db_db_goodbye(ndo2db_idi *idi) {
 	int result = NDO_OK;
 	char *buf = NULL;
-	char *ts = NULL;
-
-	ts = ndo2db_db_timet_to_sql(idi, idi->data_end_time);
 
 	/* record last connection information */
-	if (asprintf(&buf, "UPDATE %s SET disconnect_time=NOW(), last_checkin_time=NOW(), data_end_time=%s, bytes_processed='%lu', lines_processed='%lu', entries_processed='%lu' WHERE conninfo_id='%lu'",
+	if (asprintf(&buf, "UPDATE %s SET disconnect_time=NOW(), "
+					"last_checkin_time=NOW(), data_end_time="NDO2DB_PRI_TIME_AS_DATE", "
+					"bytes_processed=%lu, lines_processed=%lu, entries_processed=%lu "
+					"WHERE conninfo_id=%lu",
 			ndo2db_db_tablenames[NDO2DB_DBTABLE_CONNINFO],
-			ts,
+			idi->data_end_time,
 			idi->bytes_processed,
 			idi->lines_processed,
 			idi->entries_processed,
@@ -369,8 +369,6 @@ int ndo2db_db_goodbye(ndo2db_idi *idi) {
 	}
 	result = ndo2db_db_query(idi, buf);
 	free(buf);
-
-	free(ts);
 
 	return result;
 }
@@ -444,17 +442,6 @@ char *ndo2db_db_timet_to_sql(ndo2db_idi *idi, time_t t) {
 	(void)idi; /* Unused, don't warn. */
 
 	asprintf(&buf, "FROM_UNIXTIME(%lu)", (unsigned long)t);
-
-	return buf;
-}
-
-
-/* SQL query conversion of date/time format to time_t format */
-char *ndo2db_db_sql_to_timet(ndo2db_idi *idi, const char *field) {
-	char *buf = NULL;
-	(void)idi; /* Unused, don't warn. */
-
-	asprintf(&buf, "UNIX_TIMESTAMP(%s)", field ? field : "");
 
 	return buf;
 }
@@ -547,16 +534,15 @@ int ndo2db_db_get_latest_data_time(
 		unsigned long *t
 ) {
 	char *buf = NULL;
-	char *ts;
 	int result = NDO_OK;
 
 	if (!idi || !table_name || !field_name || !t) return NDO_ERROR;
 
 	*t = 0;
-	ts = ndo2db_db_sql_to_timet(idi, field_name);
 
-	if (asprintf(&buf, "SELECT %s AS latest_time FROM %s WHERE instance_id='%lu' ORDER BY %s DESC LIMIT 0,1",
-			ts,
+	if (asprintf(&buf, "SELECT "NDO2DB_PRI_DATE_AS_TIME" AS latest_time FROM %s WHERE instance_id=%lu "
+					"ORDER BY %s DESC LIMIT 0,1",
+			field_name,
 			table_name,
 			idi->dbinfo.instance_id,
 			field_name) == -1) {
@@ -572,7 +558,6 @@ int ndo2db_db_get_latest_data_time(
 		idi->dbinfo.mysql_result = NULL;
 	}
 	free(buf);
-	free(ts);
 
 	return result;
 }
@@ -593,22 +578,17 @@ static int ndo2db_db_trim_data_table(
 	time_t t
 ) {
 	char *buf;
-	char *ts;
 	int result = NDO_ERROR;
 
 	if (!idi || !table_name || !field_name) return NDO_ERROR;
 
-	ts = ndo2db_db_timet_to_sql(idi, t);
-	if (!ts) return NDO_ERROR;
-
-	if (asprintf(&buf, "DELETE FROM %s WHERE instance_id='%lu' AND %s<%s",
-			table_name, idi->dbinfo.instance_id, field_name, ts) != -1
+	if (asprintf(&buf, "DELETE FROM %s WHERE instance_id=%lu "
+					"AND %s<"NDO2DB_PRI_TIME_AS_DATE,
+			table_name, idi->dbinfo.instance_id, field_name, (unsigned long)t) != -1
 	) {
 		result = ndo2db_db_query(idi, buf);
 		free(buf);
 	}
-
-	free(ts);
 
 	return result;
 }

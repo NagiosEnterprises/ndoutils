@@ -142,6 +142,13 @@ typedef struct ndo2db_dbconfig {
 
 
 
+/** Format string for printing the SQL to use time_t as datetime.
+ * (SQL query conversion of time_t format to date/time format.) */
+#define NDO2DB_PRI_TIME_AS_DATE "FROM_UNIXTIME(%lu)"
+/** Format string for printing the SQL to use a datetime column as timestamp.
+ * (SQL query conversion of date/time format to time_t format.) */
+#define NDO2DB_PRI_DATE_AS_TIME "UNIX_TIMESTAMP(%s)"
+
 int ndo2db_db_init(ndo2db_idi *);
 int ndo2db_db_deinit(ndo2db_idi *);
 
@@ -154,7 +161,6 @@ int ndo2db_db_checkin(ndo2db_idi *);
 
 char *ndo2db_db_escape_string(ndo2db_idi *, char *);
 char *ndo2db_db_timet_to_sql(ndo2db_idi *, time_t);
-char *ndo2db_db_sql_to_timet(ndo2db_idi *, const char *);
 
 int ndo2db_db_query(ndo2db_idi *, char *);
 int ndo2db_db_free_query(ndo2db_idi *);
