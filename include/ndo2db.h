@@ -74,10 +74,6 @@ typedef struct ndo2db_dbconninfo {
 	MYSQL_RES *mysql_result;
 	MYSQL_ROW mysql_row;
 #endif
-#ifdef USE_PGSQL
-	PGconn *pgsql_conn;
-	PGresult *pgsql_result;
-#endif
 	unsigned long instance_id;
 	unsigned long conninfo_id;
 	time_t latest_program_status_time;
@@ -137,7 +133,6 @@ typedef struct ndo2db_input_data_info_struct{
 /*************** DB server types ***************/
 #define NDO2DB_DBSERVER_NONE                            0
 #define NDO2DB_DBSERVER_MYSQL                           1
-#define NDO2DB_DBSERVER_PGSQL                           2
 
 
 /*************** misc definitions **************/
@@ -235,7 +230,7 @@ typedef struct ndo2db_input_data_info_struct{
 int ndo2db_process_arguments(int,char **);
 
 int ndo2db_process_config_var(char *);
-int ndo2db_process_config_file(char *);
+int ndo2db_process_config_file(const char *filename);
 
 int ndo2db_initialize_variables(void);
 
@@ -254,7 +249,6 @@ int ndo2db_free_connection_memory(ndo2db_idi *);
 int ndo2db_wait_for_connections(void);
 int ndo2db_handle_client_connection(int);
 int ndo2db_idi_init(ndo2db_idi *);
-int ndo2db_check_for_client_input(ndo2db_idi *,ndo_dbuf *);
 int ndo2db_handle_client_input(ndo2db_idi *,char *);
 
 int ndo2db_start_input_data(ndo2db_idi *);

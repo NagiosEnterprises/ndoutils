@@ -142,6 +142,13 @@ typedef struct ndo2db_dbconfig {
 
 
 
+/** Format string for printing the SQL to use time_t as datetime.
+ * (SQL query conversion of time_t format to date/time format.) */
+#define NDO2DB_PRI_TIME_AS_DATE "FROM_UNIXTIME(%lu)"
+/** Format string for printing the SQL to use a datetime column as timestamp.
+ * (SQL query conversion of date/time format to time_t format.) */
+#define NDO2DB_PRI_DATE_AS_TIME "UNIX_TIMESTAMP(%s)"
+
 int ndo2db_db_init(ndo2db_idi *);
 int ndo2db_db_deinit(ndo2db_idi *);
 
@@ -152,16 +159,17 @@ int ndo2db_db_hello(ndo2db_idi *);
 int ndo2db_db_goodbye(ndo2db_idi *);
 int ndo2db_db_checkin(ndo2db_idi *);
 
-char *ndo2db_db_escape_string(ndo2db_idi *,char *);
-char *ndo2db_db_timet_to_sql(ndo2db_idi *,time_t);
-char *ndo2db_db_sql_to_timet(ndo2db_idi *,const char *);
-int ndo2db_db_query(ndo2db_idi *,char *);
+char *ndo2db_db_escape_string(ndo2db_idi *, char *);
+char *ndo2db_db_timet_to_sql(ndo2db_idi *, time_t);
+
+int ndo2db_db_query(ndo2db_idi *, char *);
 int ndo2db_db_free_query(ndo2db_idi *);
 int ndo2db_handle_db_error(ndo2db_idi *);
 
-int ndo2db_db_clear_table(ndo2db_idi *,char *);
-int ndo2db_db_get_latest_data_time(ndo2db_idi *,const char *,const char *,unsigned long *);
+int ndo2db_db_clear_table(ndo2db_idi *, char *);
+int ndo2db_db_get_latest_data_time(ndo2db_idi *, const char *, const char *, unsigned long *);
 int ndo2db_db_perform_maintenance(ndo2db_idi *);
 
-extern int ndo2db_log_debug_info(int, int, const char *, ...);
+extern int ndo2db_log_debug_info(int, int, const char *, ...) __attribute__((format(printf, 3, 4)));
+
 #endif

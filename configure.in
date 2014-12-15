@@ -149,13 +149,6 @@ AC_TRY_LINK([
     [AC_DEFINE(HAVE_SUN_LEN)], )
 
 
-dnl Solaris needs rt or posix4 libraries for nanosleep()
-AC_SEARCH_LIBS(nanosleep,[rt posix4],,[
-    echo "Error: nanosleep() needed for timing operations."
-    exit 1
-    ])
-
-
 dnl Check for location of init scripts
 init_dir=/etc/rc.d/init.d
 if test -d /etc/rc.d/init.d; then
@@ -212,11 +205,8 @@ AC_SUBST(MOD_LDFLAGS)
 
 dnl DB support options
 USE_MYSQL=yes
-dnl USE_PGSQL=yes
 AC_ARG_ENABLE(mysql,AC_HELP_STRING([--enable-mysql],[enables MySQL database support]))
 AS_IF([test x$enable_mysql = xno], [USE_MYSQL=no])
-dnl AC_ARG_ENABLE(pgsql,--enable-pgsql enables PostgreSQL database support)
-dnl AS_IF([test x$enable_pgsql = xno], [USE_PGSQL=no])
 
 
 dnl Are we using any MySQL routines?
@@ -255,16 +245,7 @@ if test $USE_MYSQL = yes; then
 		DBLIBS="$DBLIBS $np_mysql_libs"
 		CFLAGS="$CFLAGS $np_mysql_include"
 	fi
-fi	
-
-dnl Optional PostgreSQL library and include paths
-dnl AC_ARG_WITH(pgsql-lib,AC_HELP_STRING([--with-pgsql-lib=DIR],[sets location of the PostgreSQL client library]),[
-dnl 	DBLDFLAGS="-L${withval}"
-dnl 	LD_RUN_PATH="${withval}${LD_RUN_PATH:+:}${LD_RUN_PATH}"
-dnl 	])
-dnl AC_ARG_WITH(pgsql-inc,AC_HELP_STRING([--with-pgsql-inc=DIR],[sets location of the PostgreSQL client include files]),[
-dnl 	DBCFLAGS="${DBCFLAGS} -I${withval}"
-dnl 	])
+fi
 
 save_LDFLAGS="$LDFLAGS"
 LDFLAGS="${LDFLAGS} ${DBLDFLAGS}"
@@ -417,16 +398,6 @@ if test x$check_for_ssl = xyes; then
 
 fi
 
-USE_NANOSLEEP=yes
-AC_ARG_ENABLE(nanosleep,
-	AC_HELP_STRING([--enable-nanosleep],
-		[enables use of nanosleep (instead of sleep) in event timing]),
-	USE_NANOSLEEP=$enableval,
-	USE_NANOSLEEP=yes
-)
-if test x$USE_NANOSLEEP = xyes ; then
-	AC_DEFINE_UNQUOTED(USE_NANOSLEEP,,[enables use of nanosleep (instead of sleep)])
-fi
 
 AC_OUTPUT(Makefile src/Makefile docs/docbook/en-en/Makefile subst)
 

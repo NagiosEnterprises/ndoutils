@@ -84,7 +84,7 @@ static int ndomod_deinit(void);
 
 static int ndomod_check_nagios_object_version(void);
 
-static int ndomod_printf_to_logs(const char *fmt, ...);
+static int ndomod_printf_to_logs(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
 
 static int ndomod_process_module_args(char *args);
 static int ndomod_process_config_file(const char *filename);

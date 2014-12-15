@@ -69,11 +69,9 @@ use_ssl=0
 
 
 # DATABASE SERVER TYPE
-# This option determines what type of DB server the daemon should
-# connect to.
+# This option determines what type of DB server the daemon should connect to.
 # Values:
-# 	mysql = MySQL
-#       pgsql = PostgreSQL
+#   mysql = MySQL
 
 db_servertype=mysql
 
@@ -89,8 +87,7 @@ db_host=localhost
 # DATABASE PORT
 # This option specifies the port that the DB server is running on.
 # Values:
-# 	3306 = Default MySQL port
-#	5432 = Default PostgreSQL port
+#  3306 = Default MySQL port
 
 db_port=3306
 

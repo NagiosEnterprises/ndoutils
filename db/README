@@ -2,7 +2,7 @@
 DATABASE SCRIPTS
 ================
 
-Here you'll find scripts to create the necessary database tables for MySQL and PostgreSQL servers.
+Here you'll find scripts to create the necessary database tables for MySQL servers.
 The queries/ subdirectory contains some example SQL queries for fetching data from the DB tables.
 
 

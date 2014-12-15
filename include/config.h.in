@@ -278,13 +278,6 @@ typedef int int32_t;
 #include <mysql/errmsg.h>
 #endif
 
-#undef USE_PGSQL
-#undef HAVE_PGSQL
-#ifdef USE_PGSQL
-#define HAVE_PGSQL 1
-#include <libpq-fe.h>
-#endif
-
 #undef HAVE_SSL
 #ifdef HAVE_SSL
 #include <rsa.h>
@@ -295,7 +288,5 @@ typedef int int32_t;
 #include <err.h>
 #include <rand.h>
 #endif
-
-#undef USE_NANOSLEEP
 
 #endif
