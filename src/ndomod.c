@@ -5,7 +5,7 @@
  * Copyright 2009-2014 Nagios Core Development Team and Community Contributors
  * Copyright 2005-2009 Ethan Galstad
  *
- * Last Modified: 02-28-2014
+ * Last Modified: 12-15-2014
  *
  * This file is part of NDOUtils.
  *
@@ -80,9 +80,9 @@
 NEB_API_VERSION(CURRENT_NEB_API_VERSION)
 
 
-#define NDOMOD_VERSION "2.0.0"
+#define NDOMOD_VERSION "2.1b0"
 #define NDOMOD_NAME "NDOMOD"
-#define NDOMOD_DATE "02-28-2014"
+#define NDOMOD_DATE "12-15-2014"
 
 
 #ifndef ARRAY_SIZE

@@ -5,7 +5,7 @@
  * Copyright 2009-2014 Nagios Core Development Team and Community Contributors
  * Copyright 2005-2009 Ethan Galstad
  *
- * Last Modified: 02-28-2014
+ * Last Modified: 12-15-2014
  *
  * This file is part of NDOUtils.
  *
@@ -42,9 +42,9 @@
 #include "../include/dh.h"
 #endif
 
-#define NDO2DB_VERSION "2.0.0"
+#define NDO2DB_VERSION "2.1b0"
 #define NDO2DB_NAME "NDO2DB"
-#define NDO2DB_DATE "02-28-2014"
+#define NDO2DB_DATE "12-15-2014"
 
 #ifdef HAVE_SSL
 SSL_METHOD *meth;

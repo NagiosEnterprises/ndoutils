@@ -5,7 +5,7 @@
  * Copyright 2009-2014 Nagios Core Development Team and Community Contributors
  * Copyright 2005-2009 Ethan Galstad
  *
- * Last Modified: 02-28-2014
+ * Last Modified: 12-15-2014
  *
  * This file is part of NDOUtils.
  *
@@ -26,9 +26,9 @@
 #include "../include/common.h"
 #include "../include/io.h"
 
-#define FILE2SOCK_VERSION "2.0.0"
+#define FILE2SOCK_VERSION "2.1b0"
 #define FILE2SOCK_NAME "FILE2SOCK"
-#define FILE2SOCK_DATE "02-28-2014"
+#define FILE2SOCK_DATE "12-15-2014"
 
 
 int process_arguments(int,char **);
