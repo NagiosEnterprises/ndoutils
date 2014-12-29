@@ -29,6 +29,7 @@
 #include "../include/ndo2db.h"
 #include "../include/db.h"
 #include "../include/dbhandlers.h"
+#include "../include/dbstatements.h"
 
 /* Nagios headers. */
 #ifdef BUILD_NAGIOS_2X
@@ -48,8 +49,8 @@
 #endif
 
 
-/* Our prefixed table names (db.c). */
-extern char *ndo2db_db_tablenames[NDO2DB_MAX_DBTABLES];
+/* Our prefixed table names (from db.c). */
+extern char *ndo2db_db_tablenames[NDO2DB_NUM_DBTABLES];
 
 
 
@@ -2359,7 +2360,8 @@ int ndo2db_handle_hoststatusdata(ndo2db_idi *idi) {
 	for (x = 0; x < (int)NAGIOS_SIZEOF_ARRAY(es); x++) free(es[x]);
 
 	/* save custom variables to db */
-	result=ndo2db_save_custom_variables(idi,NDO2DB_DBTABLE_CUSTOMVARIABLESTATUS,object_id,ts[0]);
+// 	result=ndo2db_save_custom_variables(idi,NDO2DB_DBTABLE_CUSTOMVARIABLESTATUS,object_id,ts[0]);
+	result=ndo2db_stmt_save_customvariablestatus(idi, object_id, tstamp.tv_sec);
 
 
         /* free memory */
@@ -2559,7 +2561,8 @@ int ndo2db_handle_servicestatusdata(ndo2db_idi *idi) {
 	for (x = 0; x < (int)NAGIOS_SIZEOF_ARRAY(es); x++) free(es[x]);
 
 	/* save custom variables to db */
-	result=ndo2db_save_custom_variables(idi,NDO2DB_DBTABLE_CUSTOMVARIABLESTATUS,object_id,ts[0]);
+// 	result=ndo2db_save_custom_variables(idi,NDO2DB_DBTABLE_CUSTOMVARIABLESTATUS,object_id,ts[0]);
+	result=ndo2db_stmt_save_customvariablestatus(idi, object_id, tstamp.tv_sec);
 
         /* free memory */
 	for (x = 0; x < (int)NAGIOS_SIZEOF_ARRAY(ts); x++) free(ts[x]);
@@ -2639,7 +2642,8 @@ int ndo2db_handle_contactstatusdata(ndo2db_idi *idi) {
 	free(buf1);
 
 	/* save custom variables to db */
-	result=ndo2db_save_custom_variables(idi,NDO2DB_DBTABLE_CUSTOMVARIABLESTATUS,object_id,ts[0]);
+// 	result=ndo2db_save_custom_variables(idi,NDO2DB_DBTABLE_CUSTOMVARIABLESTATUS,object_id,ts[0]);
+	result=ndo2db_stmt_save_customvariablestatus(idi, object_id, tstamp.tv_sec);
 
 
         /* free memory */
@@ -3447,7 +3451,8 @@ int ndo2db_handle_hostdefinition(ndo2db_idi *idi) {
 	}
 
 	/* save custom variables to db */
-	result=ndo2db_save_custom_variables(idi,NDO2DB_DBTABLE_CUSTOMVARIABLES,object_id,NULL);
+// 	result=ndo2db_save_custom_variables(idi,NDO2DB_DBTABLE_CUSTOMVARIABLES,object_id,NULL);
+	result=ndo2db_stmt_save_customvariables(idi, object_id);
 
 	return NDO_OK;
 }
@@ -3851,7 +3856,8 @@ int ndo2db_handle_servicedefinition(ndo2db_idi *idi) {
 	}
 	
 	/* save custom variables to db */
-	result=ndo2db_save_custom_variables(idi,NDO2DB_DBTABLE_CUSTOMVARIABLES,object_id,NULL);
+// 	result=ndo2db_save_custom_variables(idi,NDO2DB_DBTABLE_CUSTOMVARIABLES,object_id,NULL);
+	result=ndo2db_stmt_save_customvariables(idi, object_id);
 
 	return NDO_OK;
 }
@@ -4763,9 +4769,10 @@ int ndo2db_handle_contactdefinition(ndo2db_idi *idi) {
 
 		free(es[0]);
 	}
-	
+
 	/* save custom variables to db */
-	result=ndo2db_save_custom_variables(idi,NDO2DB_DBTABLE_CUSTOMVARIABLES,contact_id,NULL);
+// 	result=ndo2db_save_custom_variables(idi,NDO2DB_DBTABLE_CUSTOMVARIABLES,contact_id,NULL);
+	result=ndo2db_stmt_save_customvariables(idi, contact_id);
 
 	return NDO_OK;
 }

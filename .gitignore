@@ -14,6 +14,9 @@ src/db.o
 src/dbhandlers-2x.o
 src/dbhandlers-3x.o
 src/dbhandlers-4x.o
+src/dbstatements-2x.o
+src/dbstatements-3x.o
+src/dbstatements-4x.o
 src/file2sock
 src/io.o
 src/log2ndo

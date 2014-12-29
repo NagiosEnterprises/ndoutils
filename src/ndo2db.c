@@ -36,6 +36,7 @@
 #include "../include/ndo2db.h"
 #include "../include/db.h"
 #include "../include/dbhandlers.h"
+#include "../include/dbstatements.h"
 #include "../include/queue.h"
 
 #ifdef HAVE_SSL
@@ -75,8 +76,6 @@ int ndo2db_debug_level = NDO2DB_DEBUGL_NONE;
 int ndo2db_debug_verbosity = NDO2DB_DEBUGV_BASIC;
 FILE *ndo2db_debug_file_fp = NULL;
 unsigned long ndo2db_max_debug_file_size = 0;
-
-extern char *ndo2db_db_tablenames[NDO2DB_MAX_DBTABLES];
 
 
 
@@ -1182,6 +1181,7 @@ void ndo2db_async_client_handle() {
 #endif
 
 	/* disconnect from database */
+	ndo2db_stmt_free_stmts();
 	ndo2db_db_disconnect(&idi);
 	ndo2db_db_deinit(&idi);
 
@@ -1247,6 +1247,7 @@ int ndo2db_handle_client_input(ndo2db_idi *idi, char *buf) {
 
 			/* save connection info to DB */
 			ndo2db_db_hello(idi);
+			ndo2db_stmt_init_stmts(idi);
 		}
 
 		else if (strcmp(var, NDO_API_PROTOCOL) == 0)
