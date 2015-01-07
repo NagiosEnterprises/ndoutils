@@ -5,7 +5,7 @@
  * Copyright 2009-2014 Nagios Core Development Team and Community Contributors
  * Copyright 2005-2009 Ethan Galstad
  *
- * Last Modified: 12-15-2014
+ * Last Modified: 01-07-2015
  *
  * This file is part of NDOUtils.
  *
@@ -24,9 +24,9 @@
 
 #include "../include/config.h"
 
-#define SOCKDEBUG_VERSION "2.1b0"
+#define SOCKDEBUG_VERSION "2.1b1"
 #define SOCKDEBUG_NAME "SOCKDEBUG"
-#define SOCKDEBUG_DATE "12-15-2014"
+#define SOCKDEBUG_DATE "01-07-2015"
 
 
 int cleanup_socket(int,char *);

@@ -2,6 +2,13 @@
 NDO Utils Changelog
 ===================
 
+2.1b1 - 01/07/2015
+------------------
+* Correct default table trim interval to 60 minutes, not seconds (Eric Mislivec)
+* Convert most DB operations to prepared statements (Eric Mislivec)
+
+
+
 2.1b0 - 12/15/2014
 ------------------
 * Fix Tracker #591: ndoutils 2.0.0 doesn't insert data to nagios_statehistory (Eric Stanley)
@@ -13,7 +20,7 @@ NDO Utils Changelog
 * Fix GitHub #1: Make the MySQL socket path a configurable option (Eric Mislivec)
 * Numerous ndomod fixes and performance improvements (Eric Mislivec)
 * Optimize ndo2db input data handling, queue retry logic, and some SQL statements (Eric Mislivec)
-* Remove incomplete Postgres implementation and other old or unused code
+* Remove incomplete Postgres implementation and other old or unused code (Eric Mislivec)
 
 
 
