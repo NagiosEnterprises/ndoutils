@@ -262,7 +262,7 @@ int ndo2db_db_hello(ndo2db_idi *idi) {
 		idi->dbinfo.mysql_result = mysql_store_result(&idi->dbinfo.mysql_conn);
 		idi->dbinfo.mysql_row = mysql_fetch_row(idi->dbinfo.mysql_result);
 		if (idi->dbinfo.mysql_row) {
-			ndo2db_convert_string_to_unsignedlong(idi->dbinfo.mysql_row[0], &idi->dbinfo.instance_id);
+			ndo2db_strtoul(idi->dbinfo.mysql_row[0], &idi->dbinfo.instance_id);
 			have_instance = NDO_TRUE;
 		}
 		mysql_free_result(idi->dbinfo.mysql_result);
@@ -545,7 +545,7 @@ int ndo2db_db_get_latest_data_time(
 		idi->dbinfo.mysql_result = mysql_store_result(&idi->dbinfo.mysql_conn);
 		idi->dbinfo.mysql_row = mysql_fetch_row(idi->dbinfo.mysql_result);
 		if (idi->dbinfo.mysql_row) {
-			ndo2db_convert_string_to_unsignedlong(idi->dbinfo.mysql_row[0], t);
+			ndo2db_strtoul(idi->dbinfo.mysql_row[0], t);
 		}
 		mysql_free_result(idi->dbinfo.mysql_result);
 		idi->dbinfo.mysql_result = NULL;

@@ -258,12 +258,16 @@ int ndo2db_add_input_data_item(ndo2db_idi *,int,char *);
 int ndo2db_add_input_data_mbuf(ndo2db_idi *,int,int,char *);
 
 int ndo2db_convert_standard_data_elements(ndo2db_idi *,int *,int *,int *,struct timeval *);
-int ndo2db_convert_string_to_int(char *,int *);
-int ndo2db_convert_string_to_float(char *,float *);
-int ndo2db_convert_string_to_double(char *,double *);
-int ndo2db_convert_string_to_long(char *,long *);
-int ndo2db_convert_string_to_unsignedlong(char *,unsigned long *);
-int ndo2db_convert_string_to_timeval(char *,struct timeval *);
+int ndo2db_strtoschar(const char *buf, signed char *c);
+int ndo2db_strtoshort(const char *buf, signed short *s);
+int ndo2db_strtoint(const char *buf, signed int *i);
+int ndo2db_strtouint(const char *buf, unsigned int *u);
+int ndo2db_strtoi(const char *,int *);
+int ndo2db_strtof(const char *,float *);
+int ndo2db_strtod(const char *,double *);
+int ndo2db_strtol(const char *,long *);
+int ndo2db_strtoul(const char *,unsigned long *);
+int ndo2db_strtotv(const char *,struct timeval *);
 
 int ndo2db_open_debug_log(void);
 int ndo2db_close_debug_log(void);

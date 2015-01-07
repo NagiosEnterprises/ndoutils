@@ -26,16 +26,21 @@
 #include "ndo2db.h"
 #define NAGIOS_SIZEOF_ARRAY(var)       (sizeof(var)/sizeof(var[0]))
 
-int ndo2db_get_object_id(ndo2db_idi *,int,char *,char *,unsigned long *);
-int ndo2db_get_object_id_with_insert(ndo2db_idi *,int,char *,char *,unsigned long *);
+int ndo2db_get_object_id(ndo2db_idi *, int, char *, char *,
+		unsigned long *);
+int ndo2db_get_object_id_with_insert(ndo2db_idi *, int, char *,
+		char *, unsigned long *);
 
 int ndo2db_get_cached_object_ids(ndo2db_idi *);
-int ndo2db_get_cached_object_id(ndo2db_idi *,int,char *,char *,unsigned long *);
-int ndo2db_add_cached_object_id(ndo2db_idi *,int,char *,char *,unsigned long);
+int ndo2db_get_cached_object_id(ndo2db_idi *, int, const char *, const char *,
+		unsigned long *);
+int ndo2db_add_cached_object_id(ndo2db_idi *, int, const char *, const char *,
+		unsigned long);
 int ndo2db_free_cached_object_ids(ndo2db_idi *);
 
-int ndo2db_object_hashfunc(const char *,const char *,int);
-int ndo2db_compare_object_hashdata(const char *,const char *,const char *,const char *);
+int ndo2db_object_hashfunc(const char *, const char *, int);
+int ndo2db_compare_object_hashdata(const char *, const char *, const char *,
+		const char *);
 
 int ndo2db_set_all_objects_as_inactive(ndo2db_idi *);
 int ndo2db_set_object_as_active(ndo2db_idi *,int,unsigned long);
@@ -85,4 +90,5 @@ int ndo2db_handle_timeperiodefinition(ndo2db_idi *);
 int ndo2db_handle_contactdefinition(ndo2db_idi *);
 int ndo2db_handle_contactgroupdefinition(ndo2db_idi *);
 int ndo2db_save_custom_variables(ndo2db_idi *,int, unsigned long, char *);
+
 #endif
