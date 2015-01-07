@@ -775,7 +775,8 @@ static int ndo2db_stmt_prepare_and_bind(
 	stmt->id = stmt_id;
 
 	/* Prepare our statement with the template. */
-	syslog(LOG_USER|LOG_INFO, "Statement %d template: %s", stmt->id, template);
+	ndo2db_log_debug_info(NDO2DB_DEBUGL_SQL, 0,
+			"Statement %d template: %s", stmt->id, template);
 
 	/* Close (and free) any existing statement and get a new statement handle. */
 	if (stmt->handle) mysql_stmt_close(stmt->handle);
