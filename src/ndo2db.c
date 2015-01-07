@@ -36,6 +36,7 @@
 #include "../include/ndo2db.h"
 #include "../include/db.h"
 #include "../include/dbhandlers.h"
+#include "../include/dbstatements.h"
 #include "../include/queue.h"
 
 #ifdef HAVE_SSL
@@ -75,8 +76,6 @@ int ndo2db_debug_level = NDO2DB_DEBUGL_NONE;
 int ndo2db_debug_verbosity = NDO2DB_DEBUGV_BASIC;
 FILE *ndo2db_debug_file_fp = NULL;
 unsigned long ndo2db_max_debug_file_size = 0;
-
-extern char *ndo2db_db_tablenames[NDO2DB_MAX_DBTABLES];
 
 
 
@@ -695,11 +694,19 @@ int ndo2db_daemonize(void) {
 
 
 	if (lock_file) {
+		int n;
 		/* Write our PID to the lockfile... */
 		lseek(lockfile, 0, SEEK_SET);
-		ftruncate(lockfile, 0);
+		if (ftruncate(lockfile, 0)) {
+			syslog(LOG_ERR, "Warning: Unable to truncate lockfile (errno %d): %s",
+					errno, strerror(errno));
+		}
 		sprintf(buf, "%d\n", (int)getpid());
-		write(lockfile, buf, strlen(buf));
+		n = (int)strlen(buf);
+		if (write(lockfile, buf, n) < n) {
+			syslog(LOG_ERR, "Warning: Unable to write pid to lockfile (errno %d): %s",
+					errno, strerror(errno));
+		}
 
 		/* Keep the lock file open while program is executing... */
 		val = fcntl(lockfile, F_GETFD, 0);
@@ -1182,6 +1189,7 @@ void ndo2db_async_client_handle() {
 #endif
 
 	/* disconnect from database */
+	ndo2db_stmt_free_stmts();
 	ndo2db_db_disconnect(&idi);
 	ndo2db_db_deinit(&idi);
 
@@ -1247,10 +1255,11 @@ int ndo2db_handle_client_input(ndo2db_idi *idi, char *buf) {
 
 			/* save connection info to DB */
 			ndo2db_db_hello(idi);
+			ndo2db_stmt_init_stmts(idi);
 		}
 
 		else if (strcmp(var, NDO_API_PROTOCOL) == 0)
-			ndo2db_convert_string_to_int((val+1), &idi->protocol_version);
+			ndo2db_strtoi((val+1), &idi->protocol_version);
 
 		else if (strcmp(var, NDO_API_INSTANCENAME) == 0)
 			idi->instance_name = strdup(val+1);
@@ -1271,7 +1280,7 @@ int ndo2db_handle_client_input(ndo2db_idi *idi, char *buf) {
 			idi->connect_type = strdup(val+1);
 
 		else if (strcmp(var, NDO_API_STARTTIME) == 0)
-			ndo2db_convert_string_to_unsignedlong((val+1), &idi->data_start_time);
+			ndo2db_strtoul((val+1), &idi->data_start_time);
 
 		break;
 
@@ -1285,7 +1294,7 @@ int ndo2db_handle_client_input(ndo2db_idi *idi, char *buf) {
 			idi->current_input_section = NDO2DB_INPUT_SECTION_NONE;
 
 		else if (strcmp(var, NDO_API_ENDTIME) == 0)
-			ndo2db_convert_string_to_unsignedlong((val+1), &idi->data_end_time);
+			ndo2db_strtoul((val+1), &idi->data_end_time);
 
 		break;
 
@@ -1528,7 +1537,6 @@ int ndo2db_start_input_data(ndo2db_idi *idi) {
 
 int ndo2db_add_input_data_item(ndo2db_idi *idi, int type, char *buf) {
 	char *newbuf = NULL;
-	int mbuf_used = NDO_TRUE;
 
 	if (!idi) return NDO_ERROR;
 
@@ -1676,7 +1684,6 @@ int ndo2db_add_input_data_item(ndo2db_idi *idi, int type, char *buf) {
 	/* NORMAL DATA */
 	/* normal data items appear only once per data type */
 	default:
-		mbuf_used = NDO_FALSE;
 		/* if there was already a matching item, discard the old one */
 		my_free(idi->buffered_input[type]);
 		/* save buffered item */
@@ -1770,10 +1777,12 @@ int ndo2db_end_input_data(ndo2db_idi *idi) {
 		result = ndo2db_handle_notificationdata(idi);
 		break;
 	case NDO2DB_INPUT_DATA_SERVICECHECKDATA:
-		result = ndo2db_handle_servicecheckdata(idi);
+// 		result = ndo2db_handle_servicecheckdata(idi);
+		result = ndo2db_stmt_handle_servicecheckdata(idi);
 		break;
 	case NDO2DB_INPUT_DATA_HOSTCHECKDATA:
-		result = ndo2db_handle_hostcheckdata(idi);
+// 		result = ndo2db_handle_hostcheckdata(idi);
+		result = ndo2db_stmt_handle_hostcheckdata(idi);
 		break;
 	case NDO2DB_INPUT_DATA_COMMENTDATA:
 		result = ndo2db_handle_commentdata(idi);
@@ -1788,34 +1797,42 @@ int ndo2db_end_input_data(ndo2db_idi *idi) {
 		result = ndo2db_handle_programstatusdata(idi);
 		break;
 	case NDO2DB_INPUT_DATA_HOSTSTATUSDATA:
-		result = ndo2db_handle_hoststatusdata(idi);
+// 		result = ndo2db_handle_hoststatusdata(idi);
+		result = ndo2db_stmt_handle_hoststatusdata(idi);
 		break;
 	case NDO2DB_INPUT_DATA_SERVICESTATUSDATA:
-		result = ndo2db_handle_servicestatusdata(idi);
+// 		result = ndo2db_handle_servicestatusdata(idi);
+		result = ndo2db_stmt_handle_servicestatusdata(idi);
 		break;
 	case NDO2DB_INPUT_DATA_CONTACTSTATUSDATA:
 		result = ndo2db_handle_contactstatusdata(idi);
 		break;
 	case NDO2DB_INPUT_DATA_ADAPTIVEPROGRAMDATA:
-		result = ndo2db_handle_adaptiveprogramdata(idi);
+// 		result = ndo2db_handle_adaptiveprogramdata(idi);
+		result = ndo2db_stmt_handle_adaptiveprogramdata(idi);
 		break;
 	case NDO2DB_INPUT_DATA_ADAPTIVEHOSTDATA:
-		result = ndo2db_handle_adaptivehostdata(idi);
+// 		result = ndo2db_handle_adaptivehostdata(idi);
+		result = ndo2db_stmt_handle_adaptivehostdata(idi);
 		break;
 	case NDO2DB_INPUT_DATA_ADAPTIVESERVICEDATA:
-		result = ndo2db_handle_adaptiveservicedata(idi);
+// 		result = ndo2db_handle_adaptiveservicedata(idi);
+		result = ndo2db_stmt_handle_adaptiveservicedata(idi);
 		break;
 	case NDO2DB_INPUT_DATA_ADAPTIVECONTACTDATA:
-		result = ndo2db_handle_adaptivecontactdata(idi);
+// 		result = ndo2db_handle_adaptivecontactdata(idi);
+		result = ndo2db_stmt_handle_adaptivecontactdata(idi);
 		break;
 	case NDO2DB_INPUT_DATA_EXTERNALCOMMANDDATA:
 		result = ndo2db_handle_externalcommanddata(idi);
 		break;
 	case NDO2DB_INPUT_DATA_AGGREGATEDSTATUSDATA:
-		result = ndo2db_handle_aggregatedstatusdata(idi);
+// 		result = ndo2db_handle_aggregatedstatusdata(idi);
+		result = ndo2db_stmt_handle_aggregatedstatusdata(idi);
 		break;
 	case NDO2DB_INPUT_DATA_RETENTIONDATA:
-		result = ndo2db_handle_retentiondata(idi);
+// 		result = ndo2db_handle_retentiondata(idi);
+		result = ndo2db_stmt_handle_retentiondata(idi);
 		break;
 	case NDO2DB_INPUT_DATA_CONTACTNOTIFICATIONDATA:
 		result = ndo2db_handle_contactnotificationdata(idi);
@@ -1832,60 +1849,78 @@ int ndo2db_end_input_data(ndo2db_idi *idi) {
 
 	/* config file and variable dumps */
 	case NDO2DB_INPUT_DATA_MAINCONFIGFILEVARIABLES:
-		result = ndo2db_handle_configfilevariables(idi, 0);
+// 		result = ndo2db_handle_configfilevariables(idi, 0);
+		result = ndo2db_stmt_handle_configfilevariables(idi, 0);
 		break;
 	case NDO2DB_INPUT_DATA_RESOURCECONFIGFILEVARIABLES:
-		result = ndo2db_handle_configfilevariables(idi, 1);
+// 		result = ndo2db_handle_configfilevariables(idi, 1);
+		result = ndo2db_stmt_handle_configfilevariables(idi, 1);
 		break;
 	case NDO2DB_INPUT_DATA_CONFIGVARIABLES:
-		result = ndo2db_handle_configvariables(idi);
+// 		result = ndo2db_handle_configvariables(idi);
+		result = ndo2db_stmt_handle_configvariables(idi);
 		break;
 	case NDO2DB_INPUT_DATA_RUNTIMEVARIABLES:
-		result = ndo2db_handle_runtimevariables(idi);
+// 		result = ndo2db_handle_runtimevariables(idi);
+		result = ndo2db_stmt_handle_runtimevariables(idi);
 		break;
 	case NDO2DB_INPUT_DATA_CONFIGDUMPSTART:
-		result = ndo2db_handle_configdumpstart(idi);
+// 		result = ndo2db_handle_configdumpstart(idi);
+		result = ndo2db_stmt_handle_configdumpstart(idi);
 		break;
 	case NDO2DB_INPUT_DATA_CONFIGDUMPEND:
-		result = ndo2db_handle_configdumpend(idi);
+// 		result = ndo2db_handle_configdumpend(idi);
+		result = ndo2db_stmt_handle_configdumpend(idi);
 		break;
 
 	/* config definitions */
 	case NDO2DB_INPUT_DATA_HOSTDEFINITION:
-		result = ndo2db_handle_hostdefinition(idi);
+// 		result = ndo2db_handle_hostdefinition(idi);
+		result = ndo2db_stmt_handle_hostdefinition(idi);
 		break;
 	case NDO2DB_INPUT_DATA_HOSTGROUPDEFINITION:
-		result = ndo2db_handle_hostgroupdefinition(idi);
+// 		result = ndo2db_handle_hostgroupdefinition(idi);
+		result = ndo2db_stmt_handle_hostgroupdefinition(idi);
 		break;
 	case NDO2DB_INPUT_DATA_SERVICEDEFINITION:
-		result = ndo2db_handle_servicedefinition(idi);
+// 		result = ndo2db_handle_servicedefinition(idi);
+		result = ndo2db_stmt_handle_servicedefinition(idi);
 		break;
 	case NDO2DB_INPUT_DATA_SERVICEGROUPDEFINITION:
-		result = ndo2db_handle_servicegroupdefinition(idi);
+// 		result = ndo2db_handle_servicegroupdefinition(idi);
+		result = ndo2db_stmt_handle_servicegroupdefinition(idi);
 		break;
 	case NDO2DB_INPUT_DATA_HOSTDEPENDENCYDEFINITION:
-		result = ndo2db_handle_hostdependencydefinition(idi);
+// 		result = ndo2db_handle_hostdependencydefinition(idi);
+		result = ndo2db_stmt_handle_hostdependencydefinition(idi);
 		break;
 	case NDO2DB_INPUT_DATA_SERVICEDEPENDENCYDEFINITION:
-		result = ndo2db_handle_servicedependencydefinition(idi);
+// 		result = ndo2db_handle_servicedependencydefinition(idi);
+		result = ndo2db_stmt_handle_servicedependencydefinition(idi);
 		break;
 	case NDO2DB_INPUT_DATA_HOSTESCALATIONDEFINITION:
-		result = ndo2db_handle_hostescalationdefinition(idi);
+// 		result = ndo2db_handle_hostescalationdefinition(idi);
+		result = ndo2db_stmt_handle_hostescalationdefinition(idi);
 		break;
 	case NDO2DB_INPUT_DATA_SERVICEESCALATIONDEFINITION:
-		result = ndo2db_handle_serviceescalationdefinition(idi);
+// 		result = ndo2db_handle_serviceescalationdefinition(idi);
+		result = ndo2db_stmt_handle_serviceescalationdefinition(idi);
 		break;
 	case NDO2DB_INPUT_DATA_COMMANDDEFINITION:
-		result = ndo2db_handle_commanddefinition(idi);
+// 		result = ndo2db_handle_commanddefinition(idi);
+		result = ndo2db_stmt_handle_commanddefinition(idi);
 		break;
 	case NDO2DB_INPUT_DATA_TIMEPERIODDEFINITION:
-		result = ndo2db_handle_timeperiodefinition(idi);
+// 		result = ndo2db_handle_timeperiodefinition(idi);
+		result = ndo2db_stmt_handle_timeperiodefinition(idi);
 		break;
 	case NDO2DB_INPUT_DATA_CONTACTDEFINITION:
-		result = ndo2db_handle_contactdefinition(idi);
+// 		result = ndo2db_handle_contactdefinition(idi);
+		result = ndo2db_stmt_handle_contactdefinition(idi);
 		break;
 	case NDO2DB_INPUT_DATA_CONTACTGROUPDEFINITION:
-		result = ndo2db_handle_contactgroupdefinition(idi);
+// 		result = ndo2db_handle_contactgroupdefinition(idi);
+		result = ndo2db_stmt_handle_contactgroupdefinition(idi);
 		break;
 	case NDO2DB_INPUT_DATA_HOSTEXTINFODEFINITION:
 		/* deprecated - merged with host definitions */
@@ -1971,10 +2006,10 @@ int ndo2db_convert_standard_data_elements(ndo2db_idi *idi, int *type, int *flags
 	int result3 = NDO_OK;
 	int result4 = NDO_OK;
 
-	result1 = ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_TYPE], type);
-	result2 = ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_FLAGS], flags);
-	result3 = ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_ATTRIBUTES], attr);
-	result4 = ndo2db_convert_string_to_timeval(idi->buffered_input[NDO_DATA_TIMESTAMP], tstamp);
+	result1 = ndo2db_strtoi(idi->buffered_input[NDO_DATA_TYPE], type);
+	result2 = ndo2db_strtoi(idi->buffered_input[NDO_DATA_FLAGS], flags);
+	result3 = ndo2db_strtoi(idi->buffered_input[NDO_DATA_ATTRIBUTES], attr);
+	result4 = ndo2db_strtotv(idi->buffered_input[NDO_DATA_TIMESTAMP], tstamp);
 
 	if (result1 == NDO_ERROR || result2 == NDO_ERROR || result3 == NDO_ERROR || result4 == NDO_ERROR)
 		return NDO_ERROR;
@@ -1983,7 +2018,58 @@ int ndo2db_convert_standard_data_elements(ndo2db_idi *idi, int *type, int *flags
 }
 
 
-int ndo2db_convert_string_to_int(char *buf, int *i) {
+int ndo2db_strtoschar(const char *buf, signed char *c) {
+	long l = 0;
+	int status = ndo2db_strtol(buf, &l);
+	*c = (signed char)l;
+	if (status != NDO_OK) {
+		return status;
+	}
+	else {
+		return (CHAR_MIN <= l && l <= CHAR_MAX) ? NDO_OK : NDO_ERROR;
+	}
+}
+
+
+int ndo2db_strtoshort(const char *buf, signed short *s) {
+	long l = 0;
+	int status = ndo2db_strtol(buf, &l);
+	*s = (signed short)l;
+	if (status != NDO_OK) {
+		return status;
+	}
+	else {
+		return (SHRT_MIN <= l && l <= SHRT_MAX) ? NDO_OK : NDO_ERROR;
+	}
+}
+
+
+int ndo2db_strtoint(const char *buf, signed int *i) {
+	long l = 0;
+	int status = ndo2db_strtol(buf, &l);
+	*i = (signed int)l;
+	if (status != NDO_OK) {
+		return status;
+	}
+	else {
+		return (INT_MIN <= l && l <= INT_MAX) ? NDO_OK : NDO_ERROR;
+	}
+}
+
+
+int ndo2db_strtouint(const char *buf, unsigned int *u) {
+	unsigned long l = 0;
+	int status = ndo2db_strtoul(buf, &l);
+	*u = (unsigned int)l;
+	if (status != NDO_OK) {
+		return status;
+	}
+	else {
+		return (l <= UINT_MAX) ? NDO_OK : NDO_ERROR;
+	}
+}
+
+int ndo2db_strtoi(const char *buf, int *i) {
 
 	if (!buf) return NDO_ERROR;
 
@@ -1993,7 +2079,7 @@ int ndo2db_convert_string_to_int(char *buf, int *i) {
 }
 
 
-int ndo2db_convert_string_to_float(char *buf, float *f) {
+int ndo2db_strtof(const char *buf, float *f) {
 	char *endptr = NULL;
 
 	if (!buf) return NDO_ERROR;
@@ -2010,7 +2096,7 @@ int ndo2db_convert_string_to_float(char *buf, float *f) {
 }
 
 
-int ndo2db_convert_string_to_double(char *buf, double *d) {
+int ndo2db_strtod(const char *buf, double *d) {
 	char *endptr = NULL;
 
 	if (!buf) return NDO_ERROR;
@@ -2022,7 +2108,7 @@ int ndo2db_convert_string_to_double(char *buf, double *d) {
 }
 
 
-int ndo2db_convert_string_to_long(char *buf, long *l) {
+int ndo2db_strtol(const char *buf, long *l) {
 	char *endptr = NULL;
 
 	if (!buf) return NDO_ERROR;
@@ -2036,7 +2122,7 @@ int ndo2db_convert_string_to_long(char *buf, long *l) {
 }
 
 
-int ndo2db_convert_string_to_unsignedlong(char *buf, unsigned long *ul) {
+int ndo2db_strtoul(const char *buf, unsigned long *ul) {
 	char *endptr = NULL;
 
 	if (!buf) return NDO_ERROR;
@@ -2050,7 +2136,7 @@ int ndo2db_convert_string_to_unsignedlong(char *buf, unsigned long *ul) {
 }
 
 
-int ndo2db_convert_string_to_timeval(char *buf, struct timeval *tv) {
+int ndo2db_strtotv(const char *buf, struct timeval *tv) {
 	char *newbuf = NULL;
 	char *ptr = NULL;
 	int result = NDO_OK;
@@ -2062,10 +2148,10 @@ int ndo2db_convert_string_to_timeval(char *buf, struct timeval *tv) {
 	if (!(newbuf = strdup(buf))) return NDO_ERROR;
 
 	ptr = strtok(newbuf, ".");
-	result = ndo2db_convert_string_to_unsignedlong(ptr, (unsigned long *)&tv->tv_sec);
+	result = ndo2db_strtoul(ptr, (unsigned long *)&tv->tv_sec);
 	if (result == NDO_OK) {
 		ptr = strtok(NULL, "\n");
-		result = ndo2db_convert_string_to_unsignedlong(ptr, (unsigned long *)&tv->tv_usec);
+		result = ndo2db_strtoul(ptr, (unsigned long *)&tv->tv_usec);
 	}
 
 	free(newbuf);

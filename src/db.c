@@ -28,6 +28,7 @@
 #include "../include/protoapi.h"
 #include "../include/ndo2db.h"
 #include "../include/dbhandlers.h"
+#include "../include/dbstatements.h"
 #include "../include/db.h"
 
 
@@ -36,7 +37,7 @@ extern ndo2db_dbconfig ndo2db_db_settings;
 /* Last time we updated our connection status in the DB (ndo2db.c). */
 extern time_t ndo2db_db_last_checkin_time;
 
-const char *ndo2db_db_rawtablenames[NDO2DB_MAX_DBTABLES] = {
+const char *ndo2db_db_rawtablenames[NDO2DB_NUM_DBTABLES] = {
 	"instances",
 	"conninfo",
 	"objects",
@@ -109,7 +110,7 @@ const char *ndo2db_db_rawtablenames[NDO2DB_MAX_DBTABLES] = {
 };
 
 /* Our prefixed table names. */
-char *ndo2db_db_tablenames[NDO2DB_MAX_DBTABLES];
+char *ndo2db_db_tablenames[NDO2DB_NUM_DBTABLES];
 
 
 /* #define DEBUG_NDO2DB_QUERIES 1 */
@@ -128,7 +129,7 @@ int ndo2db_db_init(ndo2db_idi *idi) {
 	idi->dbinfo.server_type = ndo2db_db_settings.server_type;
 
 	/* Prepare prefixed table names. */
-	for (x = 0; x < NDO2DB_MAX_DBTABLES; x++) {
+	for (x = 0; x < NDO2DB_NUM_DBTABLES; x++) {
 		int r = asprintf(ndo2db_db_tablenames + x, "%s%s",
 				ndo2db_db_settings.dbprefix ? ndo2db_db_settings.dbprefix : "",
 				ndo2db_db_rawtablenames[x]);
@@ -183,7 +184,7 @@ int ndo2db_db_deinit(ndo2db_idi *idi) {
 	if (!idi) return NDO_ERROR;
 
 	/* Free our prefixed table names. */
-	for (x = 0; x < NDO2DB_MAX_DBTABLES; x++) my_free(ndo2db_db_tablenames[x]);
+	for (x = 0; x < NDO2DB_NUM_DBTABLES; x++) my_free(ndo2db_db_tablenames[x]);
 
 	/* Free our object id cache. */
 	ndo2db_free_cached_object_ids(idi);
@@ -261,7 +262,7 @@ int ndo2db_db_hello(ndo2db_idi *idi) {
 		idi->dbinfo.mysql_result = mysql_store_result(&idi->dbinfo.mysql_conn);
 		idi->dbinfo.mysql_row = mysql_fetch_row(idi->dbinfo.mysql_result);
 		if (idi->dbinfo.mysql_row) {
-			ndo2db_convert_string_to_unsignedlong(idi->dbinfo.mysql_row[0], &idi->dbinfo.instance_id);
+			ndo2db_strtoul(idi->dbinfo.mysql_row[0], &idi->dbinfo.instance_id);
 			have_instance = NDO_TRUE;
 		}
 		mysql_free_result(idi->dbinfo.mysql_result);
@@ -447,7 +448,7 @@ char *ndo2db_db_timet_to_sql(ndo2db_idi *idi, time_t t) {
 }
 
 
-/* executes a SQL statement */
+/* Executes a SQL statement. */
 int ndo2db_db_query(ndo2db_idi *idi, char *buf) {
 	int result = NDO_OK;
 
@@ -457,6 +458,7 @@ int ndo2db_db_query(ndo2db_idi *idi, char *buf) {
 	if (!idi->dbinfo.connected) {
 		if (ndo2db_db_connect(idi) == NDO_ERROR) return NDO_ERROR;
 		ndo2db_db_hello(idi);
+		ndo2db_stmt_init_stmts(idi);
 	}
 
 #ifdef DEBUG_NDO2DB_QUERIES
@@ -466,8 +468,8 @@ int ndo2db_db_query(ndo2db_idi *idi, char *buf) {
 	ndo2db_log_debug_info(NDO2DB_DEBUGL_SQL, 0, "%s\n", buf);
 
 	if (mysql_query(&idi->dbinfo.mysql_conn, buf)) {
-		syslog(LOG_USER|LOG_INFO, "Error: mysql_query() failed for '%s'\n", buf);
-		syslog(LOG_USER|LOG_INFO, "mysql_error: '%s'\n", mysql_error(&idi->dbinfo.mysql_conn));
+		syslog(LOG_USER|LOG_ERR, "Error: mysql_query() failed for '%s'", buf);
+		syslog(LOG_USER|LOG_ERR, "mysql_error: %s", mysql_error(&idi->dbinfo.mysql_conn));
 		result = NDO_ERROR;
 	}
 
@@ -475,15 +477,6 @@ int ndo2db_db_query(ndo2db_idi *idi, char *buf) {
 	if (result != NDO_OK) ndo2db_handle_db_error(idi);
 
 	return result;
-}
-
-
-/* frees memory associated with a query */
-int ndo2db_db_free_query(ndo2db_idi *idi) {
-
-	if (!idi) return NDO_ERROR;
-
-	return NDO_OK;
 }
 
 
@@ -552,7 +545,7 @@ int ndo2db_db_get_latest_data_time(
 		idi->dbinfo.mysql_result = mysql_store_result(&idi->dbinfo.mysql_conn);
 		idi->dbinfo.mysql_row = mysql_fetch_row(idi->dbinfo.mysql_result);
 		if (idi->dbinfo.mysql_row) {
-			ndo2db_convert_string_to_unsignedlong(idi->dbinfo.mysql_row[0], t);
+			ndo2db_strtoul(idi->dbinfo.mysql_row[0], t);
 		}
 		mysql_free_result(idi->dbinfo.mysql_result);
 		idi->dbinfo.mysql_result = NULL;

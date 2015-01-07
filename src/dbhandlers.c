@@ -29,6 +29,7 @@
 #include "../include/ndo2db.h"
 #include "../include/db.h"
 #include "../include/dbhandlers.h"
+#include "../include/dbstatements.h"
 
 /* Nagios headers. */
 #ifdef BUILD_NAGIOS_2X
@@ -48,8 +49,8 @@
 #endif
 
 
-/* Our prefixed table names (db.c). */
-extern char *ndo2db_db_tablenames[NDO2DB_MAX_DBTABLES];
+/* Our prefixed table names (from db.c). */
+extern char *ndo2db_db_tablenames[NDO2DB_NUM_DBTABLES];
 
 
 
@@ -57,8 +58,8 @@ extern char *ndo2db_db_tablenames[NDO2DB_MAX_DBTABLES];
 /* OBJECT ROUTINES                                                          */
 /****************************************************************************/
 
-int ndo2db_get_object_id(ndo2db_idi *idi, int object_type, char *n1, char *n2,
-		unsigned long *object_id) {
+int ndo2db_get_object_id(ndo2db_idi *idi, int object_type, char *n1,
+		char *n2, unsigned long *object_id) {
 	int result=NDO_OK;
 	int x = 0;
 	unsigned long cached_object_id=0L;
@@ -131,7 +132,7 @@ int ndo2db_get_object_id(ndo2db_idi *idi, int object_type, char *n1, char *n2,
 	if ((result=ndo2db_db_query(idi,buf))==NDO_OK) {
 		idi->dbinfo.mysql_result=mysql_store_result(&idi->dbinfo.mysql_conn);
 		if ((idi->dbinfo.mysql_row=mysql_fetch_row(idi->dbinfo.mysql_result))!=NULL) {
-			ndo2db_convert_string_to_unsignedlong(idi->dbinfo.mysql_row[0],object_id);
+			ndo2db_strtoul(idi->dbinfo.mysql_row[0],object_id);
 			found_object=NDO_TRUE;
 		}
 		mysql_free_result(idi->dbinfo.mysql_result);
@@ -242,8 +243,8 @@ int ndo2db_get_cached_object_ids(ndo2db_idi *idi) {
 		if (idi->dbinfo.mysql_result) {
 			while ((idi->dbinfo.mysql_row=mysql_fetch_row(idi->dbinfo.mysql_result))!=NULL) {
 
-				ndo2db_convert_string_to_unsignedlong(idi->dbinfo.mysql_row[0],&object_id);
-				ndo2db_convert_string_to_int(idi->dbinfo.mysql_row[1],&objecttype_id);
+				ndo2db_strtoul(idi->dbinfo.mysql_row[0],&object_id);
+				ndo2db_strtoi(idi->dbinfo.mysql_row[1],&objecttype_id);
 
 				/* add object to cached list */
 				ndo2db_add_cached_object_id(idi,objecttype_id,idi->dbinfo.mysql_row[2],idi->dbinfo.mysql_row[3],object_id);
@@ -263,8 +264,8 @@ int ndo2db_get_cached_object_ids(ndo2db_idi *idi) {
 
 
 
-int ndo2db_get_cached_object_id(ndo2db_idi *idi, int object_type, char *name1,
-		char *name2, unsigned long *object_id) {
+int ndo2db_get_cached_object_id(ndo2db_idi *idi, int object_type,
+		const char *name1, const char *name2, unsigned long *object_id) {
 	int result=NDO_ERROR;
 	int hashslot=0;
 	int compare=0;
@@ -307,7 +308,8 @@ int ndo2db_get_cached_object_id(ndo2db_idi *idi, int object_type, char *name1,
 
 
 
-int ndo2db_add_cached_object_id(ndo2db_idi *idi, int object_type, char *n1, char *n2, unsigned long object_id) {
+int ndo2db_add_cached_object_id(ndo2db_idi *idi, int object_type,
+		const char *n1, const char *n2, unsigned long object_id) {
 	int result=NDO_OK;
 	ndo2db_dbobject *temp_object=NULL;
 	ndo2db_dbobject *lastpointer=NULL;
@@ -316,8 +318,8 @@ int ndo2db_add_cached_object_id(ndo2db_idi *idi, int object_type, char *n1, char
 	int y=0;
 	int hashslot=0;
 	int compare=0;
-	char *name1=NULL;
-	char *name2=NULL;
+	const char *name1=NULL;
+	const char *name2=NULL;
 
 	/* make sure empty strings are set to null */
 	name1=n1;
@@ -380,7 +382,7 @@ int ndo2db_add_cached_object_id(ndo2db_idi *idi, int object_type, char *n1, char
 
 
 
-int ndo2db_object_hashfunc(const char *name1,const char *name2,int hashslots) {
+int ndo2db_object_hashfunc(const char *name1, const char *name2, int hashslots) {
 	unsigned int i,result;
 
 	result=0;
@@ -399,7 +401,8 @@ int ndo2db_object_hashfunc(const char *name1,const char *name2,int hashslots) {
 
 
 
-int ndo2db_compare_object_hashdata(const char *val1a, const char *val1b, const char *val2a, const char *val2b) {
+int ndo2db_compare_object_hashdata(const char *val1a, const char *val1b,
+		const char *val2a, const char *val2b) {
 	int result=0;
 
 	/* check first name */
@@ -518,7 +521,7 @@ int ndo2db_handle_logentry(ndo2db_idi *idi) {
 	/* break log entry in pieces */
 	if ((ptr=strtok(idi->buffered_input[NDO_DATA_LOGENTRY],"]"))==NULL)
 		return NDO_ERROR;
-	if (ndo2db_convert_string_to_unsignedlong(ptr+1, &etime) == NDO_ERROR)
+	if (ndo2db_strtoul(ptr+1, &etime) == NDO_ERROR)
 		return NDO_ERROR;
 	if ((ptr=strtok(NULL,"\x0"))==NULL)
 		return NDO_ERROR;
@@ -616,7 +619,7 @@ int ndo2db_handle_processdata(ndo2db_idi *idi) {
 	result=ndo2db_convert_standard_data_elements(idi,&type,&flags,&attr,&tstamp);
 
 	/* convert vars */
-	result=ndo2db_convert_string_to_unsignedlong(idi->buffered_input[NDO_DATA_PROCESSID],&process_id);
+	result=ndo2db_strtoul(idi->buffered_input[NDO_DATA_PROCESSID],&process_id);
 
 	ts[0]=ndo2db_db_timet_to_sql(idi,tstamp.tv_sec);
 
@@ -751,9 +754,9 @@ int ndo2db_handle_timedeventdata(ndo2db_idi *idi) {
 	result=ndo2db_convert_standard_data_elements(idi,&type,&flags,&attr,&tstamp);
 
 	/* convert vars */
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_EVENTTYPE],&event_type);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_RECURRING],&recurring_event);
-	result=ndo2db_convert_string_to_unsignedlong(idi->buffered_input[NDO_DATA_RUNTIME],&run_time);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_EVENTTYPE],&event_type);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_RECURRING],&recurring_event);
+	result=ndo2db_strtoul(idi->buffered_input[NDO_DATA_RUNTIME],&run_time);
 
 	/* skip sleep events.... */
 	if (type==NEBTYPE_TIMEDEVENT_SLEEP) {
@@ -945,8 +948,8 @@ int ndo2db_handle_logdata(ndo2db_idi *idi) {
 	result=ndo2db_convert_standard_data_elements(idi,&type,&flags,&attr,&tstamp);
 
 	/* convert data */
-	result=ndo2db_convert_string_to_unsignedlong(idi->buffered_input[NDO_DATA_LOGENTRYTYPE],&letype);
-	result=ndo2db_convert_string_to_unsignedlong(idi->buffered_input[NDO_DATA_LOGENTRYTIME],(unsigned long *)&etime);
+	result=ndo2db_strtoul(idi->buffered_input[NDO_DATA_LOGENTRYTYPE],&letype);
+	result=ndo2db_strtoul(idi->buffered_input[NDO_DATA_LOGENTRYTIME],(unsigned long *)&etime);
 
 	ts[0]=ndo2db_db_timet_to_sql(idi,tstamp.tv_sec);
 	ts[1]=ndo2db_db_timet_to_sql(idi,etime);
@@ -1007,12 +1010,12 @@ int ndo2db_handle_systemcommanddata(ndo2db_idi *idi) {
 	result=ndo2db_convert_standard_data_elements(idi,&type,&flags,&attr,&tstamp);
 
 	/* covert vars */
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_TIMEOUT],&timeout);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_EARLYTIMEOUT],&early_timeout);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_RETURNCODE],&return_code);
-	result=ndo2db_convert_string_to_double(idi->buffered_input[NDO_DATA_EXECUTIONTIME],&execution_time);
-	result=ndo2db_convert_string_to_timeval(idi->buffered_input[NDO_DATA_STARTTIME],&start_time);
-	result=ndo2db_convert_string_to_timeval(idi->buffered_input[NDO_DATA_ENDTIME],&end_time);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_TIMEOUT],&timeout);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_EARLYTIMEOUT],&early_timeout);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_RETURNCODE],&return_code);
+	result=ndo2db_strtod(idi->buffered_input[NDO_DATA_EXECUTIONTIME],&execution_time);
+	result=ndo2db_strtotv(idi->buffered_input[NDO_DATA_STARTTIME],&start_time);
+	result=ndo2db_strtotv(idi->buffered_input[NDO_DATA_ENDTIME],&end_time);
 
 	es[0]=ndo2db_db_escape_string(idi,idi->buffered_input[NDO_DATA_COMMANDLINE]);
 	es[1]=ndo2db_db_escape_string(idi,idi->buffered_input[NDO_DATA_OUTPUT]);
@@ -1085,15 +1088,15 @@ int ndo2db_handle_eventhandlerdata(ndo2db_idi *idi) {
 	result=ndo2db_convert_standard_data_elements(idi,&type,&flags,&attr,&tstamp);
 
 	/* covert vars */
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_EVENTHANDLERTYPE],&eventhandler_type);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_STATE],&state);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_STATETYPE],&state_type);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_TIMEOUT],&timeout);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_EARLYTIMEOUT],&early_timeout);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_RETURNCODE],&return_code);
-	result=ndo2db_convert_string_to_double(idi->buffered_input[NDO_DATA_EXECUTIONTIME],&execution_time);
-	result=ndo2db_convert_string_to_timeval(idi->buffered_input[NDO_DATA_STARTTIME],&start_time);
-	result=ndo2db_convert_string_to_timeval(idi->buffered_input[NDO_DATA_ENDTIME],&end_time);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_EVENTHANDLERTYPE],&eventhandler_type);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_STATE],&state);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_STATETYPE],&state_type);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_TIMEOUT],&timeout);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_EARLYTIMEOUT],&early_timeout);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_RETURNCODE],&return_code);
+	result=ndo2db_strtod(idi->buffered_input[NDO_DATA_EXECUTIONTIME],&execution_time);
+	result=ndo2db_strtotv(idi->buffered_input[NDO_DATA_STARTTIME],&start_time);
+	result=ndo2db_strtotv(idi->buffered_input[NDO_DATA_ENDTIME],&end_time);
 
 	es[0]=ndo2db_db_escape_string(idi,idi->buffered_input[NDO_DATA_COMMANDARGS]);
 	es[1]=ndo2db_db_escape_string(idi,idi->buffered_input[NDO_DATA_COMMANDLINE]);
@@ -1179,14 +1182,14 @@ int ndo2db_handle_notificationdata(ndo2db_idi *idi) {
 	result=ndo2db_convert_standard_data_elements(idi,&type,&flags,&attr,&tstamp);
 
 	/* convert vars */
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_NOTIFICATIONTYPE],&notification_type);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_NOTIFICATIONREASON],&notification_reason);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_STATE],&state);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_ESCALATED],&escalated);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_CONTACTSNOTIFIED],&contacts_notified);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_NOTIFICATIONTYPE],&notification_type);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_NOTIFICATIONREASON],&notification_reason);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_STATE],&state);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_ESCALATED],&escalated);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_CONTACTSNOTIFIED],&contacts_notified);
 
-	result=ndo2db_convert_string_to_timeval(idi->buffered_input[NDO_DATA_STARTTIME],&start_time);
-	result=ndo2db_convert_string_to_timeval(idi->buffered_input[NDO_DATA_ENDTIME],&end_time);
+	result=ndo2db_strtotv(idi->buffered_input[NDO_DATA_STARTTIME],&start_time);
+	result=ndo2db_strtotv(idi->buffered_input[NDO_DATA_ENDTIME],&end_time);
 
 	es[0]=ndo2db_db_escape_string(idi,idi->buffered_input[NDO_DATA_OUTPUT]);
 	es[1]=ndo2db_db_escape_string(idi,idi->buffered_input[NDO_DATA_OUTPUT]);
@@ -1265,8 +1268,8 @@ int ndo2db_handle_contactnotificationdata(ndo2db_idi *idi) {
 
 	/* convert vars */
 
-	result=ndo2db_convert_string_to_timeval(idi->buffered_input[NDO_DATA_STARTTIME],&start_time);
-	result=ndo2db_convert_string_to_timeval(idi->buffered_input[NDO_DATA_ENDTIME],&end_time);
+	result=ndo2db_strtotv(idi->buffered_input[NDO_DATA_STARTTIME],&start_time);
+	result=ndo2db_strtotv(idi->buffered_input[NDO_DATA_ENDTIME],&end_time);
 
 	ts[0]=ndo2db_db_timet_to_sql(idi,start_time.tv_sec);
 	ts[1]=ndo2db_db_timet_to_sql(idi,end_time.tv_sec);
@@ -1333,8 +1336,8 @@ int ndo2db_handle_contactnotificationmethoddata(ndo2db_idi *idi) {
 
 	/* convert vars */
 
-	result=ndo2db_convert_string_to_timeval(idi->buffered_input[NDO_DATA_STARTTIME],&start_time);
-	result=ndo2db_convert_string_to_timeval(idi->buffered_input[NDO_DATA_ENDTIME],&end_time);
+	result=ndo2db_strtotv(idi->buffered_input[NDO_DATA_STARTTIME],&start_time);
+	result=ndo2db_strtotv(idi->buffered_input[NDO_DATA_ENDTIME],&end_time);
 
 	es[0]=ndo2db_db_escape_string(idi,idi->buffered_input[NDO_DATA_COMMANDARGS]);
 
@@ -1419,18 +1422,18 @@ int ndo2db_handle_servicecheckdata(ndo2db_idi *idi) {
 #endif
 
 	/* covert vars */
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_CHECKTYPE],&check_type);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_CURRENTCHECKATTEMPT],&current_check_attempt);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_MAXCHECKATTEMPTS],&max_check_attempts);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_STATE],&state);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_STATETYPE],&state_type);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_TIMEOUT],&timeout);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_EARLYTIMEOUT],&early_timeout);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_RETURNCODE],&return_code);
-	result=ndo2db_convert_string_to_double(idi->buffered_input[NDO_DATA_EXECUTIONTIME],&execution_time);
-	result=ndo2db_convert_string_to_double(idi->buffered_input[NDO_DATA_LATENCY],&latency);
-	result=ndo2db_convert_string_to_timeval(idi->buffered_input[NDO_DATA_STARTTIME],&start_time);
-	result=ndo2db_convert_string_to_timeval(idi->buffered_input[NDO_DATA_ENDTIME],&end_time);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_CHECKTYPE],&check_type);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_CURRENTCHECKATTEMPT],&current_check_attempt);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_MAXCHECKATTEMPTS],&max_check_attempts);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_STATE],&state);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_STATETYPE],&state_type);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_TIMEOUT],&timeout);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_EARLYTIMEOUT],&early_timeout);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_RETURNCODE],&return_code);
+	result=ndo2db_strtod(idi->buffered_input[NDO_DATA_EXECUTIONTIME],&execution_time);
+	result=ndo2db_strtod(idi->buffered_input[NDO_DATA_LATENCY],&latency);
+	result=ndo2db_strtotv(idi->buffered_input[NDO_DATA_STARTTIME],&start_time);
+	result=ndo2db_strtotv(idi->buffered_input[NDO_DATA_ENDTIME],&end_time);
 
 	es[0]=ndo2db_db_escape_string(idi,idi->buffered_input[NDO_DATA_COMMANDARGS]);
 	es[1]=ndo2db_db_escape_string(idi,idi->buffered_input[NDO_DATA_COMMANDLINE]);
@@ -1540,18 +1543,18 @@ int ndo2db_handle_hostcheckdata(ndo2db_idi *idi) {
 #endif
 
 	/* covert vars */
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_CHECKTYPE],&check_type);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_CURRENTCHECKATTEMPT],&current_check_attempt);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_MAXCHECKATTEMPTS],&max_check_attempts);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_STATE],&state);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_STATETYPE],&state_type);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_TIMEOUT],&timeout);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_EARLYTIMEOUT],&early_timeout);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_RETURNCODE],&return_code);
-	result=ndo2db_convert_string_to_double(idi->buffered_input[NDO_DATA_EXECUTIONTIME],&execution_time);
-	result=ndo2db_convert_string_to_double(idi->buffered_input[NDO_DATA_LATENCY],&latency);
-	result=ndo2db_convert_string_to_timeval(idi->buffered_input[NDO_DATA_STARTTIME],&start_time);
-	result=ndo2db_convert_string_to_timeval(idi->buffered_input[NDO_DATA_ENDTIME],&end_time);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_CHECKTYPE],&check_type);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_CURRENTCHECKATTEMPT],&current_check_attempt);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_MAXCHECKATTEMPTS],&max_check_attempts);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_STATE],&state);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_STATETYPE],&state_type);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_TIMEOUT],&timeout);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_EARLYTIMEOUT],&early_timeout);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_RETURNCODE],&return_code);
+	result=ndo2db_strtod(idi->buffered_input[NDO_DATA_EXECUTIONTIME],&execution_time);
+	result=ndo2db_strtod(idi->buffered_input[NDO_DATA_LATENCY],&latency);
+	result=ndo2db_strtotv(idi->buffered_input[NDO_DATA_STARTTIME],&start_time);
+	result=ndo2db_strtotv(idi->buffered_input[NDO_DATA_ENDTIME],&end_time);
 
 	es[0]=ndo2db_db_escape_string(idi,idi->buffered_input[NDO_DATA_COMMANDARGS]);
 	es[1]=ndo2db_db_escape_string(idi,idi->buffered_input[NDO_DATA_COMMANDLINE]);
@@ -1650,15 +1653,15 @@ int ndo2db_handle_commentdata(ndo2db_idi *idi) {
 	result=ndo2db_convert_standard_data_elements(idi,&type,&flags,&attr,&tstamp);
 
 	/* convert vars */
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_COMMENTTYPE],&comment_type);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_ENTRYTYPE],&entry_type);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_PERSISTENT],&is_persistent);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_SOURCE],&comment_source);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_EXPIRES],&expires);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_COMMENTTYPE],&comment_type);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_ENTRYTYPE],&entry_type);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_PERSISTENT],&is_persistent);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_SOURCE],&comment_source);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_EXPIRES],&expires);
 
-	result=ndo2db_convert_string_to_unsignedlong(idi->buffered_input[NDO_DATA_COMMENTID],&internal_comment_id);
-	result=ndo2db_convert_string_to_unsignedlong(idi->buffered_input[NDO_DATA_ENTRYTIME],&comment_time);
-	result=ndo2db_convert_string_to_unsignedlong(idi->buffered_input[NDO_DATA_EXPIRATIONTIME],&expire_time);
+	result=ndo2db_strtoul(idi->buffered_input[NDO_DATA_COMMENTID],&internal_comment_id);
+	result=ndo2db_strtoul(idi->buffered_input[NDO_DATA_ENTRYTIME],&comment_time);
+	result=ndo2db_strtoul(idi->buffered_input[NDO_DATA_EXPIRATIONTIME],&expire_time);
 
 	es[0]=ndo2db_db_escape_string(idi,idi->buffered_input[NDO_DATA_AUTHORNAME]);
 	es[1]=ndo2db_db_escape_string(idi,idi->buffered_input[NDO_DATA_COMMENT]);
@@ -1809,15 +1812,15 @@ int ndo2db_handle_downtimedata(ndo2db_idi *idi) {
 	result=ndo2db_convert_standard_data_elements(idi,&type,&flags,&attr,&tstamp);
 
 	/* convert vars */
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_DOWNTIMETYPE],&downtime_type);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_FIXED],&fixed);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_DOWNTIMETYPE],&downtime_type);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_FIXED],&fixed);
 
-	result=ndo2db_convert_string_to_unsignedlong(idi->buffered_input[NDO_DATA_DURATION],&duration);
-	result=ndo2db_convert_string_to_unsignedlong(idi->buffered_input[NDO_DATA_DOWNTIMEID],&internal_downtime_id);
-	result=ndo2db_convert_string_to_unsignedlong(idi->buffered_input[NDO_DATA_TRIGGEREDBY],&triggered_by);
-	result=ndo2db_convert_string_to_unsignedlong(idi->buffered_input[NDO_DATA_ENTRYTIME],&entry_time);
-	result=ndo2db_convert_string_to_unsignedlong(idi->buffered_input[NDO_DATA_STARTTIME],&start_time);
-	result=ndo2db_convert_string_to_unsignedlong(idi->buffered_input[NDO_DATA_ENDTIME],&end_time);
+	result=ndo2db_strtoul(idi->buffered_input[NDO_DATA_DURATION],&duration);
+	result=ndo2db_strtoul(idi->buffered_input[NDO_DATA_DOWNTIMEID],&internal_downtime_id);
+	result=ndo2db_strtoul(idi->buffered_input[NDO_DATA_TRIGGEREDBY],&triggered_by);
+	result=ndo2db_strtoul(idi->buffered_input[NDO_DATA_ENTRYTIME],&entry_time);
+	result=ndo2db_strtoul(idi->buffered_input[NDO_DATA_STARTTIME],&start_time);
+	result=ndo2db_strtoul(idi->buffered_input[NDO_DATA_ENDTIME],&end_time);
 
 	es[0]=ndo2db_db_escape_string(idi,idi->buffered_input[NDO_DATA_AUTHORNAME]);
 	es[1]=ndo2db_db_escape_string(idi,idi->buffered_input[NDO_DATA_COMMENT]);
@@ -2017,12 +2020,12 @@ int ndo2db_handle_flappingdata(ndo2db_idi *idi) {
 	result=ndo2db_convert_standard_data_elements(idi,&type,&flags,&attr,&tstamp);
 
 	/* convert vars */
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_FLAPPINGTYPE],&flapping_type);
-	result=ndo2db_convert_string_to_double(idi->buffered_input[NDO_DATA_PERCENTSTATECHANGE],&percent_state_change);
-	result=ndo2db_convert_string_to_double(idi->buffered_input[NDO_DATA_LOWTHRESHOLD],&low_threshold);
-	result=ndo2db_convert_string_to_double(idi->buffered_input[NDO_DATA_HIGHTHRESHOLD],&high_threshold);
-	result=ndo2db_convert_string_to_unsignedlong(idi->buffered_input[NDO_DATA_COMMENTTIME],&comment_time);
-	result=ndo2db_convert_string_to_unsignedlong(idi->buffered_input[NDO_DATA_COMMENTID],&internal_comment_id);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_FLAPPINGTYPE],&flapping_type);
+	result=ndo2db_strtod(idi->buffered_input[NDO_DATA_PERCENTSTATECHANGE],&percent_state_change);
+	result=ndo2db_strtod(idi->buffered_input[NDO_DATA_LOWTHRESHOLD],&low_threshold);
+	result=ndo2db_strtod(idi->buffered_input[NDO_DATA_HIGHTHRESHOLD],&high_threshold);
+	result=ndo2db_strtoul(idi->buffered_input[NDO_DATA_COMMENTTIME],&comment_time);
+	result=ndo2db_strtoul(idi->buffered_input[NDO_DATA_COMMENTID],&internal_comment_id);
 
 	ts[0]=ndo2db_db_timet_to_sql(idi,tstamp.tv_sec);
 	ts[1]=ndo2db_db_timet_to_sql(idi,comment_time);
@@ -2099,24 +2102,24 @@ int ndo2db_handle_programstatusdata(ndo2db_idi *idi) {
 		return NDO_OK;
 
 	/* covert vars */
-	result=ndo2db_convert_string_to_unsignedlong(idi->buffered_input[NDO_DATA_PROGRAMSTARTTIME],&program_start_time);
-	result=ndo2db_convert_string_to_unsignedlong(idi->buffered_input[NDO_DATA_PROCESSID],&process_id);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_DAEMONMODE],&daemon_mode);
-	result=ndo2db_convert_string_to_unsignedlong(idi->buffered_input[NDO_DATA_LASTCOMMANDCHECK],&last_command_check);
-	result=ndo2db_convert_string_to_unsignedlong(idi->buffered_input[NDO_DATA_LASTLOGROTATION],&last_log_rotation);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_NOTIFICATIONSENABLED],&notifications_enabled);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_ACTIVESERVICECHECKSENABLED],&active_service_checks_enabled);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_PASSIVESERVICECHECKSENABLED],&passive_service_checks_enabled);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_ACTIVEHOSTCHECKSENABLED],&active_host_checks_enabled);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_PASSIVEHOSTCHECKSENABLED],&passive_host_checks_enabled);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_EVENTHANDLERSENABLED],&event_handlers_enabled);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_FLAPDETECTIONENABLED],&flap_detection_enabled);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_FAILUREPREDICTIONENABLED],&failure_prediction_enabled);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_PROCESSPERFORMANCEDATA],&process_performance_data);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_OBSESSOVERHOSTS],&obsess_over_hosts);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_OBSESSOVERSERVICES],&obsess_over_services);
-	result=ndo2db_convert_string_to_unsignedlong(idi->buffered_input[NDO_DATA_MODIFIEDHOSTATTRIBUTES],&modified_host_attributes);
-	result=ndo2db_convert_string_to_unsignedlong(idi->buffered_input[NDO_DATA_MODIFIEDSERVICEATTRIBUTES],&modified_service_attributes);
+	result=ndo2db_strtoul(idi->buffered_input[NDO_DATA_PROGRAMSTARTTIME],&program_start_time);
+	result=ndo2db_strtoul(idi->buffered_input[NDO_DATA_PROCESSID],&process_id);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_DAEMONMODE],&daemon_mode);
+	result=ndo2db_strtoul(idi->buffered_input[NDO_DATA_LASTCOMMANDCHECK],&last_command_check);
+	result=ndo2db_strtoul(idi->buffered_input[NDO_DATA_LASTLOGROTATION],&last_log_rotation);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_NOTIFICATIONSENABLED],&notifications_enabled);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_ACTIVESERVICECHECKSENABLED],&active_service_checks_enabled);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_PASSIVESERVICECHECKSENABLED],&passive_service_checks_enabled);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_ACTIVEHOSTCHECKSENABLED],&active_host_checks_enabled);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_PASSIVEHOSTCHECKSENABLED],&passive_host_checks_enabled);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_EVENTHANDLERSENABLED],&event_handlers_enabled);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_FLAPDETECTIONENABLED],&flap_detection_enabled);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_FAILUREPREDICTIONENABLED],&failure_prediction_enabled);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_PROCESSPERFORMANCEDATA],&process_performance_data);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_OBSESSOVERHOSTS],&obsess_over_hosts);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_OBSESSOVERSERVICES],&obsess_over_services);
+	result=ndo2db_strtoul(idi->buffered_input[NDO_DATA_MODIFIEDHOSTATTRIBUTES],&modified_host_attributes);
+	result=ndo2db_strtoul(idi->buffered_input[NDO_DATA_MODIFIEDSERVICEATTRIBUTES],&modified_service_attributes);
 
 	es[0]=ndo2db_db_escape_string(idi,idi->buffered_input[NDO_DATA_GLOBALHOSTEVENTHANDLER]);
 	es[1]=ndo2db_db_escape_string(idi,idi->buffered_input[NDO_DATA_GLOBALSERVICEEVENTHANDLER]);
@@ -2233,43 +2236,43 @@ int ndo2db_handle_hoststatusdata(ndo2db_idi *idi) {
 		return NDO_OK;
 
 	/* covert vars */
-	result=ndo2db_convert_string_to_unsignedlong(idi->buffered_input[NDO_DATA_LASTHOSTCHECK],&last_check);
-	result=ndo2db_convert_string_to_unsignedlong(idi->buffered_input[NDO_DATA_NEXTHOSTCHECK],&next_check);
-	result=ndo2db_convert_string_to_unsignedlong(idi->buffered_input[NDO_DATA_LASTSTATECHANGE],&last_state_change);
-	result=ndo2db_convert_string_to_unsignedlong(idi->buffered_input[NDO_DATA_LASTHARDSTATECHANGE],&last_hard_state_change);
-	result=ndo2db_convert_string_to_unsignedlong(idi->buffered_input[NDO_DATA_LASTTIMEUP],&last_time_up);
-	result=ndo2db_convert_string_to_unsignedlong(idi->buffered_input[NDO_DATA_LASTTIMEDOWN],&last_time_down);
-	result=ndo2db_convert_string_to_unsignedlong(idi->buffered_input[NDO_DATA_LASTTIMEUNREACHABLE],&last_time_unreachable);
-	result=ndo2db_convert_string_to_unsignedlong(idi->buffered_input[NDO_DATA_LASTHOSTNOTIFICATION],&last_notification);
-	result=ndo2db_convert_string_to_unsignedlong(idi->buffered_input[NDO_DATA_NEXTHOSTNOTIFICATION],&next_notification);
-	result=ndo2db_convert_string_to_unsignedlong(idi->buffered_input[NDO_DATA_MODIFIEDHOSTATTRIBUTES],&modified_host_attributes);
-	result=ndo2db_convert_string_to_double(idi->buffered_input[NDO_DATA_PERCENTSTATECHANGE],&percent_state_change);
-	result=ndo2db_convert_string_to_double(idi->buffered_input[NDO_DATA_LATENCY],&latency);
-	result=ndo2db_convert_string_to_double(idi->buffered_input[NDO_DATA_EXECUTIONTIME],&execution_time);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_CURRENTSTATE],&current_state);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_HASBEENCHECKED],&has_been_checked);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_SHOULDBESCHEDULED],&should_be_scheduled);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_CURRENTCHECKATTEMPT],&current_check_attempt);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_MAXCHECKATTEMPTS],&max_check_attempts);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_CHECKTYPE],&check_type);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_LASTHARDSTATE],&last_hard_state);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_STATETYPE],&state_type);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_NOMORENOTIFICATIONS],&no_more_notifications);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_NOTIFICATIONSENABLED],&notifications_enabled);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_PROBLEMHASBEENACKNOWLEDGED],&problem_has_been_acknowledged);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_ACKNOWLEDGEMENTTYPE],&acknowledgement_type);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_CURRENTNOTIFICATIONNUMBER],&current_notification_number);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_PASSIVEHOSTCHECKSENABLED],&passive_checks_enabled);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_ACTIVEHOSTCHECKSENABLED],&active_checks_enabled);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_EVENTHANDLERENABLED],&event_handler_enabled);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_FLAPDETECTIONENABLED],&flap_detection_enabled);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_ISFLAPPING],&is_flapping);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_SCHEDULEDDOWNTIMEDEPTH],&scheduled_downtime_depth);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_FAILUREPREDICTIONENABLED],&failure_prediction_enabled);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_PROCESSPERFORMANCEDATA],&process_performance_data);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_OBSESSOVERHOST],&obsess_over_host);
-	result=ndo2db_convert_string_to_double(idi->buffered_input[NDO_DATA_NORMALCHECKINTERVAL],&normal_check_interval);
-	result=ndo2db_convert_string_to_double(idi->buffered_input[NDO_DATA_RETRYCHECKINTERVAL],&retry_check_interval);
+	result=ndo2db_strtoul(idi->buffered_input[NDO_DATA_LASTHOSTCHECK],&last_check);
+	result=ndo2db_strtoul(idi->buffered_input[NDO_DATA_NEXTHOSTCHECK],&next_check);
+	result=ndo2db_strtoul(idi->buffered_input[NDO_DATA_LASTSTATECHANGE],&last_state_change);
+	result=ndo2db_strtoul(idi->buffered_input[NDO_DATA_LASTHARDSTATECHANGE],&last_hard_state_change);
+	result=ndo2db_strtoul(idi->buffered_input[NDO_DATA_LASTTIMEUP],&last_time_up);
+	result=ndo2db_strtoul(idi->buffered_input[NDO_DATA_LASTTIMEDOWN],&last_time_down);
+	result=ndo2db_strtoul(idi->buffered_input[NDO_DATA_LASTTIMEUNREACHABLE],&last_time_unreachable);
+	result=ndo2db_strtoul(idi->buffered_input[NDO_DATA_LASTHOSTNOTIFICATION],&last_notification);
+	result=ndo2db_strtoul(idi->buffered_input[NDO_DATA_NEXTHOSTNOTIFICATION],&next_notification);
+	result=ndo2db_strtoul(idi->buffered_input[NDO_DATA_MODIFIEDHOSTATTRIBUTES],&modified_host_attributes);
+	result=ndo2db_strtod(idi->buffered_input[NDO_DATA_PERCENTSTATECHANGE],&percent_state_change);
+	result=ndo2db_strtod(idi->buffered_input[NDO_DATA_LATENCY],&latency);
+	result=ndo2db_strtod(idi->buffered_input[NDO_DATA_EXECUTIONTIME],&execution_time);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_CURRENTSTATE],&current_state);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_HASBEENCHECKED],&has_been_checked);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_SHOULDBESCHEDULED],&should_be_scheduled);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_CURRENTCHECKATTEMPT],&current_check_attempt);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_MAXCHECKATTEMPTS],&max_check_attempts);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_CHECKTYPE],&check_type);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_LASTHARDSTATE],&last_hard_state);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_STATETYPE],&state_type);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_NOMORENOTIFICATIONS],&no_more_notifications);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_NOTIFICATIONSENABLED],&notifications_enabled);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_PROBLEMHASBEENACKNOWLEDGED],&problem_has_been_acknowledged);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_ACKNOWLEDGEMENTTYPE],&acknowledgement_type);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_CURRENTNOTIFICATIONNUMBER],&current_notification_number);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_PASSIVEHOSTCHECKSENABLED],&passive_checks_enabled);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_ACTIVEHOSTCHECKSENABLED],&active_checks_enabled);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_EVENTHANDLERENABLED],&event_handler_enabled);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_FLAPDETECTIONENABLED],&flap_detection_enabled);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_ISFLAPPING],&is_flapping);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_SCHEDULEDDOWNTIMEDEPTH],&scheduled_downtime_depth);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_FAILUREPREDICTIONENABLED],&failure_prediction_enabled);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_PROCESSPERFORMANCEDATA],&process_performance_data);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_OBSESSOVERHOST],&obsess_over_host);
+	result=ndo2db_strtod(idi->buffered_input[NDO_DATA_NORMALCHECKINTERVAL],&normal_check_interval);
+	result=ndo2db_strtod(idi->buffered_input[NDO_DATA_RETRYCHECKINTERVAL],&retry_check_interval);
 
 	es[0]=ndo2db_db_escape_string(idi,idi->buffered_input[NDO_DATA_OUTPUT]);
 	es[1]=ndo2db_db_escape_string(idi,idi->buffered_input[NDO_DATA_LONGOUTPUT]);
@@ -2359,7 +2362,8 @@ int ndo2db_handle_hoststatusdata(ndo2db_idi *idi) {
 	for (x = 0; x < (int)NAGIOS_SIZEOF_ARRAY(es); x++) free(es[x]);
 
 	/* save custom variables to db */
-	result=ndo2db_save_custom_variables(idi,NDO2DB_DBTABLE_CUSTOMVARIABLESTATUS,object_id,ts[0]);
+// 	result=ndo2db_save_custom_variables(idi,NDO2DB_DBTABLE_CUSTOMVARIABLESTATUS,object_id,ts[0]);
+	result=ndo2db_stmt_save_customvariable_status(idi, object_id, tstamp.tv_sec);
 
 
         /* free memory */
@@ -2430,44 +2434,44 @@ int ndo2db_handle_servicestatusdata(ndo2db_idi *idi) {
 		return NDO_OK;
 
 	/* covert vars */
-	result=ndo2db_convert_string_to_unsignedlong(idi->buffered_input[NDO_DATA_LASTSERVICECHECK],&last_check);
-	result=ndo2db_convert_string_to_unsignedlong(idi->buffered_input[NDO_DATA_NEXTSERVICECHECK],&next_check);
-	result=ndo2db_convert_string_to_unsignedlong(idi->buffered_input[NDO_DATA_LASTSTATECHANGE],&last_state_change);
-	result=ndo2db_convert_string_to_unsignedlong(idi->buffered_input[NDO_DATA_LASTHARDSTATECHANGE],&last_hard_state_change);
-	result=ndo2db_convert_string_to_unsignedlong(idi->buffered_input[NDO_DATA_LASTTIMEOK],&last_time_ok);
-	result=ndo2db_convert_string_to_unsignedlong(idi->buffered_input[NDO_DATA_LASTTIMEWARNING],&last_time_warning);
-	result=ndo2db_convert_string_to_unsignedlong(idi->buffered_input[NDO_DATA_LASTTIMEUNKNOWN],&last_time_unknown);
-	result=ndo2db_convert_string_to_unsignedlong(idi->buffered_input[NDO_DATA_LASTTIMECRITICAL],&last_time_critical);
-	result=ndo2db_convert_string_to_unsignedlong(idi->buffered_input[NDO_DATA_LASTSERVICENOTIFICATION],&last_notification);
-	result=ndo2db_convert_string_to_unsignedlong(idi->buffered_input[NDO_DATA_NEXTSERVICENOTIFICATION],&next_notification);
-	result=ndo2db_convert_string_to_unsignedlong(idi->buffered_input[NDO_DATA_MODIFIEDSERVICEATTRIBUTES],&modified_service_attributes);
-	result=ndo2db_convert_string_to_double(idi->buffered_input[NDO_DATA_PERCENTSTATECHANGE],&percent_state_change);
-	result=ndo2db_convert_string_to_double(idi->buffered_input[NDO_DATA_LATENCY],&latency);
-	result=ndo2db_convert_string_to_double(idi->buffered_input[NDO_DATA_EXECUTIONTIME],&execution_time);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_CURRENTSTATE],&current_state);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_HASBEENCHECKED],&has_been_checked);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_SHOULDBESCHEDULED],&should_be_scheduled);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_CURRENTCHECKATTEMPT],&current_check_attempt);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_MAXCHECKATTEMPTS],&max_check_attempts);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_CHECKTYPE],&check_type);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_LASTHARDSTATE],&last_hard_state);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_STATETYPE],&state_type);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_NOMORENOTIFICATIONS],&no_more_notifications);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_NOTIFICATIONSENABLED],&notifications_enabled);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_PROBLEMHASBEENACKNOWLEDGED],&problem_has_been_acknowledged);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_ACKNOWLEDGEMENTTYPE],&acknowledgement_type);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_CURRENTNOTIFICATIONNUMBER],&current_notification_number);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_PASSIVESERVICECHECKSENABLED],&passive_checks_enabled);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_ACTIVESERVICECHECKSENABLED],&active_checks_enabled);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_EVENTHANDLERENABLED],&event_handler_enabled);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_FLAPDETECTIONENABLED],&flap_detection_enabled);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_ISFLAPPING],&is_flapping);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_SCHEDULEDDOWNTIMEDEPTH],&scheduled_downtime_depth);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_FAILUREPREDICTIONENABLED],&failure_prediction_enabled);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_PROCESSPERFORMANCEDATA],&process_performance_data);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_OBSESSOVERSERVICE],&obsess_over_service);
-	result=ndo2db_convert_string_to_double(idi->buffered_input[NDO_DATA_NORMALCHECKINTERVAL],&normal_check_interval);
-	result=ndo2db_convert_string_to_double(idi->buffered_input[NDO_DATA_RETRYCHECKINTERVAL],&retry_check_interval);
+	result=ndo2db_strtoul(idi->buffered_input[NDO_DATA_LASTSERVICECHECK],&last_check);
+	result=ndo2db_strtoul(idi->buffered_input[NDO_DATA_NEXTSERVICECHECK],&next_check);
+	result=ndo2db_strtoul(idi->buffered_input[NDO_DATA_LASTSTATECHANGE],&last_state_change);
+	result=ndo2db_strtoul(idi->buffered_input[NDO_DATA_LASTHARDSTATECHANGE],&last_hard_state_change);
+	result=ndo2db_strtoul(idi->buffered_input[NDO_DATA_LASTTIMEOK],&last_time_ok);
+	result=ndo2db_strtoul(idi->buffered_input[NDO_DATA_LASTTIMEWARNING],&last_time_warning);
+	result=ndo2db_strtoul(idi->buffered_input[NDO_DATA_LASTTIMEUNKNOWN],&last_time_unknown);
+	result=ndo2db_strtoul(idi->buffered_input[NDO_DATA_LASTTIMECRITICAL],&last_time_critical);
+	result=ndo2db_strtoul(idi->buffered_input[NDO_DATA_LASTSERVICENOTIFICATION],&last_notification);
+	result=ndo2db_strtoul(idi->buffered_input[NDO_DATA_NEXTSERVICENOTIFICATION],&next_notification);
+	result=ndo2db_strtoul(idi->buffered_input[NDO_DATA_MODIFIEDSERVICEATTRIBUTES],&modified_service_attributes);
+	result=ndo2db_strtod(idi->buffered_input[NDO_DATA_PERCENTSTATECHANGE],&percent_state_change);
+	result=ndo2db_strtod(idi->buffered_input[NDO_DATA_LATENCY],&latency);
+	result=ndo2db_strtod(idi->buffered_input[NDO_DATA_EXECUTIONTIME],&execution_time);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_CURRENTSTATE],&current_state);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_HASBEENCHECKED],&has_been_checked);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_SHOULDBESCHEDULED],&should_be_scheduled);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_CURRENTCHECKATTEMPT],&current_check_attempt);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_MAXCHECKATTEMPTS],&max_check_attempts);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_CHECKTYPE],&check_type);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_LASTHARDSTATE],&last_hard_state);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_STATETYPE],&state_type);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_NOMORENOTIFICATIONS],&no_more_notifications);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_NOTIFICATIONSENABLED],&notifications_enabled);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_PROBLEMHASBEENACKNOWLEDGED],&problem_has_been_acknowledged);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_ACKNOWLEDGEMENTTYPE],&acknowledgement_type);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_CURRENTNOTIFICATIONNUMBER],&current_notification_number);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_PASSIVESERVICECHECKSENABLED],&passive_checks_enabled);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_ACTIVESERVICECHECKSENABLED],&active_checks_enabled);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_EVENTHANDLERENABLED],&event_handler_enabled);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_FLAPDETECTIONENABLED],&flap_detection_enabled);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_ISFLAPPING],&is_flapping);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_SCHEDULEDDOWNTIMEDEPTH],&scheduled_downtime_depth);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_FAILUREPREDICTIONENABLED],&failure_prediction_enabled);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_PROCESSPERFORMANCEDATA],&process_performance_data);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_OBSESSOVERSERVICE],&obsess_over_service);
+	result=ndo2db_strtod(idi->buffered_input[NDO_DATA_NORMALCHECKINTERVAL],&normal_check_interval);
+	result=ndo2db_strtod(idi->buffered_input[NDO_DATA_RETRYCHECKINTERVAL],&retry_check_interval);
 
 	es[0]=ndo2db_db_escape_string(idi,idi->buffered_input[NDO_DATA_OUTPUT]);
 	es[1]=ndo2db_db_escape_string(idi,idi->buffered_input[NDO_DATA_LONGOUTPUT]);
@@ -2559,7 +2563,8 @@ int ndo2db_handle_servicestatusdata(ndo2db_idi *idi) {
 	for (x = 0; x < (int)NAGIOS_SIZEOF_ARRAY(es); x++) free(es[x]);
 
 	/* save custom variables to db */
-	result=ndo2db_save_custom_variables(idi,NDO2DB_DBTABLE_CUSTOMVARIABLESTATUS,object_id,ts[0]);
+// 	result=ndo2db_save_custom_variables(idi,NDO2DB_DBTABLE_CUSTOMVARIABLESTATUS,object_id,ts[0]);
+	result=ndo2db_stmt_save_customvariable_status(idi, object_id, tstamp.tv_sec);
 
         /* free memory */
 	for (x = 0; x < (int)NAGIOS_SIZEOF_ARRAY(ts); x++) free(ts[x]);
@@ -2596,13 +2601,13 @@ int ndo2db_handle_contactstatusdata(ndo2db_idi *idi) {
 		return NDO_OK;
 
 	/* covert vars */
-	result=ndo2db_convert_string_to_unsignedlong(idi->buffered_input[NDO_DATA_LASTHOSTNOTIFICATION],&last_host_notification);
-	result=ndo2db_convert_string_to_unsignedlong(idi->buffered_input[NDO_DATA_LASTSERVICENOTIFICATION],&last_service_notification);
-	result=ndo2db_convert_string_to_unsignedlong(idi->buffered_input[NDO_DATA_MODIFIEDCONTACTATTRIBUTES],&modified_attributes);
-	result=ndo2db_convert_string_to_unsignedlong(idi->buffered_input[NDO_DATA_MODIFIEDHOSTATTRIBUTES],&modified_host_attributes);
-	result=ndo2db_convert_string_to_unsignedlong(idi->buffered_input[NDO_DATA_MODIFIEDSERVICEATTRIBUTES],&modified_service_attributes);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_HOSTNOTIFICATIONSENABLED],&host_notifications_enabled);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_SERVICENOTIFICATIONSENABLED],&service_notifications_enabled);
+	result=ndo2db_strtoul(idi->buffered_input[NDO_DATA_LASTHOSTNOTIFICATION],&last_host_notification);
+	result=ndo2db_strtoul(idi->buffered_input[NDO_DATA_LASTSERVICENOTIFICATION],&last_service_notification);
+	result=ndo2db_strtoul(idi->buffered_input[NDO_DATA_MODIFIEDCONTACTATTRIBUTES],&modified_attributes);
+	result=ndo2db_strtoul(idi->buffered_input[NDO_DATA_MODIFIEDHOSTATTRIBUTES],&modified_host_attributes);
+	result=ndo2db_strtoul(idi->buffered_input[NDO_DATA_MODIFIEDSERVICEATTRIBUTES],&modified_service_attributes);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_HOSTNOTIFICATIONSENABLED],&host_notifications_enabled);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_SERVICENOTIFICATIONSENABLED],&service_notifications_enabled);
 
 	ts[0]=ndo2db_db_timet_to_sql(idi,tstamp.tv_sec);
 	ts[1]=ndo2db_db_timet_to_sql(idi,last_host_notification);
@@ -2639,7 +2644,8 @@ int ndo2db_handle_contactstatusdata(ndo2db_idi *idi) {
 	free(buf1);
 
 	/* save custom variables to db */
-	result=ndo2db_save_custom_variables(idi,NDO2DB_DBTABLE_CUSTOMVARIABLESTATUS,object_id,ts[0]);
+// 	result=ndo2db_save_custom_variables(idi,NDO2DB_DBTABLE_CUSTOMVARIABLESTATUS,object_id,ts[0]);
+	result=ndo2db_stmt_save_customvariable_status(idi, object_id, tstamp.tv_sec);
 
 
         /* free memory */
@@ -2715,8 +2721,8 @@ int ndo2db_handle_externalcommanddata(ndo2db_idi *idi) {
 		return NDO_OK;
 
 	/* covert vars */
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_COMMANDTYPE],&command_type);
-	result=ndo2db_convert_string_to_unsignedlong(idi->buffered_input[NDO_DATA_ENTRYTIME],&entry_time);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_COMMANDTYPE],&command_type);
+	result=ndo2db_strtoul(idi->buffered_input[NDO_DATA_ENTRYTIME],&entry_time);
 
 	es[0]=ndo2db_db_escape_string(idi,idi->buffered_input[NDO_DATA_COMMANDSTRING]);
 	es[1]=ndo2db_db_escape_string(idi,idi->buffered_input[NDO_DATA_COMMANDARGS]);
@@ -2789,11 +2795,11 @@ int ndo2db_handle_acknowledgementdata(ndo2db_idi *idi) {
 	result=ndo2db_convert_standard_data_elements(idi,&type,&flags,&attr,&tstamp);
 
 	/* convert vars */
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_ACKNOWLEDGEMENTTYPE],&acknowledgement_type);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_STATE],&state);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_STICKY],&is_sticky);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_PERSISTENT],&persistent_comment);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_NOTIFYCONTACTS],&notify_contacts);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_ACKNOWLEDGEMENTTYPE],&acknowledgement_type);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_STATE],&state);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_STICKY],&is_sticky);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_PERSISTENT],&persistent_comment);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_NOTIFYCONTACTS],&notify_contacts);
 
 	es[0]=ndo2db_db_escape_string(idi,idi->buffered_input[NDO_DATA_AUTHORNAME]);
 	es[1]=ndo2db_db_escape_string(idi,idi->buffered_input[NDO_DATA_COMMENT]);
@@ -2870,14 +2876,14 @@ int ndo2db_handle_statechangedata(ndo2db_idi *idi) {
 		return NDO_OK;
 
 	/* convert vars */
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_STATECHANGETYPE],&statechange_type);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_STATECHANGE],&state_change_occurred);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_STATE],&state);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_STATETYPE],&state_type);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_CURRENTCHECKATTEMPT],&current_attempt);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_MAXCHECKATTEMPTS],&max_attempts);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_LASTHARDSTATE],&last_hard_state);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_LASTSTATE],&last_state);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_STATECHANGETYPE],&statechange_type);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_STATECHANGE],&state_change_occurred);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_STATE],&state);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_STATETYPE],&state_type);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_CURRENTCHECKATTEMPT],&current_attempt);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_MAXCHECKATTEMPTS],&max_attempts);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_LASTHARDSTATE],&last_hard_state);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_LASTSTATE],&last_state);
 
 	es[0]=ndo2db_db_escape_string(idi,idi->buffered_input[NDO_DATA_OUTPUT]);
 	es[1]=ndo2db_db_escape_string(idi,idi->buffered_input[NDO_DATA_LONGOUTPUT]);
@@ -3199,45 +3205,45 @@ int ndo2db_handle_hostdefinition(ndo2db_idi *idi) {
 		return NDO_OK;
 
 	/* convert vars */
-	result=ndo2db_convert_string_to_double(idi->buffered_input[NDO_DATA_HOSTCHECKINTERVAL],&check_interval);
-	result=ndo2db_convert_string_to_double(idi->buffered_input[NDO_DATA_HOSTRETRYINTERVAL],&retry_interval);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_HOSTMAXCHECKATTEMPTS],&max_check_attempts);
-	result=ndo2db_convert_string_to_double(idi->buffered_input[NDO_DATA_FIRSTNOTIFICATIONDELAY],&first_notification_delay);
-	result=ndo2db_convert_string_to_double(idi->buffered_input[NDO_DATA_HOSTNOTIFICATIONINTERVAL],&notification_interval);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_NOTIFYHOSTDOWN],&notify_on_down);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_NOTIFYHOSTUNREACHABLE],&notify_on_unreachable);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_NOTIFYHOSTRECOVERY],&notify_on_recovery);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_NOTIFYHOSTFLAPPING],&notify_on_flapping);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_NOTIFYHOSTDOWNTIME],&notify_on_downtime);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_STALKHOSTONUP],&stalk_on_up);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_STALKHOSTONDOWN],&stalk_on_down);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_STALKHOSTONUNREACHABLE],&stalk_on_unreachable);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_HOSTFLAPDETECTIONENABLED],&flap_detection_enabled);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_FLAPDETECTIONONUP],&flap_detection_on_up);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_FLAPDETECTIONONDOWN],&flap_detection_on_down);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_FLAPDETECTIONONUNREACHABLE],&flap_detection_on_unreachable);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_PROCESSHOSTPERFORMANCEDATA],&process_performance_data);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_HOSTFRESHNESSCHECKSENABLED],&freshness_checks_enabled);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_HOSTFRESHNESSTHRESHOLD],&freshness_threshold);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_PASSIVEHOSTCHECKSENABLED],&passive_checks_enabled);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_HOSTEVENTHANDLERENABLED],&event_handler_enabled);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_ACTIVEHOSTCHECKSENABLED],&active_checks_enabled);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_RETAINHOSTSTATUSINFORMATION],&retain_status_information);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_RETAINHOSTNONSTATUSINFORMATION],&retain_nonstatus_information);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_HOSTNOTIFICATIONSENABLED],&notifications_enabled);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_OBSESSOVERHOST],&obsess_over_host);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_HOSTFAILUREPREDICTIONENABLED],&failure_prediction_enabled);
-	result=ndo2db_convert_string_to_double(idi->buffered_input[NDO_DATA_LOWHOSTFLAPTHRESHOLD],&low_flap_threshold);
-	result=ndo2db_convert_string_to_double(idi->buffered_input[NDO_DATA_HIGHHOSTFLAPTHRESHOLD],&high_flap_threshold);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_HAVE2DCOORDS],&have_2d_coords);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_X2D],&x_2d);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_Y3D],&y_2d);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_HAVE3DCOORDS],&have_3d_coords);
-	result=ndo2db_convert_string_to_double(idi->buffered_input[NDO_DATA_X3D],&x_3d);
-	result=ndo2db_convert_string_to_double(idi->buffered_input[NDO_DATA_Y3D],&y_3d);
-	result=ndo2db_convert_string_to_double(idi->buffered_input[NDO_DATA_Z3D],&z_3d);
+	result=ndo2db_strtod(idi->buffered_input[NDO_DATA_HOSTCHECKINTERVAL],&check_interval);
+	result=ndo2db_strtod(idi->buffered_input[NDO_DATA_HOSTRETRYINTERVAL],&retry_interval);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_HOSTMAXCHECKATTEMPTS],&max_check_attempts);
+	result=ndo2db_strtod(idi->buffered_input[NDO_DATA_FIRSTNOTIFICATIONDELAY],&first_notification_delay);
+	result=ndo2db_strtod(idi->buffered_input[NDO_DATA_HOSTNOTIFICATIONINTERVAL],&notification_interval);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_NOTIFYHOSTDOWN],&notify_on_down);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_NOTIFYHOSTUNREACHABLE],&notify_on_unreachable);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_NOTIFYHOSTRECOVERY],&notify_on_recovery);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_NOTIFYHOSTFLAPPING],&notify_on_flapping);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_NOTIFYHOSTDOWNTIME],&notify_on_downtime);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_STALKHOSTONUP],&stalk_on_up);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_STALKHOSTONDOWN],&stalk_on_down);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_STALKHOSTONUNREACHABLE],&stalk_on_unreachable);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_HOSTFLAPDETECTIONENABLED],&flap_detection_enabled);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_FLAPDETECTIONONUP],&flap_detection_on_up);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_FLAPDETECTIONONDOWN],&flap_detection_on_down);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_FLAPDETECTIONONUNREACHABLE],&flap_detection_on_unreachable);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_PROCESSHOSTPERFORMANCEDATA],&process_performance_data);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_HOSTFRESHNESSCHECKSENABLED],&freshness_checks_enabled);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_HOSTFRESHNESSTHRESHOLD],&freshness_threshold);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_PASSIVEHOSTCHECKSENABLED],&passive_checks_enabled);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_HOSTEVENTHANDLERENABLED],&event_handler_enabled);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_ACTIVEHOSTCHECKSENABLED],&active_checks_enabled);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_RETAINHOSTSTATUSINFORMATION],&retain_status_information);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_RETAINHOSTNONSTATUSINFORMATION],&retain_nonstatus_information);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_HOSTNOTIFICATIONSENABLED],&notifications_enabled);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_OBSESSOVERHOST],&obsess_over_host);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_HOSTFAILUREPREDICTIONENABLED],&failure_prediction_enabled);
+	result=ndo2db_strtod(idi->buffered_input[NDO_DATA_LOWHOSTFLAPTHRESHOLD],&low_flap_threshold);
+	result=ndo2db_strtod(idi->buffered_input[NDO_DATA_HIGHHOSTFLAPTHRESHOLD],&high_flap_threshold);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_HAVE2DCOORDS],&have_2d_coords);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_X2D],&x_2d);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_Y3D],&y_2d);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_HAVE3DCOORDS],&have_3d_coords);
+	result=ndo2db_strtod(idi->buffered_input[NDO_DATA_X3D],&x_3d);
+	result=ndo2db_strtod(idi->buffered_input[NDO_DATA_Y3D],&y_3d);
+	result=ndo2db_strtod(idi->buffered_input[NDO_DATA_Z3D],&z_3d);
 #ifdef BUILD_NAGIOS_4X
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_IMPORTANCE],&importance);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_IMPORTANCE],&importance);
 #endif
 
 	es[0]=ndo2db_db_escape_string(idi,idi->buffered_input[NDO_DATA_HOSTADDRESS]);
@@ -3447,7 +3453,8 @@ int ndo2db_handle_hostdefinition(ndo2db_idi *idi) {
 	}
 
 	/* save custom variables to db */
-	result=ndo2db_save_custom_variables(idi,NDO2DB_DBTABLE_CUSTOMVARIABLES,object_id,NULL);
+// 	result=ndo2db_save_custom_variables(idi,NDO2DB_DBTABLE_CUSTOMVARIABLES,object_id,NULL);
+	result=ndo2db_stmt_save_customvariables(idi, object_id);
 
 	return NDO_OK;
 }
@@ -3611,42 +3618,42 @@ int ndo2db_handle_servicedefinition(ndo2db_idi *idi) {
 		return NDO_OK;
 
 	/* convert vars */
-	result=ndo2db_convert_string_to_double(idi->buffered_input[NDO_DATA_SERVICECHECKINTERVAL],&check_interval);
-	result=ndo2db_convert_string_to_double(idi->buffered_input[NDO_DATA_SERVICERETRYINTERVAL],&retry_interval);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_MAXSERVICECHECKATTEMPTS],&max_check_attempts);
-	result=ndo2db_convert_string_to_double(idi->buffered_input[NDO_DATA_FIRSTNOTIFICATIONDELAY],&first_notification_delay);
-	result=ndo2db_convert_string_to_double(idi->buffered_input[NDO_DATA_SERVICENOTIFICATIONINTERVAL],&notification_interval);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_NOTIFYSERVICEWARNING],&notify_on_warning);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_NOTIFYSERVICEUNKNOWN],&notify_on_unknown);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_NOTIFYSERVICECRITICAL],&notify_on_critical);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_NOTIFYSERVICERECOVERY],&notify_on_recovery);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_NOTIFYSERVICEFLAPPING],&notify_on_flapping);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_NOTIFYSERVICEDOWNTIME],&notify_on_downtime);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_STALKSERVICEONOK],&stalk_on_ok);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_STALKSERVICEONWARNING],&stalk_on_warning);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_STALKSERVICEONUNKNOWN],&stalk_on_unknown);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_STALKSERVICEONCRITICAL],&stalk_on_critical);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_SERVICEISVOLATILE],&is_volatile);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_SERVICEFLAPDETECTIONENABLED],&flap_detection_enabled);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_FLAPDETECTIONONOK],&flap_detection_on_ok);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_FLAPDETECTIONONWARNING],&flap_detection_on_warning);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_FLAPDETECTIONONUNKNOWN],&flap_detection_on_unknown);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_FLAPDETECTIONONCRITICAL],&flap_detection_on_critical);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_PROCESSSERVICEPERFORMANCEDATA],&process_performance_data);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_SERVICEFRESHNESSCHECKSENABLED],&freshness_checks_enabled);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_SERVICEFRESHNESSTHRESHOLD],&freshness_threshold);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_PASSIVESERVICECHECKSENABLED],&passive_checks_enabled);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_SERVICEEVENTHANDLERENABLED],&event_handler_enabled);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_ACTIVESERVICECHECKSENABLED],&active_checks_enabled);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_RETAINSERVICESTATUSINFORMATION],&retain_status_information);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_RETAINSERVICENONSTATUSINFORMATION],&retain_nonstatus_information);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_SERVICENOTIFICATIONSENABLED],&notifications_enabled);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_OBSESSOVERSERVICE],&obsess_over_service);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_SERVICEFAILUREPREDICTIONENABLED],&failure_prediction_enabled);
-	result=ndo2db_convert_string_to_double(idi->buffered_input[NDO_DATA_LOWSERVICEFLAPTHRESHOLD],&low_flap_threshold);
-	result=ndo2db_convert_string_to_double(idi->buffered_input[NDO_DATA_HIGHSERVICEFLAPTHRESHOLD],&high_flap_threshold);
+	result=ndo2db_strtod(idi->buffered_input[NDO_DATA_SERVICECHECKINTERVAL],&check_interval);
+	result=ndo2db_strtod(idi->buffered_input[NDO_DATA_SERVICERETRYINTERVAL],&retry_interval);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_MAXSERVICECHECKATTEMPTS],&max_check_attempts);
+	result=ndo2db_strtod(idi->buffered_input[NDO_DATA_FIRSTNOTIFICATIONDELAY],&first_notification_delay);
+	result=ndo2db_strtod(idi->buffered_input[NDO_DATA_SERVICENOTIFICATIONINTERVAL],&notification_interval);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_NOTIFYSERVICEWARNING],&notify_on_warning);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_NOTIFYSERVICEUNKNOWN],&notify_on_unknown);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_NOTIFYSERVICECRITICAL],&notify_on_critical);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_NOTIFYSERVICERECOVERY],&notify_on_recovery);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_NOTIFYSERVICEFLAPPING],&notify_on_flapping);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_NOTIFYSERVICEDOWNTIME],&notify_on_downtime);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_STALKSERVICEONOK],&stalk_on_ok);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_STALKSERVICEONWARNING],&stalk_on_warning);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_STALKSERVICEONUNKNOWN],&stalk_on_unknown);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_STALKSERVICEONCRITICAL],&stalk_on_critical);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_SERVICEISVOLATILE],&is_volatile);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_SERVICEFLAPDETECTIONENABLED],&flap_detection_enabled);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_FLAPDETECTIONONOK],&flap_detection_on_ok);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_FLAPDETECTIONONWARNING],&flap_detection_on_warning);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_FLAPDETECTIONONUNKNOWN],&flap_detection_on_unknown);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_FLAPDETECTIONONCRITICAL],&flap_detection_on_critical);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_PROCESSSERVICEPERFORMANCEDATA],&process_performance_data);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_SERVICEFRESHNESSCHECKSENABLED],&freshness_checks_enabled);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_SERVICEFRESHNESSTHRESHOLD],&freshness_threshold);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_PASSIVESERVICECHECKSENABLED],&passive_checks_enabled);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_SERVICEEVENTHANDLERENABLED],&event_handler_enabled);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_ACTIVESERVICECHECKSENABLED],&active_checks_enabled);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_RETAINSERVICESTATUSINFORMATION],&retain_status_information);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_RETAINSERVICENONSTATUSINFORMATION],&retain_nonstatus_information);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_SERVICENOTIFICATIONSENABLED],&notifications_enabled);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_OBSESSOVERSERVICE],&obsess_over_service);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_SERVICEFAILUREPREDICTIONENABLED],&failure_prediction_enabled);
+	result=ndo2db_strtod(idi->buffered_input[NDO_DATA_LOWSERVICEFLAPTHRESHOLD],&low_flap_threshold);
+	result=ndo2db_strtod(idi->buffered_input[NDO_DATA_HIGHSERVICEFLAPTHRESHOLD],&high_flap_threshold);
 #ifdef BUILD_NAGIOS_4X
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_IMPORTANCE],&importance);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_IMPORTANCE],&importance);
 #endif
 
 	es[0]=ndo2db_db_escape_string(idi,idi->buffered_input[NDO_DATA_SERVICEFAILUREPREDICTIONOPTIONS]);
@@ -3851,7 +3858,8 @@ int ndo2db_handle_servicedefinition(ndo2db_idi *idi) {
 	}
 	
 	/* save custom variables to db */
-	result=ndo2db_save_custom_variables(idi,NDO2DB_DBTABLE_CUSTOMVARIABLES,object_id,NULL);
+// 	result=ndo2db_save_custom_variables(idi,NDO2DB_DBTABLE_CUSTOMVARIABLES,object_id,NULL);
+	result=ndo2db_stmt_save_customvariables(idi, object_id);
 
 	return NDO_OK;
 }
@@ -3977,11 +3985,11 @@ int ndo2db_handle_hostdependencydefinition(ndo2db_idi *idi) {
 		return NDO_OK;
 
 	/* convert vars */
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_DEPENDENCYTYPE],&dependency_type);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_INHERITSPARENT],&inherits_parent);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_FAILONUP],&fail_on_up);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_FAILONDOWN],&fail_on_down);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_FAILONUNREACHABLE],&fail_on_unreachable);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_DEPENDENCYTYPE],&dependency_type);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_INHERITSPARENT],&inherits_parent);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_FAILONUP],&fail_on_up);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_FAILONDOWN],&fail_on_down);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_FAILONUNREACHABLE],&fail_on_unreachable);
 
 	/* get the object ids */
 	result=ndo2db_get_object_id_with_insert(idi,NDO2DB_OBJECTTYPE_HOST,idi->buffered_input[NDO_DATA_HOSTNAME],NULL,&object_id);
@@ -4045,12 +4053,12 @@ int ndo2db_handle_servicedependencydefinition(ndo2db_idi *idi) {
 		return NDO_OK;
 
 	/* convert vars */
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_DEPENDENCYTYPE],&dependency_type);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_INHERITSPARENT],&inherits_parent);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_FAILONOK],&fail_on_ok);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_FAILONWARNING],&fail_on_warning);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_FAILONUNKNOWN],&fail_on_unknown);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_FAILONCRITICAL],&fail_on_critical);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_DEPENDENCYTYPE],&dependency_type);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_INHERITSPARENT],&inherits_parent);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_FAILONOK],&fail_on_ok);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_FAILONWARNING],&fail_on_warning);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_FAILONUNKNOWN],&fail_on_unknown);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_FAILONCRITICAL],&fail_on_critical);
 
 	/* get the object ids */
 	result=ndo2db_get_object_id_with_insert(idi,NDO2DB_OBJECTTYPE_SERVICE,idi->buffered_input[NDO_DATA_HOSTNAME],idi->buffered_input[NDO_DATA_SERVICEDESCRIPTION],&object_id);
@@ -4118,12 +4126,12 @@ int ndo2db_handle_hostescalationdefinition(ndo2db_idi *idi) {
 		return NDO_OK;
 
 	/* convert vars */
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_FIRSTNOTIFICATION],&first_notification);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_LASTNOTIFICATION],&last_notification);
-	result=ndo2db_convert_string_to_double(idi->buffered_input[NDO_DATA_NOTIFICATIONINTERVAL],&notification_interval);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_ESCALATEONRECOVERY],&escalate_recovery);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_ESCALATEONDOWN],&escalate_down);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_ESCALATEONUNREACHABLE],&escalate_unreachable);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_FIRSTNOTIFICATION],&first_notification);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_LASTNOTIFICATION],&last_notification);
+	result=ndo2db_strtod(idi->buffered_input[NDO_DATA_NOTIFICATIONINTERVAL],&notification_interval);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_ESCALATEONRECOVERY],&escalate_recovery);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_ESCALATEONDOWN],&escalate_down);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_ESCALATEONUNREACHABLE],&escalate_unreachable);
 
 	/* get the object id */
 	result=ndo2db_get_object_id_with_insert(idi,NDO2DB_OBJECTTYPE_HOST,idi->buffered_input[NDO_DATA_HOSTNAME],NULL,&object_id);
@@ -4252,13 +4260,13 @@ int ndo2db_handle_serviceescalationdefinition(ndo2db_idi *idi) {
 		return NDO_OK;
 
 	/* convert vars */
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_FIRSTNOTIFICATION],&first_notification);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_LASTNOTIFICATION],&last_notification);
-	result=ndo2db_convert_string_to_double(idi->buffered_input[NDO_DATA_NOTIFICATIONINTERVAL],&notification_interval);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_ESCALATEONRECOVERY],&escalate_recovery);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_ESCALATEONWARNING],&escalate_warning);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_ESCALATEONUNKNOWN],&escalate_unknown);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_ESCALATEONCRITICAL],&escalate_critical);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_FIRSTNOTIFICATION],&first_notification);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_LASTNOTIFICATION],&last_notification);
+	result=ndo2db_strtod(idi->buffered_input[NDO_DATA_NOTIFICATIONINTERVAL],&notification_interval);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_ESCALATEONRECOVERY],&escalate_recovery);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_ESCALATEONWARNING],&escalate_warning);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_ESCALATEONUNKNOWN],&escalate_unknown);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_ESCALATEONCRITICAL],&escalate_critical);
 
 	/* get the object id */
 	result=ndo2db_get_object_id_with_insert(idi,NDO2DB_OBJECTTYPE_SERVICE,idi->buffered_input[NDO_DATA_HOSTNAME],idi->buffered_input[NDO_DATA_SERVICEDESCRIPTION],&object_id);
@@ -4563,22 +4571,22 @@ int ndo2db_handle_contactdefinition(ndo2db_idi *idi) {
 		return NDO_OK;
 
 	/* convert vars */
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_HOSTNOTIFICATIONSENABLED],&host_notifications_enabled);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_SERVICENOTIFICATIONSENABLED],&service_notifications_enabled);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_CANSUBMITCOMMANDS],&can_submit_commands);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_NOTIFYSERVICEWARNING],&notify_service_warning);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_NOTIFYSERVICEUNKNOWN],&notify_service_unknown);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_NOTIFYSERVICECRITICAL],&notify_service_critical);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_NOTIFYSERVICERECOVERY],&notify_service_recovery);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_NOTIFYSERVICEFLAPPING],&notify_service_flapping);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_NOTIFYSERVICEDOWNTIME],&notify_service_downtime);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_NOTIFYHOSTDOWN],&notify_host_down);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_NOTIFYHOSTUNREACHABLE],&notify_host_unreachable);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_NOTIFYHOSTRECOVERY],&notify_host_recovery);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_NOTIFYHOSTFLAPPING],&notify_host_flapping);
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_NOTIFYHOSTDOWNTIME],&notify_host_downtime);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_HOSTNOTIFICATIONSENABLED],&host_notifications_enabled);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_SERVICENOTIFICATIONSENABLED],&service_notifications_enabled);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_CANSUBMITCOMMANDS],&can_submit_commands);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_NOTIFYSERVICEWARNING],&notify_service_warning);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_NOTIFYSERVICEUNKNOWN],&notify_service_unknown);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_NOTIFYSERVICECRITICAL],&notify_service_critical);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_NOTIFYSERVICERECOVERY],&notify_service_recovery);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_NOTIFYSERVICEFLAPPING],&notify_service_flapping);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_NOTIFYSERVICEDOWNTIME],&notify_service_downtime);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_NOTIFYHOSTDOWN],&notify_host_down);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_NOTIFYHOSTUNREACHABLE],&notify_host_unreachable);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_NOTIFYHOSTRECOVERY],&notify_host_recovery);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_NOTIFYHOSTFLAPPING],&notify_host_flapping);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_NOTIFYHOSTDOWNTIME],&notify_host_downtime);
 #ifdef BUILD_NAGIOS_4X
-	result=ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_MINIMUMIMPORTANCE],&minimum_importance);
+	result=ndo2db_strtoi(idi->buffered_input[NDO_DATA_MINIMUMIMPORTANCE],&minimum_importance);
 #endif
 
 	es[0]=ndo2db_db_escape_string(idi,idi->buffered_input[NDO_DATA_CONTACTALIAS]);
@@ -4763,9 +4771,10 @@ int ndo2db_handle_contactdefinition(ndo2db_idi *idi) {
 
 		free(es[0]);
 	}
-	
+
 	/* save custom variables to db */
-	result=ndo2db_save_custom_variables(idi,NDO2DB_DBTABLE_CUSTOMVARIABLES,contact_id,NULL);
+// 	result=ndo2db_save_custom_variables(idi,NDO2DB_DBTABLE_CUSTOMVARIABLES,contact_id,NULL);
+	result=ndo2db_stmt_save_customvariables(idi, contact_id);
 
 	return NDO_OK;
 }
