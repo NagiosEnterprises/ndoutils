@@ -673,6 +673,7 @@ int ndo2db_daemonize(void) {
 	/* Original parent process goes away... */
 	if (pid > 0) {
 		ndo2db_free_program_memory();
+		waitpid(pid, NULL, 0); /* Wait for the updated lock file. */
 		exit(0);
 	}
 
@@ -686,6 +687,21 @@ int ndo2db_daemonize(void) {
 	/* First child process goes away.. */
 	if (pid > 0) {
 		ndo2db_free_program_memory();
+		/* Write the grandchild PID to the lock file... */
+		if (lock_file) {
+			int n;
+			lseek(lockfile, 0, SEEK_SET);
+			if (ftruncate(lockfile, 0)) {
+				syslog(LOG_ERR, "Warning: Unable to truncate lockfile (errno %d): %s",
+						errno, strerror(errno));
+			}
+			sprintf(buf, "%d\n", (int)pid);
+			n = (int)strlen(buf);
+			if (write(lockfile, buf, n) < n) {
+				syslog(LOG_ERR, "Warning: Unable to write pid to lockfile (errno %d): %s",
+						errno, strerror(errno));
+			}
+		}
 		exit(0);
 	}
 
@@ -693,22 +709,8 @@ int ndo2db_daemonize(void) {
 	setsid();
 
 
+	/* Keep the lock file open while program is executing... */
 	if (lock_file) {
-		int n;
-		/* Write our PID to the lockfile... */
-		lseek(lockfile, 0, SEEK_SET);
-		if (ftruncate(lockfile, 0)) {
-			syslog(LOG_ERR, "Warning: Unable to truncate lockfile (errno %d): %s",
-					errno, strerror(errno));
-		}
-		sprintf(buf, "%d\n", (int)getpid());
-		n = (int)strlen(buf);
-		if (write(lockfile, buf, n) < n) {
-			syslog(LOG_ERR, "Warning: Unable to write pid to lockfile (errno %d): %s",
-					errno, strerror(errno));
-		}
-
-		/* Keep the lock file open while program is executing... */
 		val = fcntl(lockfile, F_GETFD, 0);
 		val |= FD_CLOEXEC;
 		fcntl(lockfile, F_SETFD, val);
