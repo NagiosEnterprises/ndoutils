@@ -278,6 +278,8 @@ typedef int int32_t;
 #include <mysql/errmsg.h>
 #endif
 
+#undef HAVE_SYSTEMD
+
 #undef HAVE_SSL
 #ifdef HAVE_SSL
 #include <rsa.h>
