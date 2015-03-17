@@ -39,6 +39,10 @@
 #include "../include/dbstatements.h"
 #include "../include/queue.h"
 
+#ifdef HAVE_SYSTEMD
+#include <systemd/sd-daemon.h>
+#endif
+
 #ifdef HAVE_SSL
 #include "../include/dh.h"
 #endif
@@ -807,6 +811,18 @@ int ndo2db_wait_for_connections(void) {
 	struct sockaddr_in client_address_i;
 	socklen_t client_address_length;
 
+
+#ifdef HAVE_SYSTEMD
+	/* Socket inherited from systemd */
+	if (sd_listen_fds(0) == 1) {
+		ndo2db_sd = SD_LISTEN_FDS_START + 0;
+		if (sd_is_socket_inet(ndo2db_sd, 0, 0, -1, 0))
+			client_address_length = (socklen_t)sizeof(client_address_i);
+		else
+			client_address_length = (socklen_t)sizeof(client_address_u);
+	}
+	else
+#endif
 
 	/* TCP socket */
 	if (ndo2db_socket_type == NDO_SINK_TCPSOCKET) {
