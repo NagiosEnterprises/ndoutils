@@ -5,6 +5,7 @@ NDO Utils Changelog
 ------------------
 * Replaced ndomod.cfg data_processing_options variable with single options for easier customization (See README) (Mike Guthrie)
 * Added missing maintenance options for table trimming (Mike Guthrie)
+* Probable fix for ndo2db not responding & growing queue issue (John Frickson)
 
 1.5.2 - 06/08/2012
 ------------------

@@ -8,3 +8,13 @@ include/dh.h
 src/Makefile
 subst
 CVS/
+src/*.o
+src/file2sock
+src/log2ndo
+src/ndo2db-2x
+src/ndo2db-3x
+src/ndo2db-4x
+src/sockdebug
+config/*.cfg
+config/*.cfg-sample
+nbproject/

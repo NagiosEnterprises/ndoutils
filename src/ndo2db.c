@@ -1213,6 +1213,10 @@ int ndo2db_check_for_client_input(ndo2db_idi *idi,ndo_dbuf *dbuf){
 /* asynchronous handle clients events */
 void ndo2db_async_client_handle() {
 	ndo2db_idi idi;
+	size_t len = 0, curlen, insz, maxbuf = 1024 * 64, bufsz = 1024 * 66;
+    int i;
+	char *buf = (char*)calloc(bufsz, sizeof(char));
+	char *temp_buf;
 
 	/* initialize input data information */
 	ndo2db_idi_init(&idi);
@@ -1223,55 +1227,46 @@ void ndo2db_async_client_handle() {
 
 	get_queue_id(getppid());
 
-	char *old_buf = NULL;
-
 	for (;;) {
 		char * qbuf = pop_from_queue();
-		char *buf;
-		char * temp_buf;
-		int i, start=0;
 
-		if (old_buf != NULL) {
-			buf = (char*)calloc(strlen(qbuf)+strlen(old_buf)+2, sizeof(char));
+		ndo2db_log_debug_info(NDO2DB_DEBUGL_PROCESSINFO, 2,"Queue Message: %s\n", qbuf);
 
-			strcat(buf, old_buf);
-			strcat(buf, qbuf);
+		insz = strlen(qbuf);
+		curlen = len + insz;
+		strcat(buf, qbuf);
+		free(qbuf);
 
-			free(old_buf); old_buf = NULL;
-			free(qbuf);
-		} else {
-			buf = qbuf;
-		}
-
-		for (i=0; i<=strlen(buf); i++) {
+        i = 0;
+		for ( ; i < curlen; i++) {
 			if (buf[i] == '\n') {
-				int size = i-start;
-				temp_buf = (char*)calloc(size+1, sizeof(char));
-				strncpy(temp_buf, &buf[start], size);
-				temp_buf[size] = '\x0';
+				temp_buf = (char*)malloc((curlen + 4) * sizeof(char));
+				strncpy(temp_buf, buf, i);
+				temp_buf[i] = '\x0';
 
 				ndo2db_handle_client_input(&idi,temp_buf);
 
+				memmove(buf, &buf[i+1], bufsz - i);
+				len = 0;
+				curlen = strlen(buf);
 				free(temp_buf);
 
-				start=i+1;
-
 				idi.lines_processed++;
-				idi.bytes_processed+=size+1;
+				idi.bytes_processed += i+1;
+                i = -1;
 			}
 		}
 
-		if (start <= strlen(buf)) {
-			old_buf = (char*)calloc(strlen(&buf[start])+1, sizeof(char));
-			strcpy(old_buf, &buf[start]);
-		}
-
-		free(buf);
+		len = curlen;
+		if (len  > maxbuf) {
+			buf[maxbuf+1] = 0;
+			len = curlen = maxbuf;
+			ndo2db_log_debug_info(NDO2DB_DEBUGL_PROCESSINFO, 2,"Truncating text at position %d - %s\n", maxbuf+1, &buf[maxbuf+2]);
+		} else if (len == 0)
+			memset(buf, 0, bufsz * sizeof(char));
 	}
 
-	if (old_buf != NULL) {
-		free(old_buf);
-	}
+	free(buf);
 
 	/* disconnect from database */
 	ndo2db_db_disconnect(&idi);
