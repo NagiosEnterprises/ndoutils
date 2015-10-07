@@ -1,5 +1,5 @@
-#ifndef INCLUDE_defaults_h__
-#define INCLUDE_defaults_h__
+#ifndef NDO_DEFAULTS_H_INCLUDED
+#define NDO_DEFAULTS_H_INCLUDED
 
 /******************* DEFAULT VALUES *******************/
 
@@ -91,4 +91,4 @@
 #define DEFAULT_HOST_PERFDATA_PROCESS_EMPTY_RESULTS 1
 #define DEFAULT_SERVICE_PERFDATA_PROCESS_EMPTY_RESULTS 1
 
-#endif /* INCLUDE_defaults_h__ */
+#endif /* NDO_DEFAULTS_H_INCLUDED */

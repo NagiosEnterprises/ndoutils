@@ -6,8 +6,8 @@
  *
  ************************************************************************/
 
-#ifndef _NDBXT_NDOMOD_H
-#define _NDBXT_NDOMOD_H
+#ifndef NDO_NDOMOD_H_INCLUDED
+#define NDO_NDOMOD_H_INCLUDED
 
 
 /* this is needed for access to daemon's internal data */

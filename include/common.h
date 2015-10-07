@@ -6,8 +6,8 @@
  *
  ************************************************************************/
 
-#ifndef _NDO_COMMON_H
-#define _NDO_COMMON_H
+#ifndef NDO_COMMON_H_INCLUDED
+#define NDO_COMMON_H_INCLUDED
 
 
 

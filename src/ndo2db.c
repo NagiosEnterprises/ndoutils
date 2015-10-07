@@ -1101,6 +1101,7 @@ int ndo2db_handle_client_connection(int sd){
 
 		/* append data we just read to dynamic buffer */
 		buf[result]='\x0';
+		ndo2db_log_debug_info(NDO2DB_DEBUGL_PROCESSINFO, 2,"Socket Read: %s\n", buf);
 		ndo_dbuf_strcat(&dbuf,buf);
 
 		/* check for completed lines of input */
@@ -1199,6 +1200,7 @@ int ndo2db_check_for_client_input(ndo2db_idi *idi,ndo_dbuf *dbuf){
 	if(dbuf->buf==NULL)
 		return NDO_OK;
 
+	ndo2db_log_debug_info(NDO2DB_DEBUGL_PROCESSINFO, 2,"Queueing: %s\n", dbuf->buf);
 #ifdef DEBUG_NDO2DB2
 	printf("RAWBUF: %s\n",dbuf->buf);
 	printf("  USED1: %lu, BYTES: %lu, LINES: %lu\n",dbuf->used_size,idi->bytes_processed,idi->lines_processed);
@@ -1244,7 +1246,9 @@ void ndo2db_async_client_handle() {
 				strncpy(temp_buf, buf, i);
 				temp_buf[i] = '\x0';
 
+				ndo2db_log_debug_info(NDO2DB_DEBUGL_PROCESSINFO, 2,"Handling: %s\n", temp_buf);
 				ndo2db_handle_client_input(&idi,temp_buf);
+				ndo2db_log_debug_info(NDO2DB_DEBUGL_PROCESSINFO, 2,"Full Buffer: %s\n", buf);
 
 				memmove(buf, &buf[i+1], bufsz - i);
 				len = 0;

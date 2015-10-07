@@ -6,8 +6,8 @@
  *
  ************************************************************************/
 
-#ifndef _NDO2DB_DB_H
-#define _NDO2DB_DB_H
+#ifndef NDO2DB_DB_H_INCLUDED
+#define NDO2DB_DB_H_INCLUDED
 
 #include "config.h"
 #include "ndo2db.h"

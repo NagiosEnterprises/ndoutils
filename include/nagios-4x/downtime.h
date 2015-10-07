@@ -21,8 +21,8 @@
  *****************************************************************************/
 
 
-#ifndef _DOWNTIME_H
-#define _DOWNTIME_H
+#ifndef NDO_DOWNTIME_H_INCLUDED
+#define NDO_DOWNTIME_H_INCLUDED
 
 #include "common.h"
 #include "objects.h"

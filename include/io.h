@@ -6,8 +6,8 @@
  *
  ************************************************************************/
 
-#ifndef _NDO_IO_H
-#define _NDO_IO_H
+#ifndef NDO_IO_H_INCLUDED
+#define NDO_IO_H_INCLUDED
 
 #include "config.h"
 

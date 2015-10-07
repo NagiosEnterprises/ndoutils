@@ -21,8 +21,8 @@
  *****************************************************************************/
 
 
-#ifndef _OBJECTS_H
-#define _OBJECTS_H
+#ifndef NDO_OBJECTS_H_INCLUDED
+#define NDO_OBJECTS_H_INCLUDED
 
 #include "common.h"
 

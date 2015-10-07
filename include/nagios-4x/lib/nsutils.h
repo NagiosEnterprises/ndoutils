@@ -1,5 +1,5 @@
-#ifndef LIBNAGIOS_nsutils_h__
-#define LIBNAGIOS_nsutils_h__
+#ifndef LIBNAGIOS_NSUTILS_H_INCLUDED
+#define LIBNAGIOS_NSUTILS_H_INCLUDED
 #include <sys/types.h>
 
 /**
@@ -101,4 +101,4 @@ extern int tv_delta_msec(const struct timeval *start, const struct timeval *stop
 extern float tv_delta_f(const struct timeval *start, const struct timeval *stop);
 
 /** @} */
-#endif /* LIBNAGIOS_nsutils_h__ */
+#endif /* LIBNAGIOS_NSUTILS_H_INCLUDED */

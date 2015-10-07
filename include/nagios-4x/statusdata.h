@@ -20,8 +20,8 @@
  *
  *****************************************************************************/
 
-#ifndef _STATUSDATA_H
-#define _STATUSDATA_H
+#ifndef NDO_STATUSDATA_H_INCLUDED
+#define NDO_STATUSDATA_H_INCLUDED
 
 #include "common.h"
 #include "objects.h"

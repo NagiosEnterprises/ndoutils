@@ -1,5 +1,5 @@
-#ifndef _QUEUE_
-#define _QUEUE_
+#ifndef NDO_QUEUE_H_INCLUDED
+#define NDO_QUEUE_H_INCLUDED
 
 #define NDO_QUEUE_PATH "."
 #define NDO_QUEUE_ID 9504
@@ -24,4 +24,4 @@ void push_into_queue(char*);
 /* get and delete from queue */
 char* pop_from_queue();
 
-#endif /* _QUEUE_ */
+#endif /* NDO_QUEUE_H_INCLUDED */

@@ -20,8 +20,8 @@
  *
  *****************************************************************************/
 
-#ifndef _NEBMODULES_H
-#define _NEBMODULES_H
+#ifndef NDO_NEBMODULES_H_INCLUDED
+#define NDO_NEBMODULES_H_INCLUDED
 
 #include "common.h"
 NAGIOS_BEGIN_DECL

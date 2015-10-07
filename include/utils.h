@@ -9,8 +9,8 @@
  *
  ************************************************************************/
 
-#ifndef _NDO_UTILS_H
-#define _NDO_UTILS_H
+#ifndef NDO_UTILS_H_INCLUDED
+#define NDO_UTILS_H_INCLUDED
 
 /* my_free has been freed from bondage as a function */
 #ifdef BUILD_NAGIOS_2X

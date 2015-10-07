@@ -1,5 +1,5 @@
-#ifndef INCLUDE__shared_h__
-#define INCLUDE__shared_h__
+#ifndef NDO_SHARED_H_INCLUDED
+#define NDO_SHARED_H_INCLUDED
 
 #include <time.h>
 #include "lib/libnagios.h"

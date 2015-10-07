@@ -6,8 +6,8 @@
  *
  ************************************************************************/
 
-#ifndef _NDO_PROTOAPI_H
-#define _NDO_PROTOAPI_H
+#ifndef NDO_PROTOAPI_H_INCLUDED
+#define NDO_PROTOAPI_H_INCLUDED
 
 
 /****************** PROTOCOL VERSION ***************/

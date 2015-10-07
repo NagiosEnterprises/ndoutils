@@ -6,8 +6,8 @@
  *
  ************************************************************************/
 
-#ifndef _NDO2DB_DBHANDLERS_H
-#define _NDO2DB_DBHANDLERS_H
+#ifndef NDO2DB_DBHANDLERS_H_INCLUDED
+#define NDO2DB_DBHANDLERS_H_INCLUDED
 
 #include "ndo2db.h"
 #define NAGIOS_SIZEOF_ARRAY(var)       (sizeof(var)/sizeof(var[0]))

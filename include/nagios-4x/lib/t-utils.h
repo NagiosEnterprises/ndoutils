@@ -1,5 +1,5 @@
-#ifndef INCLUDE_test_utils_h__
-#define INCLUDE_test_utils_h__
+#ifndef NDO_T_UTILS_H_INCLUDED
+#define NDO_T_UTILS_H_INCLUDED
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
