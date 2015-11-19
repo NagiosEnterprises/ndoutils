@@ -113,7 +113,6 @@ void push_into_queue (char* buf) {
 	msg.type = NDO_MSG_TYPE;
 	zero_string(msg.text, NDO_MAX_MSG_SIZE);
 	struct timespec delay;
-	int sleep_time;
 	unsigned retrynum = 0;
 
 	strncpy(msg.text, buf, NDO_MAX_MSG_SIZE-1);
@@ -126,22 +125,18 @@ void push_into_queue (char* buf) {
 					if(msgsnd(queue_id, &msg, queue_buff_size, IPC_NOWAIT)==0)
 							break;
 					#ifdef USE_NANOSLEEP
-						delay.tv_sec=(time_t)sleep_time;
-						delay.tv_nsec=(long)((sleep_time-(double)delay.tv_sec)*1000000000);
+						delay.tv_sec = 0;
+						delay.tv_nsec = 250000000;
 						nanosleep(&delay,NULL);
 					#else
-						delay.tv_sec=(time_t)sleep_time;
-						if(delay.tv_sec==0L)
-							delay.tv_sec=1;
-							delay.tv_nsec=0L;
-							sleep((unsigned int)delay.tv_sec);
+						sleep(1);
 					#endif 		
 				}
 				if (retrynum < MAX_RETRIES) {
 					syslog(LOG_ERR,"Message sent to queue.\n");
 					}
 				else {
-					syslog(LOG_ERR,"Error: max retries exceeded sending message to queue. Kernel queue parameters may neeed to be tuned. See README.\n");
+					syslog(LOG_ERR,"Error: max retries exceeded sending message to queue. Kernel queue parameters may need to be tuned. See README.\n");
 				}
 			}
 		else {

@@ -840,6 +840,7 @@ int ndo2db_wait_for_connections(void){
 	struct sockaddr_un client_address_u;
 	struct sockaddr_in client_address_i;
 	socklen_t client_address_length;
+	static int listen_backlog = INT_MAX;
 
 
 	/* TCP socket */
@@ -897,12 +898,19 @@ int ndo2db_wait_for_connections(void){
 		client_address_length=(socklen_t)sizeof(client_address_u);
 	        }
 
-	/* listen for connections */
-	if((listen(ndo2db_sd,1))){
-		perror("Cannot listen on socket");
-		ndo2db_cleanup_socket();
-		return NDO_ERROR;
-	        }
+    /* Default the backlog number on listen() to INT_MAX. If INT_MAX fails,
+     * try using SOMAXCONN (usually 127) and if that fails, return an error */
+    for (;;) {
+        if (listen(ndo2db_sd, listen_backlog)) {
+            if (listen_backlog == SOMAXCONN) {
+				perror("Cannot listen on socket");
+				ndo2db_cleanup_socket();
+				return NDO_ERROR;
+            } else
+                listen_backlog = SOMAXCONN;
+        }
+        break;
+    }
 
 
 	/* daemonize */
