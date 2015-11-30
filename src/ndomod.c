@@ -139,6 +139,14 @@ extern int __nagios_object_structure_version;
 
 extern int use_ssl;
 
+#define NDOMOD_FREE_ESC_BUFFERS(ary, num) { \
+		int i = num; \
+		if (i < 0) \
+			i = 0; \
+		while (i--) { \
+			free(ary[i]); \
+			ary[i] = NULL; \
+		} }
 
 #define DEBUG_NDO 1
 
@@ -3510,6 +3518,8 @@ int ndomod_write_config(int config_type){
 	temp_buffer[sizeof(temp_buffer)-1]='\x0';
 	ndomod_write_to_sink(temp_buffer,NDO_TRUE,NDO_TRUE);
 
+	ndomod_write_active_objects();
+
 	/* dump object config info */
 	result=ndomod_write_object_config(config_type);
 	if(result!=NDO_OK)
@@ -3531,7 +3541,257 @@ int ndomod_write_config(int config_type){
         }
 
 
+/*************************************************************
+ * Get a list of all active objects, so the "is_active" flag *
+ * can be set on them in batches, instead of one at a time.  *
+ *************************************************************/
+void ndomod_write_active_objects()
+{
+	command					*temp_command;
+	timeperiod				*temp_timeperiod;
+	contact					*temp_contact;
+	contactgroup			*temp_contactgroup;
+	host					*temp_host;
+	hostgroup				*temp_hostgroup;
+	service					*temp_service;
+	servicegroup			*temp_servicegroup;
+	ndo_dbuf				dbuf;
+	struct ndo_broker_data	active_objects[100];
+	struct timeval			now;
+	int						i, obj_count;
+	char					*name1, *name2;
+
+	gettimeofday(&now,NULL);		/* get current time */
+	ndo_dbuf_init(&dbuf, 2048);		/* initialize dynamic buffer (2KB chunk size) */
+
+
+	active_objects[0].key = NDO_DATA_ACTIVEOBJECTSTYPE;
+	active_objects[0].datatype = BD_INT;
+
+	active_objects[0].value.integer = NDO_API_COMMANDDEFINITION;
+	obj_count = 1;
+	for (temp_command = command_list; temp_command != NULL; temp_command = temp_command->next) {
+		name1 = ndo_escape_buffer(temp_command->name);
+		active_objects[obj_count].key = obj_count;
+		active_objects[obj_count].datatype = BD_STRING;
+		active_objects[obj_count].value.string = (name1 == NULL) ? "" : name1;
+		if (++obj_count > 250) {
+			ndomod_broker_data_serialize(&dbuf, NDO_API_ACTIVEOBJECTSLIST,
+					active_objects, obj_count, TRUE);
+			ndomod_write_to_sink(dbuf.buf,NDO_TRUE,NDO_TRUE);
+			ndo_dbuf_free(&dbuf);
+			while (--obj_count)
+				free(active_objects[obj_count].value.string);
+			obj_count = 1;
+		}
+	}
+	if (obj_count > 1) {
+		ndomod_broker_data_serialize(&dbuf, NDO_API_ACTIVEOBJECTSLIST,
+				active_objects, obj_count, TRUE);
+		ndomod_write_to_sink(dbuf.buf,NDO_TRUE,NDO_TRUE);
+		ndo_dbuf_free(&dbuf);
+		while (--obj_count)
+			free(active_objects[obj_count].value.string);
+	}
+
+
+	active_objects[0].value.integer = NDO_API_TIMEPERIODDEFINITION;
+	obj_count = 1;
+	for (temp_timeperiod = timeperiod_list; temp_timeperiod != NULL; temp_timeperiod = temp_timeperiod->next) {
+		name1 = ndo_escape_buffer(temp_timeperiod->name);
+		active_objects[obj_count].key = obj_count;
+		active_objects[obj_count].datatype = BD_STRING;
+		active_objects[obj_count].value.string = (name1 == NULL) ? "" : name1;
+		if (++obj_count > 250) {
+			ndomod_broker_data_serialize(&dbuf, NDO_API_ACTIVEOBJECTSLIST,
+					active_objects, obj_count, TRUE);
+			ndomod_write_to_sink(dbuf.buf,NDO_TRUE,NDO_TRUE);
+			ndo_dbuf_free(&dbuf);
+			while (--obj_count)
+				free(active_objects[obj_count].value.string);
+			obj_count = 1;
+		}
+	}
+	if (obj_count > 1) {
+		ndomod_broker_data_serialize(&dbuf, NDO_API_ACTIVEOBJECTSLIST,
+				active_objects, obj_count, TRUE);
+		ndomod_write_to_sink(dbuf.buf,NDO_TRUE,NDO_TRUE);
+		ndo_dbuf_free(&dbuf);
+		while (--obj_count)
+			free(active_objects[obj_count].value.string);
+	}
+
+	
+	active_objects[0].value.integer = NDO_API_CONTACTDEFINITION;
+	obj_count = 1;
+	for (temp_contact = contact_list; temp_contact != NULL; temp_contact = temp_contact->next) {
+		name1 = ndo_escape_buffer(temp_contact->name);
+		active_objects[obj_count].key = obj_count;
+		active_objects[obj_count].datatype = BD_STRING;
+		active_objects[obj_count].value.string = (name1 == NULL) ? "" : name1;
+		if (++obj_count > 250) {
+			ndomod_broker_data_serialize(&dbuf, NDO_API_ACTIVEOBJECTSLIST,
+					active_objects, obj_count, TRUE);
+			ndomod_write_to_sink(dbuf.buf,NDO_TRUE,NDO_TRUE);
+			ndo_dbuf_free(&dbuf);
+			while (--obj_count)
+				free(active_objects[obj_count].value.string);
+			obj_count = 1;
+		}
+	}
+	if (obj_count > 1) {
+		ndomod_broker_data_serialize(&dbuf, NDO_API_ACTIVEOBJECTSLIST,
+				active_objects, obj_count, TRUE);
+		ndomod_write_to_sink(dbuf.buf,NDO_TRUE,NDO_TRUE);
+		ndo_dbuf_free(&dbuf);
+		while (--obj_count)
+			free(active_objects[obj_count].value.string);
+	}
+
+
+	active_objects[0].value.integer = NDO_API_CONTACTGROUPDEFINITION;
+	obj_count = 1;
+	for (temp_contactgroup = contactgroup_list; temp_contactgroup != NULL; temp_contactgroup = temp_contactgroup->next) {
+		name1 = ndo_escape_buffer(temp_contactgroup->group_name);
+		active_objects[obj_count].key = obj_count;
+		active_objects[obj_count].datatype = BD_STRING;
+		active_objects[obj_count].value.string = (name1 == NULL) ? "" : name1;
+		if (++obj_count > 250) {
+			ndomod_broker_data_serialize(&dbuf, NDO_API_ACTIVEOBJECTSLIST,
+					active_objects, obj_count, TRUE);
+			ndomod_write_to_sink(dbuf.buf,NDO_TRUE,NDO_TRUE);
+			ndo_dbuf_free(&dbuf);
+			while (--obj_count)
+				free(active_objects[obj_count].value.string);
+			obj_count = 1;
+		}
+	}
+	if (obj_count > 1) {
+		ndomod_broker_data_serialize(&dbuf, NDO_API_ACTIVEOBJECTSLIST,
+				active_objects, obj_count, TRUE);
+		ndomod_write_to_sink(dbuf.buf,NDO_TRUE,NDO_TRUE);
+		ndo_dbuf_free(&dbuf);
+		while (--obj_count)
+			free(active_objects[obj_count].value.string);
+	}
+
+
+	active_objects[0].value.integer = NDO_API_HOSTDEFINITION;
+	obj_count = 1;
+	for (temp_host = host_list; temp_host != NULL; temp_host = temp_host->next) {
+		name1 = ndo_escape_buffer(temp_host->name);
+		active_objects[obj_count].key = obj_count;
+		active_objects[obj_count].datatype = BD_STRING;
+		active_objects[obj_count].value.string = (name1 == NULL) ? "" : name1;
+		if (++obj_count > 250) {
+			ndomod_broker_data_serialize(&dbuf, NDO_API_ACTIVEOBJECTSLIST,
+					active_objects, obj_count, TRUE);
+			ndomod_write_to_sink(dbuf.buf,NDO_TRUE,NDO_TRUE);
+			ndo_dbuf_free(&dbuf);
+			while (--obj_count)
+				free(active_objects[obj_count].value.string);
+			obj_count = 1;
+		}
+	}
+	if (obj_count > 1) {
+		ndomod_broker_data_serialize(&dbuf, NDO_API_ACTIVEOBJECTSLIST,
+				active_objects, obj_count, TRUE);
+		ndomod_write_to_sink(dbuf.buf,NDO_TRUE,NDO_TRUE);
+		ndo_dbuf_free(&dbuf);
+		while (--obj_count)
+			free(active_objects[obj_count].value.string);
+	}
+
+
+	active_objects[0].value.integer = NDO_API_HOSTGROUPDEFINITION;
+	obj_count = 1;
+	for (temp_hostgroup = hostgroup_list; temp_hostgroup != NULL; temp_hostgroup = temp_hostgroup->next) {
+		name1 = ndo_escape_buffer(temp_hostgroup->group_name);
+		active_objects[obj_count].key = obj_count;
+		active_objects[obj_count].datatype = BD_STRING;
+		active_objects[obj_count].value.string = (name1 == NULL) ? "" : name1;
+		if (++obj_count > 250) {
+			ndomod_broker_data_serialize(&dbuf, NDO_API_ACTIVEOBJECTSLIST,
+					active_objects, obj_count, TRUE);
+			ndomod_write_to_sink(dbuf.buf,NDO_TRUE,NDO_TRUE);
+			ndo_dbuf_free(&dbuf);
+			while (--obj_count)
+				free(active_objects[obj_count].value.string);
+			obj_count = 1;
+		}
+	}
+	if (obj_count > 1) {
+		ndomod_broker_data_serialize(&dbuf, NDO_API_ACTIVEOBJECTSLIST,
+				active_objects, obj_count, TRUE);
+		ndomod_write_to_sink(dbuf.buf,NDO_TRUE,NDO_TRUE);
+		ndo_dbuf_free(&dbuf);
+		while (--obj_count)
+			free(active_objects[obj_count].value.string);
+	}
+
+
+	active_objects[0].value.integer = NDO_API_SERVICEDEFINITION;
+	obj_count = 1;
+	for (temp_service = service_list; temp_service != NULL; temp_service = temp_service->next) {
+		name1 = ndo_escape_buffer(temp_service->host_name);
+		name2 = ndo_escape_buffer(temp_service->description);
+		active_objects[obj_count].key = obj_count;
+		active_objects[obj_count].datatype = BD_STRING;
+		active_objects[obj_count].value.string = (name1 == NULL) ? "" : name1;
+		++obj_count;
+		active_objects[obj_count].key = obj_count;
+		active_objects[obj_count].datatype = BD_STRING;
+		active_objects[obj_count].value.string = (name2 == NULL) ? "" : name2;
+		if (++obj_count > 97) {
+			ndomod_broker_data_serialize(&dbuf, NDO_API_ACTIVEOBJECTSLIST,
+					active_objects, obj_count, TRUE);
+			ndomod_write_to_sink(dbuf.buf,NDO_TRUE,NDO_TRUE);
+			ndo_dbuf_free(&dbuf);
+			while (--obj_count)
+				free(active_objects[obj_count].value.string);
+			obj_count = 1;
+		}
+	}
+	if (obj_count > 1) {
+		ndomod_broker_data_serialize(&dbuf, NDO_API_ACTIVEOBJECTSLIST,
+				active_objects, obj_count, TRUE);
+		ndomod_write_to_sink(dbuf.buf,NDO_TRUE,NDO_TRUE);
+		ndo_dbuf_free(&dbuf);
+		while (--obj_count)
+			free(active_objects[obj_count].value.string);
+	}
+
+	
+	active_objects[0].value.integer = NDO_API_SERVICEGROUPDEFINITION;
+	obj_count = 1;
+	for (temp_servicegroup = servicegroup_list; temp_servicegroup !=NULL ; temp_servicegroup = temp_servicegroup->next) {
+		name1 = ndo_escape_buffer(temp_servicegroup->group_name);
+		active_objects[obj_count].key = obj_count;
+		active_objects[obj_count].datatype = BD_STRING;
+		active_objects[obj_count].value.string = (name1 == NULL) ? "" : name1;
+		if (++obj_count > 250) {
+			ndomod_broker_data_serialize(&dbuf, NDO_API_ACTIVEOBJECTSLIST,
+					active_objects, obj_count, TRUE);
+			ndomod_write_to_sink(dbuf.buf,NDO_TRUE,NDO_TRUE);
+			ndo_dbuf_free(&dbuf);
+			while (--obj_count)
+				free(active_objects[obj_count].value.string);
+			obj_count = 1;
+		}
+	}
+	if (obj_count > 1) {
+		ndomod_broker_data_serialize(&dbuf, NDO_API_ACTIVEOBJECTSLIST,
+				active_objects, obj_count, TRUE);
+		ndomod_write_to_sink(dbuf.buf,NDO_TRUE,NDO_TRUE);
+		ndo_dbuf_free(&dbuf);
+		while (--obj_count)
+			free(active_objects[obj_count].value.string);
+	}
+}
+
+
 #define OBJECTCONFIG_ES_ITEMS 16
+
 
 /* dumps object configuration data to sink */
 int ndomod_write_object_config(int config_type){
@@ -3629,15 +3889,12 @@ int ndomod_write_object_config(int config_type){
 					TRUE);
 		}
 
+		/* free buffers */
+		NDOMOD_FREE_ESC_BUFFERS(es, 2);
+
 		/* write data to sink */
 		ndomod_write_to_sink(dbuf.buf,NDO_TRUE,NDO_TRUE);
 		ndo_dbuf_free(&dbuf);
-	        }
-
-	/* free buffers */
-	for(x=0;x<OBJECTCONFIG_ES_ITEMS;x++){
-		free(es[x]);
-		es[x]=NULL;
 	        }
 
 	/****** dump timeperiod config ******/
@@ -3660,6 +3917,8 @@ int ndomod_write_object_config(int config_type){
 					timeperiod_definition, sizeof(timeperiod_definition) / 
 					sizeof(timeperiod_definition[ 0]), FALSE);
 		}
+
+		NDOMOD_FREE_ESC_BUFFERS(es, 2);
 
 		/* dump timeranges for each day */
 		for(x=0;x<7;x++){
@@ -3836,8 +4095,7 @@ int ndomod_write_object_config(int config_type){
 					sizeof(contact_definition[ 0]), FALSE);
 		}
 
-		free(es[0]);
-		es[0]=NULL;
+		NDOMOD_FREE_ESC_BUFFERS(es, 6);
 
 		/* dump addresses for each contact */
 		for(x=0;x<MAX_CONTACT_ADDRESSES;x++){
@@ -3853,8 +4111,7 @@ int ndomod_write_object_config(int config_type){
 			temp_buffer[sizeof(temp_buffer)-1]='\x0';
 			ndo_dbuf_strcat(&dbuf,temp_buffer);
 
-			free(es[0]);
-			es[0]=NULL;
+			NDOMOD_FREE_ESC_BUFFERS(es, 1);
 		        }
 
 		/* dump host notification commands for each contact */
@@ -3879,10 +4136,7 @@ int ndomod_write_object_config(int config_type){
 
 
 	/* free buffers */
-	for(x=0;x<OBJECTCONFIG_ES_ITEMS;x++){
-		free(es[x]);
-		es[x]=NULL;
-	        }
+	NDOMOD_FREE_ESC_BUFFERS(es, OBJECTCONFIG_ES_ITEMS);
 
 	/****** dump contactgroup config ******/
 	for(temp_contactgroup=contactgroup_list;temp_contactgroup!=NULL;temp_contactgroup=temp_contactgroup->next){
@@ -3905,8 +4159,7 @@ int ndomod_write_object_config(int config_type){
 					sizeof(contactgroup_definition[ 0]), FALSE);
 		}
 
-		free(es[0]);
-		es[0]=NULL;
+		NDOMOD_FREE_ESC_BUFFERS(es, 2);
 
 		/* dump members for each contactgroup */
 		ndomod_contacts_serialize(temp_contactgroup->members, &dbuf, 
@@ -3921,10 +4174,7 @@ int ndomod_write_object_config(int config_type){
 
 
 	/* free buffers */
-	for(x=0;x<OBJECTCONFIG_ES_ITEMS;x++){
-		free(es[x]);
-		es[x]=NULL;
-	        }
+	NDOMOD_FREE_ESC_BUFFERS(es, OBJECTCONFIG_ES_ITEMS);
 
 	/****** dump host config ******/
 	for(temp_host=host_list;temp_host!=NULL;temp_host=temp_host->next){
@@ -4203,8 +4453,7 @@ int ndomod_write_object_config(int config_type){
 					sizeof(host_definition[ 0]), FALSE);
 		}
 
-		free(es[0]);
-		es[0]=NULL;
+		NDOMOD_FREE_ESC_BUFFERS(es, OBJECTCONFIG_ES_ITEMS);
 
 		/* dump parent hosts */
 		ndomod_hosts_serialize(temp_host->parent_hosts, &dbuf, 
@@ -4232,10 +4481,7 @@ int ndomod_write_object_config(int config_type){
 
 
 	/* free buffers */
-	for(x=0;x<OBJECTCONFIG_ES_ITEMS;x++){
-		free(es[x]);
-		es[x]=NULL;
-	        }
+	NDOMOD_FREE_ESC_BUFFERS(es, OBJECTCONFIG_ES_ITEMS);
 
 	/****** dump hostgroup config ******/
 	for(temp_hostgroup=hostgroup_list;temp_hostgroup!=NULL;temp_hostgroup=temp_hostgroup->next){
@@ -4258,8 +4504,7 @@ int ndomod_write_object_config(int config_type){
 					sizeof(hostgroup_definition[ 0]), FALSE);
 		}
 
-		free(es[0]);
-		es[0]=NULL;
+		NDOMOD_FREE_ESC_BUFFERS(es, 2);
 
 		/* dump members for each hostgroup */
 #ifdef BUILD_NAGIOS_2X
@@ -4275,13 +4520,6 @@ int ndomod_write_object_config(int config_type){
 		ndomod_write_to_sink(dbuf.buf,NDO_TRUE,NDO_TRUE);
 
 		ndo_dbuf_free(&dbuf);
-	        }
-
-
-	/* free buffers */
-	for(x=0;x<OBJECTCONFIG_ES_ITEMS;x++){
-		free(es[x]);
-		es[x]=NULL;
 	        }
 
 	/****** dump service config ******/
@@ -4545,8 +4783,7 @@ int ndomod_write_object_config(int config_type){
 					sizeof(service_definition[ 0]), FALSE);
 		}
 
-		free(es[0]);
-		es[0]=NULL;
+		NDOMOD_FREE_ESC_BUFFERS(es, OBJECTCONFIG_ES_ITEMS);
 
 #ifdef BUILD_NAGIOS_4X
 		/* dump parent services */
@@ -4576,12 +4813,6 @@ int ndomod_write_object_config(int config_type){
 	        }
 
 
-	/* free buffers */
-	for(x=0;x<OBJECTCONFIG_ES_ITEMS;x++){
-		free(es[x]);
-		es[x]=NULL;
-	        }
-
 	/****** dump servicegroup config ******/
 	for(temp_servicegroup=servicegroup_list;temp_servicegroup!=NULL;temp_servicegroup=temp_servicegroup->next){
 
@@ -4603,10 +4834,7 @@ int ndomod_write_object_config(int config_type){
 					sizeof(servicegroup_definition[ 0]), FALSE);
 		}
 
-		free(es[0]);
-		free(es[1]);
-		es[0]=NULL;
-		es[1]=NULL;
+		NDOMOD_FREE_ESC_BUFFERS(es, 2);
 
 		/* dump members for each servicegroup */
 		ndomod_services_serialize(temp_servicegroup->members, &dbuf, 
@@ -4619,12 +4847,6 @@ int ndomod_write_object_config(int config_type){
 		ndo_dbuf_free(&dbuf);
 	        }
 
-
-	/* free buffers */
-	for(x=0;x<OBJECTCONFIG_ES_ITEMS;x++){
-		free(es[x]);
-		es[x]=NULL;
-	        }
 
 	/****** dump host escalation config ******/
 #ifdef BUILD_NAGIOS_4X
@@ -4687,8 +4909,7 @@ int ndomod_write_object_config(int config_type){
 					sizeof(hostescalation_definition[ 0]), FALSE);
 		}
 
-		free(es[0]);
-		es[0]=NULL;
+		NDOMOD_FREE_ESC_BUFFERS(es, 2);
 
 		/* dump contactgroups */
 		ndomod_contactgroups_serialize(temp_hostescalation->contact_groups, 
@@ -4707,12 +4928,6 @@ int ndomod_write_object_config(int config_type){
 		ndo_dbuf_free(&dbuf);
 	        }
 
-
-	/* free buffers */
-	for(x=0;x<OBJECTCONFIG_ES_ITEMS;x++){
-		free(es[x]);
-		es[x]=NULL;
-	        }
 
 	/****** dump service escalation config ******/
 #ifdef BUILD_NAGIOS_4X
@@ -4784,6 +4999,8 @@ int ndomod_write_object_config(int config_type){
 						}},
 				};
 
+			NDOMOD_FREE_ESC_BUFFERS(es, 3);
+
 			ndomod_broker_data_serialize(&dbuf, 
 					NDO_API_SERVICEESCALATIONDEFINITION, 
 					serviceescalation_definition, 
@@ -4811,12 +5028,6 @@ int ndomod_write_object_config(int config_type){
 		ndo_dbuf_free(&dbuf);
 	        }
 
-
-	/* free buffers */
-	for(x=0;x<OBJECTCONFIG_ES_ITEMS;x++){
-		free(es[x]);
-		es[x]=NULL;
-	        }
 
 	/****** dump host dependency config ******/
 #ifdef BUILD_NAGIOS_4X
@@ -4879,6 +5090,8 @@ int ndomod_write_object_config(int config_type){
 						}},
 				};
 
+		NDOMOD_FREE_ESC_BUFFERS(es, 3);
+
 			ndomod_broker_data_serialize(&dbuf, 
 					NDO_API_HOSTDEPENDENCYDEFINITION, 
 					hostdependency_definition, 
@@ -4891,12 +5104,6 @@ int ndomod_write_object_config(int config_type){
 		ndo_dbuf_free(&dbuf);
 	        }
 
-
-	/* free buffers */
-	for(x=0;x<OBJECTCONFIG_ES_ITEMS;x++){
-		free(es[x]);
-		es[x]=NULL;
-	        }
 
 	/****** dump service dependency config ******/
 #ifdef BUILD_NAGIOS_4X
@@ -4974,6 +5181,8 @@ int ndomod_write_object_config(int config_type){
 						}},
 				};
 
+			NDOMOD_FREE_ESC_BUFFERS(es, 5);
+
 			ndomod_broker_data_serialize(&dbuf, 
 					NDO_API_SERVICEDEPENDENCYDEFINITION, 
 					servicedependency_definition, 
@@ -4986,12 +5195,6 @@ int ndomod_write_object_config(int config_type){
 		ndo_dbuf_free(&dbuf);
 	        }
 
-
-	/* free buffers */
-	for(x=0;x<OBJECTCONFIG_ES_ITEMS;x++){
-		free(es[x]);
-		es[x]=NULL;
-	        }
 
 	return NDO_OK;
         }

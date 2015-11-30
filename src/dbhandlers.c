@@ -5014,6 +5014,128 @@ int ndo2db_handle_contactgroupdefinition(ndo2db_idi *idi){
 	return NDO_OK;
         }
 
+/*
+ * In this function, we get a list of up to 100 objects, with the object type
+ * stored in idi->buffered_input[NDO_DATA_ACTIVEOBJECTSTYPE]. The list of
+ * object names are in the idi->buffered_input with indexes from 1 to 100.
+ * We generate an UPDATE query to set them all active at one time.
+ */
+int ndo2db_handle_activeobjectlist(ndo2db_idi *idi)
+{
+	ndo_dbuf	dbuf;
+	char		*buf = NULL, *name1, *name2 = NULL;
+	int			rc, i, object_type, num_objs = 0, sz, first = 1;
+
+	if(idi==NULL)
+		return NDO_ERROR;
+
+	/* What type of object are we dealing with? */
+	ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_ACTIVEOBJECTSTYPE], &object_type);
+
+	/* Find out how many objects we're daling with */
+	while (idi->buffered_input[num_objs])
+		++num_objs;
+
+	/* Estimate the number of bytes we'll need for the SQL statement */
+	sz = ((num_objs * 25) & !0x3ff) | 0x800;
+
+	/* Convert object type into correct value for the table */
+	switch (object_type) {
+		case NDO_API_HOSTDEFINITION:
+			object_type = NDO2DB_OBJECTTYPE_HOST;
+			break;
+		case NDO_API_HOSTGROUPDEFINITION:
+			object_type = NDO2DB_OBJECTTYPE_HOSTGROUP;
+			break;
+		case NDO_API_SERVICEDEFINITION:
+			object_type = NDO2DB_OBJECTTYPE_SERVICE;
+			break;
+		case NDO_API_SERVICEGROUPDEFINITION:
+			object_type = NDO2DB_OBJECTTYPE_SERVICEGROUP;
+			break;
+		case NDO_API_COMMANDDEFINITION:
+			object_type = NDO2DB_OBJECTTYPE_COMMAND;
+			break;
+		case NDO_API_TIMEPERIODDEFINITION:
+			object_type = NDO2DB_OBJECTTYPE_TIMEPERIOD;
+			break;
+		case NDO_API_CONTACTDEFINITION:
+			object_type = NDO2DB_OBJECTTYPE_CONTACT;
+			break;
+		case NDO_API_CONTACTGROUPDEFINITION:
+			object_type = NDO2DB_OBJECTTYPE_CONTACTGROUP;
+			break;
+		default:
+			return;
+	}
+
+	ndo_dbuf_init(&dbuf, sz);
+
+	/* Build the first part of the query */
+	rc = asprintf(
+			&buf, "UPDATE %s SET is_active='1' WHERE instance_id='%lu' "
+			"AND objecttype_id='%d' AND ("
+		    ,ndo2db_db_tablenames[NDO2DB_DBTABLE_OBJECTS],
+			idi->dbinfo.instance_id, object_type);
+	if (rc == -1) {
+		ndo_dbuf_free(&dbuf);
+		syslog(LOG_ERR, "Error: memory allocation error in ndo2db_handle_activeobjectlist()");
+		return;
+	}
+	if (ndo_dbuf_strcat(&dbuf, buf) == NDO_ERROR) {
+		ndo_dbuf_free(&dbuf);
+		free(buf);
+		syslog(LOG_ERR, "Error: memory allocation error in ndo2db_handle_activeobjectlist()");
+		return;
+	}
+	free(buf);
+
+	while (num_objs) {
+		if (first)
+			first = 0;
+		else
+			ndo_dbuf_strcat(&dbuf, "OR ");
+
+		if (object_type == NDO2DB_OBJECTTYPE_SERVICE) {
+			name2 = ndo2db_db_escape_string(idi, idi->buffered_input[num_objs--]);
+			name1 = ndo2db_db_escape_string(idi, idi->buffered_input[num_objs--]);
+			rc = asprintf(&buf, "(name1='%s' AND name2='%s')", name1, name2);
+
+		} else {
+			name1 = ndo2db_db_escape_string(idi, idi->buffered_input[num_objs--]);
+			rc = asprintf(&buf, "name1='%s'", name1);
+		}
+
+		free(name1);
+		free(name2);
+
+		if (rc == -1) {
+			ndo_dbuf_free(&dbuf);
+			free(buf);
+			syslog(LOG_ERR, "Error: memory allocation error in ndo2db_handle_activeobjectlist()");
+			return;
+		}
+		if (ndo_dbuf_strcat(&dbuf, buf) == NDO_ERROR) {
+			ndo_dbuf_free(&dbuf);
+			free(buf);
+			syslog(LOG_ERR, "Error: memory allocation error in ndo2db_handle_activeobjectlist()");
+			return;
+		}
+
+		free(buf);
+	}
+
+	if (ndo_dbuf_strcat(&dbuf, ")") == NDO_ERROR) {
+		ndo_dbuf_free(&dbuf);
+		syslog(LOG_ERR, "Error: memory allocation error in ndo2db_handle_activeobjectlist()");
+		return;
+	}
+
+	rc = ndo2db_db_query(idi, dbuf.buf);
+	ndo_dbuf_free(&dbuf);
+	return rc;
+}
+
 int ndo2db_save_custom_variables(ndo2db_idi *idi,int table_idx, unsigned long o_id, char *ts ){
 	char *buf=NULL;
 	char *buf1=NULL;
@@ -5084,4 +5206,3 @@ int ndo2db_save_custom_variables(ndo2db_idi *idi,int table_idx, unsigned long o_
 	}
 	return result;
 }
-

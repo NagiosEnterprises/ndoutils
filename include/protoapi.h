@@ -103,11 +103,12 @@
 #define NDO_API_CONTACTGROUPDEFINITION               411
 #define NDO_API_HOSTEXTINFODEFINITION                412    /* no longer used */
 #define NDO_API_SERVICEEXTINFODEFINITION             413    /* no longer used */
+#define NDO_API_ACTIVEOBJECTSLIST                    414
 
 
 /************** COMMON DATA ATTRIBUTES **************/
 
-#define NDO_MAX_DATA_TYPES                           269
+#define NDO_MAX_DATA_TYPES                           270
 
 #define NDO_DATA_NONE                                0
 
@@ -390,5 +391,6 @@
 #define NDO_DATA_IMPORTANCE                          266
 #define NDO_DATA_MINIMUMIMPORTANCE                   267
 #define NDO_DATA_PARENTSERVICE                       268
+#define NDO_DATA_ACTIVEOBJECTSTYPE                   269
 
 #endif

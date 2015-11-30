@@ -191,6 +191,7 @@ typedef struct ndo2db_input_data_info_struct{
 #define NDO2DB_INPUT_DATA_CONTACTGROUPDEFINITION        72
 #define NDO2DB_INPUT_DATA_HOSTEXTINFODEFINITION         73
 #define NDO2DB_INPUT_DATA_SERVICEEXTINFODEFINITION      74
+#define NDO2DB_INPUT_DATA_ACTIVEOBJECTSLIST             75
 
 
 /************* types of config data *************/

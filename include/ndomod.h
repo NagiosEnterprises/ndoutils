@@ -102,6 +102,7 @@ int ndomod_deregister_callbacks(void);
 int ndomod_broker_data(int,void *);
 
 int ndomod_write_config(int);
+void ndomod_write_active_objects();
 int ndomod_write_object_config(int);
 
 int ndomod_write_config_files(void);
