@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <syslog.h>
+#include "../include/config.h"
 #include "../include/queue.h"
 #include <errno.h>
 #include <time.h>
@@ -68,7 +69,7 @@ void log_retry( void) {
 #if defined( __linux__)
 	const char *	statsfmt = "You are currently using %lu of %lu messages and %lu of %lu bytes in the queue.";
 #endif
-	
+
 	time( &now);
 
 	/* if we've never logged a retry message or we've exceeded the retry log interval */
@@ -89,8 +90,8 @@ void log_retry( void) {
 				syslog(LOG_ERR, logmsg);
 				}
 			else {
-				sprintf(curstats, statsfmt, queue_stats.msg_qnum, 
-						(unsigned long)msgmni, queue_stats.__msg_cbytes, 
+				sprintf(curstats, statsfmt, queue_stats.msg_qnum,
+						(unsigned long)msgmni, queue_stats.__msg_cbytes,
 						queue_stats.msg_qbytes);
 				sprintf(logmsg, logfmt, curstats);
 				syslog(LOG_ERR, logmsg);
@@ -130,7 +131,7 @@ void push_into_queue (char* buf) {
 						nanosleep(&delay,NULL);
 					#else
 						sleep(1);
-					#endif 		
+					#endif
 				}
 				if (retrynum < MAX_RETRIES) {
 					syslog(LOG_ERR,"Message sent to queue.\n");

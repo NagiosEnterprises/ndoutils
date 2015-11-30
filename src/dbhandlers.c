@@ -88,7 +88,7 @@ int ndo2db_get_object_id(ndo2db_idi *idi, int object_type, char *n1, char *n2, u
 		es[0]=ndo2db_db_escape_string(idi,name1);
 		/* HINT: HB 10/27/2009
 		 * BINARY operator is just a MySQL special to provide case sensitive queries
-		 * Think about it in the future if not only MySQL is supported 
+		 * Think about it in the future if not only MySQL is supported
 		 */
 		if(asprintf(&buf1,"BINARY name1='%s'",es[0])==-1)
 			buf1=NULL;
@@ -103,12 +103,12 @@ int ndo2db_get_object_id(ndo2db_idi *idi, int object_type, char *n1, char *n2, u
 		es[1]=ndo2db_db_escape_string(idi,name2);
 		/* HINT: HB 10/27/2009
 		 * BINARY operator is just a MySQL special to provide case sensitive queries
-		 * Think about it in the future if not only MySQL is supported 
+		 * Think about it in the future if not only MySQL is supported
 		 */
 		if(asprintf(&buf2,"BINARY name2='%s'",es[1])==-1)
 			buf2=NULL;
 	        }
-	
+
 	if(asprintf(&buf,"SELECT * FROM %s WHERE instance_id='%lu' AND objecttype_id='%d' AND %s AND %s"
 		    ,ndo2db_db_tablenames[NDO2DB_DBTABLE_OBJECTS]
 		    ,idi->dbinfo.instance_id
@@ -192,7 +192,7 @@ int ndo2db_get_object_id_with_insert(ndo2db_idi *idi, int object_type, char *n1,
 	        }
 	else
 		es[1]=NULL;
-	
+
 	if(asprintf(&buf,"INSERT INTO %s SET instance_id='%lu', objecttype_id='%d' %s %s"
 		    ,ndo2db_db_tablenames[NDO2DB_DBTABLE_OBJECTS]
 		    ,idi->dbinfo.instance_id
@@ -355,7 +355,7 @@ int ndo2db_add_cached_object_id(ndo2db_idi *idi, int object_type, char *n1, char
 		idi->dbinfo.object_hashlist=(ndo2db_dbobject **)malloc(sizeof(ndo2db_dbobject *)*NDO2DB_OBJECT_HASHSLOTS);
 		if(idi->dbinfo.object_hashlist==NULL)
 			return NDO_ERROR;
-		
+
 		for(x=0;x<NDO2DB_OBJECT_HASHSLOTS;x++)
 			idi->dbinfo.object_hashlist[x]=NULL;
 	        }
@@ -492,7 +492,7 @@ int ndo2db_set_all_objects_as_inactive(ndo2db_idi *idi){
 int ndo2db_set_object_as_active(ndo2db_idi *idi, int object_type, unsigned long object_id){
 	int result=NDO_OK;
 	char *buf=NULL;
-	
+
 	/* mark the object as being active */
 	if(asprintf(&buf,"UPDATE %s SET is_active='1' WHERE instance_id='%lu' AND objecttype_id='%d' AND object_id='%lu'"
 		    ,ndo2db_db_tablenames[NDO2DB_DBTABLE_OBJECTS]
@@ -732,7 +732,7 @@ int ndo2db_handle_processdata(ndo2db_idi *idi){
 			buf=NULL;
 		result=ndo2db_db_query(idi,buf);
 		free(buf);
-#endif		
+#endif
 	        }
 
 	/* if process is shutting down or restarting, update process status data */
@@ -1393,7 +1393,7 @@ int ndo2db_handle_contactnotificationmethoddata(ndo2db_idi *idi){
 
 	ts[0]=ndo2db_db_timet_to_sql(idi,start_time.tv_sec);
 	ts[1]=ndo2db_db_timet_to_sql(idi,end_time.tv_sec);
-	
+
 
 	/* get the command id */
 	result=ndo2db_get_object_id_with_insert(idi,NDO2DB_OBJECTTYPE_COMMAND,idi->buffered_input[NDO_DATA_COMMANDNAME],NULL,&command_id);
@@ -2893,14 +2893,14 @@ int ndo2db_handle_acknowledgementdata(ndo2db_idi *idi){
 		    ,notify_contacts
 		   )==-1)
 		buf=NULL;
-	
+
 	if(asprintf(&buf1,"INSERT INTO %s SET %s ON DUPLICATE KEY UPDATE %s"
 		    ,ndo2db_db_tablenames[NDO2DB_DBTABLE_ACKNOWLEDGEMENTS]
 		    ,buf
 		    ,buf
 		   )==-1)
 		buf1=NULL;
-	
+
 	result=ndo2db_db_query(idi,buf1);
 	free(buf);
 	free(buf1);
@@ -3040,7 +3040,7 @@ int ndo2db_handle_configfilevariables(ndo2db_idi *idi, int configfile_type){
 		    ,es[0]
 		   )==-1)
 		buf=NULL;
-	
+
 	if(asprintf(&buf1,"INSERT INTO %s SET %s ON DUPLICATE KEY UPDATE %s"
 		    ,ndo2db_db_tablenames[NDO2DB_DBTABLE_CONFIGFILES]
 		    ,buf
@@ -3085,7 +3085,7 @@ int ndo2db_handle_configfilevariables(ndo2db_idi *idi, int configfile_type){
 			    ,es[2]
 			   )==-1)
 			buf=NULL;
-	
+
 		if(asprintf(&buf1,"INSERT INTO %s SET %s"
 			    ,ndo2db_db_tablenames[NDO2DB_DBTABLE_CONFIGFILEVARIABLES]
 			    ,buf
@@ -3164,7 +3164,7 @@ int ndo2db_handle_runtimevariables(ndo2db_idi *idi){
 			    ,es[1]
 			   )==-1)
 			buf=NULL;
-	
+
 		if(asprintf(&buf1,"INSERT INTO %s SET %s ON DUPLICATE KEY UPDATE %s"
 			    ,ndo2db_db_tablenames[NDO2DB_DBTABLE_RUNTIMEVARIABLES]
 			    ,buf
@@ -3332,13 +3332,13 @@ int ndo2db_handle_hostdefinition(ndo2db_idi *idi){
 	argptr=strtok(NULL,"\x0");
 	result=ndo2db_get_object_id_with_insert(idi,NDO2DB_OBJECTTYPE_COMMAND,cmdptr,NULL,&check_command_id);
 	es[2]=ndo2db_db_escape_string(idi,argptr);
-	
+
 	/* get the event handler command */
 	cmdptr=strtok(idi->buffered_input[NDO_DATA_HOSTEVENTHANDLER],"!");
 	argptr=strtok(NULL,"\x0");
 	result=ndo2db_get_object_id_with_insert(idi,NDO2DB_OBJECTTYPE_COMMAND,cmdptr,NULL,&eventhandler_command_id);
 	es[3]=ndo2db_db_escape_string(idi,argptr);
-	
+
 	es[4]=ndo2db_db_escape_string(idi,idi->buffered_input[NDO_DATA_NOTES]);
 	es[5]=ndo2db_db_escape_string(idi,idi->buffered_input[NDO_DATA_NOTESURL]);
 	es[6]=ndo2db_db_escape_string(idi,idi->buffered_input[NDO_DATA_ACTIONURL]);
@@ -3426,7 +3426,7 @@ int ndo2db_handle_hostdefinition(ndo2db_idi *idi){
 #endif
 		   )==-1)
 		buf=NULL;
-	
+
 	if(asprintf(&buf1,"INSERT INTO %s SET %s ON DUPLICATE KEY UPDATE %s"
 		    ,ndo2db_db_tablenames[NDO2DB_DBTABLE_HOSTS]
 		    ,buf
@@ -3467,7 +3467,7 @@ int ndo2db_handle_hostdefinition(ndo2db_idi *idi){
 			    ,member_id
 			   )==-1)
 			buf=NULL;
-	
+
 		if(asprintf(&buf1,"INSERT INTO %s SET %s ON DUPLICATE KEY UPDATE %s"
 			    ,ndo2db_db_tablenames[NDO2DB_DBTABLE_HOSTPARENTHOSTS]
 			    ,buf
@@ -3496,7 +3496,7 @@ int ndo2db_handle_hostdefinition(ndo2db_idi *idi){
 			    ,member_id
 			   )==-1)
 			buf=NULL;
-	
+
 		if(asprintf(&buf1,"INSERT INTO %s SET %s ON DUPLICATE KEY UPDATE %s"
 			    ,ndo2db_db_tablenames[NDO2DB_DBTABLE_HOSTCONTACTGROUPS]
 			    ,buf
@@ -3525,7 +3525,7 @@ int ndo2db_handle_hostdefinition(ndo2db_idi *idi){
 			    ,member_id
 			   )==-1)
 			buf=NULL;
-	
+
 		if(asprintf(&buf1,"INSERT INTO %s SET %s ON DUPLICATE KEY UPDATE %s"
 			    ,ndo2db_db_tablenames[NDO2DB_DBTABLE_HOSTCONTACTS]
 			    ,buf
@@ -3584,7 +3584,7 @@ int ndo2db_handle_hostgroupdefinition(ndo2db_idi *idi){
 		    ,es[0]
 		   )==-1)
 		buf=NULL;
-	
+
 	if(asprintf(&buf1,"INSERT INTO %s SET %s ON DUPLICATE KEY UPDATE %s"
 		    ,ndo2db_db_tablenames[NDO2DB_DBTABLE_HOSTGROUPS]
 		    ,buf
@@ -3624,7 +3624,7 @@ int ndo2db_handle_hostgroupdefinition(ndo2db_idi *idi){
 			    ,member_id
 			   )==-1)
 			buf=NULL;
-	
+
 		if(asprintf(&buf1,"INSERT INTO %s SET %s ON DUPLICATE KEY UPDATE %s"
 			    ,ndo2db_db_tablenames[NDO2DB_DBTABLE_HOSTGROUPMEMBERS]
 			    ,buf
@@ -3756,13 +3756,13 @@ int ndo2db_handle_servicedefinition(ndo2db_idi *idi){
 	argptr=strtok(NULL,"\x0");
 	result=ndo2db_get_object_id_with_insert(idi,NDO2DB_OBJECTTYPE_COMMAND,cmdptr,NULL,&check_command_id);
 	es[1]=ndo2db_db_escape_string(idi,argptr);
-	
+
 	/* get the event handler command */
 	cmdptr=strtok(idi->buffered_input[NDO_DATA_SERVICEEVENTHANDLER],"!");
 	argptr=strtok(NULL,"\x0");
 	result=ndo2db_get_object_id_with_insert(idi,NDO2DB_OBJECTTYPE_COMMAND,cmdptr,NULL,&eventhandler_command_id);
 	es[2]=ndo2db_db_escape_string(idi,argptr);
-	
+
 	es[3]=ndo2db_db_escape_string(idi,idi->buffered_input[NDO_DATA_NOTES]);
 	es[4]=ndo2db_db_escape_string(idi,idi->buffered_input[NDO_DATA_NOTESURL]);
 	es[5]=ndo2db_db_escape_string(idi,idi->buffered_input[NDO_DATA_ACTIONURL]);
@@ -3842,7 +3842,7 @@ int ndo2db_handle_servicedefinition(ndo2db_idi *idi){
 #endif
 		   )==-1)
 		buf=NULL;
-	
+
 	if(asprintf(&buf1,"INSERT INTO %s SET %s ON DUPLICATE KEY UPDATE %s"
 		    ,ndo2db_db_tablenames[NDO2DB_DBTABLE_SERVICES]
 		    ,buf
@@ -3879,7 +3879,7 @@ int ndo2db_handle_servicedefinition(ndo2db_idi *idi){
 		sptr=strtok(NULL,"\x0");
 
 		/* get the object id of the member */
-		result = ndo2db_get_object_id_with_insert(idi, 
+		result = ndo2db_get_object_id_with_insert(idi,
 				NDO2DB_OBJECTTYPE_SERVICE, hptr, sptr, &member_id);
 
 		if(asprintf(&buf,
@@ -3887,7 +3887,7 @@ int ndo2db_handle_servicedefinition(ndo2db_idi *idi){
 				idi->dbinfo.instance_id, service_id, member_id) == -1) {
 			buf = NULL;
 			}
-	
+
 		if(asprintf(&buf1, "INSERT INTO %s SET %s ON DUPLICATE KEY UPDATE %s",
 				ndo2db_db_tablenames[NDO2DB_DBTABLE_SERVICEPARENTSERVICES],
 				buf, buf) == -1) {
@@ -3916,7 +3916,7 @@ int ndo2db_handle_servicedefinition(ndo2db_idi *idi){
 			    ,member_id
 			   )==-1)
 			buf=NULL;
-	
+
 		if(asprintf(&buf1,"INSERT INTO %s SET %s ON DUPLICATE KEY UPDATE %s"
 			    ,ndo2db_db_tablenames[NDO2DB_DBTABLE_SERVICECONTACTGROUPS]
 			    ,buf
@@ -3945,7 +3945,7 @@ int ndo2db_handle_servicedefinition(ndo2db_idi *idi){
 			    ,member_id
 			   )==-1)
 			buf=NULL;
-	
+
 		if(asprintf(&buf1,"INSERT INTO %s SET %s ON DUPLICATE KEY UPDATE %s"
 			    ,ndo2db_db_tablenames[NDO2DB_DBTABLE_SERVICECONTACTS]
 			    ,buf
@@ -3957,7 +3957,7 @@ int ndo2db_handle_servicedefinition(ndo2db_idi *idi){
 		free(buf);
 		free(buf1);
 	}
-	
+
 	/* save custom variables to db */
 	result=ndo2db_save_custom_variables(idi,NDO2DB_DBTABLE_CUSTOMVARIABLES,object_id,NULL);
 
@@ -4006,7 +4006,7 @@ int ndo2db_handle_servicegroupdefinition(ndo2db_idi *idi){
 		    ,es[0]
 		   )==-1)
 		buf=NULL;
-	
+
 	if(asprintf(&buf1,"INSERT INTO %s SET %s ON DUPLICATE KEY UPDATE %s"
 		    ,ndo2db_db_tablenames[NDO2DB_DBTABLE_SERVICEGROUPS]
 		    ,buf
@@ -4050,7 +4050,7 @@ int ndo2db_handle_servicegroupdefinition(ndo2db_idi *idi){
 			    ,member_id
 			   )==-1)
 			buf=NULL;
-	
+
 		if(asprintf(&buf1,"INSERT INTO %s SET %s ON DUPLICATE KEY UPDATE %s"
 			    ,ndo2db_db_tablenames[NDO2DB_DBTABLE_SERVICEGROUPMEMBERS]
 			    ,buf
@@ -4118,7 +4118,7 @@ int ndo2db_handle_hostdependencydefinition(ndo2db_idi *idi){
 		    ,fail_on_unreachable
 		   )==-1)
 		buf=NULL;
-	
+
 	if(asprintf(&buf1,"INSERT INTO %s SET %s ON DUPLICATE KEY UPDATE %s"
 		    ,ndo2db_db_tablenames[NDO2DB_DBTABLE_HOSTDEPENDENCIES]
 		    ,buf
@@ -4188,7 +4188,7 @@ int ndo2db_handle_servicedependencydefinition(ndo2db_idi *idi){
 		    ,fail_on_critical
 		   )==-1)
 		buf=NULL;
-	
+
 	if(asprintf(&buf1,"INSERT INTO %s SET %s ON DUPLICATE KEY UPDATE %s"
 		    ,ndo2db_db_tablenames[NDO2DB_DBTABLE_SERVICEDEPENDENCIES]
 		    ,buf
@@ -4261,7 +4261,7 @@ int ndo2db_handle_hostescalationdefinition(ndo2db_idi *idi){
 		    ,escalate_unreachable
 		   )==-1)
 		buf=NULL;
-	
+
 	if(asprintf(&buf1,"INSERT INTO %s SET %s ON DUPLICATE KEY UPDATE %s"
 		    ,ndo2db_db_tablenames[NDO2DB_DBTABLE_HOSTESCALATIONS]
 		    ,buf
@@ -4299,7 +4299,7 @@ int ndo2db_handle_hostescalationdefinition(ndo2db_idi *idi){
 			    ,member_id
 			   )==-1)
 			buf=NULL;
-	
+
 		if(asprintf(&buf1,"INSERT INTO %s SET %s ON DUPLICATE KEY UPDATE %s"
 			    ,ndo2db_db_tablenames[NDO2DB_DBTABLE_HOSTESCALATIONCONTACTGROUPS]
 			    ,buf
@@ -4328,7 +4328,7 @@ int ndo2db_handle_hostescalationdefinition(ndo2db_idi *idi){
 			    ,member_id
 			   )==-1)
 			buf=NULL;
-	
+
 		if(asprintf(&buf1,"INSERT INTO %s SET %s ON DUPLICATE KEY UPDATE %s"
 			    ,ndo2db_db_tablenames[NDO2DB_DBTABLE_HOSTESCALATIONCONTACTS]
 			    ,buf
@@ -4405,7 +4405,7 @@ int ndo2db_handle_serviceescalationdefinition(ndo2db_idi *idi){
 		    ,escalate_critical
 		   )==-1)
 		buf=NULL;
-	
+
 	if(asprintf(&buf1,"INSERT INTO %s SET %s ON DUPLICATE KEY UPDATE %s"
 		    ,ndo2db_db_tablenames[NDO2DB_DBTABLE_SERVICEESCALATIONS]
 		    ,buf
@@ -4443,7 +4443,7 @@ int ndo2db_handle_serviceescalationdefinition(ndo2db_idi *idi){
 			    ,member_id
 			   )==-1)
 			buf=NULL;
-	
+
 		if(asprintf(&buf1,"INSERT INTO %s SET %s ON DUPLICATE KEY UPDATE %s"
 			    ,ndo2db_db_tablenames[NDO2DB_DBTABLE_SERVICEESCALATIONCONTACTGROUPS]
 			    ,buf
@@ -4472,7 +4472,7 @@ int ndo2db_handle_serviceescalationdefinition(ndo2db_idi *idi){
 			    ,member_id
 			   )==-1)
 			buf=NULL;
-	
+
 		if(asprintf(&buf1,"INSERT INTO %s SET %s ON DUPLICATE KEY UPDATE %s"
 			    ,ndo2db_db_tablenames[NDO2DB_DBTABLE_SERVICEESCALATIONCONTACTS]
 			    ,buf
@@ -4525,7 +4525,7 @@ int ndo2db_handle_commanddefinition(ndo2db_idi *idi){
 		    ,es[0]
 		   )==-1)
 		buf=NULL;
-	
+
 	if(asprintf(&buf1,"INSERT INTO %s SET %s ON DUPLICATE KEY UPDATE %s"
 		    ,ndo2db_db_tablenames[NDO2DB_DBTABLE_COMMANDS]
 		    ,buf
@@ -4588,7 +4588,7 @@ int ndo2db_handle_timeperiodefinition(ndo2db_idi *idi){
 		    ,es[0]
 		   )==-1)
 		buf=NULL;
-	
+
 	if(asprintf(&buf1,"INSERT INTO %s SET %s ON DUPLICATE KEY UPDATE %s"
 		    ,ndo2db_db_tablenames[NDO2DB_DBTABLE_TIMEPERIODS]
 		    ,buf
@@ -4639,7 +4639,7 @@ int ndo2db_handle_timeperiodefinition(ndo2db_idi *idi){
 			    ,end_sec
 			   )==-1)
 			buf=NULL;
-	
+
 		if(asprintf(&buf1,"INSERT INTO %s SET %s ON DUPLICATE KEY UPDATE %s"
 			    ,ndo2db_db_tablenames[NDO2DB_DBTABLE_TIMEPERIODTIMERANGES]
 			    ,buf
@@ -4767,7 +4767,7 @@ int ndo2db_handle_contactdefinition(ndo2db_idi *idi){
 #endif
 		   )==-1)
 		buf=NULL;
-	
+
 	if(asprintf(&buf1,"INSERT INTO %s SET %s ON DUPLICATE KEY UPDATE %s"
 		    ,ndo2db_db_tablenames[NDO2DB_DBTABLE_CONTACTS]
 		    ,buf
@@ -4815,7 +4815,7 @@ int ndo2db_handle_contactdefinition(ndo2db_idi *idi){
 			    ,es[0]
 			   )==-1)
 			buf=NULL;
-	
+
 		if(asprintf(&buf1,"INSERT INTO %s SET %s ON DUPLICATE KEY UPDATE %s"
 			    ,ndo2db_db_tablenames[NDO2DB_DBTABLE_CONTACTADDRESSES]
 			    ,buf
@@ -4856,7 +4856,7 @@ int ndo2db_handle_contactdefinition(ndo2db_idi *idi){
 			    ,(es[0]==NULL)?"":es[0]
 			   )==-1)
 			buf=NULL;
-	
+
 		if(asprintf(&buf1,"INSERT INTO %s SET %s ON DUPLICATE KEY UPDATE %s"
 			    ,ndo2db_db_tablenames[NDO2DB_DBTABLE_CONTACTNOTIFICATIONCOMMANDS]
 			    ,buf
@@ -4897,7 +4897,7 @@ int ndo2db_handle_contactdefinition(ndo2db_idi *idi){
 			    ,(es[0]==NULL)?"":es[0]
 			   )==-1)
 			buf=NULL;
-	
+
 		if(asprintf(&buf1,"INSERT INTO %s SET %s ON DUPLICATE KEY UPDATE %s"
 			    ,ndo2db_db_tablenames[NDO2DB_DBTABLE_CONTACTNOTIFICATIONCOMMANDS]
 			    ,buf
@@ -4911,7 +4911,7 @@ int ndo2db_handle_contactdefinition(ndo2db_idi *idi){
 
 		free(es[0]);
 	}
-	
+
 	/* save custom variables to db */
 	result=ndo2db_save_custom_variables(idi,NDO2DB_DBTABLE_CUSTOMVARIABLES,contact_id,NULL);
 
@@ -4958,7 +4958,7 @@ int ndo2db_handle_contactgroupdefinition(ndo2db_idi *idi){
 		    ,es[0]
 		   )==-1)
 		buf=NULL;
-	
+
 	if(asprintf(&buf1,"INSERT INTO %s SET %s ON DUPLICATE KEY UPDATE %s"
 		    ,ndo2db_db_tablenames[NDO2DB_DBTABLE_CONTACTGROUPS]
 		    ,buf
@@ -4998,7 +4998,7 @@ int ndo2db_handle_contactgroupdefinition(ndo2db_idi *idi){
 			    ,member_id
 			   )==-1)
 			buf=NULL;
-	
+
 		if(asprintf(&buf1,"INSERT INTO %s SET %s ON DUPLICATE KEY UPDATE %s"
 			    ,ndo2db_db_tablenames[NDO2DB_DBTABLE_CONTACTGROUPMEMBERS]
 			    ,buf
@@ -5066,7 +5066,7 @@ int ndo2db_handle_activeobjectlist(ndo2db_idi *idi)
 			object_type = NDO2DB_OBJECTTYPE_CONTACTGROUP;
 			break;
 		default:
-			return;
+			return NDO_ERROR;
 	}
 
 	ndo_dbuf_init(&dbuf, sz);
@@ -5080,13 +5080,13 @@ int ndo2db_handle_activeobjectlist(ndo2db_idi *idi)
 	if (rc == -1) {
 		ndo_dbuf_free(&dbuf);
 		syslog(LOG_ERR, "Error: memory allocation error in ndo2db_handle_activeobjectlist()");
-		return;
+		return NDO_ERROR;
 	}
 	if (ndo_dbuf_strcat(&dbuf, buf) == NDO_ERROR) {
 		ndo_dbuf_free(&dbuf);
 		free(buf);
 		syslog(LOG_ERR, "Error: memory allocation error in ndo2db_handle_activeobjectlist()");
-		return;
+		return NDO_ERROR;
 	}
 	free(buf);
 
@@ -5113,13 +5113,13 @@ int ndo2db_handle_activeobjectlist(ndo2db_idi *idi)
 			ndo_dbuf_free(&dbuf);
 			free(buf);
 			syslog(LOG_ERR, "Error: memory allocation error in ndo2db_handle_activeobjectlist()");
-			return;
+			return NDO_ERROR;
 		}
 		if (ndo_dbuf_strcat(&dbuf, buf) == NDO_ERROR) {
 			ndo_dbuf_free(&dbuf);
 			free(buf);
 			syslog(LOG_ERR, "Error: memory allocation error in ndo2db_handle_activeobjectlist()");
-			return;
+			return NDO_ERROR;
 		}
 
 		free(buf);
@@ -5128,7 +5128,7 @@ int ndo2db_handle_activeobjectlist(ndo2db_idi *idi)
 	if (ndo_dbuf_strcat(&dbuf, ")") == NDO_ERROR) {
 		ndo_dbuf_free(&dbuf);
 		syslog(LOG_ERR, "Error: memory allocation error in ndo2db_handle_activeobjectlist()");
-		return;
+		return NDO_ERROR;
 	}
 
 	rc = ndo2db_db_query(idi, dbuf.buf);
