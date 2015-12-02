@@ -3562,7 +3562,7 @@ void ndomod_write_active_objects()
 	service					*temp_service;
 	servicegroup			*temp_servicegroup;
 	ndo_dbuf				dbuf;
-	struct ndo_broker_data	active_objects[100];
+	struct ndo_broker_data	active_objects[256];
 	struct timeval			now;
 	int						i, obj_count;
 	char					*name1, *name2;
