@@ -57,11 +57,11 @@ perl -i -p -e "s/SOCKDEBUG_VERSION \"[0-9].*\"/SOCKDEBUG_VERSION \"$newversion\"
 perl -i -p -e "s/SOCKDEBUG_DATE \"[0-9].*\"/SOCKDEBUG_DATE \"$SHORTDATE\"/;" src/sockdebug.c
 perl -i -p -e "s/Last Modified: [0-9].*/Last Modified: $SHORTDATE/;" src/sockdebug.c
 
-# Update version number and release date in configure script and configure.in
+# Update version number and release date in configure script and configure.ac
 perl -i -p -e "s/PKG_VERSION=.*/PKG_VERSION=\"$newversion\"/;" configure
 perl -i -p -e "s/PKG_REL_DATE=.*\"/PKG_REL_DATE=\"$SHORTDATE\"/;" configure
-perl -i -p -e "s/PKG_VERSION=.*/PKG_VERSION=\"$newversion\"/;" configure.in
-perl -i -p -e "s/PKG_REL_DATE=.*\"/PKG_REL_DATE=\"$SHORTDATE\"/;" configure.in
+perl -i -p -e "s/PKG_VERSION=.*/PKG_VERSION=\"$newversion\"/;" configure.ac
+perl -i -p -e "s/PKG_REL_DATE=.*\"/PKG_REL_DATE=\"$SHORTDATE\"/;" configure.ac
 
 # Update this file with version number and last date
 perl -i -p -e "s/^CURRENTVERSION=.*/CURRENTVERSION=$newversion/;" update-version
