@@ -2333,9 +2333,9 @@ $as_echo "#define DEFAULT_NAGIOS_GROUP nagios" >>confdefs.h
 
 
 PKG_NAME=ndoutils
-PKG_VERSION="1.5.2"
+PKG_VERSION="2.1.0b2"
 PKG_HOME_URL="http://www.nagios.org/"
-PKG_REL_DATE="06-08-2012"
+PKG_REL_DATE="12-02-2015"
 
 ac_aux_dir=
 for ac_dir in "$srcdir" "$srcdir/.." "$srcdir/../.."; do

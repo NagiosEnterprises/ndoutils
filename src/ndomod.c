@@ -6,7 +6,7 @@
  * Copyright (c) 2005-2009 Ethan Galstad
  *
  * First Written: 05-19-2005
- * Last Modified: 09-27-2012
+ * Last Modified: 12-02-2015
  *
  * TO DO: Add service parents, hourly value (hosts / services),
  *        minimum value (contacts)
@@ -65,9 +65,9 @@
 NEB_API_VERSION(CURRENT_NEB_API_VERSION)
 
 
-#define NDOMOD_VERSION "2.0.0"
+#define NDOMOD_VERSION "2.1.0b2"
 #define NDOMOD_NAME "NDOMOD"
-#define NDOMOD_DATE "10-30-2012"
+#define NDOMOD_DATE "12-02-2015"
 
 #define BD_INT				0
 #define BD_TIMEVAL			1
