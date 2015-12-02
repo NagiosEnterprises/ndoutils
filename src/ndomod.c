@@ -1779,6 +1779,8 @@ int ndomod_broker_data(int event_type, void *data){
 
 	case NEBCALLBACK_PROCESS_DATA:
 
+		ndomod_write_active_objects();
+
 		procdata=(nebstruct_process_data *)data;
 
 		{
@@ -3518,7 +3520,7 @@ int ndomod_write_config(int config_type){
 	temp_buffer[sizeof(temp_buffer)-1]='\x0';
 	ndomod_write_to_sink(temp_buffer,NDO_TRUE,NDO_TRUE);
 
-	ndomod_write_active_objects();
+/*	ndomod_write_active_objects(); */
 
 	/* dump object config info */
 	result=ndomod_write_object_config(config_type);
@@ -3742,7 +3744,7 @@ void ndomod_write_active_objects()
 		active_objects[obj_count].key = obj_count;
 		active_objects[obj_count].datatype = BD_STRING;
 		active_objects[obj_count].value.string = (name2 == NULL) ? "" : name2;
-		if (++obj_count > 97) {
+		if (++obj_count > 250) {
 			ndomod_broker_data_serialize(&dbuf, NDO_API_ACTIVEOBJECTSLIST,
 					active_objects, obj_count, TRUE);
 			ndomod_write_to_sink(dbuf.buf,NDO_TRUE,NDO_TRUE);

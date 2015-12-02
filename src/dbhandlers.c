@@ -5015,9 +5015,9 @@ int ndo2db_handle_contactgroupdefinition(ndo2db_idi *idi){
         }
 
 /*
- * In this function, we get a list of up to 100 objects, with the object type
+ * In this function, we get a list of up to 250 objects, with the object type
  * stored in idi->buffered_input[NDO_DATA_ACTIVEOBJECTSTYPE]. The list of
- * object names are in the idi->buffered_input with indexes from 1 to 100.
+ * object names are in the idi->buffered_input with indexes from 1 to 250.
  * We generate an UPDATE query to set them all active at one time.
  */
 int ndo2db_handle_activeobjectlist(ndo2db_idi *idi)
@@ -5131,7 +5131,8 @@ int ndo2db_handle_activeobjectlist(ndo2db_idi *idi)
 		return NDO_ERROR;
 	}
 
-	rc = ndo2db_db_query(idi, dbuf.buf);
+	if (!first)
+		rc = ndo2db_db_query(idi, dbuf.buf);
 	ndo_dbuf_free(&dbuf);
 	return rc;
 }
