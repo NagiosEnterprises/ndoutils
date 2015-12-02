@@ -1612,7 +1612,11 @@ int ndomod_broker_data(int event_type, void *data){
 	char *es[9];
 	int x=0;
 	scheduled_downtime *temp_downtime=NULL;
+#if ( defined( BUILD_NAGIOS_2X) || defined( BUILD_NAGIOS_3X))
 	comment *temp_comment=NULL;
+#else
+	nagios_comment *temp_comment=NULL;
+#endif
 	nebstruct_process_data *procdata=NULL;
 	nebstruct_timed_event_data *eventdata=NULL;
 	nebstruct_log_data *logdata=NULL;

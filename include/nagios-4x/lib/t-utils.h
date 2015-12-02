@@ -1,5 +1,5 @@
-#ifndef NDO_T_UTILS_H_INCLUDED
-#define NDO_T_UTILS_H_INCLUDED
+#ifndef NAGIOS_T_UTILS_H_INCLUDED
+#define NAGIOS_T_UTILS_H_INCLUDED
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>

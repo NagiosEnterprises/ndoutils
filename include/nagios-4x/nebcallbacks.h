@@ -20,8 +20,8 @@
  *
  *****************************************************************************/
 
-#ifndef NDO_NEBCALLBACKS_H_INCLUDED
-#define NDO_NEBCALLBACKS_H_INCLUDED
+#ifndef NAGIOS_NEBCALLBACKS_H_INCLUDED
+#define NAGIOS_NEBCALLBACKS_H_INCLUDED
 
 #include "nebmodules.h"
 

@@ -1,5 +1,5 @@
-#ifndef NDO_LOGGING_H_INCLUDED
-#define NDO_LOGGING_H_INCLUDED
+#ifndef NAGIOS_LOGGING_H_INCLUDED
+#define NAGIOS_LOGGING_H_INCLUDED
 
 #include "objects.h"
 

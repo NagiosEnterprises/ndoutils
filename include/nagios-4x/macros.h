@@ -19,8 +19,8 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  ************************************************************************/
 
-#ifndef NDO_MACROS_H_INCLUDED
-#define NDO_MACROS_H_INCLUDED
+#ifndef NAGIOS_MACROS_H_INCLUDED
+#define NAGIOS_MACROS_H_INCLUDED
 
 #include "common.h"
 #include "objects.h"
@@ -316,6 +316,7 @@ int clear_servicegroup_macros_r(nagios_macros *mac);
 int clear_contact_macros_r(nagios_macros *mac);
 int clear_contactgroup_macros_r(nagios_macros *mac);
 int clear_summary_macros_r(nagios_macros *mac);
+int clear_datetime_macros_r(nagios_macros *mac);
 
 
 #ifndef NSCGI

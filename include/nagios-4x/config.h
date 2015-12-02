@@ -31,7 +31,7 @@
 #define USE_EVENT_BROKER /**/
 
 /* commands used by CGIs */
-#define TRACEROUTE_COMMAND "/bin/traceroute"
+#define TRACEROUTE_COMMAND ""
 /* #undef PING_COMMAND */
 /* #undef PING_PACKETS_FIRST */
 
@@ -143,7 +143,7 @@
 #ifdef HAVE_PWD_H
 #include <pwd.h>
 #endif
- 
+
 #define HAVE_GRP_H 1
 #ifdef HAVE_GRP_H
 #include <grp.h>
@@ -192,6 +192,15 @@
 #define HAVE_STDARG_H 1
 #ifdef HAVE_STDARG_H
 #include <stdarg.h>
+#endif
+
+/* Another Solarisism: getloadavg() lives in <sys/loadavg.h>, not <stdlib.h>,
+ * so include the former if it exists. This may be true on other systems, or
+ * this function may be missing altogether (see:
+ * https://www.gnu.org/software/gnulib/manual/html_node/getloadavg.html). */
+/* #undef HAVE_SYS_LOADAVG_H */
+#ifdef HAVE_SYS_LOADAVG_H
+#include <sys/loadavg.h>
 #endif
 
 #define HAVE_SYS_TYPES_H 1
@@ -313,7 +322,7 @@
 #ifdef USE_LTDL
 #include <ltdl.h>
 #else
-#define HAVE_DLFCN_H /**/
+/* #undef HAVE_DLFCN_H */
 #ifdef HAVE_DLFCN_H
 #include <dlfcn.h>
 #endif

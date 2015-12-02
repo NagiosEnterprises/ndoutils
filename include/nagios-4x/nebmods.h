@@ -20,8 +20,8 @@
  *
  *****************************************************************************/
 
-#ifndef NDO_NEBMODS_H_INCLUDED
-#define NDO_NEBMODS_H_INCLUDED
+#ifndef NAGIOS_NEBMODS_H_INCLUDED
+#define NAGIOS_NEBMODS_H_INCLUDED
 
 #include "nebcallbacks.h"
 #include "nebmodules.h"

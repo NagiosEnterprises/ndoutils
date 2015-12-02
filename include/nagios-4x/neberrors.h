@@ -20,8 +20,8 @@
  *
  *****************************************************************************/
 
-#ifndef NDO_NEBERRORS_H_INCLUDED
-#define NDO_NEBERRORS_H_INCLUDED
+#ifndef NAGIOS_NEBERRORS_H_INCLUDED
+#define NAGIOS_NEBERRORS_H_INCLUDED
 
 
 /***** GENERIC DEFINES *****/
