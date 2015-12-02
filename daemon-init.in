@@ -157,14 +157,14 @@ case "$1" in
  		# to (sooner or later) run - John Sellens
 		#echo -n 'Waiting for ndo2db to exit .'
  		for i in 1 2 3 4 5 6 7 8 9 10 ; do
- 		    if status_ndo2db > /dev/null; then
+ 		    if status_ndo2db > /dev/null 2>&1; then
  			echo -n '.'
  			sleep 1
  		    else
  			break
  		    fi
  		done
- 		if status_ndo2db > /dev/null; then
+ 		if status_ndo2db > /dev/null 2>&1; then
  		    echo ''
  		    echo 'Warning - $servicename did not exit in a timely manner'
  		else
