@@ -109,6 +109,7 @@ unsigned long ndomod_process_options=0;
 int ndomod_config_output_options=NDOMOD_CONFIG_DUMP_ALL;
 unsigned long ndomod_sink_buffer_slots=5000;
 ndomod_sink_buffer sinkbuf;
+int has_ver403_long_output = (CURRENT_OBJECT_STRUCTURE_VERSION >= 403);
 
 extern int errno;
 
@@ -210,7 +211,12 @@ int ndomod_check_nagios_object_version(void){
 	char temp_buffer[NDOMOD_MAX_BUFLEN];
 
 	if(__nagios_object_structure_version!=CURRENT_OBJECT_STRUCTURE_VERSION){
-
+		/* Temporary special case so newer ndomod can be used with slightly
+		 * older nagios in order to get longoutput on state changes */
+		if (CURRENT_OBJECT_STRUCTURE_VERSION == 403 && __nagios_object_structure_version == 402) {
+			has_ver403_long_output = 0;
+			return NDO_OK;
+		}
 		snprintf(temp_buffer,sizeof(temp_buffer)-1,"ndomod: I've been compiled with support for revision %d of the internal Nagios object structures, but the Nagios daemon is currently using revision %d.  I'm going to unload so I don't cause any problems...\n",CURRENT_OBJECT_STRUCTURE_VERSION,__nagios_object_structure_version);
 		temp_buffer[sizeof(temp_buffer)-1]='\x0';
 		ndomod_write_to_logs(temp_buffer,NSLOG_INFO_MESSAGE);
@@ -467,57 +473,59 @@ int ndomod_process_config_var(char *arg){
 
 	/* add bitwise processing opts */
 	else if(!strcmp(var,"process_data") && atoi(val)==1)
-		ndomod_process_options=ndomod_process_options + NDOMOD_PROCESS_PROCESS_DATA;
+		ndomod_process_options |= NDOMOD_PROCESS_PROCESS_DATA;
 	else if(!strcmp(var,"timed_event_data") && atoi(val)==1)
-		ndomod_process_options+=NDOMOD_PROCESS_TIMED_EVENT_DATA;
+		ndomod_process_options |= NDOMOD_PROCESS_TIMED_EVENT_DATA;
 	else if(!strcmp(var,"log_data") && atoi(val)==1)
-		ndomod_process_options+=NDOMOD_PROCESS_LOG_DATA;
+		ndomod_process_options |= NDOMOD_PROCESS_LOG_DATA;
 	else if(!strcmp(var,"system_command_data") && atoi(val)==1)
-		ndomod_process_options+=NDOMOD_PROCESS_SYSTEM_COMMAND_DATA;
+		ndomod_process_options |= NDOMOD_PROCESS_SYSTEM_COMMAND_DATA;
 	else if(!strcmp(var,"event_handler_data") && atoi(val)==1)
-		ndomod_process_options+=NDOMOD_PROCESS_EVENT_HANDLER_DATA;
+		ndomod_process_options |= NDOMOD_PROCESS_EVENT_HANDLER_DATA;
 	else if(!strcmp(var,"notification_data") && atoi(val)==1)
-		ndomod_process_options+=NDOMOD_PROCESS_NOTIFICATION_DATA;
+		ndomod_process_options |= NDOMOD_PROCESS_NOTIFICATION_DATA;
 	else if(!strcmp(var,"service_check_data") && atoi(val)==1)
-		ndomod_process_options+=NDOMOD_PROCESS_SERVICE_CHECK_DATA ;
+		ndomod_process_options |= NDOMOD_PROCESS_SERVICE_CHECK_DATA ;
 	else if(!strcmp(var,"host_check_data") && atoi(val)==1)
-		ndomod_process_options+=NDOMOD_PROCESS_HOST_CHECK_DATA;
+		ndomod_process_options |= NDOMOD_PROCESS_HOST_CHECK_DATA;
 	else if(!strcmp(var,"comment_data") && atoi(val)==1)
-		ndomod_process_options+=NDOMOD_PROCESS_COMMENT_DATA;
+		ndomod_process_options |= NDOMOD_PROCESS_COMMENT_DATA;
 	else if(!strcmp(var,"downtime_data") && atoi(val)==1)
-		ndomod_process_options+=NDOMOD_PROCESS_DOWNTIME_DATA;
+		ndomod_process_options |= NDOMOD_PROCESS_DOWNTIME_DATA;
 	else if(!strcmp(var,"flapping_data") && atoi(val)==1)
-		ndomod_process_options+=NDOMOD_PROCESS_FLAPPING_DATA;
+		ndomod_process_options |= NDOMOD_PROCESS_FLAPPING_DATA;
 	else if(!strcmp(var,"program_status_data") && atoi(val)==1)
-		ndomod_process_options+=NDOMOD_PROCESS_PROGRAM_STATUS_DATA;
+		ndomod_process_options |= NDOMOD_PROCESS_PROGRAM_STATUS_DATA;
 	else if(!strcmp(var,"host_status_data") && atoi(val)==1)
-		ndomod_process_options+=NDOMOD_PROCESS_HOST_STATUS_DATA;
+		ndomod_process_options |= NDOMOD_PROCESS_HOST_STATUS_DATA;
 	else if(!strcmp(var,"service_status_data") && atoi(val)==1)
-		ndomod_process_options+=NDOMOD_PROCESS_SERVICE_STATUS_DATA;
+		ndomod_process_options |= NDOMOD_PROCESS_SERVICE_STATUS_DATA;
 	else if(!strcmp(var,"adaptive_program_data") && atoi(val)==1)
-		ndomod_process_options+=NDOMOD_PROCESS_ADAPTIVE_PROGRAM_DATA;
+		ndomod_process_options |= NDOMOD_PROCESS_ADAPTIVE_PROGRAM_DATA;
 	else if(!strcmp(var,"adaptive_host_data") && atoi(val)==1)
-		ndomod_process_options+=NDOMOD_PROCESS_ADAPTIVE_HOST_DATA;
+		ndomod_process_options |= NDOMOD_PROCESS_ADAPTIVE_HOST_DATA;
 	else if(!strcmp(var,"adaptive_service_data") && atoi(val)==1)
-		ndomod_process_options+=NDOMOD_PROCESS_ADAPTIVE_SERVICE_DATA;
+		ndomod_process_options |= NDOMOD_PROCESS_ADAPTIVE_SERVICE_DATA;
 	else if(!strcmp(var,"external_command_data") && atoi(val)==1)
-		ndomod_process_options+=NDOMOD_PROCESS_EXTERNAL_COMMAND_DATA;
+		ndomod_process_options |= NDOMOD_PROCESS_EXTERNAL_COMMAND_DATA;
 	else if(!strcmp(var,"object_config_data") && atoi(val)==1)
-		ndomod_process_options+=NDOMOD_PROCESS_OBJECT_CONFIG_DATA;
+		ndomod_process_options |= NDOMOD_PROCESS_OBJECT_CONFIG_DATA;
 	else if(!strcmp(var,"main_config_data") && atoi(val)==1)
-		ndomod_process_options+=NDOMOD_PROCESS_MAIN_CONFIG_DATA;
+		ndomod_process_options |= NDOMOD_PROCESS_MAIN_CONFIG_DATA;
 	else if(!strcmp(var,"aggregated_status_data") && atoi(val)==1)
-		ndomod_process_options+=NDOMOD_PROCESS_AGGREGATED_STATUS_DATA;
+		ndomod_process_options |= NDOMOD_PROCESS_AGGREGATED_STATUS_DATA;
 	else if(!strcmp(var,"retention_data") && atoi(val)==1)
-		ndomod_process_options+=NDOMOD_PROCESS_RETENTION_DATA;
+		ndomod_process_options |= NDOMOD_PROCESS_RETENTION_DATA;
 	else if(!strcmp(var,"acknowledgement_data") && atoi(val)==1)
-		ndomod_process_options+=NDOMOD_PROCESS_ACKNOWLEDGEMENT_DATA;
+		ndomod_process_options |= NDOMOD_PROCESS_ACKNOWLEDGEMENT_DATA;
+	else if(!strcmp(var,"statechange_data") && atoi(val)==1)
+		ndomod_process_options |= NDOMOD_PROCESS_STATECHANGE_DATA ;
 	else if(!strcmp(var,"state_change_data") && atoi(val)==1)
-		ndomod_process_options+=NDOMOD_PROCESS_STATECHANGE_DATA ;
+		ndomod_process_options |= NDOMOD_PROCESS_STATECHANGE_DATA ;
 	else if(!strcmp(var,"contact_status_data") && atoi(val)==1)
-		ndomod_process_options+=NDOMOD_PROCESS_CONTACT_STATUS_DATA;
+		ndomod_process_options |= NDOMOD_PROCESS_CONTACT_STATUS_DATA;
 	else if(!strcmp(var,"adaptive_contact_data") && atoi(val)==1)
-		ndomod_process_options+=NDOMOD_PROCESS_ADAPTIVE_CONTACT_DATA ;
+		ndomod_process_options |= NDOMOD_PROCESS_ADAPTIVE_CONTACT_DATA ;
 
 	/* data_processing_options will override individual values if set */
 	else if(!strcmp(var,"data_processing_options")){
@@ -3392,8 +3400,14 @@ int ndomod_broker_data(int event_type, void *data){
 		es[0]=ndo_escape_buffer(schangedata->host_name);
 		es[1]=ndo_escape_buffer(schangedata->service_description);
 		es[2]=ndo_escape_buffer(schangedata->output);
-		/* Preparing for long_output in the future */
+#ifdef BUILD_NAGIOS_4X
+		if (CURRENT_OBJECT_STRUCTURE_VERSION > 403 || (CURRENT_OBJECT_STRUCTURE_VERSION == 403 && has_ver403_long_output))
+			es[3]=ndo_escape_buffer(schangedata->longoutput);
+		else
+			es[3]=ndo_escape_buffer(schangedata->output);
+#else
 		es[3]=ndo_escape_buffer(schangedata->output);
+#endif
 
 		{
 			struct ndo_broker_data state_change_data[] = {
