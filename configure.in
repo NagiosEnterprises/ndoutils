@@ -267,6 +267,26 @@ INSTALL_OPTS="-o $ndo2db_user -g $ndo2db_group"
 AC_SUBST(INSTALL_OPTS)
 
 
+dnl Does the user want to check for systemd?
+AC_ARG_ENABLE([systemd-sockets],
+	AC_HELP_STRING([--enable-systemd-sockets],[enables systemd socket activation]),
+	[],[enable_systemd_sockets=auto])
+
+dnl Try to compile and link a program that checks for systemd sockets.
+if test x$enable_systemd_sockets != xno; then
+	have_systemd=no
+
+	AC_SEARCH_LIBS([sd_listen_fds],[systemd systemd-daemon],
+		AC_TRY_LINK([#include <systemd/sd-daemon.h>],[sd_listen_fds(0);],[have_systemd=yes]))
+
+	if test x$have_systemd = xyes; then
+		AC_DEFINE([HAVE_SYSTEMD])
+	elif test x$enable_systemd_sockets = xyes; then
+		AC_MSG_ERROR([systemd was requested, but could not be found])
+	fi
+fi
+
+
 dnl Does user want to check for SSL?
 AC_ARG_ENABLE(ssl,AC_HELP_STRING([--enable-ssl],[enables native SSL support]),[
 	if test x$enableval = xyes; then
