@@ -213,7 +213,7 @@ int ndomod_check_nagios_object_version(void){
 	if(__nagios_object_structure_version!=CURRENT_OBJECT_STRUCTURE_VERSION){
 		/* Temporary special case so newer ndomod can be used with slightly
 		 * older nagios in order to get longoutput on state changes */
-		if (CURRENT_OBJECT_STRUCTURE_VERSION == 403 && __nagios_object_structure_version == 402) {
+		if (CURRENT_OBJECT_STRUCTURE_VERSION >= 403 && __nagios_object_structure_version == 402) {
 			has_ver403_long_output = 0;
 			return NDO_OK;
 		}
@@ -3401,7 +3401,7 @@ int ndomod_broker_data(int event_type, void *data){
 		es[1]=ndo_escape_buffer(schangedata->service_description);
 		es[2]=ndo_escape_buffer(schangedata->output);
 #ifdef BUILD_NAGIOS_4X
-		if (CURRENT_OBJECT_STRUCTURE_VERSION > 403 || (CURRENT_OBJECT_STRUCTURE_VERSION == 403 && has_ver403_long_output))
+		if (CURRENT_OBJECT_STRUCTURE_VERSION >= 403 && has_ver403_long_output)
 			es[3]=ndo_escape_buffer(schangedata->longoutput);
 		else
 			es[3]=ndo_escape_buffer(schangedata->output);
