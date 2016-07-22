@@ -153,9 +153,13 @@ elif test -d /sbin/init.d; then
     init_dir="/sbin/init.d"
 fi
 
-dnl User can override init script location
-AC_ARG_WITH(init_dir,AC_HELP_STRING([--with-init-dir=<path>],[sets directory to place init script into]),init_dir=$withval)
-AC_SUBST(init_dir)
+AC_ARG_WITH([ndo2db_port],
+	AS_HELP_STRING([--with-ndo2db-port=<port>],
+		[sets port number for NDO2DB to listen on]),
+	[ndo2db_port=$withval],
+	[ndo2db_port=5668])
+AC_DEFINE_UNQUOTED(DEFAULT_SERVER_PORT,$ndo2db_port,[Default port for NDO2DB daemon])
+AC_SUBST(ndo2db_port)
 
 dnl - Modified version from www.erlang.org
 dnl - Some 12/15/05 mods made after reading http://xaxxon.slackworks.com/phuku/dl.html
@@ -305,120 +309,12 @@ AC_ARG_ENABLE(ssl,AC_HELP_STRING([--enable-ssl],[enables native SSL support]),[
 	],check_for_ssl=no)
 
 dnl Optional SSL library and include paths
-ssl_dir=
-ssl_inc_dir=
-ssl_lib_dir=
-AC_ARG_WITH(ssl,AC_HELP_STRING([--with-ssl=DIR],[sets location of the SSL installation]),[
-	ssl_dir=$withval
-	])
-AC_ARG_WITH(ssl-inc,AC_HELP_STRING([--with-ssl-inc=DIR],[sets location of the SSL include files]),[
-	ssl_inc_dir=$withval
-	])
-AC_ARG_WITH(ssl-lib,AC_HELP_STRING([--with-ssl-lib=DIR], [sets location of the SSL libraries]),[
-	ssl_lib_dir=$withval
-	])
-AC_ARG_WITH(kerberos-inc,AC_HELP_STRING([--with-kerberos-inc=DIR],[sets location of the Kerberos include files]),[
-	kerberos_inc_dir=$withval
-	])
-
-dnl Check for SSL support
-dnl Modified version of Mark Ethan Trostler's macro <trostler@juniper.net>
 if test x$check_for_ssl = xyes; then
-	AC_MSG_CHECKING(for SSL headers)
-	found_ssl=no
-	for dir in $ssl_inc_dir $ssl_dir /usr/local/openssl /usr/local/ssl /usr/lib/ssl /usr/ssl /usr/pkg /usr/local /usr /usr/freeware/lib/openssl; do
-		ssldir="$dir"
-		if test -f "$dir/include/openssl/ssl.h"; then
-			found_ssl=yes
-			CFLAGS="$CFLAGS -I$dir/include/openssl -I$ssldir/include"
-			sslincdir="$dir/include/openssl"
-		        break
-		fi
-		if test -f "$dir/include/ssl.h"; then
-			found_ssl=yes
-			CFLAGS="$CFLAGS -I$dir/include"
-			sslincdir="$dir/include"
-		        break
-		fi
-		if test -f "$dir/ssl.h"; then
-			found_ssl=yes
-			CFLAGS="$CFLAGS -I$dir"
-			sslincdir="$dir"
-			ssldir="$dir/.."
-		        break
-		fi
-		if test -f "$dir/openssl/ssl.h"; then
-			found_ssl=yes
-			CFLAGS="$CFLAGS -I$dir/openssl"
-			sslincdir="$dir/openssl"
-			ssldir="$dir/.."
-		        break
-		fi
-	done
-
-	if test x_$found_ssl != x_yes; then
-        	AC_MSG_ERROR(Cannot find ssl headers)
-	else
-
-	        printf "SSL headers found in $ssldir\n";
-
-		dnl Now try and find SSL libraries
-		AC_MSG_CHECKING(for SSL libraries)
-		found_ssl=no
-		for dir in $ssl_lib_dir $ssl_dir /usr/lib64 /usr/lib /usr/local/lib /usr/lib/ssl /usr/ssl/lib /usr/openssl/lib /usr/pkg/lib  /usr/freeware/lib/openssl; do
-			ssllibdir="$dir"
-			if test -f "$dir/libssl.so"; then
-				found_ssl=yes
-			        break
-			fi
-		done	
-
-		if test x_$found_ssl != x_yes; then
-        		AC_MSG_ERROR(Cannot find ssl libraries)
-		else
-		        printf "SSL libraries found in $ssllibdir\n";
-
-			LDFLAGS="$LDFLAGS -L$ssllibdir";
-		        LIBS="$LIBS -lssl -lcrypto";
-
-			AC_DEFINE_UNQUOTED(HAVE_SSL)
-			AC_SUBST(HAVE_SSL)
-	
-			dnl Generate DH parameters
-			echo ""
-			echo "*** Generating DH Parameters for SSL/TLS ***"
-			if test -f "$ssldir/sbin/openssl"; then
-				sslbin=$ssldir/sbin/openssl
-			else
-				sslbin=$ssldir/bin/openssl
-			fi
-			# awk to strip off meta data at bottom of dhparam output
-			$sslbin dhparam -C 512 | awk '/^-----/ {exit} {print}' > include/dh.h
-		fi
-	fi
-
-	dnl RedHat 8.0 and 9.0 include openssl compiled with kerberos, so we must include header file
-	AC_MSG_CHECKING(for Kerberos include files)
-	found_kerberos=no
-	for dir in $kerberos_inc_dir /usr/kerberos/include; do
-		kerbdir="$dir"
-		if test -f "$dir/krb5.h"; then
-			found_kerberos=yes
-			CFLAGS="$CFLAGS -I$kerbdir"
-			AC_DEFINE_UNQUOTED(HAVE_KRB5_H)
-			dnl AC_CHECK_HEADERS(krb5.h)
-			break
-		fi
-	done
-
-	if test x_$found_kerberos != x_yes; then
-		printf "could not find include files\n";
-	else
-		printf "found Kerberos include files in $kerbdir\n";
-	fi
-	
-
+	# need_dh should only be set for NRPE and NDOUTILS
+	need_dh=yes
+	AC_NAGIOS_GET_SSL
 fi
+
 
 USE_NANOSLEEP=yes
 AC_ARG_ENABLE(nanosleep,AC_HELP_STRING([--enable-nanosleep],[enables use of nanosleep (instead of sleep) in event timing]))
@@ -427,13 +323,38 @@ if test x$USE_NANOSLEEP = xyes ; then
 	AC_DEFINE_UNQUOTED(USE_NANOSLEEP)
 fi
 
-AC_OUTPUT(Makefile src/Makefile docs/docbook/en-en/Makefile subst)
+AC_CONFIG_FILES([Makefile
+	src/Makefile
+	uninstall
+	config/ndo2db.cfg-sample
+	config/ndomod.cfg-sample
+	config/nagios.cfg
+	config/misccommands.cfg
+	docs/docbook/en-en/Makefile
+	include/io.h
+	startup/bsd-init
+	startup/debian-init
+	startup/default-init
+	startup/default-inetd
+	startup/default-service
+	startup/default-socket
+	startup/default-socket-svc
+	startup/default-xinetd
+	startup/mac-init.plist
+	startup/mac-inetd.plist
+	startup/newbsd-init
+	startup/openbsd-init
+	startup/openrc-conf
+	startup/openrc-init
+	startup/solaris-init.xml
+	startup/solaris-inetd.xml
+	startup/tmpfile.conf
+	startup/upstart-init
+	startup/rh-upstart-init
+])
 
-$PERL subst daemon-init
-$PERL subst config/ndo2db.cfg-sample
-$PERL subst config/ndomod.cfg-sample
-$PERL subst config/nagios.cfg
-$PERL subst config/misccommands.cfg
+AC_OUTPUT()
+
 
 dnl Review options
 echo ""

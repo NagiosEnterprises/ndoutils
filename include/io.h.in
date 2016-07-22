@@ -17,7 +17,7 @@
 #define NDO_SINK_UNIXSOCKET   2
 #define NDO_SINK_TCPSOCKET    3
 
-#define NDO_DEFAULT_TCP_PORT  5668
+#define NDO_DEFAULT_TCP_PORT  @ndo2db_port@	/* default port to use */
 
 
 /* MMAPFILE structure - used for reading files via mmap() */
