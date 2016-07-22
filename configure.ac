@@ -97,8 +97,8 @@ fi
 
 
 dnl Check for getopt_long (Solaris)
-AC_CHECK_FUNCS([getopt_long],,AC_CHECK_LIB([iberty],[getopt_long],OTHERLIBS="$OTHERLIBS -liberty"))
-AC_SUBST(OTHERLIBS)
+# AC_CHECK_FUNCS([getopt_long],,AC_CHECK_LIB([iberty],[getopt_long],OTHERLIBS="$OTHERLIBS -liberty"))
+# AC_SUBST(OTHERLIBS)
 
 dnl Checks for library functions.
 AC_CHECK_LIB(nsl,main,SOCKETLIBS="$SOCKETLIBS -lnsl")
@@ -109,7 +109,7 @@ AC_CHECK_LIB(wrap,main,[
 	AC_DEFINE(HAVE_LIBWRAP)
 	])
 AC_SUBST(LIBWRAPLIBS)
-AC_CHECK_FUNCS(strdup strstr strtoul initgroups strtof)
+AC_CHECK_FUNCS(getopt_long strdup strstr strtoul initgroups strtof)
 
 AC_MSG_CHECKING(for type of socket size)
 AC_TRY_COMPILE([#include <stdlib.h>
@@ -365,8 +365,9 @@ echo ""
 echo " General Options:"
 echo " -------------------------"
 
-AC_MSG_RESULT([ NDO2DB user:    $ndo2db_user])
-AC_MSG_RESULT([ NDO2DB group:   $ndo2db_group])
+AC_MSG_RESULT([ NDO2DB user:      $ndo2db_user])
+AC_MSG_RESULT([ NDO2DB group:     $ndo2db_group])
+AC_MSG_RESULT([ NDO2DB tcp port:  $ndo2db_port])
 
 
 echo ""

@@ -48,8 +48,6 @@ NDO_INC=$(SRC_INCLUDE)/ndo2db.h $(SRC_INCLUDE)/db.h $(SRC_INCLUDE)/queue.h
 NDO_SRC=db.c
 NDO_OBJS=db.o
 
-CP=@CP@
-
 
 all: file2sock log2ndo ndo2db ndomod sockdebug
 
