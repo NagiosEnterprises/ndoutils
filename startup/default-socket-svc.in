@@ -5,7 +5,7 @@ After=var-run.mount nss-lookup.target network.target local-fs.target time-sync.t
 
 [Service]
 Restart=on-failure
-ExecStart=@sbindir@/ndo2db -c @pkgsysconfdir@/ndo2db.cfg --inetd
+ExecStart=@sbindir@/ndo2db -c @pkgsysconfdir@/ndo2db.cfg -i
 KillMode=process
 User=@ndo2db_user@
 Group=@ndo2db_group@

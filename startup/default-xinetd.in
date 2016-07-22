@@ -9,7 +9,7 @@ service ndo2db
     user            = @ndo2db_user@
     group           = @ndo2db_group@
     server          = @sbindir@/ndo2db
-    server_args     = -c @pkgsysconfdir@/ndo2db.cfg --inetd
+    server_args     = -c @pkgsysconfdir@/ndo2db.cfg -i
     only_from       = 127.0.0.1
     log_on_failure  += USERID
 }

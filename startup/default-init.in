@@ -89,7 +89,7 @@ case "$1" in
 start)
 	# Start daemons.
 	$MSG_CMD "Starting ndo2db "
-	$START_CMD $NDO2DB_BIN -c $NDO2DB_CFG -d
+	$START_CMD $NDO2DB_BIN -c $NDO2DB_CFG
 	RETVAL=$?
 	if test "$PRT_STAT" = log_end_msg; then
 		$PRT_STAT $RETVAL

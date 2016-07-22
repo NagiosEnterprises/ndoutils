@@ -14,7 +14,7 @@ ndo2db_start() {
 	if [ ! -d "$PID_DIR" ]; then
 		mkdir -p "$PID_DIR"
 	fi
-	$NDO2DB_BIN -c $NDO2DB_CFG -d
+	$NDO2DB_BIN -c $NDO2DB_CFG
 	if [ $? = 0 ]; then
 		echo "started"
 	else

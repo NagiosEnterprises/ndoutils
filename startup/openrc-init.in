@@ -28,7 +28,7 @@ start() {
 	# Make sure we have a sane current directory
 	cd /
 	start-stop-daemon --start --exec $NDO2DB_BIN --pidfile $PID_FILE \
-		-- -c $NDO2DB_CFG -f $NDO2DB_OPTS
+		-- -c $NDO2DB_CFG -f
 	eend $?
 }
 
