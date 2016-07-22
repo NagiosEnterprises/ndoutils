@@ -56,6 +56,7 @@ int ndo2db_socket_type=NDO_SINK_UNIXSOCKET;
 char *ndo2db_socket_name=NULL;
 int ndo2db_tcp_port=NDO_DEFAULT_TCP_PORT;
 int ndo2db_use_inetd=NDO_FALSE;
+int ndo2db_no_fork=NDO_FALSE;
 int ndo2db_show_version=NDO_FALSE;
 int ndo2db_show_license=NDO_FALSE;
 int ndo2db_show_help=NDO_FALSE;
@@ -120,9 +121,10 @@ int main(int argc, char **argv){
 		printf("and processing.  Clients that are capable of sending data to the NDO2DB daemon\n");
 		printf("include the LOG2NDO utility and NDOMOD event broker module.\n");
 		printf("\n");
-		printf("Usage: %s -c <config_file> [-i]\n",argv[0]);
+		printf("Usage: %s -c <config_file> [-i] [-f]\n",argv[0]);
 		printf("\n");
 		printf("-i  = Run under INETD/XINETD.\n");
+		printf("-f  = Do not fork daemon.\n");
 		printf("\n");
 		exit(1);
 	        }
@@ -271,6 +273,7 @@ int ndo2db_process_arguments(int argc, char **argv){
 	static struct option long_options[]={
 		{"configfile", required_argument, 0, 'c'},
 		{"inetd", no_argument, 0, 'i'},
+		{"no-forking", no_argument, 0, 'f'},
 		{"help", no_argument, 0, 'h'},
 		{"license", no_argument, 0, 'l'},
 		{"version", no_argument, 0, 'V'},
@@ -313,6 +316,10 @@ int ndo2db_process_arguments(int argc, char **argv){
 			break;
 		case 'i':
 			ndo2db_use_inetd=NDO_TRUE;
+			break;
+		case 'f':
+			ndo2db_use_inetd=NDO_FALSE;
+			ndo2db_no_fork=NDO_TRUE;
 			break;
 		default:
 			return NDO_ERROR;
@@ -708,62 +715,69 @@ int ndo2db_daemonize(void){
 			}
 		}
 
-	/* fork */
-	if((pid=fork())<0){
-		perror("Fork error");
-		ndo2db_cleanup_socket();
-		return NDO_ERROR;
-	        }
-
-	/* parent process goes away... */
-	else if((int)pid!=0){
-		ndo2db_free_program_memory();
-		waitpid(pid, NULL, 0);		/* Wait for the updated lock file. */
-		exit(0);
-		}
-
-	/* child forks again... */
-	else{
+	/* fork (maybe) */
+	if(ndo2db_no_fork == NDO_TRUE) {
 
 		if((pid=fork())<0){
 			perror("Fork error");
 			ndo2db_cleanup_socket();
 			return NDO_ERROR;
-	                }
+				}
 
-		/* first child process goes away.. */
+		/* parent process goes away... */
 		else if((int)pid!=0){
 			ndo2db_free_program_memory();
-			/* Write the grandchild PID to the lock file... */
-			if (lock_file) {
-				int n;
-				lseek(lockfile, 0, SEEK_SET);
-				if (ftruncate(lockfile, 0)) {
-					syslog(LOG_ERR, "Warning: Unable to truncate lockfile (errno %d): %s",
-							errno, strerror(errno));
-				}
-				sprintf(buf, "%d\n", (int)pid);
-				n = (int)strlen(buf);
-				if (write(lockfile, buf, n) < n) {
-					syslog(LOG_ERR, "Warning: Unable to write pid to lockfile (errno %d): %s",
-							errno, strerror(errno));
-				}
-			}
+			waitpid(pid, NULL, 0);		/* Wait for the updated lock file. */
 			exit(0);
+			}
+
+		/* child forks again... */
+		else{
+
+			if((pid=fork())<0){
+				perror("Fork error");
+				ndo2db_cleanup_socket();
+				return NDO_ERROR;
+						}
+
+			/* first child process goes away.. */
+			else if((int)pid!=0){
+				ndo2db_free_program_memory();
+				exit(0);
+			}
 		}
 
-		/* grandchild continues... */
 
-		/* grandchild becomes session leader... */
-		setsid();
-	        }
 
-	if(lock_file){
+
+	}
+
+	/* Write the PID to the lock file... */
+
+	if (lock_file) {
+		int n;
+		lseek(lockfile, 0, SEEK_SET);
+		if (ftruncate(lockfile, 0)) {
+			syslog(LOG_ERR, "Warning: Unable to truncate lockfile (errno %d): %s",
+					errno, strerror(errno));
+		}
+		sprintf(buf, "%d\n", (int)pid);
+		n = (int)strlen(buf);
+		if (write(lockfile, buf, n) < n) {
+			syslog(LOG_ERR, "Warning: Unable to write pid to lockfile (errno %d): %s",
+					errno, strerror(errno));
+		}
+	}
+
+	/* become session leader... */
+	setsid();
+
+	if(lock_file) {
 		/* make sure lock file stays open while program is executing... */
 		val=fcntl(lockfile,F_GETFD,0);
 		val|=FD_CLOEXEC;
 		fcntl(lockfile,F_SETFD,val);
-		}
+	}
 
         /* close existing stdin, stdout, stderr */
 	close(0);
