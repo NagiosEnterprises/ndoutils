@@ -30,6 +30,14 @@ dnl Checks for programs.
 AC_PROG_CC
 AC_PROG_MAKE_SET
 
+dnl Nagios O/S, Distribution, Startup, Paths, Files macros
+AC_NAGIOS_GET_OS
+AC_NAGIOS_GET_DISTRIB_TYPE
+AC_NAGIOS_GET_INIT
+AC_NAGIOS_GET_INETD
+AC_NAGIOS_GET_PATHS
+AC_NAGIOS_GET_FILES
+
 dnl Checks for header files.
 AC_HEADER_STDC
 AC_HEADER_TIME

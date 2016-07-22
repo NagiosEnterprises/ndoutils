@@ -18,8 +18,15 @@ BINDIR=@bindir@
 LIBEXECDIR=@libexecdir@
 INSTALL=@INSTALL@
 INSTALL_OPTS=@INSTALL_OPTS@
-INIT_DIR=@init_dir@
+INIT_TYPE=@init_type@
+INIT_DIR=@initdir@
 INIT_OPTS=-o root -g root
+INETD_TYPE=@inetd_type@
+INETD_DIR=@inetddir@
+INETD_FILE=@inetdname@
+SRC_INETD=@src_inetd@
+INIT_FILE=@initname@
+SRC_INIT=@src_init@
 
 all:
 	cd $(SRC_BASE) && $(MAKE)
@@ -45,9 +52,49 @@ install-config:
 	@echo "Please read the documentation to know what they are doing."
 	@echo ""
 
-install-init: 
-	$(INSTALL) -m 755 $(INIT_OPTS) -d $(DESTDIR)$(INIT_DIR)
-	$(INSTALL) -m 755 $(INIT_OPTS) daemon-init $(DESTDIR)$(INIT_DIR)/ndo2db
+install-init:
+	@if test $(SRC_INIT) = unknown; then \
+		echo No init file to install; \
+		exit 1; \
+	fi
+	@if test $(INIT_TYPE) = upstart; then\
+		echo $(INSTALL) -m 644 startup/$(SRC_INIT) $(INIT_DIR)/$(INIT_FILE); \
+		$(INSTALL) -m 644 startup/$(SRC_INIT) $(INIT_DIR)/$(INIT_FILE); \
+		echo initctl reload-configuration; \
+		initctl reload-configuration; \
+	elif test $(INIT_TYPE) = systemd; then\
+		echo $(INSTALL) -m 644 startup/$(SRC_INIT) $(INIT_DIR)/$(INIT_FILE); \
+		$(INSTALL) -m 644 startup/$(SRC_INIT) $(INIT_DIR)/$(INIT_FILE); \
+	elif test $(INIT_TYPE) = smf10 -o $(INIT_TYPE) = smf11; then \
+		echo $(INSTALL) -m 775 -g sys -d $(INIT_DIR);\
+		$(INSTALL) -m 775 -g sys -d $(INIT_DIR);\
+		echo $(INSTALL) -m 644 startup/$(SRC_INIT) $(INIT_DIR)/$(INIT_FILE); \
+		$(INSTALL) -m 644 startup/$(SRC_INIT) $(INIT_DIR)/$(INIT_FILE); \
+		echo svccfg import $(INIT_DIR)/$(INIT_FILE); \
+		svccfg import $(INIT_DIR)/$(INIT_FILE); \
+		echo "*** Run 'svcadm enable ndo2db' to start it"; \
+	else\
+		echo $(INSTALL) -m 755 startup/$(SRC_INIT) $(INIT_DIR)/$(INIT_FILE); \
+		$(INSTALL) -m 755 startup/$(SRC_INIT) $(INIT_DIR)/$(INIT_FILE); \
+		if test $(INIT_TYPE) = newbsd; then\
+			if test $(DIST) = openbsd; then\
+				echo "# ndo2db@bsd_enable@=NO" >> /etc/rc.conf;\
+				echo "ndo2db@bsd_enable@=\"-d -c $(CFGDIR)/ndo2db.cfg\"" >> /etc/rc.conf;\
+				echo "Make sure to enable the ndo2db daemon";\
+			else\
+				echo "ndo2db@bsd_enable@=YES" >> /etc/rc.conf;\
+				echo "ndo2db_configfile=$(CFGDIR)/ndo2db.cfg" >> /etc/rc.conf;\
+			fi;\
+		elif test $(INIT_TYPE) = launchd; then\
+			launchctl load $(INIT_DIR)/$(INIT_FILE); \
+		else\
+			if test -f /sbin/chkconfig ; then \
+			    /sbin/chkconfig ndo2db on;\
+			else\
+				echo "Make sure to enable the ndo2db daemon";\
+			fi;\
+		fi;\
+	fi
 
 fullinstall: install install-init install-config
 
