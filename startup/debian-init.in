@@ -1,0 +1,47 @@
+#!/bin/sh
+#
+# Copyright (c) 2016 Nagios(R) Core(TM) Development Team
+#
+# Start/stop the ndo2db daemon.
+
+NDO2DB_BIN=@sbindir@/ndo2db
+NDO2DB_CFG=@pkgsysconfdir@/ndo2db.cfg
+PID_FILE=@piddir@/ndo2db.pid
+
+test -x $NDO2DB_BIN || exit 0
+
+case "$1" in
+
+start)
+	echo -n "Starting nagios remote plugin daemon: ndo2db"
+	start-stop-daemon --start --quiet --pidfile $PID_FILE --exec $NDO2DB_BIN -- -c $NDO2DB_CFG -d
+	echo "." 
+	;;
+
+stop)
+	echo -n "Stopping nagios remote plugin daemon: ndo2db"
+	start-stop-daemon --stop --quiet --pidfile $PID_FILE --exec $NDO2DB_BIN
+	echo "."
+	;;
+
+restart|force-reload)
+	echo -n "Restarting nagios remote plugin daemon: ndo2db"
+	start-stop-daemon --stop --quiet --pidfile $PID_FILE --exec $NDO2DB_BIN
+	start-stop-daemon --start --quiet --pidfile $PID_FILE --exec $NDO2DB_BIN -- -c $NDO2DB_CFG -d
+	echo "."
+	;;
+
+reload)
+	echo -n "Reloading configuration files for nagios remote plugin daemon: ndo2db"
+	test -f $PID_FILE || exit 0
+	test -x /bin/kill && /bin/kill -HUP `cat $PID_FILE`
+	echo "."
+	;;
+
+*)
+	echo "Usage: $0 start|stop|restart|reload|force-reload"
+	exit 1 
+	;;
+esac
+
+exit 0
