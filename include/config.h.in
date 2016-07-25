@@ -257,8 +257,8 @@ typedef int int32_t;
 #undef HAVE_MYSQL
 #ifdef USE_MYSQL
 #define HAVE_MYSQL 1
-#include <mysql/mysql.h>
-#include <mysql/errmsg.h>
+#include <mysql.h>
+#include <errmsg.h>
 #endif
 
 #undef USE_PGSQL

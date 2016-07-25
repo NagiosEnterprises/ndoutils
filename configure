@@ -5847,6 +5847,89 @@ fi
 done
 
 
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for va_copy" >&5
+$as_echo_n "checking for va_copy... " >&6; }
+if ${ac_cv_HAVE_VA_COPY+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <stdarg.h>
+va_list ap1,ap2;
+int
+main ()
+{
+va_copy(ap1,ap2);
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_HAVE_VA_COPY=yes
+else
+  ac_cv_HAVE_VA_COPY=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_HAVE_VA_COPY" >&5
+$as_echo "$ac_cv_HAVE_VA_COPY" >&6; }
+if test x"$ac_cv_HAVE_VA_COPY" = x"yes"; then
+
+$as_echo "#define HAVE_VA_COPY 1" >>confdefs.h
+
+else
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for __va_copy" >&5
+$as_echo_n "checking for __va_copy... " >&6; }
+if ${ac_cv_HAVE___VA_COPY+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+	cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <stdarg.h>
+	va_list ap1,ap2;
+int
+main ()
+{
+__va_copy(ap1,ap2);
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_HAVE___VA_COPY=yes
+else
+  ac_cv_HAVE___VA_COPY=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_HAVE___VA_COPY" >&5
+$as_echo "$ac_cv_HAVE___VA_COPY" >&6; }
+	if test x"$ac_cv_HAVE___VA_COPY" = x"yes"; then
+
+$as_echo "#define HAVE___VA_COPY 1" >>confdefs.h
+
+	fi
+fi
+
+ac_fn_c_check_func "$LINENO" "snprintf" "ac_cv_func_snprintf"
+if test "x$ac_cv_func_snprintf" = xyes; then :
+
+else
+  SNPRINTF_O=./snprintf.o
+fi
+
+ac_fn_c_check_func "$LINENO" "asprintf" "ac_cv_func_asprintf"
+if test "x$ac_cv_func_asprintf" = xyes; then :
+
+else
+  SNPRINTF_O=./snprintf.o
+fi
+
+
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for type of socket size" >&5
 $as_echo_n "checking for type of socket size... " >&6; }
 cat confdefs.h - <<_ACEOF >conftest.$ac_ext

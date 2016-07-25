@@ -111,6 +111,28 @@ AC_CHECK_LIB(wrap,main,[
 AC_SUBST(LIBWRAPLIBS)
 AC_CHECK_FUNCS(getopt_long strdup strstr strtoul initgroups strtof)
 
+dnl Check for asprintf() and friends...
+AC_CACHE_CHECK([for va_copy],ac_cv_HAVE_VA_COPY,[
+AC_TRY_LINK([#include <stdarg.h>
+va_list ap1,ap2;], [va_copy(ap1,ap2);],
+ac_cv_HAVE_VA_COPY=yes,
+ac_cv_HAVE_VA_COPY=no)])
+if test x"$ac_cv_HAVE_VA_COPY" = x"yes"; then
+	AC_DEFINE(HAVE_VA_COPY,1,[Whether va_copy() is available])
+else
+	AC_CACHE_CHECK([for __va_copy],ac_cv_HAVE___VA_COPY,[
+	AC_TRY_LINK([#include <stdarg.h>
+	va_list ap1,ap2;], [__va_copy(ap1,ap2);],
+	ac_cv_HAVE___VA_COPY=yes,
+	ac_cv_HAVE___VA_COPY=no)])
+	if test x"$ac_cv_HAVE___VA_COPY" = x"yes"; then
+		AC_DEFINE(HAVE___VA_COPY,1,[Whether __va_copy() is available])
+	fi
+fi
+
+AC_CHECK_FUNC(snprintf,,SNPRINTF_O=./snprintf.o)
+AC_CHECK_FUNC(asprintf,,SNPRINTF_O=./snprintf.o)
+
 AC_MSG_CHECKING(for type of socket size)
 AC_TRY_COMPILE([#include <stdlib.h>
 #include <sys/types.h>
