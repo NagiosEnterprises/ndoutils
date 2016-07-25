@@ -19,6 +19,8 @@
 #include "../include/protoapi.h"
 #include "../include/ndomod.h"
 
+#include <pthread.h>
+
 /* include (minimum required) event broker header files */
 #ifdef BUILD_NAGIOS_2X
 #include "../include/nagios-2x/nebstructs.h"

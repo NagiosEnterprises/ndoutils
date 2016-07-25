@@ -18,6 +18,8 @@
 #include "../include/db.h"
 #include "../include/dbhandlers.h"
 
+#include <pthread.h>
+
 /* Nagios header files */
 
 #ifdef BUILD_NAGIOS_2X

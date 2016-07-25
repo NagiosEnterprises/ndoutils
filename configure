@@ -639,6 +639,7 @@ np_mysql_config
 MOD_LDFLAGS
 MOD_CFLAGS
 ndo2db_port
+SNPRINTF_O
 LIBWRAPLIBS
 SOCKETLIBS
 EGREP
@@ -5914,6 +5915,7 @@ $as_echo "#define HAVE___VA_COPY 1" >>confdefs.h
 
 	fi
 fi
+
 
 ac_fn_c_check_func "$LINENO" "snprintf" "ac_cv_func_snprintf"
 if test "x$ac_cv_func_snprintf" = xyes; then :

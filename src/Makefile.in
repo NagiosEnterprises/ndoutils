@@ -20,7 +20,7 @@ INSTALL_OPTS=@INSTALL_OPTS@
 
 CC=@CC@
 
-CFLAGS=@CFLAGS@ @DEFS@ 
+CFLAGS=-FPIC @CFLAGS@ @DEFS@ 
 CFLAGS_4X=-I $(SRC_INCLUDE)/nagios-4x 
 
 # We don't like ANSI because ANSI doesn't like us! phhht!

@@ -34,6 +34,8 @@
 #include "../include/dh.h"
 #endif
 
+#include <pthread.h>
+
 #define NDO2DB_VERSION "2.1.0b2"
 #define NDO2DB_NAME "NDO2DB"
 #define NDO2DB_DATE "12-02-2015"
@@ -2299,7 +2301,7 @@ int ndo2db_convert_string_to_timeval(char *buf, struct timeval *tv){
 		return NDO_ERROR;
 
 	tv->tv_sec=(time_t)0L;
-	tv->tv_usec=(suseconds_t)0L;
+	tv->tv_usec=0;
 
 	if((newbuf=strdup(buf))==NULL)
 		return NDO_ERROR;

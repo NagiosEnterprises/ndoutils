@@ -129,6 +129,7 @@ else
 		AC_DEFINE(HAVE___VA_COPY,1,[Whether __va_copy() is available])
 	fi
 fi
+AC_SUBST(SNPRINTF_O)
 
 AC_CHECK_FUNC(snprintf,,SNPRINTF_O=./snprintf.o)
 AC_CHECK_FUNC(asprintf,,SNPRINTF_O=./snprintf.o)
