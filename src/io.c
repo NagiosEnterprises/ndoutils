@@ -13,7 +13,11 @@
 #include "../include/io.h"
 
 #ifdef HAVE_SSL
+# if (defined(__sun) && defined(SOLARIS_10)) || defined(_AIX) || defined(__hpux)
 SSL_METHOD *meth;
+# else
+const SSL_METHOD *meth;
+# endif
 SSL_CTX *ctx;
 SSL *ssl;
 #endif

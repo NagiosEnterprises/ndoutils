@@ -39,7 +39,11 @@
 #define NDO2DB_DATE "12-02-2015"
 
 #ifdef HAVE_SSL
+# if (defined(__sun) && defined(SOLARIS_10)) || defined(_AIX) || defined(__hpux)
 SSL_METHOD *meth;
+# else
+const SSL_METHOD *meth;
+# endif
 SSL_CTX *ctx;
 int allow_weak_random_seed = NDO_FALSE;
 #endif
@@ -175,7 +179,7 @@ int main(int argc, char **argv){
 
         	/* use anonymous DH ciphers */
         	SSL_CTX_set_cipher_list(ctx,"ADH");
-        	dh=get_dh512();
+			dh=get_dh2048();
         	SSL_CTX_set_tmp_dh(ctx,dh);
         	DH_free(dh);
         	syslog(LOG_INFO,"INFO: SSL/TLS initialized. All network traffic will be encrypted.");

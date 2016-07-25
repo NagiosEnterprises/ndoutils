@@ -271,15 +271,6 @@ typedef int int32_t;
 #undef HAVE_SYSTEMD
 
 #undef HAVE_SSL
-#ifdef HAVE_SSL
-#include <rsa.h>
-#include <crypto.h>
-#include <dh.h>
-#include <pem.h>
-#include <ssl.h>
-#include <err.h>
-#include <rand.h>
-#endif
 
 #undef USE_NANOSLEEP
 

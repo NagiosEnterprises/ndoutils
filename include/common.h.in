@@ -9,7 +9,9 @@
 #ifndef NDO_COMMON_H_INCLUDED
 #define NDO_COMMON_H_INCLUDED
 
-
+#ifdef HAVE_SSL
+#include <@SSL_INC_PREFIX@@SSL_HDR@>
+#endif
 
 #define NDO_TRUE      1
 #define NDO_FALSE     0

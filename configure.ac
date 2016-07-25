@@ -332,6 +332,7 @@ AC_CONFIG_FILES([Makefile
 	config/misccommands.cfg
 	docs/docbook/en-en/Makefile
 	include/io.h
+	include/common.h
 	startup/bsd-init
 	startup/debian-init
 	startup/default-init
