@@ -2,7 +2,7 @@
 #define LIBNAGIOS_SQUEUE_H_INCLUDED
 #include <sys/time.h>
 #include <time.h>
-/* #include "pqueue.h" */
+#include "pqueue.h"
 /**
  * @file squeue.h
  * @brief Scheduling queue function declarations
@@ -21,7 +21,6 @@
  * The pqueue library can be useful on its own though, so we
  * don't block that from user view.
  */
-typedef pqueue pqueue_t;
 typedef pqueue_t squeue_t;
 struct squeue_event;
 typedef struct squeue_event squeue_event;

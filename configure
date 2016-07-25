@@ -6707,7 +6707,7 @@ fi
 			$as_echo "#define USE_SSL_DH 1" >>confdefs.h
 
 			# Generate DH parameters
-			if test -f "$sslbin" -a ! -f include/dh.h; then
+			if test -f "$sslbin"; then
 				echo ""
 				echo "*** Generating DH Parameters for SSL/TLS ***"
 				# awk to strip off meta data at bottom of dhparam output
@@ -6738,7 +6738,7 @@ _ACEOF
 
 fi
 
-ac_config_files="$ac_config_files Makefile src/Makefile uninstall config/ndo2db.cfg-sample config/ndomod.cfg-sample config/nagios.cfg config/misccommands.cfg docs/docbook/en-en/Makefile include/io.h startup/bsd-init startup/debian-init startup/default-init startup/default-inetd startup/default-service startup/default-socket startup/default-socket-svc startup/default-xinetd startup/mac-init.plist startup/mac-inetd.plist startup/newbsd-init startup/openbsd-init startup/openrc-conf startup/openrc-init startup/solaris-init.xml startup/solaris-inetd.xml startup/tmpfile.conf startup/upstart-init startup/rh-upstart-init"
+ac_config_files="$ac_config_files Makefile src/Makefile config/ndo2db.cfg-sample config/ndomod.cfg-sample config/nagios.cfg config/misccommands.cfg docs/docbook/en-en/Makefile include/io.h include/common.h startup/bsd-init startup/debian-init startup/default-init startup/default-inetd startup/default-service startup/default-socket startup/default-socket-svc startup/default-xinetd startup/mac-init.plist startup/mac-inetd.plist startup/newbsd-init startup/openbsd-init startup/openrc-conf startup/openrc-init startup/solaris-init.xml startup/solaris-inetd.xml startup/tmpfile.conf startup/upstart-init startup/rh-upstart-init"
 
 
 
@@ -7350,13 +7350,13 @@ do
     "include/config.h") CONFIG_HEADERS="$CONFIG_HEADERS include/config.h" ;;
     "Makefile") CONFIG_FILES="$CONFIG_FILES Makefile" ;;
     "src/Makefile") CONFIG_FILES="$CONFIG_FILES src/Makefile" ;;
-    "uninstall") CONFIG_FILES="$CONFIG_FILES uninstall" ;;
     "config/ndo2db.cfg-sample") CONFIG_FILES="$CONFIG_FILES config/ndo2db.cfg-sample" ;;
     "config/ndomod.cfg-sample") CONFIG_FILES="$CONFIG_FILES config/ndomod.cfg-sample" ;;
     "config/nagios.cfg") CONFIG_FILES="$CONFIG_FILES config/nagios.cfg" ;;
     "config/misccommands.cfg") CONFIG_FILES="$CONFIG_FILES config/misccommands.cfg" ;;
     "docs/docbook/en-en/Makefile") CONFIG_FILES="$CONFIG_FILES docs/docbook/en-en/Makefile" ;;
     "include/io.h") CONFIG_FILES="$CONFIG_FILES include/io.h" ;;
+    "include/common.h") CONFIG_FILES="$CONFIG_FILES include/common.h" ;;
     "startup/bsd-init") CONFIG_FILES="$CONFIG_FILES startup/bsd-init" ;;
     "startup/debian-init") CONFIG_FILES="$CONFIG_FILES startup/debian-init" ;;
     "startup/default-init") CONFIG_FILES="$CONFIG_FILES startup/default-init" ;;

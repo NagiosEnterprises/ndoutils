@@ -325,7 +325,6 @@ fi
 
 AC_CONFIG_FILES([Makefile
 	src/Makefile
-	uninstall
 	config/ndo2db.cfg-sample
 	config/ndomod.cfg-sample
 	config/nagios.cfg

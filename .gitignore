@@ -4,6 +4,7 @@ config.log
 config.status
 uninstall
 
+include/common.h
 include/config.h
 include/dh.h
 include/io.h
