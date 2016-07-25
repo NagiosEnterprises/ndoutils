@@ -39,6 +39,7 @@ DBLDFLAGS=@DBLDFLAGS@
 DBLIBS=@DBLIBS@
 MATHLIBS=-lm
 # OTHERLIBS=@OTHERLIBS@
+SNPRINTF_O=@SNPRINTF_O@
 
 COMMON_INC=$(SRC_INCLUDE)/config.h $(SRC_INCLUDE)/common.h $(SRC_INCLUDE)/io.h $(SRC_INCLUDE)/protoapi.h $(SRC_INCLUDE)/utils.h
 COMMON_SRC=io.c utils.c
@@ -62,28 +63,28 @@ ndo2db:
 	$(MAKE) ndo2db-3x
 	$(MAKE) ndo2db-4x
 
-ndo2db-2x: queue.c ndo2db.c $(NDO_INC) $(NDO_OBJS) $(COMMON_INC) $(COMMON_OBJS) dbhandlers-2x.o
-	$(CC) $(CFLAGS) $(DBCFLAGS) -D BUILD_NAGIOS_2X -o ndo2db-2x queue.c ndo2db.c dbhandlers-2x.o $(COMMON_OBJS) $(NDO_OBJS) $(LDFLAGS) $(DBLDFLAGS) $(LIBS) $(SOCKETLIBS) $(DBLIBS) $(MATHLIBS) $(OTHERLIBS)
+ndo2db-2x: queue.c ndo2db.c $(NDO_INC) $(NDO_OBJS) $(COMMON_INC) $(COMMON_OBJS) dbhandlers-2x.o $(SNPRINTF_O)
+	$(CC) $(CFLAGS) $(DBCFLAGS) -D BUILD_NAGIOS_2X -o ndo2db-2x queue.c ndo2db.c dbhandlers-2x.o $(SNPRINTF_O) $(COMMON_OBJS) $(NDO_OBJS) $(LDFLAGS) $(DBLDFLAGS) $(LIBS) $(SOCKETLIBS) $(DBLIBS) $(MATHLIBS) $(OTHERLIBS)
 
-ndo2db-3x: queue.c ndo2db.c $(NDO_INC) $(NDO_OBJS) $(COMMON_INC) $(COMMON_OBJS) dbhandlers-3x.o
-	$(CC) $(CFLAGS) $(DBCFLAGS) -D BUILD_NAGIOS_3X -o ndo2db-3x queue.c ndo2db.c dbhandlers-3x.o $(COMMON_OBJS) $(NDO_OBJS) $(LDFLAGS) $(DBLDFLAGS) $(LIBS) $(SOCKETLIBS) $(DBLIBS) $(MATHLIBS) $(OTHERLIBS)
+ndo2db-3x: queue.c ndo2db.c $(NDO_INC) $(NDO_OBJS) $(COMMON_INC) $(COMMON_OBJS) dbhandlers-3x.o $(SNPRINTF_O)
+	$(CC) $(CFLAGS) $(DBCFLAGS) -D BUILD_NAGIOS_3X -o ndo2db-3x queue.c ndo2db.c dbhandlers-3x.o $(SNPRINTF_O) $(COMMON_OBJS) $(NDO_OBJS) $(LDFLAGS) $(DBLDFLAGS) $(LIBS) $(SOCKETLIBS) $(DBLIBS) $(MATHLIBS) $(OTHERLIBS)
 
-ndo2db-4x: queue.c ndo2db.c $(NDO_INC) $(NDO_OBJS) $(COMMON_INC) $(COMMON_OBJS) dbhandlers-4x.o
-	$(CC) $(CFLAGS) $(DBCFLAGS) -D BUILD_NAGIOS_4X -o ndo2db-4x queue.c ndo2db.c dbhandlers-4x.o $(COMMON_OBJS) $(NDO_OBJS) $(LDFLAGS) $(DBLDFLAGS) $(LIBS) $(SOCKETLIBS) $(DBLIBS) $(MATHLIBS) $(OTHERLIBS)
+ndo2db-4x: queue.c ndo2db.c $(NDO_INC) $(NDO_OBJS) $(COMMON_INC) $(COMMON_OBJS) dbhandlers-4x.o $(SNPRINTF_O)
+	$(CC) $(CFLAGS) $(DBCFLAGS) -D BUILD_NAGIOS_4X -o ndo2db-4x queue.c ndo2db.c dbhandlers-4x.o $(SNPRINTF_O) $(COMMON_OBJS) $(NDO_OBJS) $(LDFLAGS) $(DBLDFLAGS) $(LIBS) $(SOCKETLIBS) $(DBLIBS) $(MATHLIBS) $(OTHERLIBS)
 
 ndomod: 
 	$(MAKE) ndomod-2x.o
 	$(MAKE) ndomod-3x.o
 	$(MAKE) ndomod-4x.o
 
-ndomod-2x.o: ndomod.c $(COMMON_INC) $(COMMON_OBJS)
-	$(CC) $(MOD_CFLAGS) $(CFLAGS) -D BUILD_NAGIOS_2X -o ndomod-2x.o ndomod.c $(COMMON_OBJS) $(MOD_LDFLAGS) $(LDFLAGS) $(LIBS) $(SOCKETLIBS) $(OTHERLIBS)
+ndomod-2x.o: ndomod.c $(COMMON_INC) $(COMMON_OBJS) $(SNPRINTF_O)
+	$(CC) $(MOD_CFLAGS) $(CFLAGS) -D BUILD_NAGIOS_2X -o ndomod-2x.o ndomod.c $(SNPRINTF_O) $(COMMON_OBJS) $(MOD_LDFLAGS) $(LDFLAGS) $(LIBS) $(SOCKETLIBS) $(OTHERLIBS)
 
-ndomod-3x.o: ndomod.c $(COMMON_INC) $(COMMON_OBJS)
-	$(CC) $(MOD_CFLAGS) $(CFLAGS) -D BUILD_NAGIOS_3X -o ndomod-3x.o ndomod.c $(COMMON_OBJS) $(MOD_LDFLAGS) $(LDFLAGS) $(LIBS) $(SOCKETLIBS) $(OTHERLIBS)
+ndomod-3x.o: ndomod.c $(COMMON_INC) $(COMMON_OBJS) $(SNPRINTF_O)
+	$(CC) $(MOD_CFLAGS) $(CFLAGS) -D BUILD_NAGIOS_3X -o ndomod-3x.o ndomod.c $(SNPRINTF_O) $(COMMON_OBJS) $(MOD_LDFLAGS) $(LDFLAGS) $(LIBS) $(SOCKETLIBS) $(OTHERLIBS)
 
-ndomod-4x.o: ndomod.c $(COMMON_INC) $(COMMON_OBJS)
-	$(CC) $(MOD_CFLAGS) $(CFLAGS) $(CFLAGS_4X) -D BUILD_NAGIOS_4X -o ndomod-4x.o ndomod.c $(COMMON_OBJS) $(MOD_LDFLAGS) $(LDFLAGS) $(LIBS) $(SOCKETLIBS) $(OTHERLIBS)
+ndomod-4x.o: ndomod.c $(COMMON_INC) $(COMMON_OBJS) $(SNPRINTF_O)
+	$(CC) $(MOD_CFLAGS) $(CFLAGS) $(CFLAGS_4X) -D BUILD_NAGIOS_4X -o ndomod-4x.o ndomod.c $(SNPRINTF_O) $(COMMON_OBJS) $(MOD_LDFLAGS) $(LDFLAGS) $(LIBS) $(SOCKETLIBS) $(OTHERLIBS)
 
 sockdebug: sockdebug.c $(COMMON_INC) $(COMMON_OBJS)
 	$(CC) $(CFLAGS) -o $@ sockdebug.c $(COMMON_OBJS) $(LDFLAGS) $(LIBS) $(MATHLIBS) $(SOCKETLIBS) $(OTHERLIBS)
