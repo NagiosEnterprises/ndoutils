@@ -10,6 +10,7 @@ SRC_INCLUDE=../include
 
 prefix=@prefix@
 exec_prefix=@exec_prefix@
+PIPEDIR=@localstatedir@
 BINDIR=@bindir@
 INSTALL=@INSTALL@
 INSTALL_OPTS=@INSTALL_OPTS@
@@ -133,16 +134,19 @@ install: install-4x
 	@echo ""
 
 install-2x:
+	$(INSTALL) -m 775 $(INSTALL_OPTS) -d $(PIPEDIR)
 	$(INSTALL) -m 775 $(INSTALL_OPTS) -d $(BINDIR)
 	$(INSTALL) -m 755 $(INSTALL_OPTS) ndo2db-2x $(BINDIR)/ndo2db
 	$(INSTALL) -m 755 $(INSTALL_OPTS) ndomod-2x.o $(BINDIR)/ndomod.o
 
 install-3x:
+	$(INSTALL) -m 775 $(INSTALL_OPTS) -d $(PIPEDIR)
 	$(INSTALL) -m 775 $(INSTALL_OPTS) -d $(BINDIR)
 	$(INSTALL) -m 755 $(INSTALL_OPTS) ndo2db-3x $(BINDIR)/ndo2db
 	$(INSTALL) -m 755 $(INSTALL_OPTS) ndomod-3x.o $(BINDIR)/ndomod.o
 
 install-4x:
+	$(INSTALL) -m 775 $(INSTALL_OPTS) -d $(PIPEDIR)
 	$(INSTALL) -m 775 $(INSTALL_OPTS) -d $(BINDIR)
 	$(INSTALL) -m 755 $(INSTALL_OPTS) ndo2db-4x $(BINDIR)/ndo2db
 	$(INSTALL) -m 755 $(INSTALL_OPTS) ndomod-4x.o $(BINDIR)/ndomod.o

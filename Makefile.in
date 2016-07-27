@@ -12,7 +12,7 @@ SRC_CONFIG=./config
 
 prefix=@prefix@
 exec_prefix=@exec_prefix@
-LOGDIR=@localstatedir@
+PIPEDIR=@localstatedir@
 CFGDIR=@sysconfdir@
 BINDIR=@bindir@
 LIBEXECDIR=@libexecdir@
@@ -86,6 +86,7 @@ install:
 
 install-config:
 	$(INSTALL) -m 775 $(INSTALL_OPTS) -d $(CFGDIR)
+	$(INSTALL) -m 775 $(INSTALL_OPTS) -d $(PIPEDIR)
 	$(INSTALL) -m 644 $(INSTALL_OPTS) config/ndo2db.cfg-sample $(CFGDIR)
 	$(INSTALL) -m 644 $(INSTALL_OPTS) config/ndomod.cfg-sample $(CFGDIR)
 	@echo ""
