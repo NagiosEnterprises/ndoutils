@@ -293,7 +293,7 @@ int ndo2db_process_arguments(int argc, char **argv){
 		return NDO_OK;
 	        }
 
-	snprintf(optchars,sizeof(optchars),"c:ihlV");
+	snprintf(optchars,sizeof(optchars),"c:ifhlV");
 
 	while(1){
 #ifdef HAVE_GETOPT_H
