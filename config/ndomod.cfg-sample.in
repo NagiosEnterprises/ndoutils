@@ -46,7 +46,7 @@ output=@localstatedir@/ndo.sock
 # order to send output.  This option is only valid if the output type
 # option specified above is "tcpsocket".
 
-tcp_port=5668
+tcp_port=@ndo2db_port@
 
 
 
