@@ -39,10 +39,6 @@ AC_NAGIOS_GET_INETD
 AC_NAGIOS_GET_PATHS
 AC_NAGIOS_GET_FILES
 
-if test "$opsys" = aix; then
-	MOD_LDFLAGS="$MOD_LDFLAGS -Wl,-berok"
-fi
-
 dnl Checks for header files.
 AC_HEADER_STDC
 AC_HEADER_TIME
@@ -223,6 +219,10 @@ esac
 AC_MSG_RESULT([$MOD_LDFLAGS])
 AC_SUBST(MOD_CFLAGS)
 AC_SUBST(MOD_LDFLAGS)
+
+if test "$opsys" = aix; then
+	MOD_LDFLAGS="$MOD_LDFLAGS -Wl,-berok"
+fi
 
 
 dnl DB support options

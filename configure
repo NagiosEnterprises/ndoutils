@@ -3798,13 +3798,14 @@ fi
 			elif test "$dist_type" = "slackware"; then
 				init_type="bsd"
 				init_type_wanted=no
+			elif test "$dist_type" = "aix"; then
+				init_type="bsd"
+				init_type_wanted=no
 			fi
 		fi
 
 		PSCMD="ps -p1 -o args"
 		case $dist_type in #(
-  aix) :
-    PSCMD="env UNIX95=1; ps -p1 -o args" ;; #(
   solaris) :
     PSCMD="env UNIX95=1; ps -p1 -o args" ;; #(
   hp-ux) :
@@ -4615,47 +4616,52 @@ case $init_type in #(
 		fi
 		initname=${initname="$INIT_PROG.service"} ;; #(
   bsd) :
-    initdir=${initdir="/etc/rc.d"}
-		initname=${initname="rc.$INIT_PROG"} ;; #(
-  newbsd) :
-    initdir=${initdir="/etc/rc.d"}
-		initname=${initname="$INIT_PROG"} ;; #(
-  gentoo) :
-    initdir=${initdir="/etc/init.d"}
+    if test $dist_type = "aix"; then
+			initdir=${initdir="/sbin/rc.d/init.d"}
+			initname=${initname="$INIT_PROG"} ;; #(
+  else
+			initdir=${initdir="/etc/rc.d"}
+			initname=${initname="rc.$INIT_PROG"}) :
+    fi
+
+	newbsd ;; #(
+  initdir=${initdir="/etc/rc.d"}
+		initname=${initname="$INIT_PROG"}) :
+    gentoo ;; #(
+  initdir=${initdir="/etc/init.d"}
 		initname=${initname="$INIT_PROG"}
 		initconfdir=${initconfdir="/etc/init.d"}
-		initconf=${initconf="$initconfdir/$INIT_PROG"} ;; #(
-  openrc) :
-    initdir=${initdir="/etc/init.d"}
+		initconf=${initconf="$initconfdir/$INIT_PROG"}) :
+    openrc ;; #(
+  initdir=${initdir="/etc/init.d"}
 		initname=${initname="$INIT_PROG"}
 		initconfdir=${initconfdir="/etc/conf.d"}
-		initconf=${initconf="$initconfdir/$INIT_PROG"} ;; #(
-  smf*) :
-    if test $init_type = smf10; then
+		initconf=${initconf="$initconfdir/$INIT_PROG"}) :
+    smf* ;; #(
+  if test $init_type = smf10; then
 			initdir=${initdir="/var/svc/manifest/network/nagios"}
 		else
 			initdir=${initdir="/lib/svc/manifest/network/nagios"}
 		fi
 		initname=${initname="$INIT_PROG.xml"}
 		initconfdir=unknown
-		initconf=unknown ;; #(
-  upstart) :
-    initdir=${initdir="/etc/init"}
+		initconf=unknown) :
+    upstart ;; #(
+  initdir=${initdir="/etc/init"}
 		initname=${initname="$INIT_PROG.conf"}
 		initconfdir=${initconfdir="/etc/default"}
-		initconf=${initconf="$initconfdir/$INIT_PROG"} ;; #(
-  launchd) :
-    initdir=${initdir="/Library/LaunchDaemons"}
-		initname=${initname="org.nagios.$INIT_PROG.plist"} ;; #(
-  #		initconfdir=${initconfdir="/private/etc"}
+		initconf=${initconf="$initconfdir/$INIT_PROG"}) :
+    launchd ;; #(
+  initdir=${initdir="/Library/LaunchDaemons"}
+		initname=${initname="org.nagios.$INIT_PROG.plist"}) :
+    #		initconfdir=${initconfdir="/private/etc"}
 #		initconf=${initconf="$initconfdir/$INIT_PROG"},
 
 
-	*) :
-    initdir=unknown
-		initname=unknown ;; #(
+	* ;; #(
   *) :
-     ;;
+    initdir=unknown
+		initname=unknown ;;
 esac
 
 #
@@ -4782,10 +4788,6 @@ fi
 $as_echo "$src_inetd" >&6; }
 
 
-
-if test "$opsys" = aix; then
-	MOD_LDFLAGS="$MOD_LDFLAGS -Wl,-berok"
-fi
 
 
 ac_ext=c
@@ -6052,6 +6054,10 @@ esac
 $as_echo "$MOD_LDFLAGS" >&6; }
 
 
+
+if test "$opsys" = aix; then
+	MOD_LDFLAGS="$MOD_LDFLAGS -Wl,-berok"
+fi
 
 
 USE_MYSQL=yes
