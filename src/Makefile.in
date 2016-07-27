@@ -10,24 +10,20 @@ SRC_INCLUDE=../include
 
 prefix=@prefix@
 exec_prefix=@exec_prefix@
-LOGDIR=@localstatedir@
-CFGDIR=@sysconfdir@
 BINDIR=@bindir@
-LIBEXECDIR=@libexecdir@
-CGIDIR=@sbindir@
 INSTALL=@INSTALL@
 INSTALL_OPTS=@INSTALL_OPTS@
 
 CC=@CC@
 
-CFLAGS=-FPIC @CFLAGS@ @DEFS@ 
+CFLAGS=-fPIC @CFLAGS@ @DEFS@ 
 CFLAGS_4X=-I $(SRC_INCLUDE)/nagios-4x 
 
 # We don't like ANSI because ANSI doesn't like us! phhht!
-#CFLAGS=-g -Wall -ansi -pedantic -DHAVE_CONFIG_H
+#CFLAGS=-fPIC -g -Wall -ansi -pedantic -DHAVE_CONFIG_H
 
 # Compiler flags for use with Valgrind
-#CFLAGS=-O0 -g -DHAVE_CONFIG_H
+#CFLAGS=-fPIC -O0 -g -DHAVE_CONFIG_H
 
 MOD_CFLAGS=@MOD_CFLAGS@
 LDFLAGS=@LDFLAGS@
@@ -38,7 +34,6 @@ DBCFLAGS=@DBCFLAGS@
 DBLDFLAGS=@DBLDFLAGS@
 DBLIBS=@DBLIBS@
 MATHLIBS=-lm
-# OTHERLIBS=@OTHERLIBS@
 SNPRINTF_O=@SNPRINTF_O@
 
 COMMON_INC=$(SRC_INCLUDE)/config.h $(SRC_INCLUDE)/common.h $(SRC_INCLUDE)/io.h $(SRC_INCLUDE)/protoapi.h $(SRC_INCLUDE)/utils.h
@@ -117,9 +112,9 @@ distclean: clean
 devclean: distclean
 
 install: install-4x
-	$(INSTALL) -m 774 $(INSTALL_OPTS) file2sock $(DESTDIR)$(BINDIR)
-	$(INSTALL) -m 774 $(INSTALL_OPTS) log2ndo $(DESTDIR)$(BINDIR)
-	$(INSTALL) -m 774 $(INSTALL_OPTS) sockdebug $(DESTDIR)$(BINDIR)
+	$(INSTALL) -m 774 $(INSTALL_OPTS) file2sock $(BINDIR)
+	$(INSTALL) -m 774 $(INSTALL_OPTS) log2ndo $(BINDIR)
+	$(INSTALL) -m 774 $(INSTALL_OPTS) sockdebug $(BINDIR)
 	@echo ""
 	@echo "  Hint: NDOUtils Installation against Nagios v4.x"
 	@echo "  completed."
@@ -138,17 +133,17 @@ install: install-4x
 	@echo ""
 
 install-2x:
-	$(INSTALL) -m 775 $(INSTALL_OPTS) -d $(DESTDIR)$(BINDIR)
-	$(INSTALL) -m 755 $(INSTALL_OPTS) ndo2db-2x $(DESTDIR)$(BINDIR)/ndo2db
-	$(INSTALL) -m 755 $(INSTALL_OPTS) ndomod-2x.o $(DESTDIR)$(BINDIR)/ndomod.o
+	$(INSTALL) -m 775 $(INSTALL_OPTS) -d $(BINDIR)
+	$(INSTALL) -m 755 $(INSTALL_OPTS) ndo2db-2x $(BINDIR)/ndo2db
+	$(INSTALL) -m 755 $(INSTALL_OPTS) ndomod-2x.o $(BINDIR)/ndomod.o
 
 install-3x:
-	$(INSTALL) -m 775 $(INSTALL_OPTS) -d $(DESTDIR)$(BINDIR)
-	$(INSTALL) -m 755 $(INSTALL_OPTS) ndo2db-3x $(DESTDIR)$(BINDIR)/ndo2db
-	$(INSTALL) -m 755 $(INSTALL_OPTS) ndomod-3x.o $(DESTDIR)$(BINDIR)/ndomod.o
+	$(INSTALL) -m 775 $(INSTALL_OPTS) -d $(BINDIR)
+	$(INSTALL) -m 755 $(INSTALL_OPTS) ndo2db-3x $(BINDIR)/ndo2db
+	$(INSTALL) -m 755 $(INSTALL_OPTS) ndomod-3x.o $(BINDIR)/ndomod.o
 
 install-4x:
-	$(INSTALL) -m 775 $(INSTALL_OPTS) -d $(DESTDIR)$(BINDIR)
-	$(INSTALL) -m 755 $(INSTALL_OPTS) ndo2db-4x $(DESTDIR)$(BINDIR)/ndo2db
-	$(INSTALL) -m 755 $(INSTALL_OPTS) ndomod-4x.o $(DESTDIR)$(BINDIR)/ndomod.o
+	$(INSTALL) -m 775 $(INSTALL_OPTS) -d $(BINDIR)
+	$(INSTALL) -m 755 $(INSTALL_OPTS) ndo2db-4x $(BINDIR)/ndo2db
+	$(INSTALL) -m 755 $(INSTALL_OPTS) ndomod-4x.o $(BINDIR)/ndomod.o
 

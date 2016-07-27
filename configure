@@ -4740,12 +4740,12 @@ case $init_type in #(
 			src_init=upstart-init
 		fi ;; #(
   launchd) :
-    src_init="mac-init.plist"
-
-	* ;; #(
+    src_init="mac-init.plist" ;; #(
   *) :
     src_init="unknown"
- ;;
+ ;; #(
+  *) :
+     ;;
 esac
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $src_init" >&5
 $as_echo "$src_init" >&6; }
@@ -4776,6 +4776,10 @@ fi
 $as_echo "$src_inetd" >&6; }
 
 
+
+if test "$opsys" = aix; then
+	MOD_LDFLAGS="$MOD_LDFLAGS -Wl,-berok"
+fi
 
 
 ac_ext=c
@@ -8066,8 +8070,9 @@ $as_echo " NDO2DB group:     $ndo2db_group" >&6; }
 $as_echo " NDO2DB tcp port:  $ndo2db_port" >&6; }
 
 
-echo ""
-echo ""
-echo "Review the options above for accuracy.  If they look okay,"
-echo "type 'make' to compile the NDO utilities."
+echo "";\
+echo "";\
+echo "Review the options above for accuracy.  If they look";\
+echo "okay, type 'make all' to compile the NDO utilities,";\
+echo "or type 'make' to get a list of make options.";\
 echo ""

@@ -38,6 +38,10 @@ AC_NAGIOS_GET_INETD
 AC_NAGIOS_GET_PATHS
 AC_NAGIOS_GET_FILES
 
+if test "$opsys" = aix; then
+	MOD_LDFLAGS="$MOD_LDFLAGS -Wl,-berok"
+fi
+
 dnl Checks for header files.
 AC_HEADER_STDC
 AC_HEADER_TIME
@@ -393,8 +397,9 @@ AC_MSG_RESULT([ NDO2DB group:     $ndo2db_group])
 AC_MSG_RESULT([ NDO2DB tcp port:  $ndo2db_port])
 
 
-echo ""
-echo ""
-echo "Review the options above for accuracy.  If they look okay,"
-echo "type 'make' to compile the NDO utilities."
+echo "";\
+echo "";\
+echo "Review the options above for accuracy.  If they look";\
+echo "okay, type 'make all' to compile the NDO utilities,";\
+echo "or type 'make' to get a list of make options.";\
 echo ""

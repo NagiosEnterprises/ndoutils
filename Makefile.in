@@ -16,20 +16,64 @@ LOGDIR=@localstatedir@
 CFGDIR=@sysconfdir@
 BINDIR=@bindir@
 LIBEXECDIR=@libexecdir@
+
+NDO2DB_USER=@ndo2db_user@
+NDO2DB_GROUP=@ndo2db_group@
+
 INSTALL=@INSTALL@
+GREP=@GREP@
+EGREP=@EGREP@
+
 INSTALL_OPTS=@INSTALL_OPTS@
+OPSYS=@opsys@
+DIST=@dist_type@
+
 INIT_TYPE=@init_type@
 INIT_DIR=@initdir@
 INIT_OPTS=-o root -g root
+INIT_FILE=@initname@
 INETD_TYPE=@inetd_type@
 INETD_DIR=@inetddir@
 INETD_FILE=@inetdname@
 SRC_INETD=@src_inetd@
-INIT_FILE=@initname@
 SRC_INIT=@src_init@
+
+default:
+	@echo;\
+	echo Please enter 'make [option]' where [option] is one of:;\
+	echo;\
+	echo "     all                  builds the NDO Utilities";\
+	echo "     ndo2db               builds the ndo2db daemon";\
+	echo "     ndomod               builds the ndomod nagios module";\
+	echo "     file2sock            builds the file2sock utility";\
+	echo "     log2ndo              builds the log2ndo utility";\
+	echo "     sockdebug            builds the sockdebug utility";\
+	echo "     install-groups-users add the user and group if they do not exist";\
+	echo "     install              installs the module and programs";\
+	echo "     install-config       installs the sample configuration files";\
+	echo "     install-inetd        install the startup files for inetd, launchd, etc.";\
+	echo "     install-init         install the startup files for init, systemd, etc.";\
+	echo "     fullinstall          runs install-groups-users, install,";\
+	echo "                          install-config and install-init";\
+	echo
 
 all:
 	cd $(SRC_BASE) && $(MAKE)
+
+ndo2db:
+	cd $(SRC_BASE); $(MAKE) $@
+
+ndomod:
+	cd $(SRC_BASE); $(MAKE) $@
+
+file2sock:
+	cd $(SRC_BASE); $(MAKE) $@
+
+log2ndo:
+	cd $(SRC_BASE); $(MAKE) $@
+
+sockdebug:
+	cd $(SRC_BASE); $(MAKE) $@
 
 ctags:
 	ctags -R
@@ -41,9 +85,9 @@ install:
 	@echo ""
 
 install-config:
-	$(INSTALL) -m 775 $(INSTALL_OPTS) -d $(DESTDIR)$(CFGDIR)
-	$(INSTALL) -b -m 664 $(INSTALL_OPTS) config/ndo2db.cfg-sample $(DESTDIR)$(CFGDIR)
-	$(INSTALL) -b -m 664 $(INSTALL_OPTS) config/ndomod.cfg-sample $(DESTDIR)$(CFGDIR)
+	$(INSTALL) -m 775 $(INSTALL_OPTS) -d $(CFGDIR)
+	$(INSTALL) -b -m 644 $(INSTALL_OPTS) config/ndo2db.cfg-sample $(CFGDIR)
+	$(INSTALL) -b -m 644 $(INSTALL_OPTS) config/ndomod.cfg-sample $(CFGDIR)
 	@echo ""
 	@echo "*** Config files installed ***"
 	@echo ""
@@ -51,6 +95,9 @@ install-config:
 	@echo "the files in order to use them."
 	@echo "Please read the documentation to know what they are doing."
 	@echo ""
+
+install-groups-users:
+	@macros/add_group_user $(DIST) $(NDO2DB_USER) $(NDO2DB_GROUP)
 
 install-init:
 	@if test $(SRC_INIT) = unknown; then \
@@ -96,7 +143,38 @@ install-init:
 		fi;\
 	fi
 
-fullinstall: install install-init install-config
+install-inetd:
+	@if test $(SRC_INETD) = unknown; then \
+		echo No inetd file to install; \
+		exit 1; \
+	fi
+	@if test $(INETD_TYPE) = inetd; then \
+		$(EGREP) -q "^\W*nrpe\s+" $(INETD_DIR)/$(INETD_FILE) 2>/dev/null || \
+		   cat startup/$(SRC_INETD) >> $(INETD_DIR)/$(INETD_FILE); \
+	elif test $(INETD_TYPE) = systemd; then \
+		SRC_INETD_FILE=`echo "$(SRC_INETD)" | sed -e 's/socket/socket-svc/'`; \
+		echo $(INSTALL) -m 644 startup/$$SRC_INETD_FILE $(INETD_DIR)/$(INIT_FILE); \
+		$(INSTALL) -m 644 startup/$$SRC_INETD_FILE $(INETD_DIR)/$(INIT_FILE); \
+	elif test $(INETD_TYPE) = smf10 -o $(INETD_TYPE) = smf11; then \
+		echo $(INSTALL) -m 775 -g sys -d $(INETD_DIR);\
+		$(INSTALL) -m 775 -g sys -d $(INETD_DIR);\
+		echo $(INSTALL) -m 644 startup/$(SRC_INETD) $(INETD_DIR)/$(INETD_FILE); \
+		$(INSTALL) -m 644 startup/$(SRC_INETD) $(INETD_DIR)/$(INETD_FILE); \
+		$(INSTALL) -m 775 -d $(INETD_DIR);\
+		echo svccfg import $(INETD_DIR)/$(INETD_FILE); \
+		svccfg import $(INETD_DIR)/$(INETD_FILE); \
+		echo "*** Run 'svcadm enable nrpe' to start it"; \
+	elif test $(INIT_TYPE) = launchd; then\
+		$(INSTALL) -m 644 startup/$(SRC_INETD) $(INETD_DIR)/$(INETD_FILE); \
+		launchctl load $(INETD_DIR)/$(INETD_FILE); \
+	else\
+		echo $(INSTALL) -m 644 startup/$(SRC_INETD) $(INETD_DIR)/$(INETD_FILE); \
+		$(INSTALL) -m 644 startup/$(SRC_INETD) $(INETD_DIR)/$(INETD_FILE); \
+	fi
+	@$(EGREP) -q "^nrpe[\t ]+@ndo2db_port@/tcp" /etc/services || \
+		echo "***** MAKE SURE 'ndo2db @ndo2db_port@/tcp' IS IN YOUR /etc/services FILE"
+
+fullinstall: install-groups-users install install-config install-init
 
 clean:
 	cd $(SRC_BASE) && $(MAKE) $@
@@ -104,13 +182,18 @@ clean:
 	rm -f *~ */*~ include/nagios-*/*~
 
 distclean: clean
-	cd $(SRC_BASE) && $(MAKE) $@
+	cd $(SRC_BASE) && $(MAKE) $@; cd ..
 	cd docs/docbook/en-en/ && $(MAKE) $@
 	rm -f config.log config.status config.cache 
 	rm -f $(SRC_INCLUDE)/dh.h $(SRC_INCLUDE)/config.h
 	rm -f $(SRC_CONFIG)/ndo2db.cfg-sample $(SRC_CONFIG)/ndomod.cfg-sample $(SRC_CONFIG)/nagios.cfg $(SRC_CONFIG)/misccommands.cfg
+	rm -f startup/bsd-init startup/debian-init startup/default-init startup/default-inetd
+	rm -f startup/default-service startup/default-socket startup/default-socket-svc
+	rm -f startup/default-xinetd startup/mac-init.plist startup/mac-inetd.plist
+	rm -f startup/newbsd-init startup/openbsd-init startup/openrc-conf
+	rm -f startup/openrc-init startup/rh-upstart-init startup/solaris-init.xml
+	rm -f startup/solaris-inetd.xml startup/tmpfile.conf startup/upstart-init
 	rm -f Makefile
-	rm -f subst daemon-init
 	rm -f tags
 
 devclean: distclean
