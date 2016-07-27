@@ -4618,50 +4618,50 @@ case $init_type in #(
   bsd) :
     if test $dist_type = "aix"; then
 			initdir=${initdir="/sbin/rc.d/init.d"}
-			initname=${initname="$INIT_PROG"} ;; #(
-  else
+			initname=${initname="$INIT_PROG"}
+		else
 			initdir=${initdir="/etc/rc.d"}
-			initname=${initname="rc.$INIT_PROG"}) :
-    fi
-
-	newbsd ;; #(
-  initdir=${initdir="/etc/rc.d"}
-		initname=${initname="$INIT_PROG"}) :
-    gentoo ;; #(
-  initdir=${initdir="/etc/init.d"}
+			initname=${initname="rc.$INIT_PROG"}
+		fi ;; #(
+  newbsd) :
+    initdir=${initdir="/etc/rc.d"}
+		initname=${initname="$INIT_PROG"} ;; #(
+  gentoo) :
+    initdir=${initdir="/etc/init.d"}
 		initname=${initname="$INIT_PROG"}
 		initconfdir=${initconfdir="/etc/init.d"}
-		initconf=${initconf="$initconfdir/$INIT_PROG"}) :
-    openrc ;; #(
-  initdir=${initdir="/etc/init.d"}
+		initconf=${initconf="$initconfdir/$INIT_PROG"} ;; #(
+  openrc) :
+    initdir=${initdir="/etc/init.d"}
 		initname=${initname="$INIT_PROG"}
 		initconfdir=${initconfdir="/etc/conf.d"}
-		initconf=${initconf="$initconfdir/$INIT_PROG"}) :
-    smf* ;; #(
-  if test $init_type = smf10; then
+		initconf=${initconf="$initconfdir/$INIT_PROG"} ;; #(
+  smf*) :
+    if test $init_type = smf10; then
 			initdir=${initdir="/var/svc/manifest/network/nagios"}
 		else
 			initdir=${initdir="/lib/svc/manifest/network/nagios"}
 		fi
 		initname=${initname="$INIT_PROG.xml"}
 		initconfdir=unknown
-		initconf=unknown) :
-    upstart ;; #(
-  initdir=${initdir="/etc/init"}
+		initconf=unknown ;; #(
+  upstart) :
+    initdir=${initdir="/etc/init"}
 		initname=${initname="$INIT_PROG.conf"}
 		initconfdir=${initconfdir="/etc/default"}
-		initconf=${initconf="$initconfdir/$INIT_PROG"}) :
-    launchd ;; #(
-  initdir=${initdir="/Library/LaunchDaemons"}
-		initname=${initname="org.nagios.$INIT_PROG.plist"}) :
-    #		initconfdir=${initconfdir="/private/etc"}
+		initconf=${initconf="$initconfdir/$INIT_PROG"} ;; #(
+  launchd) :
+    initdir=${initdir="/Library/LaunchDaemons"}
+		initname=${initname="org.nagios.$INIT_PROG.plist"} ;; #(
+  #		initconfdir=${initconfdir="/private/etc"}
 #		initconf=${initconf="$initconfdir/$INIT_PROG"},
 
 
-	* ;; #(
-  *) :
+	*) :
     initdir=unknown
-		initname=unknown ;;
+		initname=unknown ;; #(
+  *) :
+     ;;
 esac
 
 #
