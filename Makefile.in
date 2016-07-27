@@ -86,8 +86,8 @@ install:
 
 install-config:
 	$(INSTALL) -m 775 $(INSTALL_OPTS) -d $(CFGDIR)
-	$(INSTALL) -b -m 644 $(INSTALL_OPTS) config/ndo2db.cfg-sample $(CFGDIR)
-	$(INSTALL) -b -m 644 $(INSTALL_OPTS) config/ndomod.cfg-sample $(CFGDIR)
+	$(INSTALL) -m 644 $(INSTALL_OPTS) config/ndo2db.cfg-sample $(CFGDIR)
+	$(INSTALL) -m 644 $(INSTALL_OPTS) config/ndomod.cfg-sample $(CFGDIR)
 	@echo ""
 	@echo "*** Config files installed ***"
 	@echo ""
