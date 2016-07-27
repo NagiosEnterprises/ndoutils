@@ -3,6 +3,8 @@
 # Start/stop/restart/reload ndo2db
 # Copyright (c) 2016 Nagios(R) Core(TM) Development Team
 
+BSDTYPE=@dist_type@
+
 NDO2DB_BIN=@sbindir@/ndo2db
 NDO2DB_CFG=@pkgsysconfdir@/ndo2db.cfg
 PID_DIR=@piddir@
@@ -46,10 +48,12 @@ ndo2db_restart() {
 
 # ndo2db status
 ndo2db_status() {
-	if ps -C ndo2db >/dev/null; then
-		echo "ndo2db is running."
-	else
-		echo "ndo2db is stopped."
+	if test $BSDTYPE != aix; then
+		if ps -C ndo2db >/dev/null; then
+			echo "ndo2db is running."
+		else
+			echo "ndo2db is stopped."
+		fi
 	fi
 }
 
@@ -67,6 +71,11 @@ case "$1" in
 	ndo2db_status
 	;;
 *)
+
+if test $BSDTYPE = aix; then
+	echo "Usage $0 start|stop|restart"
+else
 	echo "Usage $0 start|stop|restart|status"
+fi
 	;;
 esac
