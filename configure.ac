@@ -110,7 +110,7 @@ AC_CHECK_LIB(wrap,main,[
 	AC_DEFINE(HAVE_LIBWRAP)
 	])
 AC_SUBST(LIBWRAPLIBS)
-AC_CHECK_FUNCS(getopt_long strdup strstr strtoul initgroups strtof)
+AC_CHECK_FUNCS(getopt_long strdup strstr strtoul initgroups strtof nanosleep)
 
 dnl Check for asprintf() and friends...
 AC_CACHE_CHECK([for va_copy],ac_cv_HAVE_VA_COPY,[
@@ -345,11 +345,15 @@ if test x$check_for_ssl = xyes; then
 fi
 
 
-USE_NANOSLEEP=yes
-AC_ARG_ENABLE(nanosleep,AC_HELP_STRING([--enable-nanosleep],[enables use of nanosleep (instead of sleep) in event timing]))
-AS_IF([test x$enable_nanosleep = xno],[USE_NANOSLEEP=no],[USE_NANOSLEEP=yes])
-if test x$USE_NANOSLEEP = xyes ; then
-	AC_DEFINE_UNQUOTED(USE_NANOSLEEP)
+if test x$HAVE_NANOSLEEP = x; then
+	USE_NANOSLEEP=no
+else
+	USE_NANOSLEEP=yes
+	AC_ARG_ENABLE(nanosleep,AC_HELP_STRING([--enable-nanosleep],[enables use of nanosleep (instead of sleep) in event timing]))
+	AS_IF([test x$enable_nanosleep = xno],[USE_NANOSLEEP=no],[USE_NANOSLEEP=yes])
+	if test x$USE_NANOSLEEP = xyes ; then
+		AC_DEFINE_UNQUOTED(USE_NANOSLEEP)
+	fi
 fi
 
 AC_CONFIG_FILES([Makefile
