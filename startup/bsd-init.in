@@ -13,11 +13,17 @@ PID_FILE=@piddir@/ndo2db.pid
 # Get PID of running process
 ndo2db_get_pid() {
 	if [ -r "$PID_FILE" ]; then
-		pid=$(cat "$PID_FILE")
+		pid1=$(cat "$PID_FILE")
 	else
-		pid=$(ps -A -o pid,command|grep ndo2db|tr -s ' '|sed -e 's/^ //'|cut -d' ' -f1)
+		pid1=""
 	fi
-	echo $pid
+	pid2=$(ps -A -o pid,command | grep ndo2db | grep -v grep | tr -s ' ' | sed -e 's/^ //' | cut -d' ' -f1)
+
+	if [ $pid1 = $pid2 ]; then
+		echo $pid1
+	else
+		echo $pid1 $pid2
+	fi
 }
 
 # Start ndo2db
