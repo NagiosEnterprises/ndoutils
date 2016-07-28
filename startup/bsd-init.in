@@ -37,8 +37,8 @@ ndo2db_start() {
 # Stop ndo2db
 ndo2db_stop() {
 	printf "Stopping ndo2db daemon - "
-	pid=`ndo2db_get_pid()`
-	if [ -n $pid ]; then
+	pid=`ndo2db_get_pid`
+	if [ -n "$pid" ]; then
 		kill $(cat "$PID_FILE")
 		if [ $? = 0 ]; then
 			echo "stopped"
@@ -59,16 +59,14 @@ ndo2db_restart() {
 
 # ndo2db status
 ndo2db_status() {
-	pid=`ndo2db_get_pid()`
-	if [ -n $pid ]; then
-		if test $BSDTYPE = aix; then
-			if ps g -o pid
+	pid=`ndo2db_get_pid`
+	if [ -n "$pid" ]; then
+		if [ $BSDTYPE = aix ]; then
+			echo "ndo2db is running ($pid)"
+		elif ps -C ndo2db >/dev/null; then
+			echo "ndo2db is running ($pid)"
 		else
-			if ps -C ndo2db >/dev/null; then
-				echo "ndo2db is running."
-			else
-				echo "ndo2db is stopped."
-			fi
+			echo "ndo2db is stopped."
 		fi
 	else
 		echo "ndo2db is stopped."

@@ -6050,14 +6050,15 @@ case $host_os in
 		MOD_LDFLAGS="-shared"
 	;;
 esac
+
+if test "$dist_type" = aix; then
+	MOD_LDFLAGS="$MOD_LDFLAGS -Wl,-berok"
+fi
+
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $MOD_LDFLAGS" >&5
 $as_echo "$MOD_LDFLAGS" >&6; }
 
 
-
-if test "$opsys" = aix; then
-	MOD_LDFLAGS="$MOD_LDFLAGS -Wl,-berok"
-fi
 
 
 USE_MYSQL=yes

@@ -216,13 +216,14 @@ case $host_os in
 		MOD_LDFLAGS="-shared"
 	;;
 esac
+
+if test "$dist_type" = aix; then
+	MOD_LDFLAGS="$MOD_LDFLAGS -Wl,-berok"
+fi
+
 AC_MSG_RESULT([$MOD_LDFLAGS])
 AC_SUBST(MOD_CFLAGS)
 AC_SUBST(MOD_LDFLAGS)
-
-if test "$opsys" = aix; then
-	MOD_LDFLAGS="$MOD_LDFLAGS -Wl,-berok"
-fi
 
 
 dnl DB support options
