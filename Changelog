@@ -7,12 +7,14 @@ NDO Utils Changelog
 * Probable fix for ndo2db not responding & growing queue issue (John Frickson)
 * Got rid of uninitialized variable used for sleep() and increased the listen backlog (John Frickson)
 * ndoutils clears all entries from SQL table causing slow startup (John Frickson)
+* Clean up bad returns (John Frickson)
 * Update nagios headers to (mostly) match the ones actually in core (John Frickson)
 * cannot open /xxxx/ndo2db.lock for reading: No such file or directory (box293)
 * Added option to specify alternative mysql TCP port on installdb script (JR Dalrymple)
 * State History does not use actual plugin long_output
 * Have the parent process wait until the lock file is written (David Michael)
 * Accept a socket fd passed from systemd (David Michael)
+* Cross-platform changes (John Frickson)
 
 
 
