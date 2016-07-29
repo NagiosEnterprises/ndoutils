@@ -19,7 +19,7 @@ lock_file=@localstatedir@/ndo2db.pid
 # You can specify a number (uid/gid) or a name for either option.
 
 ndo2db_user=@ndo2db_user@
-ndo2db_group=@ndo2db_user@
+ndo2db_group=@ndo2db_group@
 
 
 
