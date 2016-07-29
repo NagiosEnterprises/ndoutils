@@ -750,7 +750,7 @@ int ndo2db_daemonize(void){
 		}
 
 	/* fork (maybe) */
-	if(ndo2db_no_fork == NDO_TRUE) {
+	if(ndo2db_no_fork != NDO_TRUE) {
 
 		if((pid=fork())<0){
 			perror("Fork error");
