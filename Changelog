@@ -2,7 +2,7 @@
 NDO Utils Changelog
 ===================
 
-2.1.0 - 2016-08-??
+2.1.0 - 2016-08-01
 ------------------
 * Probable fix for ndo2db not responding & growing queue issue (John Frickson)
 * Got rid of uninitialized variable used for sleep() and increased the listen backlog (John Frickson)
