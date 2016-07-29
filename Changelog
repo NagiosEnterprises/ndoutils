@@ -2,7 +2,7 @@
 NDO Utils Changelog
 ===================
 
-2.1.0 - ??/??/????
+2.1.0 - 2016-08-??
 ------------------
 * Probable fix for ndo2db not responding & growing queue issue (John Frickson)
 * Got rid of uninitialized variable used for sleep() and increased the listen backlog (John Frickson)
@@ -15,6 +15,13 @@ NDO Utils Changelog
 * Have the parent process wait until the lock file is written (David Michael)
 * Accept a socket fd passed from systemd (David Michael)
 * Cross-platform changes (John Frickson)
+* Remove PostgreSQL support stub code (Eric Mislivec)
+* db/upgrade: Fix a schema version typo (Eric Mislivec)
+* Pad usecs to six digits when printing timevals (Eric Mislivec)
+* Make the MySQL socket path a configurable option (Eric Mislivec)
+* Patch situation where db table nagios_logentries has items where `instance_id`,`logentry_time`,`entry_time`,`entry_time_usec` isn't unique enough. - (Scott Wilkerson)
+* Truncate all tables we should (Eric Mislivec)
+* Free memory allocated for config options (Eric Mislivec)
 
 
 
