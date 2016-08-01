@@ -10,7 +10,7 @@
  * License: GPL v2
  *
  * First Written: 05-13-2005
- * Last Modified: 07-28-2016
+ * Last Modified: 08-01-2016
  *
  * This file is part of NDOUtils.
  *
@@ -31,9 +31,9 @@
 #include "../include/common.h"
 #include "../include/io.h"
 
-#define FILE2SOCK_VERSION "2.1"
+#define FILE2SOCK_VERSION "2.1.0"
 #define FILE2SOCK_NAME "FILE2SOCK"
-#define FILE2SOCK_DATE "07-28-2016"
+#define FILE2SOCK_DATE "08-01-2016"
 
 
 int process_arguments(int,char **);
