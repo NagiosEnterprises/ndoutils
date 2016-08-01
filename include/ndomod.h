@@ -1,13 +1,27 @@
-/************************************************************************
+/**
+ * @file ndomod.h Nagios Data Output Event Broker Module declarations
+ */
+/*
+ * Copyright 2009-2014 Nagios Core Development Team and Community Contributors
+ * Copyright 2005-2009 Ethan Galstad
  *
- * NDOMOD.H - NDO NEB Module Include File
- * Copyright (c) 2005-2006 Ethan Galstad
- * Last Modified: 05-25-2006
+ * This file is part of NDOUtils.
  *
- ************************************************************************/
+ * NDOUtils is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ *
+ * NDOUtils is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with NDOUtils. If not, see <http://www.gnu.org/licenses/>.
+ */
 
-#ifndef _NDBXT_NDOMOD_H
-#define _NDBXT_NDOMOD_H
+#ifndef NDO_NDOMOD_H_INCLUDED
+#define NDO_NDOMOD_H_INCLUDED
 
 
 /* this is needed for access to daemon's internal data */
@@ -76,6 +90,7 @@ int ndomod_write_to_logs(char *,int);
 int ndomod_process_module_args(char *);
 int ndomod_process_config_var(char *);
 int ndomod_process_config_file(char *);
+static void ndomod_free_config_memory(void);
 
 int ndomod_open_sink(void);
 int ndomod_close_sink(void);
@@ -102,12 +117,11 @@ int ndomod_deregister_callbacks(void);
 int ndomod_broker_data(int,void *);
 
 int ndomod_write_config(int);
+void ndomod_write_active_objects();
 int ndomod_write_object_config(int);
 
 int ndomod_write_config_files(void);
 int ndomod_write_main_config_file(void);
-int ndomod_write_resource_config_files(void);
-int ndomod_write_resource_config_file(char *);
 
 int ndomod_write_runtime_variables(void);
 

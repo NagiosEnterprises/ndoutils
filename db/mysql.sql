@@ -38,7 +38,7 @@ CREATE TABLE IF NOT EXISTS `nagios_acknowledgements` (
   `persistent_comment` smallint(6) NOT NULL default '0',
   `notify_contacts` smallint(6) NOT NULL default '0',
   PRIMARY KEY  (`acknowledgement_id`),
-  UNIQUE KEY `instance_id` (`instance_id`, `entry_time`, `entry_time_usec`)
+  UNIQUE KEY `instance_id` (`instance_id`, `entry_time`, `entry_time_usec`, `logentry_id`)
 ) ENGINE=MyISAM COMMENT='Current and historical host and service acknowledgements';
 
 -- --------------------------------------------------------

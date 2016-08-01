@@ -1,13 +1,27 @@
-/***************************************************************
- * NDO2DB.C - NDO To Database Daemon
- *
- * Copyright (c) 2009 Nagios Core Development Team and Community Contributors
- * Copyright (c) 2005-2009 Ethan Galstad
+/**
+ * @file ndo2db.c Nagios Data Output to Database Daemon
+ */
+/*
+ * Copyright 2009-2014 Nagios Core Development Team and Community Contributors
+ * Copyright 2005-2009 Ethan Galstad
  *
  * First Written: 05-19-2005
- * Last Modified: 02-28-2014
+ * Last Modified: 07-28-2016
  *
- **************************************************************/
+ * This file is part of NDOUtils.
+ *
+ * NDOUtils is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ *
+ * NDOUtils is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with NDOUtils. If not, see <http://www.gnu.org/licenses/>.
+ */
 
 /*#define DEBUG_MEMORY 1*/
 
@@ -26,16 +40,26 @@
 #include "../include/dbhandlers.h"
 #include "../include/queue.h"
 
+#ifdef HAVE_SYSTEMD
+#include <systemd/sd_daemon.h>
+#endif
+
 #ifdef HAVE_SSL
 #include "../include/dh.h"
 #endif
 
-#define NDO2DB_VERSION "2.0.0"
+#include <pthread.h>
+
+#define NDO2DB_VERSION "2.1"
 #define NDO2DB_NAME "NDO2DB"
-#define NDO2DB_DATE "02-28-2014"
+#define NDO2DB_DATE "07-28-2016"
 
 #ifdef HAVE_SSL
+# if (defined(__sun) && defined(SOLARIS_10)) || defined(_AIX) || defined(__hpux)
 SSL_METHOD *meth;
+# else
+const SSL_METHOD *meth;
+# endif
 SSL_CTX *ctx;
 int allow_weak_random_seed = NDO_FALSE;
 #endif
@@ -52,6 +76,7 @@ int ndo2db_socket_type=NDO_SINK_UNIXSOCKET;
 char *ndo2db_socket_name=NULL;
 int ndo2db_tcp_port=NDO_DEFAULT_TCP_PORT;
 int ndo2db_use_inetd=NDO_FALSE;
+int ndo2db_no_fork=NDO_FALSE;
 int ndo2db_show_version=NDO_FALSE;
 int ndo2db_show_license=NDO_FALSE;
 int ndo2db_show_help=NDO_FALSE;
@@ -116,9 +141,10 @@ int main(int argc, char **argv){
 		printf("and processing.  Clients that are capable of sending data to the NDO2DB daemon\n");
 		printf("include the LOG2NDO utility and NDOMOD event broker module.\n");
 		printf("\n");
-		printf("Usage: %s -c <config_file> [-i]\n",argv[0]);
+		printf("Usage: %s -c <config_file> [-i] [-f]\n",argv[0]);
 		printf("\n");
 		printf("-i  = Run under INETD/XINETD.\n");
+		printf("-f  = Do not fork daemon.\n");
 		printf("\n");
 		exit(1);
 	        }
@@ -169,7 +195,7 @@ int main(int argc, char **argv){
 
         	/* use anonymous DH ciphers */
         	SSL_CTX_set_cipher_list(ctx,"ADH");
-        	dh=get_dh512();
+			dh=get_dh2048();
         	SSL_CTX_set_tmp_dh(ctx,dh);
         	DH_free(dh);
         	syslog(LOG_INFO,"INFO: SSL/TLS initialized. All network traffic will be encrypted.");
@@ -191,14 +217,8 @@ int main(int argc, char **argv){
 	if(ndo2db_db_settings.server_type==NDO2DB_DBSERVER_MYSQL)
 		db_supported=NDO_TRUE;
 #endif
-#ifdef USE_PGSQL
-	/* PostgreSQL support is not yet done... */
-	/*
-	if(ndo2db_db_settings.server_type==NDO2DB_DBSERVER_PGSQL)
-		db_supported=NDO_TRUE;
-	*/
-#endif
-	if(db_supported==NDO_FALSE){
+
+	if (!db_supported) {
 		printf("Support for the specified database server is either not yet supported, or was not found on your system.\n");
 
 #ifdef HAVE_SSL
@@ -267,6 +287,7 @@ int ndo2db_process_arguments(int argc, char **argv){
 	static struct option long_options[]={
 		{"configfile", required_argument, 0, 'c'},
 		{"inetd", no_argument, 0, 'i'},
+		{"no-forking", no_argument, 0, 'f'},
 		{"help", no_argument, 0, 'h'},
 		{"license", no_argument, 0, 'l'},
 		{"version", no_argument, 0, 'V'},
@@ -280,7 +301,7 @@ int ndo2db_process_arguments(int argc, char **argv){
 		return NDO_OK;
 	        }
 
-	snprintf(optchars,sizeof(optchars),"c:ihlV");
+	snprintf(optchars,sizeof(optchars),"c:ifhlV");
 
 	while(1){
 #ifdef HAVE_GETOPT_H
@@ -309,6 +330,10 @@ int ndo2db_process_arguments(int argc, char **argv){
 			break;
 		case 'i':
 			ndo2db_use_inetd=NDO_TRUE;
+			break;
+		case 'f':
+			ndo2db_use_inetd=NDO_FALSE;
+			ndo2db_no_fork=NDO_TRUE;
 			break;
 		default:
 			return NDO_ERROR;
@@ -406,8 +431,6 @@ int ndo2db_process_config_var(char *arg){
 	else if(!strcmp(var,"db_servertype")){
 		if(!strcmp(val,"mysql"))
 			ndo2db_db_settings.server_type=NDO2DB_DBSERVER_MYSQL;
-		else if(!strcmp(val,"pgsql"))
-			ndo2db_db_settings.server_type=NDO2DB_DBSERVER_PGSQL;
 		else
 			return NDO_ERROR;
 	        }
@@ -417,6 +440,10 @@ int ndo2db_process_config_var(char *arg){
 	        }
 	else if(!strcmp(var,"db_port")){
 		ndo2db_db_settings.port=atoi(val);
+	        }
+	else if (!strcmp(var, "db_socket")) {
+		if(!(ndo2db_db_settings.socket = strdup(val)))
+			return NDO_ERROR;
 	        }
 	else if(!strcmp(var,"db_user")){
 		if((ndo2db_db_settings.username=strdup(val))==NULL)
@@ -434,28 +461,41 @@ int ndo2db_process_config_var(char *arg){
 		if((ndo2db_db_settings.dbprefix=strdup(val))==NULL)
 			return NDO_ERROR;
 	        }
+
 	else if(!strcmp(var,"max_timedevents_age"))
 		ndo2db_db_settings.max_timedevents_age=strtoul(val,NULL,0)*60;
+
 	else if(!strcmp(var,"max_systemcommands_age"))
 		ndo2db_db_settings.max_systemcommands_age=strtoul(val,NULL,0)*60;
+
 	else if(!strcmp(var,"max_servicechecks_age"))
 		ndo2db_db_settings.max_servicechecks_age=strtoul(val,NULL,0)*60;
+
 	else if(!strcmp(var,"max_hostchecks_age"))
 		ndo2db_db_settings.max_hostchecks_age=strtoul(val,NULL,0)*60;
+
 	else if(!strcmp(var,"max_eventhandlers_age"))
 		ndo2db_db_settings.max_eventhandlers_age=strtoul(val,NULL,0)*60;
+
 	else if(!strcmp(var,"max_externalcommands_age"))
 		ndo2db_db_settings.max_externalcommands_age=strtoul(val,NULL,0)*60;
+
 	else if(!strcmp(var,"max_logentries_age"))
-		ndo2db_db_settings.max_externalcommands_age=strtoul(val,NULL,0)*60;		
+		ndo2db_db_settings.max_logentries_age=strtoul(val,NULL,0)*60;
+
 	else if(!strcmp(var,"max_notifications_age"))
-		ndo2db_db_settings.max_externalcommands_age=strtoul(val,NULL,0)*60;			
-	else if(!strcmp(var,"max_contactnotifications_age"))
-		ndo2db_db_settings.max_externalcommands_age=strtoul(val,NULL,0)*60;	
-	else if(!strcmp(var,"max_contactnotificationmethods_age"))
-		ndo2db_db_settings.max_externalcommands_age=strtoul(val,NULL,0)*60;	
+		ndo2db_db_settings.max_notifications_age=strtoul(val,NULL,0)*60;
+
+	else if(!strcmp(var,"max_contactnotifications") || !strcmp(var,"max_contactnotifications_age"))
+		/* Accept max_contactnotifications too (a typo in old configs). */
+		ndo2db_db_settings.max_contactnotifications_age=strtoul(val,NULL,0)*60;
+
+	else if(!strcmp(var,"max_contactnotificationmethods") || !strcmp(var,"max_contactnotificationmethods_age"))
+		/* Accept max_contactnotificationmethods too (a typo in old configs). */
+		ndo2db_db_settings.max_contactnotificationmethods_age=strtoul(val,NULL,0)*60;
+
 	else if(!strcmp(var,"max_acknowledgements_age"))
-		ndo2db_db_settings.max_externalcommands_age=strtoul(val,NULL,0)*60;			
+		ndo2db_db_settings.max_acknowledgements_age=strtoul(val,NULL,0)*60;
 		
 	else if(!strcmp(var,"ndo2db_user"))
 		ndo2db_user=strdup(val);
@@ -491,6 +531,7 @@ int ndo2db_initialize_variables(void){
 	ndo2db_db_settings.server_type=NDO2DB_DBSERVER_NONE;
 	ndo2db_db_settings.host=NULL;
 	ndo2db_db_settings.port=0;
+	ndo2db_db_settings.socket = NULL;
 	ndo2db_db_settings.username=NULL;
 	ndo2db_db_settings.password=NULL;
 	ndo2db_db_settings.dbname=NULL;
@@ -538,6 +579,10 @@ int ndo2db_free_program_memory(void){
 	if(ndo2db_db_settings.host){
 		free(ndo2db_db_settings.host);
 		ndo2db_db_settings.host=NULL;
+		}
+	if(ndo2db_db_settings.socket){
+		free(ndo2db_db_settings.socket);
+		ndo2db_db_settings.socket=NULL;
 		}
 	if(ndo2db_db_settings.username){
 		free(ndo2db_db_settings.username);
@@ -704,52 +749,69 @@ int ndo2db_daemonize(void){
 			}
 		}
 
-	/* fork */
-	if((pid=fork())<0){
-		perror("Fork error");
-		ndo2db_cleanup_socket();
-		return NDO_ERROR;
-	        }
-
-	/* parent process goes away... */
-	else if((int)pid!=0){
-		ndo2db_free_program_memory();
-		exit(0);
-		}
-
-	/* child forks again... */
-	else{
+	/* fork (maybe) */
+	if(ndo2db_no_fork != NDO_TRUE) {
 
 		if((pid=fork())<0){
 			perror("Fork error");
 			ndo2db_cleanup_socket();
 			return NDO_ERROR;
-	                }
+				}
 
-		/* first child process goes away.. */
+		/* parent process goes away... */
 		else if((int)pid!=0){
 			ndo2db_free_program_memory();
+			waitpid(pid, NULL, 0);		/* Wait for the updated lock file. */
 			exit(0);
 			}
 
-		/* grandchild continues... */
+		/* child forks again... */
+		else{
 
-		/* grandchild becomes session leader... */
-		setsid();
-	        }
+			if((pid=fork())<0){
+				perror("Fork error");
+				ndo2db_cleanup_socket();
+				return NDO_ERROR;
+						}
 
-	if(lock_file){
-		/* write PID to lockfile... */
-		lseek(lockfile,0,SEEK_SET);
-		ftruncate(lockfile,0);
-		sprintf(buf,"%d\n",(int)getpid());
-		write(lockfile,buf,strlen(buf));
+			/* first child process goes away.. */
+			else if((int)pid!=0){
+				ndo2db_free_program_memory();
+				exit(0);
+			}
+		}
 
+
+
+
+	}
+
+	/* Write the PID to the lock file... */
+
+	if (lock_file) {
+		int n;
+		lseek(lockfile, 0, SEEK_SET);
+		if (ftruncate(lockfile, 0)) {
+			syslog(LOG_ERR, "Warning: Unable to truncate lockfile (errno %d): %s",
+					errno, strerror(errno));
+		}
+		sprintf(buf, "%d\n", (int)pid);
+		n = (int)strlen(buf);
+		if (write(lockfile, buf, n) < n) {
+			syslog(LOG_ERR, "Warning: Unable to write pid to lockfile (errno %d): %s",
+					errno, strerror(errno));
+		}
+	}
+
+	/* become session leader... */
+	setsid();
+
+	if(lock_file) {
 		/* make sure lock file stays open while program is executing... */
 		val=fcntl(lockfile,F_GETFD,0);
 		val|=FD_CLOEXEC;
 		fcntl(lockfile,F_SETFD,val);
-		}
+	}
 
         /* close existing stdin, stdout, stderr */
 	close(0);
@@ -840,7 +902,20 @@ int ndo2db_wait_for_connections(void){
 	struct sockaddr_un client_address_u;
 	struct sockaddr_in client_address_i;
 	socklen_t client_address_length;
+	static int listen_backlog = INT_MAX;
 
+
+#ifdef HAVE_SYSTEMD
+	/* Socket inherited from systemd */
+	if (sd_listen_fds(0) == 1) {
+		ndo2db_sd = SD_LISTEN_FDS_START + 0;
+		if (sd_is_socket_inet(ndo2db_sd, 0, 0, -1, 0))
+			client_address_length = (socklen_t)sizeof(client_address_i);
+		else
+			client_address_length = (socklen_t)sizeof(client_address_u);
+	}
+	else
+#endif
 
 	/* TCP socket */
 	if(ndo2db_socket_type==NDO_SINK_TCPSOCKET){
@@ -897,12 +972,19 @@ int ndo2db_wait_for_connections(void){
 		client_address_length=(socklen_t)sizeof(client_address_u);
 	        }
 
-	/* listen for connections */
-	if((listen(ndo2db_sd,1))){
-		perror("Cannot listen on socket");
-		ndo2db_cleanup_socket();
-		return NDO_ERROR;
-	        }
+    /* Default the backlog number on listen() to INT_MAX. If INT_MAX fails,
+     * try using SOMAXCONN (usually 127) and if that fails, return an error */
+    for (;;) {
+        if (listen(ndo2db_sd, listen_backlog)) {
+            if (listen_backlog == SOMAXCONN) {
+				perror("Cannot listen on socket");
+				ndo2db_cleanup_socket();
+				return NDO_ERROR;
+            } else
+                listen_backlog = SOMAXCONN;
+        }
+        break;
+    }
 
 
 	/* daemonize */
@@ -1213,6 +1295,10 @@ int ndo2db_check_for_client_input(ndo2db_idi *idi,ndo_dbuf *dbuf){
 /* asynchronous handle clients events */
 void ndo2db_async_client_handle() {
 	ndo2db_idi idi;
+	size_t len = 0, curlen, insz, maxbuf = 1024 * 64, bufsz = 1024 * 66;
+    int i;
+	char *buf = (char*)calloc(bufsz, sizeof(char));
+	char *temp_buf;
 
 	/* initialize input data information */
 	ndo2db_idi_init(&idi);
@@ -1223,55 +1309,48 @@ void ndo2db_async_client_handle() {
 
 	get_queue_id(getppid());
 
-	char *old_buf = NULL;
-
 	for (;;) {
 		char * qbuf = pop_from_queue();
-		char *buf;
-		char * temp_buf;
-		int i, start=0;
 
-		if (old_buf != NULL) {
-			buf = (char*)calloc(strlen(qbuf)+strlen(old_buf)+2, sizeof(char));
+		ndo2db_log_debug_info(NDO2DB_DEBUGL_PROCESSINFO, 2,"Queue Message: %s\n", qbuf);
 
-			strcat(buf, old_buf);
-			strcat(buf, qbuf);
+		insz = strlen(qbuf);
+		curlen = len + insz;
+		strcat(buf, qbuf);
+		free(qbuf);
 
-			free(old_buf); old_buf = NULL;
-			free(qbuf);
-		} else {
-			buf = qbuf;
-		}
-
-		for (i=0; i<=strlen(buf); i++) {
+        i = 0;
+		for ( ; i < curlen; i++) {
 			if (buf[i] == '\n') {
-				int size = i-start;
-				temp_buf = (char*)calloc(size+1, sizeof(char));
-				strncpy(temp_buf, &buf[start], size);
-				temp_buf[size] = '\x0';
+				temp_buf = (char*)malloc((curlen + 4) * sizeof(char));
+				strncpy(temp_buf, buf, i);
+				temp_buf[i] = '\x0';
 
+				ndo2db_log_debug_info(NDO2DB_DEBUGL_PROCESSINFO, 2,"Handling: %s\n", temp_buf);
 				ndo2db_handle_client_input(&idi,temp_buf);
+/*				ndo2db_log_debug_info(NDO2DB_DEBUGL_PROCESSINFO, 2,"Full Buffer: %s\n", buf); */
 
+				memmove(buf, &buf[i+1], bufsz - i);
+				len = 0;
+				curlen = strlen(buf);
 				free(temp_buf);
 
-				start=i+1;
-
 				idi.lines_processed++;
-				idi.bytes_processed+=size+1;
+				idi.bytes_processed += i+1;
+                i = -1;
 			}
 		}
 
-		if (start <= strlen(buf)) {
-			old_buf = (char*)calloc(strlen(&buf[start])+1, sizeof(char));
-			strcpy(old_buf, &buf[start]);
-		}
-
-		free(buf);
+		len = curlen;
+		if (len  > maxbuf) {
+			buf[maxbuf+1] = 0;
+			len = curlen = maxbuf;
+			ndo2db_log_debug_info(NDO2DB_DEBUGL_PROCESSINFO, 2,"Truncating text at position %d - %s\n", maxbuf+1, &buf[maxbuf+2]);
+		} else if (len == 0)
+			memset(buf, 0, bufsz * sizeof(char));
 	}
 
-	if (old_buf != NULL) {
-		free(old_buf);
-	}
+	free(buf);
 
 	/* disconnect from database */
 	ndo2db_db_disconnect(&idi);
@@ -1549,6 +1628,11 @@ int ndo2db_handle_client_input(ndo2db_idi *idi, char *buf){
 				/* deprecated - merged with host definitions */
 			case NDO_API_SERVICEEXTINFODEFINITION:
 				/* deprecated - merged with service definitions */
+
+			case NDO_API_ACTIVEOBJECTSLIST:
+				idi->current_input_data=NDO2DB_INPUT_DATA_ACTIVEOBJECTSLIST;
+				break;
+	
 			default:
 				break;
 			        }
@@ -1585,28 +1669,28 @@ int ndo2db_handle_client_input(ndo2db_idi *idi, char *buf){
 			else{
 
 				/* the data type is out of range - throw it out */
-				if(data_type>NDO_MAX_DATA_TYPES){
+				if (data_type > NDO_MAX_DATA_TYPES) {
 #ifdef DEBUG_NDO2DB2
-					printf("## DISCARD! LINE: %lu, TYPE: %d, VAL: %s\n",idi->lines_processed,data_type,val);
+						printf("## DISCARD! LINE: %lu, TYPE: %d, VAL: %s\n",idi->lines_processed,data_type,val);
 #endif
-					break;
-			                }
+						break;
+				}
 
 #ifdef DEBUG_NDO2DB2
 				printf("LINE: %lu, TYPE: %d, VAL:%s\n",idi->lines_processed,data_type,val);
 #endif
 				ndo2db_add_input_data_item(idi,data_type,val);
-		                }
-		        }
+			}
+		}
 
 		break;
 
 	default:
 		break;
-	        }
+	}
 
 	return NDO_OK;
-        }
+}
 
 
 int ndo2db_start_input_data(ndo2db_idi *idi){
@@ -1636,6 +1720,23 @@ int ndo2db_add_input_data_item(ndo2db_idi *idi, int type, char *buf){
 
 	if(idi==NULL)
 		return NDO_ERROR;
+
+	if (idi->current_input_data == NDO2DB_INPUT_DATA_ACTIVEOBJECTSLIST) {
+		if(buf==NULL)
+			newbuf=strdup("");
+		else
+			newbuf=strdup(buf);
+		if (type != NDO_DATA_ACTIVEOBJECTSTYPE)
+			ndo_unescape_buffer(newbuf);
+		if(idi->buffered_input[type]!=NULL){
+			free(idi->buffered_input[type]);
+			idi->buffered_input[type]=NULL;
+		}
+		/* save buffered item */
+		idi->buffered_input[type]=newbuf;
+
+		return NDO_OK;
+	}
 
 	/* escape data if necessary */
 	switch(type){
@@ -1725,7 +1826,7 @@ int ndo2db_add_input_data_item(ndo2db_idi *idi, int type, char *buf){
 		else
 			newbuf=strdup(buf);
 		break;
-	        }
+	}
 
 	/* check for errors */
 	if(newbuf==NULL){
@@ -2016,6 +2117,9 @@ int ndo2db_end_input_data(ndo2db_idi *idi){
 	case NDO2DB_INPUT_DATA_SERVICEEXTINFODEFINITION:
 		/* deprecated - merged with service definitions */
 		break;
+	case NDO2DB_INPUT_DATA_ACTIVEOBJECTSLIST:
+		result = ndo2db_handle_activeobjectlist(idi);
+		break;
 
 	default:
 		break;
@@ -2225,7 +2329,7 @@ int ndo2db_convert_string_to_timeval(char *buf, struct timeval *tv){
 		return NDO_ERROR;
 
 	tv->tv_sec=(time_t)0L;
-	tv->tv_usec=(suseconds_t)0L;
+	tv->tv_usec=0;
 
 	if((newbuf=strdup(buf))==NULL)
 		return NDO_ERROR;

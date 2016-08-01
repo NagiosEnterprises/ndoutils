@@ -1,16 +1,35 @@
-/*****************************************************************************
+/**
+ * @file ndomod.c Nagios Data Output Event Broker Module
+ */
+/*
+ * Copyright 2009-2014 Nagios Core Development Team and Community Contributors
+ * Copyright 2005-2009 Ethan Galstad
  *
- * NDOMOD.C - Nagios Data Output Event Broker Module
- *
- * Copyright (c) 2009-2012 Nagios Core Development Team and Community Contributors
- * Copyright (c) 2005-2009 Ethan Galstad
- *
- * First Written: 05-19-2005
  * Last Modified: 02-28-2014
  *
- * TO DO: Add service parents, hourly value (hosts / services), 
- *        minimum value (contacts) 
- *****************************************************************************/
+ * This file is part of NDOUtils.
+ *
+ * First Written: 05-19-2005
+ * Last Modified: 07-28-2016
+ *
+ *****************************************************************************
+ * NDOUtils is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ *
+ * NDOUtils is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with NDOUtils. If not, see <http://www.gnu.org/licenses/>.
+ */
+/**
+ * @todo Add service parents
+ * @todo hourly value (hosts / services)
+ * @todo minimum value (contacts)
+ */
 
 /* include our project's header files */
 #include "../include/common.h"
@@ -18,6 +37,8 @@
 #include "../include/utils.h"
 #include "../include/protoapi.h"
 #include "../include/ndomod.h"
+
+#include <pthread.h>
 
 /* include (minimum required) event broker header files */
 #ifdef BUILD_NAGIOS_2X
@@ -65,9 +86,9 @@
 NEB_API_VERSION(CURRENT_NEB_API_VERSION)
 
 
-#define NDOMOD_VERSION "2.0.0"
+#define NDOMOD_VERSION "2.1"
 #define NDOMOD_NAME "NDOMOD"
-#define NDOMOD_DATE "02-28-2014"
+#define NDOMOD_DATE "07-28-2016"
 
 #define BD_INT				0
 #define BD_TIMEVAL			1
@@ -109,6 +130,7 @@ unsigned long ndomod_process_options=0;
 int ndomod_config_output_options=NDOMOD_CONFIG_DUMP_ALL;
 unsigned long ndomod_sink_buffer_slots=5000;
 ndomod_sink_buffer sinkbuf;
+int has_ver403_long_output = (CURRENT_OBJECT_STRUCTURE_VERSION >= 403);
 
 extern int errno;
 
@@ -139,6 +161,14 @@ extern int __nagios_object_structure_version;
 
 extern int use_ssl;
 
+#define NDOMOD_FREE_ESC_BUFFERS(ary, num) { \
+		int i = num; \
+		if (i < 0) \
+			i = 0; \
+		while (i--) { \
+			free(ary[i]); \
+			ary[i] = NULL; \
+		} }
 
 #define DEBUG_NDO 1
 
@@ -176,20 +206,13 @@ int nebmodule_init(int flags, char *args, void *handle){
         }
 
 
-/* this function gets called when the module is unloaded by the event broker */
-int nebmodule_deinit(int flags, int reason){
-	char temp_buffer[NDOMOD_MAX_BUFLEN];
-
-	/* do some shutdown stuff... */
+/* Shutdown and release our resources when the module is unloaded. */
+int nebmodule_deinit(int flags, int reason) {
+	char msg[] = "ndomod: Shutdown complete."; /* A message for the core log. */
 	ndomod_deinit();
-
-	/* log a message to the Nagios log file */
-	snprintf(temp_buffer,sizeof(temp_buffer)-1,"ndomod: Shutdown complete.\n");
-	temp_buffer[sizeof(temp_buffer)-1]='\x0';
-        ndomod_write_to_logs(temp_buffer,NSLOG_INFO_MESSAGE);
-
+	ndomod_write_to_logs(msg, NSLOG_INFO_MESSAGE);
 	return 0;
-        }
+}
 
 
 
@@ -202,7 +225,12 @@ int ndomod_check_nagios_object_version(void){
 	char temp_buffer[NDOMOD_MAX_BUFLEN];
 
 	if(__nagios_object_structure_version!=CURRENT_OBJECT_STRUCTURE_VERSION){
-
+		/* Temporary special case so newer ndomod can be used with slightly
+		 * older nagios in order to get longoutput on state changes */
+		if (CURRENT_OBJECT_STRUCTURE_VERSION >= 403 && __nagios_object_structure_version == 402) {
+			has_ver403_long_output = 0;
+			return NDO_OK;
+		}
 		snprintf(temp_buffer,sizeof(temp_buffer)-1,"ndomod: I've been compiled with support for revision %d of the internal Nagios object structures, but the Nagios daemon is currently using revision %d.  I'm going to unload so I don't cause any problems...\n",CURRENT_OBJECT_STRUCTURE_VERSION,__nagios_object_structure_version);
 		temp_buffer[sizeof(temp_buffer)-1]='\x0';
 		ndomod_write_to_logs(temp_buffer,NSLOG_INFO_MESSAGE);
@@ -268,24 +296,19 @@ int ndomod_init(void){
         }
 
 
-/* performs some shutdown stuff */
-int ndomod_deinit(void){
-
-	/* deregister callbacks */
+/* Shutdown and release our resources when the module is unloaded. */
+int ndomod_deinit(void) {
 	ndomod_deregister_callbacks();
 
-	/* save unprocessed data to buffer file */
 	ndomod_save_unprocessed_data(ndomod_buffer_file);
-
-	/* clear sink buffer */
 	ndomod_sink_buffer_deinit(&sinkbuf);
-
-	/* close data sink */
 	ndomod_goodbye_sink();
 	ndomod_close_sink();
 
+	ndomod_free_config_memory();
+
 	return NDO_OK;
-        }
+}
 
 
 
@@ -394,7 +417,7 @@ int ndomod_process_config_file(char *filename){
 
 	/* close the file */
 	ndo_mmap_fclose(thefile);
-	
+
 	return result;
         }
 
@@ -457,61 +480,63 @@ int ndomod_process_config_var(char *arg){
 	else if(!strcmp(var,"file_rotation_timeout"))
 		ndomod_sink_rotation_timeout=atoi(val);
 
-	/* add bitwise processing opts */ 
+	/* add bitwise processing opts */
 	else if(!strcmp(var,"process_data") && atoi(val)==1)
-		ndomod_process_options=ndomod_process_options + NDOMOD_PROCESS_PROCESS_DATA;
+		ndomod_process_options |= NDOMOD_PROCESS_PROCESS_DATA;
 	else if(!strcmp(var,"timed_event_data") && atoi(val)==1)
-		ndomod_process_options+=NDOMOD_PROCESS_TIMED_EVENT_DATA;
+		ndomod_process_options |= NDOMOD_PROCESS_TIMED_EVENT_DATA;
 	else if(!strcmp(var,"log_data") && atoi(val)==1)
-		ndomod_process_options+=NDOMOD_PROCESS_LOG_DATA;
+		ndomod_process_options |= NDOMOD_PROCESS_LOG_DATA;
 	else if(!strcmp(var,"system_command_data") && atoi(val)==1)
-		ndomod_process_options+=NDOMOD_PROCESS_SYSTEM_COMMAND_DATA;
+		ndomod_process_options |= NDOMOD_PROCESS_SYSTEM_COMMAND_DATA;
 	else if(!strcmp(var,"event_handler_data") && atoi(val)==1)
-		ndomod_process_options+=NDOMOD_PROCESS_EVENT_HANDLER_DATA;
+		ndomod_process_options |= NDOMOD_PROCESS_EVENT_HANDLER_DATA;
 	else if(!strcmp(var,"notification_data") && atoi(val)==1)
-		ndomod_process_options+=NDOMOD_PROCESS_NOTIFICATION_DATA;
+		ndomod_process_options |= NDOMOD_PROCESS_NOTIFICATION_DATA;
 	else if(!strcmp(var,"service_check_data") && atoi(val)==1)
-		ndomod_process_options+=NDOMOD_PROCESS_SERVICE_CHECK_DATA ;
+		ndomod_process_options |= NDOMOD_PROCESS_SERVICE_CHECK_DATA ;
 	else if(!strcmp(var,"host_check_data") && atoi(val)==1)
-		ndomod_process_options+=NDOMOD_PROCESS_HOST_CHECK_DATA;
+		ndomod_process_options |= NDOMOD_PROCESS_HOST_CHECK_DATA;
 	else if(!strcmp(var,"comment_data") && atoi(val)==1)
-		ndomod_process_options+=NDOMOD_PROCESS_COMMENT_DATA;
+		ndomod_process_options |= NDOMOD_PROCESS_COMMENT_DATA;
 	else if(!strcmp(var,"downtime_data") && atoi(val)==1)
-		ndomod_process_options+=NDOMOD_PROCESS_DOWNTIME_DATA;
+		ndomod_process_options |= NDOMOD_PROCESS_DOWNTIME_DATA;
 	else if(!strcmp(var,"flapping_data") && atoi(val)==1)
-		ndomod_process_options+=NDOMOD_PROCESS_FLAPPING_DATA;
+		ndomod_process_options |= NDOMOD_PROCESS_FLAPPING_DATA;
 	else if(!strcmp(var,"program_status_data") && atoi(val)==1)
-		ndomod_process_options+=NDOMOD_PROCESS_PROGRAM_STATUS_DATA;
+		ndomod_process_options |= NDOMOD_PROCESS_PROGRAM_STATUS_DATA;
 	else if(!strcmp(var,"host_status_data") && atoi(val)==1)
-		ndomod_process_options+=NDOMOD_PROCESS_HOST_STATUS_DATA;
+		ndomod_process_options |= NDOMOD_PROCESS_HOST_STATUS_DATA;
 	else if(!strcmp(var,"service_status_data") && atoi(val)==1)
-		ndomod_process_options+=NDOMOD_PROCESS_SERVICE_STATUS_DATA;
+		ndomod_process_options |= NDOMOD_PROCESS_SERVICE_STATUS_DATA;
 	else if(!strcmp(var,"adaptive_program_data") && atoi(val)==1)
-		ndomod_process_options+=NDOMOD_PROCESS_ADAPTIVE_PROGRAM_DATA;
+		ndomod_process_options |= NDOMOD_PROCESS_ADAPTIVE_PROGRAM_DATA;
 	else if(!strcmp(var,"adaptive_host_data") && atoi(val)==1)
-		ndomod_process_options+=NDOMOD_PROCESS_ADAPTIVE_HOST_DATA;
+		ndomod_process_options |= NDOMOD_PROCESS_ADAPTIVE_HOST_DATA;
 	else if(!strcmp(var,"adaptive_service_data") && atoi(val)==1)
-		ndomod_process_options+=NDOMOD_PROCESS_ADAPTIVE_SERVICE_DATA;
+		ndomod_process_options |= NDOMOD_PROCESS_ADAPTIVE_SERVICE_DATA;
 	else if(!strcmp(var,"external_command_data") && atoi(val)==1)
-		ndomod_process_options+=NDOMOD_PROCESS_EXTERNAL_COMMAND_DATA;
+		ndomod_process_options |= NDOMOD_PROCESS_EXTERNAL_COMMAND_DATA;
 	else if(!strcmp(var,"object_config_data") && atoi(val)==1)
-		ndomod_process_options+=NDOMOD_PROCESS_OBJECT_CONFIG_DATA;
+		ndomod_process_options |= NDOMOD_PROCESS_OBJECT_CONFIG_DATA;
 	else if(!strcmp(var,"main_config_data") && atoi(val)==1)
-		ndomod_process_options+=NDOMOD_PROCESS_MAIN_CONFIG_DATA;
+		ndomod_process_options |= NDOMOD_PROCESS_MAIN_CONFIG_DATA;
 	else if(!strcmp(var,"aggregated_status_data") && atoi(val)==1)
-		ndomod_process_options+=NDOMOD_PROCESS_AGGREGATED_STATUS_DATA;
+		ndomod_process_options |= NDOMOD_PROCESS_AGGREGATED_STATUS_DATA;
 	else if(!strcmp(var,"retention_data") && atoi(val)==1)
-		ndomod_process_options+=NDOMOD_PROCESS_RETENTION_DATA;
+		ndomod_process_options |= NDOMOD_PROCESS_RETENTION_DATA;
 	else if(!strcmp(var,"acknowledgement_data") && atoi(val)==1)
-		ndomod_process_options+=NDOMOD_PROCESS_ACKNOWLEDGEMENT_DATA;
+		ndomod_process_options |= NDOMOD_PROCESS_ACKNOWLEDGEMENT_DATA;
+	else if(!strcmp(var,"statechange_data") && atoi(val)==1)
+		ndomod_process_options |= NDOMOD_PROCESS_STATECHANGE_DATA ;
 	else if(!strcmp(var,"state_change_data") && atoi(val)==1)
-		ndomod_process_options+=NDOMOD_PROCESS_STATECHANGE_DATA ;
+		ndomod_process_options |= NDOMOD_PROCESS_STATECHANGE_DATA ;
 	else if(!strcmp(var,"contact_status_data") && atoi(val)==1)
-		ndomod_process_options+=NDOMOD_PROCESS_CONTACT_STATUS_DATA;
+		ndomod_process_options |= NDOMOD_PROCESS_CONTACT_STATUS_DATA;
 	else if(!strcmp(var,"adaptive_contact_data") && atoi(val)==1)
-		ndomod_process_options+=NDOMOD_PROCESS_ADAPTIVE_CONTACT_DATA ;
-		
-	/* data_processing_options will override individual values if set */ 
+		ndomod_process_options |= NDOMOD_PROCESS_ADAPTIVE_CONTACT_DATA ;
+
+	/* data_processing_options will override individual values if set */
 	else if(!strcmp(var,"data_processing_options")){
 		if(!strcmp(val,"-1"))
 			ndomod_process_options=NDOMOD_PROCESS_EVERYTHING;
@@ -532,17 +557,24 @@ int ndomod_process_config_var(char *arg){
 			else
 				use_ssl = 0;
 		}
-	}	
+	}
 
-	/* new processing options will be skipped if they're set to 0 
+	/* new processing options will be skipped if they're set to 0
 	else {
-		printf("Invalid ndomod config option: %s\n",var);  
+		printf("Invalid ndomod config option: %s\n",var);
 		return NDO_ERROR;
-	} */ 	
-		
-	return NDO_OK;
-        }
+	} */
 
+	return NDO_OK;
+}
+
+/* Frees any memory allocated for config options. */
+static void ndomod_free_config_memory(void) {
+	my_free(ndomod_instance_name);
+	my_free(ndomod_sink_name);
+	my_free(ndomod_sink_rotation_command);
+	my_free(ndomod_buffer_file);
+}
 
 
 /****************************************************************************/
@@ -1135,39 +1167,39 @@ int ndomod_sink_buffer_set_overflow(ndomod_sink_buffer *sbuf, unsigned long num)
 int ndomod_register_callbacks(void){
 	int priority=0;
 	int result=NDO_OK;
-	char *msg=NULL; 
+	char *msg=NULL;
 
-	//only register for events that we're going to process 
+	//only register for events that we're going to process
 	if(result==NDO_OK && (ndomod_process_options & NDOMOD_PROCESS_PROCESS_DATA)) {
 		result=neb_register_callback(NEBCALLBACK_PROCESS_DATA,ndomod_module_handle,priority,ndomod_broker_data);
 		asprintf(&msg,"ndomod registered for process data\n");
 		ndomod_write_to_logs(msg,NSLOG_INFO_MESSAGE);
-		}	
+		}
 	if(result==NDO_OK && (ndomod_process_options & NDOMOD_PROCESS_TIMED_EVENT_DATA)) {
 		result=neb_register_callback(NEBCALLBACK_TIMED_EVENT_DATA,ndomod_module_handle,priority,ndomod_broker_data);
 		asprintf(&msg,"ndomod registered for timed event data\n");
 		ndomod_write_to_logs(msg,NSLOG_INFO_MESSAGE);
-		}	
+		}
 	if(result==NDO_OK && (ndomod_process_options & NDOMOD_PROCESS_LOG_DATA)){
 		result=neb_register_callback(NEBCALLBACK_LOG_DATA,ndomod_module_handle,priority,ndomod_broker_data);
 		asprintf(&msg,"ndomod registered for log data\'");
 		ndomod_write_to_logs(msg,NSLOG_INFO_MESSAGE);
-		}	
+		}
 	if(result==NDO_OK && (ndomod_process_options & NDOMOD_PROCESS_SYSTEM_COMMAND_DATA)) {
 		result=neb_register_callback(NEBCALLBACK_SYSTEM_COMMAND_DATA,ndomod_module_handle,priority,ndomod_broker_data);
 		asprintf(&msg,"ndomod registered for system command data\'");
 		ndomod_write_to_logs(msg,NSLOG_INFO_MESSAGE);
-		}	
+		}
 	if(result==NDO_OK && (ndomod_process_options & NDOMOD_PROCESS_EVENT_HANDLER_DATA)) {
 		result=neb_register_callback(NEBCALLBACK_EVENT_HANDLER_DATA,ndomod_module_handle,priority,ndomod_broker_data);
 		asprintf(&msg,"ndomod registered for event handler data\'");
 		ndomod_write_to_logs(msg,NSLOG_INFO_MESSAGE);
-		}	
+		}
 	if(result==NDO_OK && (ndomod_process_options & NDOMOD_PROCESS_NOTIFICATION_DATA)) {
 		result=neb_register_callback(NEBCALLBACK_NOTIFICATION_DATA,ndomod_module_handle,priority,ndomod_broker_data);
 		asprintf(&msg,"ndomod registered for notification data\'");
 		ndomod_write_to_logs(msg,NSLOG_INFO_MESSAGE);
-		}	
+		}
 	if(result==NDO_OK && (ndomod_process_options & NDOMOD_PROCESS_SERVICE_CHECK_DATA)){
 		result=neb_register_callback(NEBCALLBACK_SERVICE_CHECK_DATA,ndomod_module_handle,priority,ndomod_broker_data);
 		asprintf(&msg,"ndomod registered for service check data\'");
@@ -1271,7 +1303,7 @@ int ndomod_register_callbacks(void){
 		}
 #endif
 
-	free(msg); 
+	free(msg);
 
 	return result;
         }
@@ -1338,13 +1370,13 @@ static void ndomod_broker_data_serialize(ndo_dbuf *dbufp, int datatype,
 	for(x = 0, bdp = bd; x < bdsize; x++, bdp++) {
 		switch(bdp->datatype) {
 		case BD_INT:
-			snprintf(temp, sizeof(temp)-1, "\n%d=%d", bdp->key, 
+			snprintf(temp, sizeof(temp)-1, "\n%d=%d", bdp->key,
 					bdp->value.integer);
 			temp[sizeof(temp)-1]='\x0';
 			ndo_dbuf_strcat(dbufp, temp);
 			break;
 		case BD_TIMEVAL:
-			snprintf(temp, sizeof(temp)-1, "\n%d=%ld.%ld", bdp->key, 
+			snprintf(temp, sizeof(temp)-1, "\n%d=%ld.%06ld", bdp->key,
 					bdp->value.timestamp.tv_sec, bdp->value.timestamp.tv_usec);
 			temp[sizeof(temp)-1]='\x0';
 			ndo_dbuf_strcat(dbufp, temp);
@@ -1356,13 +1388,13 @@ static void ndomod_broker_data_serialize(ndo_dbuf *dbufp, int datatype,
 			ndo_dbuf_strcat(dbufp, bdp->value.string);
 			break;
 		case BD_UNSIGNED_LONG:
-			snprintf(temp, sizeof(temp)-1, "\n%d=%lu", bdp->key, 
+			snprintf(temp, sizeof(temp)-1, "\n%d=%lu", bdp->key,
 					bdp->value.unsigned_long);
 			temp[sizeof(temp)-1]='\x0';
 			ndo_dbuf_strcat(dbufp, temp);
 			break;
 		case BD_FLOAT:
-			snprintf(temp, sizeof(temp)-1, "\n%d=%.5lf", bdp->key, 
+			snprintf(temp, sizeof(temp)-1, "\n%d=%.5lf", bdp->key,
 					bdp->value.floating_point);
 			temp[sizeof(temp)-1]='\x0';
 			ndo_dbuf_strcat(dbufp, temp);
@@ -1394,7 +1426,7 @@ static void ndomod_customvars_serialize(customvariablesmember *customvars,
 
 		snprintf(temp_buffer, sizeof(temp_buffer)-1, "\n%d=%s:%d:%s",
 				NDO_DATA_CUSTOMVARIABLE, (NULL == cvname) ? "" : cvname,
-				temp_customvar->has_been_modified, 
+				temp_customvar->has_been_modified,
 				(NULL == cvvalue ) ? "" : cvvalue);
 
 		temp_buffer[sizeof(temp_buffer)-1] = '\x0';
@@ -1408,18 +1440,18 @@ static void ndomod_customvars_serialize(customvariablesmember *customvars,
 
 static void ndomod_contactgroups_serialize(contactgroupsmember *contactgroups,
 	ndo_dbuf *dbufp) {
-		
+
 	contactgroupsmember *temp_contactgroupsmember = NULL;
 	char *groupname;
 	char temp_buffer[NDOMOD_MAX_BUFLEN];
 
-	for(temp_contactgroupsmember = contactgroups; 
+	for(temp_contactgroupsmember = contactgroups;
 			temp_contactgroupsmember != NULL;
 			temp_contactgroupsmember = temp_contactgroupsmember->next) {
 
 		groupname = ndo_escape_buffer(temp_contactgroupsmember->group_name);
 
-		snprintf(temp_buffer, sizeof(temp_buffer)-1,"\n%d=%s", 
+		snprintf(temp_buffer, sizeof(temp_buffer)-1,"\n%d=%s",
 				NDO_DATA_CONTACTGROUP ,(NULL == groupname) ? "" : groupname);
 		temp_buffer[sizeof(temp_buffer)-1] = '\x0';
 		ndo_dbuf_strcat(dbufp, temp_buffer);
@@ -1441,7 +1473,7 @@ static void ndomod_contacts_serialize(contactgroupmember *contacts,
 
 		contact_name = ndo_escape_buffer(temp_contactgroupmember->contact_name);
 
-		snprintf(temp_buffer, sizeof(temp_buffer)-1, "\n%d=%s", varnum, 
+		snprintf(temp_buffer, sizeof(temp_buffer)-1, "\n%d=%s", varnum,
 				(NULL == contact_name) ? "" : contact_name);
 		temp_buffer[sizeof(temp_buffer)-1] = '\x0';
 		ndo_dbuf_strcat(dbufp, temp_buffer);
@@ -1463,7 +1495,7 @@ static void ndomod_contacts_serialize(contactsmember *contacts,
 
 		contact_name = ndo_escape_buffer(temp_contactsmember->contact_name);
 
-		snprintf(temp_buffer, sizeof(temp_buffer)-1, "\n%d=%s", varnum, 
+		snprintf(temp_buffer, sizeof(temp_buffer)-1, "\n%d=%s", varnum,
 				(NULL == contact_name) ? "" : contact_name);
 		temp_buffer[sizeof(temp_buffer)-1] = '\x0';
 		ndo_dbuf_strcat(dbufp, temp_buffer);
@@ -1474,7 +1506,7 @@ static void ndomod_contacts_serialize(contactsmember *contacts,
 #endif
 
 #ifdef BUILD_NAGIOS_2X
-static void ndomod_hosts_serialize_2x(hostgroupmember *hosts, ndo_dbuf *dbufp, 
+static void ndomod_hosts_serialize_2x(hostgroupmember *hosts, ndo_dbuf *dbufp,
 		int varnum) {
 
 	hostgroupmember *temp_hostgroupmember=NULL;
@@ -1496,7 +1528,7 @@ static void ndomod_hosts_serialize_2x(hostgroupmember *hosts, ndo_dbuf *dbufp,
 	}
 #endif
 
-static void ndomod_hosts_serialize(hostsmember *hosts, ndo_dbuf *dbufp, 
+static void ndomod_hosts_serialize(hostsmember *hosts, ndo_dbuf *dbufp,
 		int varnum) {
 
 	hostsmember *temp_hostsmember = NULL;
@@ -1518,7 +1550,7 @@ static void ndomod_hosts_serialize(hostsmember *hosts, ndo_dbuf *dbufp,
 	}
 
 #ifdef BUILD_NAGIOS_2X
-static void ndomod_services_serialize(servicegroupmember *services, 
+static void ndomod_services_serialize(servicegroupmember *services,
 		ndo_dbuf *dbufp, int varnum) {
 
 	servicegroupmember *temp_servicegroupmember = NULL;
@@ -1604,7 +1636,11 @@ int ndomod_broker_data(int event_type, void *data){
 	char *es[9];
 	int x=0;
 	scheduled_downtime *temp_downtime=NULL;
+#if ( defined( BUILD_NAGIOS_2X) || defined( BUILD_NAGIOS_3X))
 	comment *temp_comment=NULL;
+#else
+	nagios_comment *temp_comment=NULL;
+#endif
 	nebstruct_process_data *procdata=NULL;
 	nebstruct_timed_event_data *eventdata=NULL;
 	nebstruct_log_data *logdata=NULL;
@@ -1642,7 +1678,7 @@ int ndomod_broker_data(int event_type, void *data){
 
 	if(data==NULL)
 		return 0;
-		
+
 	/* should we handle this type of data? */
 	switch(event_type){
 
@@ -1771,6 +1807,8 @@ int ndomod_broker_data(int event_type, void *data){
 
 	case NEBCALLBACK_PROCESS_DATA:
 
+		ndomod_write_active_objects();
+
 		procdata=(nebstruct_process_data *)data;
 
 		{
@@ -1778,19 +1816,19 @@ int ndomod_broker_data(int event_type, void *data){
 				{ NDO_DATA_TYPE, BD_INT, { .integer = procdata->type }},
 				{ NDO_DATA_FLAGS, BD_INT, { .integer = procdata->flags }},
 				{ NDO_DATA_ATTRIBUTES, BD_INT, { .integer = procdata->attr }},
-				{ NDO_DATA_TIMESTAMP, BD_TIMEVAL, 
+				{ NDO_DATA_TIMESTAMP, BD_TIMEVAL,
 						{ .timestamp = procdata->timestamp }},
 				{ NDO_DATA_PROGRAMNAME, BD_STRING, { .string = "Nagios" }},
-				{ NDO_DATA_PROGRAMVERSION, BD_STRING, 
+				{ NDO_DATA_PROGRAMVERSION, BD_STRING,
 						{ .string = get_program_version() }},
-				{ NDO_DATA_PROGRAMDATE, BD_STRING, 
+				{ NDO_DATA_PROGRAMDATE, BD_STRING,
 						{ .string = get_program_modification_date() }},
-				{ NDO_DATA_PROCESSID, BD_UNSIGNED_LONG, 
+				{ NDO_DATA_PROCESSID, BD_UNSIGNED_LONG,
 						{ .unsigned_long = (unsigned long)getpid() }}
 				};
 
-			ndomod_broker_data_serialize(&dbuf, NDO_API_PROCESSDATA, 
-					process_data, 
+			ndomod_broker_data_serialize(&dbuf, NDO_API_PROCESSDATA,
+					process_data,
 					sizeof(process_data) / sizeof(process_data[ 0]), TRUE);
 		}
 
@@ -1812,24 +1850,24 @@ int ndomod_broker_data(int event_type, void *data){
 				struct ndo_broker_data timed_event_data[] = {
 					{ NDO_DATA_TYPE, BD_INT, { .integer = eventdata->type }},
 					{ NDO_DATA_FLAGS, BD_INT, { .integer = eventdata->flags }},
-					{ NDO_DATA_ATTRIBUTES, BD_INT, 
+					{ NDO_DATA_ATTRIBUTES, BD_INT,
 							{ .integer = eventdata->attr }},
-					{ NDO_DATA_TIMESTAMP, BD_TIMEVAL, 
+					{ NDO_DATA_TIMESTAMP, BD_TIMEVAL,
 							{ .timestamp = eventdata->timestamp }},
-					{ NDO_DATA_EVENTTYPE, BD_INT, 
+					{ NDO_DATA_EVENTTYPE, BD_INT,
 							{ .integer = eventdata->event_type }},
-					{ NDO_DATA_RECURRING, BD_INT, 
+					{ NDO_DATA_RECURRING, BD_INT,
 							{ .integer = eventdata->recurring }},
-					{ NDO_DATA_RUNTIME, BD_UNSIGNED_LONG, { .unsigned_long = 
+					{ NDO_DATA_RUNTIME, BD_UNSIGNED_LONG, { .unsigned_long =
 							(unsigned long)eventdata->run_time }},
-					{ NDO_DATA_HOST, BD_STRING, 
+					{ NDO_DATA_HOST, BD_STRING,
 							{ .string = (es[0]==NULL) ? "" : es[0] }},
 					{ NDO_DATA_SERVICE, BD_STRING,
 							{ .string = (es[1]==NULL) ? "" : es[1] }}
 					};
 
-				ndomod_broker_data_serialize(&dbuf, NDO_API_TIMEDEVENTDATA, 
-						timed_event_data, 
+				ndomod_broker_data_serialize(&dbuf, NDO_API_TIMEDEVENTDATA,
+						timed_event_data,
 						sizeof(timed_event_data) / sizeof(timed_event_data[ 0]),
 						TRUE);
 			}
@@ -1845,22 +1883,22 @@ int ndomod_broker_data(int event_type, void *data){
 				struct ndo_broker_data timed_event_data[] = {
 					{ NDO_DATA_TYPE, BD_INT, { .integer = eventdata->type }},
 					{ NDO_DATA_FLAGS, BD_INT, { .integer = eventdata->flags }},
-					{ NDO_DATA_ATTRIBUTES, BD_INT, 
+					{ NDO_DATA_ATTRIBUTES, BD_INT,
 							{ .integer = eventdata->attr }},
-					{ NDO_DATA_TIMESTAMP, BD_TIMEVAL, 
+					{ NDO_DATA_TIMESTAMP, BD_TIMEVAL,
 							{ .timestamp = eventdata->timestamp }},
-					{ NDO_DATA_EVENTTYPE, BD_INT, 
+					{ NDO_DATA_EVENTTYPE, BD_INT,
 							{ .integer = eventdata->event_type }},
-					{ NDO_DATA_RECURRING, BD_INT, 
+					{ NDO_DATA_RECURRING, BD_INT,
 							{ .integer = eventdata->recurring }},
-					{ NDO_DATA_RUNTIME, BD_UNSIGNED_LONG, { .unsigned_long = 
+					{ NDO_DATA_RUNTIME, BD_UNSIGNED_LONG, { .unsigned_long =
 							(unsigned long)eventdata->run_time }},
-					{ NDO_DATA_HOST, BD_STRING, 
+					{ NDO_DATA_HOST, BD_STRING,
 							{ .string = (es[0]==NULL) ? "" : es[0] }}
 					};
 
-				ndomod_broker_data_serialize(&dbuf, NDO_API_TIMEDEVENTDATA, 
-						timed_event_data, 
+				ndomod_broker_data_serialize(&dbuf, NDO_API_TIMEDEVENTDATA,
+						timed_event_data,
 						sizeof(timed_event_data) / sizeof(timed_event_data[ 0]),
 						TRUE);
 			}
@@ -1879,24 +1917,24 @@ int ndomod_broker_data(int event_type, void *data){
 				struct ndo_broker_data timed_event_data[] = {
 					{ NDO_DATA_TYPE, BD_INT, { .integer = eventdata->type }},
 					{ NDO_DATA_FLAGS, BD_INT, { .integer = eventdata->flags }},
-					{ NDO_DATA_ATTRIBUTES, BD_INT, 
+					{ NDO_DATA_ATTRIBUTES, BD_INT,
 							{ .integer = eventdata->attr }},
-					{ NDO_DATA_TIMESTAMP, BD_TIMEVAL, 
+					{ NDO_DATA_TIMESTAMP, BD_TIMEVAL,
 							{ .timestamp = eventdata->timestamp }},
-					{ NDO_DATA_EVENTTYPE, BD_INT, 
+					{ NDO_DATA_EVENTTYPE, BD_INT,
 							{ .integer = eventdata->event_type }},
-					{ NDO_DATA_RECURRING, BD_INT, 
+					{ NDO_DATA_RECURRING, BD_INT,
 							{ .integer = eventdata->recurring }},
-					{ NDO_DATA_RUNTIME, BD_UNSIGNED_LONG, { .unsigned_long = 
+					{ NDO_DATA_RUNTIME, BD_UNSIGNED_LONG, { .unsigned_long =
 							(unsigned long)eventdata->run_time }},
-					{ NDO_DATA_HOST, BD_STRING, 
+					{ NDO_DATA_HOST, BD_STRING,
 							{ .string = (es[0]==NULL) ? "" : es[0] }},
 					{ NDO_DATA_SERVICE, BD_STRING,
 							{ .string = (es[1]==NULL) ? "" : es[1] }}
 					};
 
-				ndomod_broker_data_serialize(&dbuf, NDO_API_TIMEDEVENTDATA, 
-						timed_event_data, 
+				ndomod_broker_data_serialize(&dbuf, NDO_API_TIMEDEVENTDATA,
+						timed_event_data,
 						sizeof(timed_event_data) / sizeof(timed_event_data[ 0]),
 						TRUE);
 			}
@@ -1909,20 +1947,20 @@ int ndomod_broker_data(int event_type, void *data){
 				struct ndo_broker_data timed_event_data[] = {
 					{ NDO_DATA_TYPE, BD_INT, { .integer = eventdata->type }},
 					{ NDO_DATA_FLAGS, BD_INT, { .integer = eventdata->flags }},
-					{ NDO_DATA_ATTRIBUTES, BD_INT, 
+					{ NDO_DATA_ATTRIBUTES, BD_INT,
 							{ .integer = eventdata->attr }},
-					{ NDO_DATA_TIMESTAMP, BD_TIMEVAL, 
+					{ NDO_DATA_TIMESTAMP, BD_TIMEVAL,
 							{ .timestamp = eventdata->timestamp }},
-					{ NDO_DATA_EVENTTYPE, BD_INT, 
+					{ NDO_DATA_EVENTTYPE, BD_INT,
 							{ .integer = eventdata->event_type }},
-					{ NDO_DATA_RECURRING, BD_INT, 
+					{ NDO_DATA_RECURRING, BD_INT,
 							{ .integer = eventdata->recurring }},
-					{ NDO_DATA_RUNTIME, BD_UNSIGNED_LONG, { .unsigned_long = 
+					{ NDO_DATA_RUNTIME, BD_UNSIGNED_LONG, { .unsigned_long =
 							(unsigned long)eventdata->run_time }}
 					};
 
-				ndomod_broker_data_serialize(&dbuf, NDO_API_TIMEDEVENTDATA, 
-						timed_event_data, 
+				ndomod_broker_data_serialize(&dbuf, NDO_API_TIMEDEVENTDATA,
+						timed_event_data,
 						sizeof(timed_event_data) / sizeof(timed_event_data[ 0]),
 						TRUE);
 			}
@@ -1940,18 +1978,18 @@ int ndomod_broker_data(int event_type, void *data){
 			struct ndo_broker_data log_data[] = {
 				{ NDO_DATA_TYPE, BD_INT, { .integer = logdata->type }},
 				{ NDO_DATA_FLAGS, BD_INT, { .integer = logdata->flags }},
-				{ NDO_DATA_ATTRIBUTES, BD_INT, 
+				{ NDO_DATA_ATTRIBUTES, BD_INT,
 						{ .integer = logdata->attr }},
-				{ NDO_DATA_TIMESTAMP, BD_TIMEVAL, 
+				{ NDO_DATA_TIMESTAMP, BD_TIMEVAL,
 						{ .timestamp = logdata->timestamp }},
-				{ NDO_DATA_LOGENTRYTIME, BD_UNSIGNED_LONG, 
+				{ NDO_DATA_LOGENTRYTIME, BD_UNSIGNED_LONG,
 						{ .unsigned_long = logdata->entry_time }},
-				{ NDO_DATA_LOGENTRYTYPE, BD_INT, 
+				{ NDO_DATA_LOGENTRYTYPE, BD_INT,
 						{ .integer = logdata->data_type }},
 				{ NDO_DATA_LOGENTRY, BD_STRING, { .string = logdata->data }}
 				};
 
-			ndomod_broker_data_serialize(&dbuf, NDO_API_LOGDATA, log_data, 
+			ndomod_broker_data_serialize(&dbuf, NDO_API_LOGDATA, log_data,
 					sizeof(log_data) / sizeof(log_data[ 0]), TRUE);
 		}
 
@@ -1969,31 +2007,31 @@ int ndomod_broker_data(int event_type, void *data){
 			struct ndo_broker_data system_command_data[] = {
 				{ NDO_DATA_TYPE, BD_INT, { .integer = cmddata->type }},
 				{ NDO_DATA_FLAGS, BD_INT, { .integer = cmddata->flags }},
-				{ NDO_DATA_ATTRIBUTES, BD_INT, 
+				{ NDO_DATA_ATTRIBUTES, BD_INT,
 						{ .integer = cmddata->attr }},
-				{ NDO_DATA_TIMESTAMP, BD_TIMEVAL, 
+				{ NDO_DATA_TIMESTAMP, BD_TIMEVAL,
 						{ .timestamp = cmddata->timestamp }},
-				{ NDO_DATA_STARTTIME, BD_TIMEVAL, 
+				{ NDO_DATA_STARTTIME, BD_TIMEVAL,
 						{ .timestamp = cmddata->start_time }},
-				{ NDO_DATA_ENDTIME, BD_TIMEVAL, 
+				{ NDO_DATA_ENDTIME, BD_TIMEVAL,
 						{ .timestamp = cmddata->end_time }},
 				{ NDO_DATA_TIMEOUT, BD_INT, { .integer = cmddata->timeout }},
-				{ NDO_DATA_COMMANDLINE, BD_STRING, 
+				{ NDO_DATA_COMMANDLINE, BD_STRING,
 						{ .string = (es[0]==NULL) ? "" : es[0] }},
-				{ NDO_DATA_EARLYTIMEOUT, BD_INT, 
+				{ NDO_DATA_EARLYTIMEOUT, BD_INT,
 						{ .integer = cmddata->early_timeout }},
-				{ NDO_DATA_EXECUTIONTIME, BD_FLOAT, 
+				{ NDO_DATA_EXECUTIONTIME, BD_FLOAT,
 						{ .floating_point = cmddata->execution_time }},
-				{ NDO_DATA_RETURNCODE, BD_INT, 
+				{ NDO_DATA_RETURNCODE, BD_INT,
 						{ .integer = cmddata->return_code }},
-				{ NDO_DATA_OUTPUT, BD_STRING, 
+				{ NDO_DATA_OUTPUT, BD_STRING,
 						{ .string = (es[1]==NULL) ? "" : es[1] }},
-				{ NDO_DATA_LONGOUTPUT, BD_STRING, 
+				{ NDO_DATA_LONGOUTPUT, BD_STRING,
 						{ .string = (es[2]==NULL) ? "" : es[2] }}
 				};
 
-			ndomod_broker_data_serialize(&dbuf, NDO_API_SYSTEMCOMMANDDATA, 
-					system_command_data, sizeof(system_command_data) / 
+			ndomod_broker_data_serialize(&dbuf, NDO_API_SYSTEMCOMMANDDATA,
+					system_command_data, sizeof(system_command_data) /
 					sizeof(system_command_data[ 0]), TRUE);
 		}
 
@@ -2016,42 +2054,42 @@ int ndomod_broker_data(int event_type, void *data){
 			struct ndo_broker_data event_handler_data[] = {
 				{ NDO_DATA_TYPE, BD_INT, { .integer = ehanddata->type }},
 				{ NDO_DATA_FLAGS, BD_INT, { .integer = ehanddata->flags }},
-				{ NDO_DATA_ATTRIBUTES, BD_INT, 
+				{ NDO_DATA_ATTRIBUTES, BD_INT,
 						{ .integer = ehanddata->attr }},
-				{ NDO_DATA_TIMESTAMP, BD_TIMEVAL, 
+				{ NDO_DATA_TIMESTAMP, BD_TIMEVAL,
 						{ .timestamp = ehanddata->timestamp }},
-				{ NDO_DATA_HOST, BD_STRING, 
+				{ NDO_DATA_HOST, BD_STRING,
 						{ .string = (es[0]==NULL) ? "" : es[0] }},
-				{ NDO_DATA_SERVICE, BD_STRING, 
+				{ NDO_DATA_SERVICE, BD_STRING,
 						{ .string = (es[1]==NULL) ? "" : es[1] }},
-				{ NDO_DATA_STATETYPE, BD_INT, 
+				{ NDO_DATA_STATETYPE, BD_INT,
 						{ .integer = ehanddata->state_type }},
 				{ NDO_DATA_STATE, BD_INT, { .integer = ehanddata->state }},
-				{ NDO_DATA_STARTTIME, BD_TIMEVAL, 
+				{ NDO_DATA_STARTTIME, BD_TIMEVAL,
 						{ .timestamp = ehanddata->start_time }},
-				{ NDO_DATA_ENDTIME, BD_TIMEVAL, 
+				{ NDO_DATA_ENDTIME, BD_TIMEVAL,
 						{ .timestamp = ehanddata->end_time }},
 				{ NDO_DATA_TIMEOUT, BD_INT, { .integer = ehanddata->timeout }},
-				{ NDO_DATA_COMMANDNAME, BD_STRING, 
+				{ NDO_DATA_COMMANDNAME, BD_STRING,
 						{ .string = (es[2]==NULL) ? "" : es[2] }},
-				{ NDO_DATA_COMMANDARGS, BD_STRING, 
+				{ NDO_DATA_COMMANDARGS, BD_STRING,
 						{ .string = (es[3]==NULL) ? "" : es[3] }},
-				{ NDO_DATA_COMMANDLINE, BD_STRING, 
+				{ NDO_DATA_COMMANDLINE, BD_STRING,
 						{ .string = (es[4]==NULL) ? "" : es[4] }},
-				{ NDO_DATA_EARLYTIMEOUT, BD_INT, 
+				{ NDO_DATA_EARLYTIMEOUT, BD_INT,
 						{ .integer = ehanddata->early_timeout }},
-				{ NDO_DATA_EXECUTIONTIME, BD_FLOAT, 
+				{ NDO_DATA_EXECUTIONTIME, BD_FLOAT,
 						{ .floating_point = ehanddata->execution_time }},
-				{ NDO_DATA_RETURNCODE, BD_INT, 
+				{ NDO_DATA_RETURNCODE, BD_INT,
 						{ .integer = ehanddata->return_code }},
-				{ NDO_DATA_OUTPUT, BD_STRING, 
+				{ NDO_DATA_OUTPUT, BD_STRING,
 						{ .string = (es[5]==NULL) ? "" : es[5] }},
-				{ NDO_DATA_LONGOUTPUT, BD_STRING, 
+				{ NDO_DATA_LONGOUTPUT, BD_STRING,
 						{ .string = (es[6]==NULL) ? "" : es[6] }}
 				};
 
-			ndomod_broker_data_serialize(&dbuf, NDO_API_EVENTHANDLERDATA, 
-					event_handler_data, 
+			ndomod_broker_data_serialize(&dbuf, NDO_API_EVENTHANDLERDATA,
+					event_handler_data,
 					sizeof(event_handler_data) / sizeof(event_handler_data[ 0]),
 					TRUE);
 		}
@@ -2074,39 +2112,39 @@ int ndomod_broker_data(int event_type, void *data){
 			struct ndo_broker_data notification_data[] = {
 				{ NDO_DATA_TYPE, BD_INT, { .integer = notdata->type }},
 				{ NDO_DATA_FLAGS, BD_INT, { .integer = notdata->flags }},
-				{ NDO_DATA_ATTRIBUTES, BD_INT, 
+				{ NDO_DATA_ATTRIBUTES, BD_INT,
 						{ .integer = notdata->attr }},
-				{ NDO_DATA_TIMESTAMP, BD_TIMEVAL, 
+				{ NDO_DATA_TIMESTAMP, BD_TIMEVAL,
 						{ .timestamp = notdata->timestamp }},
-				{ NDO_DATA_NOTIFICATIONTYPE, BD_INT, 
+				{ NDO_DATA_NOTIFICATIONTYPE, BD_INT,
 						{ .integer = notdata->notification_type }},
-				{ NDO_DATA_STARTTIME, BD_TIMEVAL, 
+				{ NDO_DATA_STARTTIME, BD_TIMEVAL,
 						{ .timestamp = notdata->start_time }},
-				{ NDO_DATA_ENDTIME, BD_TIMEVAL, 
+				{ NDO_DATA_ENDTIME, BD_TIMEVAL,
 						{ .timestamp = notdata->end_time }},
-				{ NDO_DATA_HOST, BD_STRING, 
+				{ NDO_DATA_HOST, BD_STRING,
 						{ .string = (es[0]==NULL) ? "" : es[0] }},
-				{ NDO_DATA_SERVICE, BD_STRING, 
+				{ NDO_DATA_SERVICE, BD_STRING,
 						{ .string = (es[1]==NULL) ? "" : es[1] }},
-				{ NDO_DATA_NOTIFICATIONREASON, BD_INT, 
+				{ NDO_DATA_NOTIFICATIONREASON, BD_INT,
 						{ .integer = notdata->reason_type }},
 				{ NDO_DATA_STATE, BD_INT, { .integer = notdata->state }},
-				{ NDO_DATA_OUTPUT, BD_STRING, 
+				{ NDO_DATA_OUTPUT, BD_STRING,
 						{ .string = (es[2]==NULL) ? "" : es[2] }},
-				{ NDO_DATA_LONGOUTPUT, BD_STRING, 
+				{ NDO_DATA_LONGOUTPUT, BD_STRING,
 						{ .string = (es[3]==NULL) ? "" : es[3] }},
-				{ NDO_DATA_ACKAUTHOR, BD_STRING, 
+				{ NDO_DATA_ACKAUTHOR, BD_STRING,
 						{ .string = (es[4]==NULL) ? "" : es[4] }},
-				{ NDO_DATA_ACKDATA, BD_STRING, 
+				{ NDO_DATA_ACKDATA, BD_STRING,
 						{ .string = (es[5]==NULL) ? "" : es[5] }},
-				{ NDO_DATA_ESCALATED, BD_INT, 
+				{ NDO_DATA_ESCALATED, BD_INT,
 						{ .integer = notdata->escalated }},
-				{ NDO_DATA_CONTACTSNOTIFIED, BD_INT, 
+				{ NDO_DATA_CONTACTSNOTIFIED, BD_INT,
 						{ .integer = notdata->contacts_notified }}
 				};
 
-			ndomod_broker_data_serialize(&dbuf, NDO_API_NOTIFICATIONDATA, 
-					notification_data, 
+			ndomod_broker_data_serialize(&dbuf, NDO_API_NOTIFICATIONDATA,
+					notification_data,
 					sizeof(notification_data) / sizeof(notification_data[ 0]),
 					TRUE);
 		}
@@ -2114,7 +2152,7 @@ int ndomod_broker_data(int event_type, void *data){
 		break;
 
 	case NEBCALLBACK_SERVICE_CHECK_DATA:
-	
+
 		scdata=(nebstruct_service_check_data *)data;
 
 		/* Nagios XI MOD */
@@ -2137,52 +2175,52 @@ int ndomod_broker_data(int event_type, void *data){
 			struct ndo_broker_data service_check_data[] = {
 				{ NDO_DATA_TYPE, BD_INT, { .integer = scdata->type }},
 				{ NDO_DATA_FLAGS, BD_INT, { .integer = scdata->flags }},
-				{ NDO_DATA_ATTRIBUTES, BD_INT, 
+				{ NDO_DATA_ATTRIBUTES, BD_INT,
 						{ .integer = scdata->attr }},
-				{ NDO_DATA_TIMESTAMP, BD_TIMEVAL, 
+				{ NDO_DATA_TIMESTAMP, BD_TIMEVAL,
 						{ .timestamp = scdata->timestamp }},
-				{ NDO_DATA_HOST, BD_STRING, 
+				{ NDO_DATA_HOST, BD_STRING,
 						{ .string = (es[0]==NULL) ? "" : es[0] }},
-				{ NDO_DATA_SERVICE, BD_STRING, 
+				{ NDO_DATA_SERVICE, BD_STRING,
 						{ .string = (es[1]==NULL) ? "" : es[1] }},
-				{ NDO_DATA_CHECKTYPE, BD_INT, 
+				{ NDO_DATA_CHECKTYPE, BD_INT,
 						{ .integer = scdata->check_type }},
-				{ NDO_DATA_CURRENTCHECKATTEMPT, BD_INT, 
+				{ NDO_DATA_CURRENTCHECKATTEMPT, BD_INT,
 						{ .integer = scdata->current_attempt }},
-				{ NDO_DATA_MAXCHECKATTEMPTS, BD_INT, 
+				{ NDO_DATA_MAXCHECKATTEMPTS, BD_INT,
 						{ .integer = scdata->max_attempts }},
-				{ NDO_DATA_STATETYPE, BD_INT, 
+				{ NDO_DATA_STATETYPE, BD_INT,
 						{ .integer = scdata->state_type }},
 				{ NDO_DATA_STATE, BD_INT, { .integer = scdata->state }},
 				{ NDO_DATA_TIMEOUT, BD_INT, { .integer = scdata->timeout }},
-				{ NDO_DATA_COMMANDNAME, BD_STRING, 
+				{ NDO_DATA_COMMANDNAME, BD_STRING,
 						{ .string = (es[2]==NULL) ? "" : es[2] }},
-				{ NDO_DATA_COMMANDARGS, BD_STRING, 
+				{ NDO_DATA_COMMANDARGS, BD_STRING,
 						{ .string = (es[3]==NULL) ? "" : es[3] }},
-				{ NDO_DATA_COMMANDLINE, BD_STRING, 
+				{ NDO_DATA_COMMANDLINE, BD_STRING,
 						{ .string = (es[4]==NULL) ? "" : es[4] }},
-				{ NDO_DATA_STARTTIME, BD_TIMEVAL, 
+				{ NDO_DATA_STARTTIME, BD_TIMEVAL,
 						{ .timestamp = scdata->start_time }},
-				{ NDO_DATA_ENDTIME, BD_TIMEVAL, 
+				{ NDO_DATA_ENDTIME, BD_TIMEVAL,
 						{ .timestamp = scdata->end_time }},
-				{ NDO_DATA_EARLYTIMEOUT, BD_INT, 
+				{ NDO_DATA_EARLYTIMEOUT, BD_INT,
 						{ .integer = scdata->early_timeout }},
-				{ NDO_DATA_EXECUTIONTIME, BD_FLOAT, 
+				{ NDO_DATA_EXECUTIONTIME, BD_FLOAT,
 						{ .floating_point = scdata->execution_time }},
-				{ NDO_DATA_LATENCY, BD_FLOAT, 
+				{ NDO_DATA_LATENCY, BD_FLOAT,
 						{ .floating_point = scdata->latency }},
-				{ NDO_DATA_RETURNCODE, BD_INT, 
+				{ NDO_DATA_RETURNCODE, BD_INT,
 						{ .integer = scdata->return_code }},
-				{ NDO_DATA_OUTPUT, BD_STRING, 
+				{ NDO_DATA_OUTPUT, BD_STRING,
 						{ .string = (es[5]==NULL) ? "" : es[5] }},
-				{ NDO_DATA_LONGOUTPUT, BD_STRING, 
+				{ NDO_DATA_LONGOUTPUT, BD_STRING,
 						{ .string = (es[6]==NULL) ? "" : es[6] }},
-				{ NDO_DATA_PERFDATA, BD_STRING, 
+				{ NDO_DATA_PERFDATA, BD_STRING,
 						{ .string = (es[7]==NULL) ? "" : es[7] }}
 				};
 
-			ndomod_broker_data_serialize(&dbuf, NDO_API_SERVICECHECKDATA, 
-					service_check_data, 
+			ndomod_broker_data_serialize(&dbuf, NDO_API_SERVICECHECKDATA,
+					service_check_data,
 					sizeof(service_check_data) / sizeof(service_check_data[ 0]),
 					TRUE);
 		}
@@ -2212,50 +2250,50 @@ int ndomod_broker_data(int event_type, void *data){
 			struct ndo_broker_data host_check_data[] = {
 				{ NDO_DATA_TYPE, BD_INT, { .integer = hcdata->type }},
 				{ NDO_DATA_FLAGS, BD_INT, { .integer = hcdata->flags }},
-				{ NDO_DATA_ATTRIBUTES, BD_INT, 
+				{ NDO_DATA_ATTRIBUTES, BD_INT,
 						{ .integer = hcdata->attr }},
-				{ NDO_DATA_TIMESTAMP, BD_TIMEVAL, 
+				{ NDO_DATA_TIMESTAMP, BD_TIMEVAL,
 						{ .timestamp = hcdata->timestamp }},
-				{ NDO_DATA_HOST, BD_STRING, 
+				{ NDO_DATA_HOST, BD_STRING,
 						{ .string = (es[0]==NULL) ? "" : es[0] }},
-				{ NDO_DATA_CHECKTYPE, BD_INT, 
+				{ NDO_DATA_CHECKTYPE, BD_INT,
 						{ .integer = hcdata->check_type }},
-				{ NDO_DATA_CURRENTCHECKATTEMPT, BD_INT, 
+				{ NDO_DATA_CURRENTCHECKATTEMPT, BD_INT,
 						{ .integer = hcdata->current_attempt }},
-				{ NDO_DATA_MAXCHECKATTEMPTS, BD_INT, 
+				{ NDO_DATA_MAXCHECKATTEMPTS, BD_INT,
 						{ .integer = hcdata->max_attempts }},
-				{ NDO_DATA_STATETYPE, BD_INT, 
+				{ NDO_DATA_STATETYPE, BD_INT,
 						{ .integer = hcdata->state_type }},
 				{ NDO_DATA_STATE, BD_INT, { .integer = hcdata->state }},
 				{ NDO_DATA_TIMEOUT, BD_INT, { .integer = hcdata->timeout }},
-				{ NDO_DATA_COMMANDNAME, BD_STRING, 
+				{ NDO_DATA_COMMANDNAME, BD_STRING,
 						{ .string = (es[1]==NULL) ? "" : es[1] }},
-				{ NDO_DATA_COMMANDARGS, BD_STRING, 
+				{ NDO_DATA_COMMANDARGS, BD_STRING,
 						{ .string = (es[2]==NULL) ? "" : es[2] }},
-				{ NDO_DATA_COMMANDLINE, BD_STRING, 
+				{ NDO_DATA_COMMANDLINE, BD_STRING,
 						{ .string = (es[3]==NULL) ? "" : es[3] }},
-				{ NDO_DATA_STARTTIME, BD_TIMEVAL, 
+				{ NDO_DATA_STARTTIME, BD_TIMEVAL,
 						{ .timestamp = hcdata->start_time }},
-				{ NDO_DATA_ENDTIME, BD_TIMEVAL, 
+				{ NDO_DATA_ENDTIME, BD_TIMEVAL,
 						{ .timestamp = hcdata->end_time }},
-				{ NDO_DATA_EARLYTIMEOUT, BD_INT, 
+				{ NDO_DATA_EARLYTIMEOUT, BD_INT,
 						{ .integer = hcdata->early_timeout }},
-				{ NDO_DATA_EXECUTIONTIME, BD_FLOAT, 
+				{ NDO_DATA_EXECUTIONTIME, BD_FLOAT,
 						{ .floating_point = hcdata->execution_time }},
-				{ NDO_DATA_LATENCY, BD_FLOAT, 
+				{ NDO_DATA_LATENCY, BD_FLOAT,
 						{ .floating_point = hcdata->latency }},
-				{ NDO_DATA_RETURNCODE, BD_INT, 
+				{ NDO_DATA_RETURNCODE, BD_INT,
 						{ .integer = hcdata->return_code }},
-				{ NDO_DATA_OUTPUT, BD_STRING, 
+				{ NDO_DATA_OUTPUT, BD_STRING,
 						{ .string = (es[4]==NULL) ? "" : es[4] }},
-				{ NDO_DATA_LONGOUTPUT, BD_STRING, 
+				{ NDO_DATA_LONGOUTPUT, BD_STRING,
 						{ .string = (es[5]==NULL) ? "" : es[5] }},
-				{ NDO_DATA_PERFDATA, BD_STRING, 
+				{ NDO_DATA_PERFDATA, BD_STRING,
 						{ .string = (es[6]==NULL) ? "" : es[6] }}
 				};
 
-			ndomod_broker_data_serialize(&dbuf, NDO_API_HOSTCHECKDATA, 
-					host_check_data, 
+			ndomod_broker_data_serialize(&dbuf, NDO_API_HOSTCHECKDATA,
+					host_check_data,
 					sizeof(host_check_data) / sizeof(host_check_data[ 0]),
 					TRUE);
 		}
@@ -2275,38 +2313,38 @@ int ndomod_broker_data(int event_type, void *data){
 			struct ndo_broker_data comment_data[] = {
 				{ NDO_DATA_TYPE, BD_INT, { .integer = comdata->type }},
 				{ NDO_DATA_FLAGS, BD_INT, { .integer = comdata->flags }},
-				{ NDO_DATA_ATTRIBUTES, BD_INT, 
+				{ NDO_DATA_ATTRIBUTES, BD_INT,
 						{ .integer = comdata->attr }},
-				{ NDO_DATA_TIMESTAMP, BD_TIMEVAL, 
+				{ NDO_DATA_TIMESTAMP, BD_TIMEVAL,
 						{ .timestamp = comdata->timestamp }},
-				{ NDO_DATA_COMMENTTYPE, BD_INT, 
+				{ NDO_DATA_COMMENTTYPE, BD_INT,
 						{ .integer = comdata->comment_type }},
-				{ NDO_DATA_HOST, BD_STRING, 
+				{ NDO_DATA_HOST, BD_STRING,
 						{ .string = (es[0]==NULL) ? "" : es[0] }},
-				{ NDO_DATA_SERVICE, BD_STRING, 
+				{ NDO_DATA_SERVICE, BD_STRING,
 						{ .string = (es[1]==NULL) ? "" : es[1] }},
-				{ NDO_DATA_ENTRYTIME, BD_UNSIGNED_LONG, { .unsigned_long = 
+				{ NDO_DATA_ENTRYTIME, BD_UNSIGNED_LONG, { .unsigned_long =
 						(unsigned long)comdata->entry_time }},
-				{ NDO_DATA_AUTHORNAME, BD_STRING, 
+				{ NDO_DATA_AUTHORNAME, BD_STRING,
 						{ .string = (es[2]==NULL) ? "" : es[2] }},
-				{ NDO_DATA_COMMENT, BD_STRING, 
+				{ NDO_DATA_COMMENT, BD_STRING,
 						{ .string = (es[3]==NULL) ? "" : es[3] }},
-				{ NDO_DATA_PERSISTENT, BD_INT, 
+				{ NDO_DATA_PERSISTENT, BD_INT,
 						{ .integer = comdata->persistent }},
-				{ NDO_DATA_SOURCE, BD_INT, 
+				{ NDO_DATA_SOURCE, BD_INT,
 						{ .integer = comdata->source }},
-				{ NDO_DATA_ENTRYTYPE, BD_INT, 
+				{ NDO_DATA_ENTRYTYPE, BD_INT,
 						{ .integer = comdata->entry_type }},
-				{ NDO_DATA_EXPIRES, BD_INT, 
+				{ NDO_DATA_EXPIRES, BD_INT,
 						{ .integer = comdata->expires }},
-				{ NDO_DATA_EXPIRATIONTIME, BD_UNSIGNED_LONG, { .unsigned_long = 
+				{ NDO_DATA_EXPIRATIONTIME, BD_UNSIGNED_LONG, { .unsigned_long =
 						(unsigned long)comdata->expire_time }},
-				{ NDO_DATA_COMMENTID, BD_UNSIGNED_LONG, 
+				{ NDO_DATA_COMMENTID, BD_UNSIGNED_LONG,
 						{ .unsigned_long = comdata->comment_id }}
 				};
 
-			ndomod_broker_data_serialize(&dbuf, NDO_API_COMMENTDATA, 
-					comment_data, 
+			ndomod_broker_data_serialize(&dbuf, NDO_API_COMMENTDATA,
+					comment_data,
 					sizeof(comment_data) / sizeof(comment_data[ 0]), TRUE);
 		}
 
@@ -2325,37 +2363,37 @@ int ndomod_broker_data(int event_type, void *data){
 			struct ndo_broker_data downtime_data[] = {
 				{ NDO_DATA_TYPE, BD_INT, { .integer = downdata->type }},
 				{ NDO_DATA_FLAGS, BD_INT, { .integer = downdata->flags }},
-				{ NDO_DATA_ATTRIBUTES, BD_INT, 
+				{ NDO_DATA_ATTRIBUTES, BD_INT,
 						{ .integer = downdata->attr }},
-				{ NDO_DATA_TIMESTAMP, BD_TIMEVAL, 
+				{ NDO_DATA_TIMESTAMP, BD_TIMEVAL,
 						{ .timestamp = downdata->timestamp }},
-				{ NDO_DATA_DOWNTIMETYPE, BD_INT, 
+				{ NDO_DATA_DOWNTIMETYPE, BD_INT,
 						{ .integer = downdata->downtime_type }},
-				{ NDO_DATA_HOST, BD_STRING, 
+				{ NDO_DATA_HOST, BD_STRING,
 						{ .string = (es[0]==NULL) ? "" : es[0] }},
-				{ NDO_DATA_SERVICE, BD_STRING, 
+				{ NDO_DATA_SERVICE, BD_STRING,
 						{ .string = (es[1]==NULL) ? "" : es[1] }},
-				{ NDO_DATA_ENTRYTIME, BD_UNSIGNED_LONG, { .unsigned_long = 
+				{ NDO_DATA_ENTRYTIME, BD_UNSIGNED_LONG, { .unsigned_long =
 						(unsigned long)downdata->entry_time }},
-				{ NDO_DATA_AUTHORNAME, BD_STRING, 
+				{ NDO_DATA_AUTHORNAME, BD_STRING,
 						{ .string = (es[2]==NULL) ? "" : es[2] }},
-				{ NDO_DATA_COMMENT, BD_STRING, 
+				{ NDO_DATA_COMMENT, BD_STRING,
 						{ .string = (es[3]==NULL) ? "" : es[3] }},
-				{ NDO_DATA_STARTTIME, BD_UNSIGNED_LONG, { .unsigned_long = 
+				{ NDO_DATA_STARTTIME, BD_UNSIGNED_LONG, { .unsigned_long =
 						(unsigned long)downdata->start_time }},
-				{ NDO_DATA_ENDTIME, BD_UNSIGNED_LONG, { .unsigned_long = 
+				{ NDO_DATA_ENDTIME, BD_UNSIGNED_LONG, { .unsigned_long =
 						(unsigned long)downdata->end_time }},
 				{ NDO_DATA_FIXED, BD_INT, { .integer = downdata->fixed }},
-				{ NDO_DATA_DURATION, BD_UNSIGNED_LONG, { .unsigned_long = 
+				{ NDO_DATA_DURATION, BD_UNSIGNED_LONG, { .unsigned_long =
 						(unsigned long)downdata->duration }},
-				{ NDO_DATA_TRIGGEREDBY, BD_UNSIGNED_LONG, { .unsigned_long = 
+				{ NDO_DATA_TRIGGEREDBY, BD_UNSIGNED_LONG, { .unsigned_long =
 						(unsigned long)downdata->triggered_by }},
-				{ NDO_DATA_DOWNTIMEID, BD_UNSIGNED_LONG, { .unsigned_long = 
+				{ NDO_DATA_DOWNTIMEID, BD_UNSIGNED_LONG, { .unsigned_long =
 						(unsigned long)downdata->downtime_id }}
 				};
 
-			ndomod_broker_data_serialize(&dbuf, NDO_API_DOWNTIMEDATA, 
-					downtime_data, 
+			ndomod_broker_data_serialize(&dbuf, NDO_API_DOWNTIMEDATA,
+					downtime_data,
 					sizeof(downtime_data) / sizeof(downtime_data[ 0]), TRUE);
 		}
 
@@ -2377,31 +2415,31 @@ int ndomod_broker_data(int event_type, void *data){
 			struct ndo_broker_data flapping_data[] = {
 				{ NDO_DATA_TYPE, BD_INT, { .integer = flapdata->type }},
 				{ NDO_DATA_FLAGS, BD_INT, { .integer = flapdata->flags }},
-				{ NDO_DATA_ATTRIBUTES, BD_INT, 
+				{ NDO_DATA_ATTRIBUTES, BD_INT,
 						{ .integer = flapdata->attr }},
-				{ NDO_DATA_TIMESTAMP, BD_TIMEVAL, 
+				{ NDO_DATA_TIMESTAMP, BD_TIMEVAL,
 						{ .timestamp = flapdata->timestamp }},
-				{ NDO_DATA_FLAPPINGTYPE, BD_INT, 
+				{ NDO_DATA_FLAPPINGTYPE, BD_INT,
 						{ .integer = flapdata->flapping_type }},
-				{ NDO_DATA_HOST, BD_STRING, 
+				{ NDO_DATA_HOST, BD_STRING,
 						{ .string = (es[0]==NULL) ? "" : es[0] }},
-				{ NDO_DATA_SERVICE, BD_STRING, 
+				{ NDO_DATA_SERVICE, BD_STRING,
 						{ .string = (es[1]==NULL) ? "" : es[1] }},
-				{ NDO_DATA_PERCENTSTATECHANGE, BD_FLOAT, 
+				{ NDO_DATA_PERCENTSTATECHANGE, BD_FLOAT,
 						{ .floating_point = flapdata->percent_change }},
-				{ NDO_DATA_HIGHTHRESHOLD, BD_FLOAT, 
+				{ NDO_DATA_HIGHTHRESHOLD, BD_FLOAT,
 						{ .floating_point = flapdata->high_threshold }},
-				{ NDO_DATA_LOWTHRESHOLD, BD_FLOAT, 
+				{ NDO_DATA_LOWTHRESHOLD, BD_FLOAT,
 						{ .floating_point = flapdata->low_threshold }},
-				{ NDO_DATA_COMMENTTIME, BD_UNSIGNED_LONG, { .unsigned_long = 
-			 			(temp_comment==NULL) ? 0L : 
+				{ NDO_DATA_COMMENTTIME, BD_UNSIGNED_LONG, { .unsigned_long =
+			 			(temp_comment==NULL) ? 0L :
 						(unsigned long)temp_comment->entry_time }},
-				{ NDO_DATA_COMMENTID, BD_UNSIGNED_LONG, 
+				{ NDO_DATA_COMMENTID, BD_UNSIGNED_LONG,
 						{ .unsigned_long = flapdata->comment_id }}
 				};
 
-			ndomod_broker_data_serialize(&dbuf, NDO_API_FLAPPINGDATA, 
-					flapping_data, 
+			ndomod_broker_data_serialize(&dbuf, NDO_API_FLAPPINGDATA,
+					flapping_data,
 					sizeof(flapping_data) / sizeof(flapping_data[ 0]), TRUE);
 		}
 
@@ -2418,68 +2456,68 @@ int ndomod_broker_data(int event_type, void *data){
 			struct ndo_broker_data program_status_data[] = {
 				{ NDO_DATA_TYPE, BD_INT, { .integer = psdata->type }},
 				{ NDO_DATA_FLAGS, BD_INT, { .integer = psdata->flags }},
-				{ NDO_DATA_ATTRIBUTES, BD_INT, 
+				{ NDO_DATA_ATTRIBUTES, BD_INT,
 						{ .integer = psdata->attr }},
-				{ NDO_DATA_TIMESTAMP, BD_TIMEVAL, 
+				{ NDO_DATA_TIMESTAMP, BD_TIMEVAL,
 						{ .timestamp = psdata->timestamp }},
-				{ NDO_DATA_PROGRAMSTARTTIME, BD_UNSIGNED_LONG, 
-						{ .unsigned_long = 
+				{ NDO_DATA_PROGRAMSTARTTIME, BD_UNSIGNED_LONG,
+						{ .unsigned_long =
 						(unsigned long)psdata->program_start }},
-				{ NDO_DATA_PROCESSID, BD_INT, 
+				{ NDO_DATA_PROCESSID, BD_INT,
 						{ .integer = psdata->pid }},
-				{ NDO_DATA_DAEMONMODE, BD_INT, 
+				{ NDO_DATA_DAEMONMODE, BD_INT,
 						{ .integer = psdata->daemon_mode }},
-				{ NDO_DATA_LASTCOMMANDCHECK, BD_UNSIGNED_LONG, 
-						{ .unsigned_long = 
+				{ NDO_DATA_LASTCOMMANDCHECK, BD_UNSIGNED_LONG,
+						{ .unsigned_long =
 #ifdef BUILD_NAGIOS_4X
 							0L
 #else
 							(unsigned long)psdata->last_command_check
 #endif
 						}},
-				{ NDO_DATA_LASTLOGROTATION, BD_UNSIGNED_LONG, 
+				{ NDO_DATA_LASTLOGROTATION, BD_UNSIGNED_LONG,
 						{ .unsigned_long = psdata->last_log_rotation }},
-				{ NDO_DATA_NOTIFICATIONSENABLED, BD_INT, 
+				{ NDO_DATA_NOTIFICATIONSENABLED, BD_INT,
 						{ .integer = psdata->notifications_enabled }},
-				{ NDO_DATA_ACTIVESERVICECHECKSENABLED, BD_INT, 
+				{ NDO_DATA_ACTIVESERVICECHECKSENABLED, BD_INT,
 						{ .integer = psdata->active_service_checks_enabled }},
-				{ NDO_DATA_PASSIVESERVICECHECKSENABLED, BD_INT, 
+				{ NDO_DATA_PASSIVESERVICECHECKSENABLED, BD_INT,
 						{ .integer = psdata->passive_service_checks_enabled }},
-				{ NDO_DATA_ACTIVEHOSTCHECKSENABLED, BD_INT, 
+				{ NDO_DATA_ACTIVEHOSTCHECKSENABLED, BD_INT,
 						{ .integer = psdata->active_host_checks_enabled }},
-				{ NDO_DATA_PASSIVEHOSTCHECKSENABLED, BD_INT, 
+				{ NDO_DATA_PASSIVEHOSTCHECKSENABLED, BD_INT,
 						{ .integer = psdata->passive_host_checks_enabled }},
-				{ NDO_DATA_EVENTHANDLERSENABLED, BD_INT, 
+				{ NDO_DATA_EVENTHANDLERSENABLED, BD_INT,
 						{ .integer = psdata->event_handlers_enabled }},
-				{ NDO_DATA_FLAPDETECTIONENABLED, BD_INT, 
+				{ NDO_DATA_FLAPDETECTIONENABLED, BD_INT,
 						{ .integer = psdata->flap_detection_enabled }},
-				{ NDO_DATA_FAILUREPREDICTIONENABLED, BD_INT, { .integer = 
+				{ NDO_DATA_FAILUREPREDICTIONENABLED, BD_INT, { .integer =
 #ifdef BUILD_NAGIOS_4X
 							0L
 #else
 							psdata->failure_prediction_enabled
 #endif
 						}},
-				{ NDO_DATA_PROCESSPERFORMANCEDATA, BD_INT, 
+				{ NDO_DATA_PROCESSPERFORMANCEDATA, BD_INT,
 						{ .integer = psdata->process_performance_data }},
-				{ NDO_DATA_OBSESSOVERHOSTS, BD_INT, 
+				{ NDO_DATA_OBSESSOVERHOSTS, BD_INT,
 						{ .integer = psdata->obsess_over_hosts }},
-				{ NDO_DATA_OBSESSOVERSERVICES, BD_INT, 
+				{ NDO_DATA_OBSESSOVERSERVICES, BD_INT,
 						{ .integer = psdata->obsess_over_services }},
-				{ NDO_DATA_MODIFIEDHOSTATTRIBUTES, BD_UNSIGNED_LONG, 
+				{ NDO_DATA_MODIFIEDHOSTATTRIBUTES, BD_UNSIGNED_LONG,
 						{ .unsigned_long = psdata->modified_host_attributes }},
-				{ NDO_DATA_MODIFIEDSERVICEATTRIBUTES, BD_UNSIGNED_LONG, 
-						{ .unsigned_long = 
+				{ NDO_DATA_MODIFIEDSERVICEATTRIBUTES, BD_UNSIGNED_LONG,
+						{ .unsigned_long =
 						psdata->modified_service_attributes }},
-				{ NDO_DATA_GLOBALHOSTEVENTHANDLER, BD_STRING, 
+				{ NDO_DATA_GLOBALHOSTEVENTHANDLER, BD_STRING,
 						{ .string = (es[0]==NULL) ? "" : es[0] }},
-				{ NDO_DATA_GLOBALSERVICEEVENTHANDLER, BD_STRING, 
+				{ NDO_DATA_GLOBALSERVICEEVENTHANDLER, BD_STRING,
 						{ .string = (es[1]==NULL) ? "" : es[1] }},
 				};
 
-			ndomod_broker_data_serialize(&dbuf, NDO_API_PROGRAMSTATUSDATA, 
-					program_status_data, 
-					sizeof(program_status_data) / 
+			ndomod_broker_data_serialize(&dbuf, NDO_API_PROGRAMSTATUSDATA,
+					program_status_data,
+					sizeof(program_status_data) /
 					sizeof(program_status_data[ 0]), TRUE);
 		}
 
@@ -2519,54 +2557,54 @@ int ndomod_broker_data(int event_type, void *data){
 			struct ndo_broker_data host_status_data[] = {
 				{ NDO_DATA_TYPE, BD_INT, { .integer = hsdata->type }},
 				{ NDO_DATA_FLAGS, BD_INT, { .integer = hsdata->flags }},
-				{ NDO_DATA_ATTRIBUTES, BD_INT, 
+				{ NDO_DATA_ATTRIBUTES, BD_INT,
 						{ .integer = hsdata->attr }},
-				{ NDO_DATA_TIMESTAMP, BD_TIMEVAL, 
+				{ NDO_DATA_TIMESTAMP, BD_TIMEVAL,
 						{ .timestamp = hsdata->timestamp }},
-				{ NDO_DATA_HOST, BD_STRING, 
+				{ NDO_DATA_HOST, BD_STRING,
 						{ .string = (es[0]==NULL) ? "" : es[0] }},
-				{ NDO_DATA_OUTPUT, BD_STRING, 
+				{ NDO_DATA_OUTPUT, BD_STRING,
 						{ .string = (es[1]==NULL) ? "" : es[1] }},
-				{ NDO_DATA_LONGOUTPUT, BD_STRING, 
+				{ NDO_DATA_LONGOUTPUT, BD_STRING,
 						{ .string = (es[2]==NULL) ? "" : es[2] }},
-				{ NDO_DATA_PERFDATA, BD_STRING, 
+				{ NDO_DATA_PERFDATA, BD_STRING,
 						{ .string = (es[3]==NULL) ? "" : es[3] }},
-				{ NDO_DATA_CURRENTSTATE, BD_INT, 
+				{ NDO_DATA_CURRENTSTATE, BD_INT,
 						{ .integer = temp_host->current_state }},
-				{ NDO_DATA_HASBEENCHECKED, BD_INT, 
+				{ NDO_DATA_HASBEENCHECKED, BD_INT,
 						{ .integer = temp_host->has_been_checked }},
-				{ NDO_DATA_SHOULDBESCHEDULED, BD_INT, 
+				{ NDO_DATA_SHOULDBESCHEDULED, BD_INT,
 						{ .integer = temp_host->should_be_scheduled }},
-				{ NDO_DATA_CURRENTCHECKATTEMPT, BD_INT, 
+				{ NDO_DATA_CURRENTCHECKATTEMPT, BD_INT,
 						{ .integer = temp_host->current_attempt }},
-				{ NDO_DATA_MAXCHECKATTEMPTS, BD_INT, 
+				{ NDO_DATA_MAXCHECKATTEMPTS, BD_INT,
 						{ .integer = temp_host->max_attempts }},
-				{ NDO_DATA_LASTHOSTCHECK, BD_UNSIGNED_LONG, { .unsigned_long = 
+				{ NDO_DATA_LASTHOSTCHECK, BD_UNSIGNED_LONG, { .unsigned_long =
 						(unsigned long)temp_host->last_check }},
-				{ NDO_DATA_NEXTHOSTCHECK, BD_UNSIGNED_LONG, { .unsigned_long = 
+				{ NDO_DATA_NEXTHOSTCHECK, BD_UNSIGNED_LONG, { .unsigned_long =
 						(unsigned long)temp_host->next_check }},
-				{ NDO_DATA_CHECKTYPE, BD_INT, 
+				{ NDO_DATA_CHECKTYPE, BD_INT,
 						{ .integer = temp_host->check_type }},
-				{ NDO_DATA_LASTSTATECHANGE, BD_UNSIGNED_LONG, 
-						{ .unsigned_long = 
+				{ NDO_DATA_LASTSTATECHANGE, BD_UNSIGNED_LONG,
+						{ .unsigned_long =
 						(unsigned long)temp_host->last_state_change }},
-				{ NDO_DATA_LASTHARDSTATECHANGE, BD_UNSIGNED_LONG, 
-						{ .unsigned_long = 
+				{ NDO_DATA_LASTHARDSTATECHANGE, BD_UNSIGNED_LONG,
+						{ .unsigned_long =
 						(unsigned long)temp_host->last_hard_state_change }},
-				{ NDO_DATA_LASTHARDSTATE, BD_INT, 
+				{ NDO_DATA_LASTHARDSTATE, BD_INT,
 						{ .integer = temp_host->last_hard_state }},
-				{ NDO_DATA_LASTTIMEUP, BD_UNSIGNED_LONG, 
-						{ .unsigned_long = 
+				{ NDO_DATA_LASTTIMEUP, BD_UNSIGNED_LONG,
+						{ .unsigned_long =
 						(unsigned long)temp_host->last_time_up }},
-				{ NDO_DATA_LASTTIMEDOWN, BD_UNSIGNED_LONG, 
-						{ .unsigned_long = 
+				{ NDO_DATA_LASTTIMEDOWN, BD_UNSIGNED_LONG,
+						{ .unsigned_long =
 						(unsigned long)temp_host->last_time_down }},
-				{ NDO_DATA_LASTTIMEUNREACHABLE, BD_UNSIGNED_LONG, 
-						{ .unsigned_long = 
+				{ NDO_DATA_LASTTIMEUNREACHABLE, BD_UNSIGNED_LONG,
+						{ .unsigned_long =
 						(unsigned long)temp_host->last_time_unreachable }},
-				{ NDO_DATA_STATETYPE, BD_INT, 
+				{ NDO_DATA_STATETYPE, BD_INT,
 						{ .integer = temp_host->state_type }},
-				{ NDO_DATA_LASTHOSTNOTIFICATION, BD_UNSIGNED_LONG, 
+				{ NDO_DATA_LASTHOSTNOTIFICATION, BD_UNSIGNED_LONG,
 						{ .unsigned_long =
 #ifdef BUILD_NAGIOS_4X
 			 				(unsigned long)temp_host->last_notification
@@ -2574,7 +2612,7 @@ int ndomod_broker_data(int event_type, void *data){
 			 				(unsigned long)temp_host->last_host_notification
 #endif
 						}},
-				{ NDO_DATA_NEXTHOSTNOTIFICATION, BD_UNSIGNED_LONG, 
+				{ NDO_DATA_NEXTHOSTNOTIFICATION, BD_UNSIGNED_LONG,
 						{ .unsigned_long =
 #ifdef BUILD_NAGIOS_4X
 			 				(unsigned long)temp_host->next_notification
@@ -2582,18 +2620,18 @@ int ndomod_broker_data(int event_type, void *data){
 			 				(unsigned long)temp_host->next_host_notification
 #endif
 						}},
-				{ NDO_DATA_NOMORENOTIFICATIONS, BD_INT, 
+				{ NDO_DATA_NOMORENOTIFICATIONS, BD_INT,
 						{ .integer = temp_host->no_more_notifications }},
-				{ NDO_DATA_NOTIFICATIONSENABLED, BD_INT, 
+				{ NDO_DATA_NOTIFICATIONSENABLED, BD_INT,
 						{ .integer = temp_host->notifications_enabled }},
-				{ NDO_DATA_PROBLEMHASBEENACKNOWLEDGED, BD_INT, 
-						{ .integer = 
+				{ NDO_DATA_PROBLEMHASBEENACKNOWLEDGED, BD_INT,
+						{ .integer =
 						temp_host->problem_has_been_acknowledged }},
-				{ NDO_DATA_ACKNOWLEDGEMENTTYPE, BD_INT, 
+				{ NDO_DATA_ACKNOWLEDGEMENTTYPE, BD_INT,
 						{ .integer = temp_host->acknowledgement_type }},
-				{ NDO_DATA_CURRENTNOTIFICATIONNUMBER, BD_INT, 
+				{ NDO_DATA_CURRENTNOTIFICATIONNUMBER, BD_INT,
 						{ .integer = temp_host->current_notification_number }},
-				{ NDO_DATA_PASSIVEHOSTCHECKSENABLED, BD_INT, 
+				{ NDO_DATA_PASSIVEHOSTCHECKSENABLED, BD_INT,
 						{ .integer =
 #ifdef BUILD_NAGIOS_4X
 			 				temp_host->accept_passive_checks
@@ -2601,57 +2639,57 @@ int ndomod_broker_data(int event_type, void *data){
 			 				temp_host->accept_passive_host_checks
 #endif
 						}},
-				{ NDO_DATA_EVENTHANDLERENABLED, BD_INT, 
+				{ NDO_DATA_EVENTHANDLERENABLED, BD_INT,
 						{ .integer = temp_host->event_handler_enabled }},
-				{ NDO_DATA_ACTIVEHOSTCHECKSENABLED, BD_INT, 
+				{ NDO_DATA_ACTIVEHOSTCHECKSENABLED, BD_INT,
 						{ .integer = temp_host->checks_enabled }},
-				{ NDO_DATA_FLAPDETECTIONENABLED, BD_INT, 
+				{ NDO_DATA_FLAPDETECTIONENABLED, BD_INT,
 						{ .integer = temp_host->flap_detection_enabled }},
-				{ NDO_DATA_ISFLAPPING, BD_INT, 
+				{ NDO_DATA_ISFLAPPING, BD_INT,
 						{ .integer = temp_host->is_flapping }},
-				{ NDO_DATA_PERCENTSTATECHANGE, BD_FLOAT, 
+				{ NDO_DATA_PERCENTSTATECHANGE, BD_FLOAT,
 						{ .floating_point = temp_host->percent_state_change }},
-				{ NDO_DATA_LATENCY, BD_FLOAT, 
+				{ NDO_DATA_LATENCY, BD_FLOAT,
 						{ .floating_point = temp_host->latency }},
-				{ NDO_DATA_EXECUTIONTIME, BD_FLOAT, 
+				{ NDO_DATA_EXECUTIONTIME, BD_FLOAT,
 						{ .floating_point = temp_host->execution_time }},
-				{ NDO_DATA_SCHEDULEDDOWNTIMEDEPTH, BD_INT, 
+				{ NDO_DATA_SCHEDULEDDOWNTIMEDEPTH, BD_INT,
 						{ .integer = temp_host->scheduled_downtime_depth }},
-				{ NDO_DATA_FAILUREPREDICTIONENABLED, BD_INT, 
-						{ .integer = 
+				{ NDO_DATA_FAILUREPREDICTIONENABLED, BD_INT,
+						{ .integer =
 #ifdef BUILD_NAGIOS_4X
 			 				0
 #else
 			 				temp_host->failure_prediction_enabled
 #endif
 						}},
-				{ NDO_DATA_PROCESSPERFORMANCEDATA, BD_INT, 
+				{ NDO_DATA_PROCESSPERFORMANCEDATA, BD_INT,
 						{ .integer = temp_host->process_performance_data }},
-				{ NDO_DATA_OBSESSOVERHOST, BD_INT, 
-						{ .integer = 
+				{ NDO_DATA_OBSESSOVERHOST, BD_INT,
+						{ .integer =
 #ifdef BUILD_NAGIOS_4X
 			 				temp_host->obsess
 #else
 			 				temp_host->obsess_over_host
 #endif
 						}},
-				{ NDO_DATA_MODIFIEDHOSTATTRIBUTES, BD_UNSIGNED_LONG, 
+				{ NDO_DATA_MODIFIEDHOSTATTRIBUTES, BD_UNSIGNED_LONG,
 						{ .unsigned_long = temp_host->modified_attributes }},
-				{ NDO_DATA_EVENTHANDLER, BD_STRING, 
+				{ NDO_DATA_EVENTHANDLER, BD_STRING,
 						{ .string = (es[4]==NULL) ? "" : es[4] }},
-				{ NDO_DATA_CHECKCOMMAND, BD_STRING, 
+				{ NDO_DATA_CHECKCOMMAND, BD_STRING,
 						{ .string = (es[5]==NULL) ? "" : es[5] }},
-				{ NDO_DATA_NORMALCHECKINTERVAL, BD_FLOAT, 
-						{ .floating_point = 
+				{ NDO_DATA_NORMALCHECKINTERVAL, BD_FLOAT,
+						{ .floating_point =
 						(double)temp_host->check_interval }},
-				{ NDO_DATA_RETRYCHECKINTERVAL, BD_FLOAT, 
+				{ NDO_DATA_RETRYCHECKINTERVAL, BD_FLOAT,
 						{ .floating_point = (double)retry_interval }},
-				{ NDO_DATA_HOSTCHECKPERIOD, BD_STRING, 
+				{ NDO_DATA_HOSTCHECKPERIOD, BD_STRING,
 						{ .string = (es[6]==NULL) ? "" : es[6] }}
 				};
 
-			ndomod_broker_data_serialize(&dbuf, NDO_API_HOSTSTATUSDATA, 
-					host_status_data, 
+			ndomod_broker_data_serialize(&dbuf, NDO_API_HOSTSTATUSDATA,
+					host_status_data,
 					sizeof(host_status_data) / sizeof(host_status_data[ 0]),
 					FALSE);
 		}
@@ -2692,79 +2730,79 @@ int ndomod_broker_data(int event_type, void *data){
 			struct ndo_broker_data service_status_data[] = {
 				{ NDO_DATA_TYPE, BD_INT, { .integer = ssdata->type }},
 				{ NDO_DATA_FLAGS, BD_INT, { .integer = ssdata->flags }},
-				{ NDO_DATA_ATTRIBUTES, BD_INT, 
+				{ NDO_DATA_ATTRIBUTES, BD_INT,
 						{ .integer = ssdata->attr }},
-				{ NDO_DATA_TIMESTAMP, BD_TIMEVAL, 
+				{ NDO_DATA_TIMESTAMP, BD_TIMEVAL,
 						{ .timestamp = ssdata->timestamp }},
-				{ NDO_DATA_HOST, BD_STRING, 
+				{ NDO_DATA_HOST, BD_STRING,
 						{ .string = (es[0]==NULL) ? "" : es[0] }},
-				{ NDO_DATA_SERVICE, BD_STRING, 
+				{ NDO_DATA_SERVICE, BD_STRING,
 						{ .string = (es[1]==NULL) ? "" : es[1] }},
-				{ NDO_DATA_OUTPUT, BD_STRING, 
+				{ NDO_DATA_OUTPUT, BD_STRING,
 						{ .string = (es[2]==NULL) ? "" : es[2] }},
-				{ NDO_DATA_LONGOUTPUT, BD_STRING, 
+				{ NDO_DATA_LONGOUTPUT, BD_STRING,
 						{ .string = (es[3]==NULL) ? "" : es[3] }},
-				{ NDO_DATA_PERFDATA, BD_STRING, 
+				{ NDO_DATA_PERFDATA, BD_STRING,
 						{ .string = (es[4]==NULL) ? "" : es[4] }},
-				{ NDO_DATA_CURRENTSTATE, BD_INT, 
+				{ NDO_DATA_CURRENTSTATE, BD_INT,
 						{ .integer = temp_service->current_state }},
-				{ NDO_DATA_HASBEENCHECKED, BD_INT, 
+				{ NDO_DATA_HASBEENCHECKED, BD_INT,
 						{ .integer = temp_service->has_been_checked }},
-				{ NDO_DATA_SHOULDBESCHEDULED, BD_INT, 
+				{ NDO_DATA_SHOULDBESCHEDULED, BD_INT,
 						{ .integer = temp_service->should_be_scheduled }},
-				{ NDO_DATA_CURRENTCHECKATTEMPT, BD_INT, 
+				{ NDO_DATA_CURRENTCHECKATTEMPT, BD_INT,
 						{ .integer = temp_service->current_attempt }},
-				{ NDO_DATA_MAXCHECKATTEMPTS, BD_INT, 
+				{ NDO_DATA_MAXCHECKATTEMPTS, BD_INT,
 						{ .integer = temp_service->max_attempts }},
-				{ NDO_DATA_LASTSERVICECHECK, BD_UNSIGNED_LONG, 
-						{ .unsigned_long = 
+				{ NDO_DATA_LASTSERVICECHECK, BD_UNSIGNED_LONG,
+						{ .unsigned_long =
 						(unsigned long)temp_service->last_check }},
-				{ NDO_DATA_NEXTSERVICECHECK, BD_UNSIGNED_LONG, 
-						{ .unsigned_long = 
+				{ NDO_DATA_NEXTSERVICECHECK, BD_UNSIGNED_LONG,
+						{ .unsigned_long =
 						(unsigned long)temp_service->next_check }},
-				{ NDO_DATA_CHECKTYPE, BD_INT, 
+				{ NDO_DATA_CHECKTYPE, BD_INT,
 						{ .integer = temp_service->check_type }},
-				{ NDO_DATA_LASTSTATECHANGE, BD_UNSIGNED_LONG, 
-						{ .unsigned_long = 
+				{ NDO_DATA_LASTSTATECHANGE, BD_UNSIGNED_LONG,
+						{ .unsigned_long =
 						(unsigned long)temp_service->last_state_change }},
-				{ NDO_DATA_LASTHARDSTATECHANGE, BD_UNSIGNED_LONG, 
-						{ .unsigned_long = 
+				{ NDO_DATA_LASTHARDSTATECHANGE, BD_UNSIGNED_LONG,
+						{ .unsigned_long =
 						(unsigned long)temp_service->last_hard_state_change }},
-				{ NDO_DATA_LASTHARDSTATE, BD_INT, 
+				{ NDO_DATA_LASTHARDSTATE, BD_INT,
 						{ .integer = temp_service->last_hard_state }},
-				{ NDO_DATA_LASTTIMEOK, BD_UNSIGNED_LONG, 
-						{ .unsigned_long = 
+				{ NDO_DATA_LASTTIMEOK, BD_UNSIGNED_LONG,
+						{ .unsigned_long =
 						(unsigned long)temp_service->last_time_ok }},
-				{ NDO_DATA_LASTTIMEWARNING, BD_UNSIGNED_LONG, 
-						{ .unsigned_long = 
+				{ NDO_DATA_LASTTIMEWARNING, BD_UNSIGNED_LONG,
+						{ .unsigned_long =
 						(unsigned long)temp_service->last_time_warning }},
-				{ NDO_DATA_LASTTIMEUNKNOWN, BD_UNSIGNED_LONG, 
-						{ .unsigned_long = 
+				{ NDO_DATA_LASTTIMEUNKNOWN, BD_UNSIGNED_LONG,
+						{ .unsigned_long =
 						(unsigned long)temp_service->last_time_unknown }},
-				{ NDO_DATA_LASTTIMECRITICAL, BD_UNSIGNED_LONG, 
-						{ .unsigned_long = 
+				{ NDO_DATA_LASTTIMECRITICAL, BD_UNSIGNED_LONG,
+						{ .unsigned_long =
 						(unsigned long)temp_service->last_time_critical }},
-				{ NDO_DATA_STATETYPE, BD_INT, 
+				{ NDO_DATA_STATETYPE, BD_INT,
 						{ .integer = temp_service->state_type }},
-				{ NDO_DATA_LASTSERVICENOTIFICATION, BD_UNSIGNED_LONG, 
+				{ NDO_DATA_LASTSERVICENOTIFICATION, BD_UNSIGNED_LONG,
 						{ .unsigned_long =
 		 				(unsigned long)temp_service->last_notification }},
-				{ NDO_DATA_NEXTSERVICENOTIFICATION, BD_UNSIGNED_LONG, 
+				{ NDO_DATA_NEXTSERVICENOTIFICATION, BD_UNSIGNED_LONG,
 						{ .unsigned_long =
 		 				(unsigned long)temp_service->next_notification }},
-				{ NDO_DATA_NOMORENOTIFICATIONS, BD_INT, 
+				{ NDO_DATA_NOMORENOTIFICATIONS, BD_INT,
 						{ .integer = temp_service->no_more_notifications }},
-				{ NDO_DATA_NOTIFICATIONSENABLED, BD_INT, 
+				{ NDO_DATA_NOTIFICATIONSENABLED, BD_INT,
 						{ .integer = temp_service->notifications_enabled }},
-				{ NDO_DATA_PROBLEMHASBEENACKNOWLEDGED, BD_INT, 
-						{ .integer = 
+				{ NDO_DATA_PROBLEMHASBEENACKNOWLEDGED, BD_INT,
+						{ .integer =
 						temp_service->problem_has_been_acknowledged }},
-				{ NDO_DATA_ACKNOWLEDGEMENTTYPE, BD_INT, 
+				{ NDO_DATA_ACKNOWLEDGEMENTTYPE, BD_INT,
 						{ .integer = temp_service->acknowledgement_type }},
-				{ NDO_DATA_CURRENTNOTIFICATIONNUMBER, BD_INT, 
-						{ .integer = 
+				{ NDO_DATA_CURRENTNOTIFICATIONNUMBER, BD_INT,
+						{ .integer =
 						temp_service->current_notification_number }},
-				{ NDO_DATA_PASSIVESERVICECHECKSENABLED, BD_INT, 
+				{ NDO_DATA_PASSIVESERVICECHECKSENABLED, BD_INT,
 						{ .integer =
 #ifdef BUILD_NAGIOS_4X
 			 				temp_service->accept_passive_checks
@@ -2772,59 +2810,59 @@ int ndomod_broker_data(int event_type, void *data){
 			 				temp_service->accept_passive_service_checks
 #endif
 						}},
-				{ NDO_DATA_EVENTHANDLERENABLED, BD_INT, 
+				{ NDO_DATA_EVENTHANDLERENABLED, BD_INT,
 						{ .integer = temp_service->event_handler_enabled }},
-				{ NDO_DATA_ACTIVESERVICECHECKSENABLED, BD_INT, 
+				{ NDO_DATA_ACTIVESERVICECHECKSENABLED, BD_INT,
 						{ .integer = temp_service->checks_enabled }},
-				{ NDO_DATA_FLAPDETECTIONENABLED, BD_INT, 
+				{ NDO_DATA_FLAPDETECTIONENABLED, BD_INT,
 						{ .integer = temp_service->flap_detection_enabled }},
-				{ NDO_DATA_ISFLAPPING, BD_INT, 
+				{ NDO_DATA_ISFLAPPING, BD_INT,
 						{ .integer = temp_service->is_flapping }},
-				{ NDO_DATA_PERCENTSTATECHANGE, BD_FLOAT, 
-						{ .floating_point = 
+				{ NDO_DATA_PERCENTSTATECHANGE, BD_FLOAT,
+						{ .floating_point =
 						temp_service->percent_state_change }},
-				{ NDO_DATA_LATENCY, BD_FLOAT, 
+				{ NDO_DATA_LATENCY, BD_FLOAT,
 						{ .floating_point = temp_service->latency }},
-				{ NDO_DATA_EXECUTIONTIME, BD_FLOAT, 
+				{ NDO_DATA_EXECUTIONTIME, BD_FLOAT,
 						{ .floating_point = temp_service->execution_time }},
-				{ NDO_DATA_SCHEDULEDDOWNTIMEDEPTH, BD_INT, 
+				{ NDO_DATA_SCHEDULEDDOWNTIMEDEPTH, BD_INT,
 						{ .integer = temp_service->scheduled_downtime_depth }},
-				{ NDO_DATA_FAILUREPREDICTIONENABLED, BD_INT, 
-						{ .integer = 
+				{ NDO_DATA_FAILUREPREDICTIONENABLED, BD_INT,
+						{ .integer =
 #ifdef BUILD_NAGIOS_4X
 			 				0
 #else
 			 				temp_service->failure_prediction_enabled
 #endif
 						}},
-				{ NDO_DATA_PROCESSPERFORMANCEDATA, BD_INT, 
+				{ NDO_DATA_PROCESSPERFORMANCEDATA, BD_INT,
 						{ .integer = temp_service->process_performance_data }},
-				{ NDO_DATA_OBSESSOVERSERVICE, BD_INT, 
-						{ .integer = 
+				{ NDO_DATA_OBSESSOVERSERVICE, BD_INT,
+						{ .integer =
 #ifdef BUILD_NAGIOS_4X
 			 				temp_service->obsess
 #else
 			 				temp_service->obsess_over_service
 #endif
 						}},
-				{ NDO_DATA_MODIFIEDSERVICEATTRIBUTES, BD_UNSIGNED_LONG, 
+				{ NDO_DATA_MODIFIEDSERVICEATTRIBUTES, BD_UNSIGNED_LONG,
 						{ .unsigned_long = temp_service->modified_attributes }},
-				{ NDO_DATA_EVENTHANDLER, BD_STRING, 
+				{ NDO_DATA_EVENTHANDLER, BD_STRING,
 						{ .string = (es[5]==NULL) ? "" : es[5] }},
-				{ NDO_DATA_CHECKCOMMAND, BD_STRING, 
+				{ NDO_DATA_CHECKCOMMAND, BD_STRING,
 						{ .string = (es[6]==NULL) ? "" : es[6] }},
-				{ NDO_DATA_NORMALCHECKINTERVAL, BD_FLOAT, 
-						{ .floating_point = 
+				{ NDO_DATA_NORMALCHECKINTERVAL, BD_FLOAT,
+						{ .floating_point =
 						(double)temp_service->check_interval }},
-				{ NDO_DATA_RETRYCHECKINTERVAL, BD_FLOAT, 
-						{ .floating_point = 
+				{ NDO_DATA_RETRYCHECKINTERVAL, BD_FLOAT,
+						{ .floating_point =
 						(double)temp_service->retry_interval }},
-				{ NDO_DATA_SERVICECHECKPERIOD, BD_STRING, 
+				{ NDO_DATA_SERVICECHECKPERIOD, BD_STRING,
 						{ .string = (es[7]==NULL) ? "" : es[7] }}
 				};
 
-			ndomod_broker_data_serialize(&dbuf, NDO_API_SERVICESTATUSDATA, 
-					service_status_data, sizeof(service_status_data) / 
+			ndomod_broker_data_serialize(&dbuf, NDO_API_SERVICESTATUSDATA,
+					service_status_data, sizeof(service_status_data) /
 					sizeof(service_status_data[ 0]), FALSE);
 		}
 
@@ -2852,36 +2890,36 @@ int ndomod_broker_data(int event_type, void *data){
 			struct ndo_broker_data contact_status_data[] = {
 				{ NDO_DATA_TYPE, BD_INT, { .integer = csdata->type }},
 				{ NDO_DATA_FLAGS, BD_INT, { .integer = csdata->flags }},
-				{ NDO_DATA_ATTRIBUTES, BD_INT, 
+				{ NDO_DATA_ATTRIBUTES, BD_INT,
 						{ .integer = csdata->attr }},
-				{ NDO_DATA_TIMESTAMP, BD_TIMEVAL, 
+				{ NDO_DATA_TIMESTAMP, BD_TIMEVAL,
 						{ .timestamp = csdata->timestamp }},
-				{ NDO_DATA_CONTACTNAME, BD_STRING, 
+				{ NDO_DATA_CONTACTNAME, BD_STRING,
 						{ .string = (es[0]==NULL) ? "" : es[0] }},
-				{ NDO_DATA_HOSTNOTIFICATIONSENABLED, BD_INT, 
-						{ .integer = 
+				{ NDO_DATA_HOSTNOTIFICATIONSENABLED, BD_INT,
+						{ .integer =
 						temp_contact->host_notifications_enabled }},
-				{ NDO_DATA_SERVICENOTIFICATIONSENABLED, BD_INT, 
-						{ .integer = 
+				{ NDO_DATA_SERVICENOTIFICATIONSENABLED, BD_INT,
+						{ .integer =
 						temp_contact->service_notifications_enabled }},
-				{ NDO_DATA_LASTHOSTNOTIFICATION, BD_UNSIGNED_LONG, 
+				{ NDO_DATA_LASTHOSTNOTIFICATION, BD_UNSIGNED_LONG,
 						{ .unsigned_long =
 		 				(unsigned long)temp_contact->last_host_notification }},
-				{ NDO_DATA_LASTSERVICENOTIFICATION, BD_UNSIGNED_LONG, 
+				{ NDO_DATA_LASTSERVICENOTIFICATION, BD_UNSIGNED_LONG,
 						{ .unsigned_long =
 		 				(unsigned long)temp_contact->last_service_notification }},
-				{ NDO_DATA_MODIFIEDCONTACTATTRIBUTES, BD_UNSIGNED_LONG, 
+				{ NDO_DATA_MODIFIEDCONTACTATTRIBUTES, BD_UNSIGNED_LONG,
 						{ .unsigned_long = temp_contact->modified_attributes }},
-				{ NDO_DATA_MODIFIEDHOSTATTRIBUTES, BD_UNSIGNED_LONG, 
-						{ .unsigned_long = 
+				{ NDO_DATA_MODIFIEDHOSTATTRIBUTES, BD_UNSIGNED_LONG,
+						{ .unsigned_long =
 						temp_contact->modified_host_attributes }},
-				{ NDO_DATA_MODIFIEDSERVICEATTRIBUTES, BD_UNSIGNED_LONG, 
-						{ .unsigned_long = 
+				{ NDO_DATA_MODIFIEDSERVICEATTRIBUTES, BD_UNSIGNED_LONG,
+						{ .unsigned_long =
 						temp_contact->modified_service_attributes }}
 				};
 
-			ndomod_broker_data_serialize(&dbuf, NDO_API_CONTACTSTATUSDATA, 
-					contact_status_data, sizeof(contact_status_data) / 
+			ndomod_broker_data_serialize(&dbuf, NDO_API_CONTACTSTATUSDATA,
+					contact_status_data, sizeof(contact_status_data) /
 					sizeof(contact_status_data[ 0]), FALSE);
 		}
 
@@ -2904,30 +2942,30 @@ int ndomod_broker_data(int event_type, void *data){
 			struct ndo_broker_data adaptive_program_data[] = {
 				{ NDO_DATA_TYPE, BD_INT, { .integer = apdata->type }},
 				{ NDO_DATA_FLAGS, BD_INT, { .integer = apdata->flags }},
-				{ NDO_DATA_ATTRIBUTES, BD_INT, 
+				{ NDO_DATA_ATTRIBUTES, BD_INT,
 						{ .integer = apdata->attr }},
-				{ NDO_DATA_TIMESTAMP, BD_TIMEVAL, 
+				{ NDO_DATA_TIMESTAMP, BD_TIMEVAL,
 						{ .timestamp = apdata->timestamp }},
-				{ NDO_DATA_COMMANDTYPE, BD_INT, 
+				{ NDO_DATA_COMMANDTYPE, BD_INT,
 						{ .integer = apdata->command_type }},
-				{ NDO_DATA_MODIFIEDHOSTATTRIBUTE, BD_UNSIGNED_LONG, 
+				{ NDO_DATA_MODIFIEDHOSTATTRIBUTE, BD_UNSIGNED_LONG,
 						{ .unsigned_long = apdata->modified_host_attribute }},
-				{ NDO_DATA_MODIFIEDHOSTATTRIBUTES, BD_UNSIGNED_LONG, 
+				{ NDO_DATA_MODIFIEDHOSTATTRIBUTES, BD_UNSIGNED_LONG,
 						{ .unsigned_long = apdata->modified_host_attributes }},
-				{ NDO_DATA_MODIFIEDSERVICEATTRIBUTE, BD_UNSIGNED_LONG, 
-						{ .unsigned_long = 
+				{ NDO_DATA_MODIFIEDSERVICEATTRIBUTE, BD_UNSIGNED_LONG,
+						{ .unsigned_long =
 						apdata->modified_service_attribute }},
-				{ NDO_DATA_MODIFIEDSERVICEATTRIBUTES, BD_UNSIGNED_LONG, 
-						{ .unsigned_long = 
+				{ NDO_DATA_MODIFIEDSERVICEATTRIBUTES, BD_UNSIGNED_LONG,
+						{ .unsigned_long =
 						apdata->modified_service_attributes }},
-				{ NDO_DATA_GLOBALHOSTEVENTHANDLER, BD_STRING, 
+				{ NDO_DATA_GLOBALHOSTEVENTHANDLER, BD_STRING,
 						{ .string = (es[0]==NULL) ? "" : es[0] }},
-				{ NDO_DATA_GLOBALSERVICEEVENTHANDLER, BD_STRING, 
+				{ NDO_DATA_GLOBALSERVICEEVENTHANDLER, BD_STRING,
 						{ .string = (es[1]==NULL) ? "" : es[1] }},
 				};
 
-			ndomod_broker_data_serialize(&dbuf, NDO_API_ADAPTIVEPROGRAMDATA, 
-					adaptive_program_data, sizeof(adaptive_program_data) / 
+			ndomod_broker_data_serialize(&dbuf, NDO_API_ADAPTIVEPROGRAMDATA,
+					adaptive_program_data, sizeof(adaptive_program_data) /
 					sizeof(adaptive_program_data[ 0]), TRUE);
 		}
 
@@ -2961,32 +2999,32 @@ int ndomod_broker_data(int event_type, void *data){
 			struct ndo_broker_data adaptive_host_data[] = {
 				{ NDO_DATA_TYPE, BD_INT, { .integer = ahdata->type }},
 				{ NDO_DATA_FLAGS, BD_INT, { .integer = ahdata->flags }},
-				{ NDO_DATA_ATTRIBUTES, BD_INT, 
+				{ NDO_DATA_ATTRIBUTES, BD_INT,
 						{ .integer = ahdata->attr }},
-				{ NDO_DATA_TIMESTAMP, BD_TIMEVAL, 
+				{ NDO_DATA_TIMESTAMP, BD_TIMEVAL,
 						{ .timestamp = ahdata->timestamp }},
-				{ NDO_DATA_COMMANDTYPE, BD_INT, 
+				{ NDO_DATA_COMMANDTYPE, BD_INT,
 						{ .integer = ahdata->command_type }},
-				{ NDO_DATA_MODIFIEDHOSTATTRIBUTE, BD_UNSIGNED_LONG, 
+				{ NDO_DATA_MODIFIEDHOSTATTRIBUTE, BD_UNSIGNED_LONG,
 						{ .unsigned_long = ahdata->modified_attribute }},
-				{ NDO_DATA_MODIFIEDHOSTATTRIBUTES, BD_UNSIGNED_LONG, 
+				{ NDO_DATA_MODIFIEDHOSTATTRIBUTES, BD_UNSIGNED_LONG,
 						{ .unsigned_long = ahdata->modified_attributes }},
-				{ NDO_DATA_HOST, BD_STRING, 
+				{ NDO_DATA_HOST, BD_STRING,
 						{ .string = (es[0]==NULL) ? "" : es[0] }},
-				{ NDO_DATA_EVENTHANDLER, BD_STRING, 
+				{ NDO_DATA_EVENTHANDLER, BD_STRING,
 						{ .string = (es[1]==NULL) ? "" : es[1] }},
-				{ NDO_DATA_CHECKCOMMAND, BD_STRING, 
+				{ NDO_DATA_CHECKCOMMAND, BD_STRING,
 						{ .string = (es[2]==NULL) ? "" : es[2] }},
-				{ NDO_DATA_NORMALCHECKINTERVAL, BD_FLOAT, 
+				{ NDO_DATA_NORMALCHECKINTERVAL, BD_FLOAT,
 						{ .floating_point = temp_host->check_interval }},
-				{ NDO_DATA_RETRYCHECKINTERVAL, BD_FLOAT, 
+				{ NDO_DATA_RETRYCHECKINTERVAL, BD_FLOAT,
 						{ .floating_point = retry_interval }},
-				{ NDO_DATA_MAXCHECKATTEMPTS, BD_INT, 
+				{ NDO_DATA_MAXCHECKATTEMPTS, BD_INT,
 						{ .integer = temp_host->max_attempts }},
 				};
 
-			ndomod_broker_data_serialize(&dbuf, NDO_API_ADAPTIVEHOSTDATA, 
-					adaptive_host_data, 
+			ndomod_broker_data_serialize(&dbuf, NDO_API_ADAPTIVEHOSTDATA,
+					adaptive_host_data,
 					sizeof(adaptive_host_data) / sizeof(adaptive_host_data[ 0]),
 					TRUE);
 		}
@@ -3015,36 +3053,36 @@ int ndomod_broker_data(int event_type, void *data){
 			struct ndo_broker_data adaptive_service_data[] = {
 				{ NDO_DATA_TYPE, BD_INT, { .integer = asdata->type }},
 				{ NDO_DATA_FLAGS, BD_INT, { .integer = asdata->flags }},
-				{ NDO_DATA_ATTRIBUTES, BD_INT, 
+				{ NDO_DATA_ATTRIBUTES, BD_INT,
 						{ .integer = asdata->attr }},
-				{ NDO_DATA_TIMESTAMP, BD_TIMEVAL, 
+				{ NDO_DATA_TIMESTAMP, BD_TIMEVAL,
 						{ .timestamp = asdata->timestamp }},
-				{ NDO_DATA_COMMANDTYPE, BD_INT, 
+				{ NDO_DATA_COMMANDTYPE, BD_INT,
 						{ .integer = asdata->command_type }},
-				{ NDO_DATA_MODIFIEDSERVICEATTRIBUTE, BD_UNSIGNED_LONG, 
+				{ NDO_DATA_MODIFIEDSERVICEATTRIBUTE, BD_UNSIGNED_LONG,
 						{ .unsigned_long = asdata->modified_attribute }},
-				{ NDO_DATA_MODIFIEDSERVICEATTRIBUTES, BD_UNSIGNED_LONG, 
+				{ NDO_DATA_MODIFIEDSERVICEATTRIBUTES, BD_UNSIGNED_LONG,
 						{ .unsigned_long = asdata->modified_attributes }},
-				{ NDO_DATA_HOST, BD_STRING, 
+				{ NDO_DATA_HOST, BD_STRING,
 						{ .string = (es[0]==NULL) ? "" : es[0] }},
-				{ NDO_DATA_SERVICE, BD_STRING, 
+				{ NDO_DATA_SERVICE, BD_STRING,
 						{ .string = (es[1]==NULL) ? "" : es[1] }},
-				{ NDO_DATA_EVENTHANDLER, BD_STRING, 
+				{ NDO_DATA_EVENTHANDLER, BD_STRING,
 						{ .string = (es[2]==NULL) ? "" : es[2] }},
-				{ NDO_DATA_CHECKCOMMAND, BD_STRING, 
+				{ NDO_DATA_CHECKCOMMAND, BD_STRING,
 						{ .string = (es[3]==NULL) ? "" : es[3] }},
-				{ NDO_DATA_NORMALCHECKINTERVAL, BD_FLOAT, 
-						{ .floating_point = 
+				{ NDO_DATA_NORMALCHECKINTERVAL, BD_FLOAT,
+						{ .floating_point =
 						(double)temp_service->check_interval }},
-				{ NDO_DATA_RETRYCHECKINTERVAL, BD_FLOAT, 
-						{ .floating_point = 
+				{ NDO_DATA_RETRYCHECKINTERVAL, BD_FLOAT,
+						{ .floating_point =
 						(double)temp_service->retry_interval }},
-				{ NDO_DATA_MAXCHECKATTEMPTS, BD_INT, 
+				{ NDO_DATA_MAXCHECKATTEMPTS, BD_INT,
 						{ .integer = temp_service->max_attempts }},
 				};
 
-			ndomod_broker_data_serialize(&dbuf, NDO_API_ADAPTIVESERVICEDATA, 
-					adaptive_service_data, sizeof(adaptive_service_data) / 
+			ndomod_broker_data_serialize(&dbuf, NDO_API_ADAPTIVESERVICEDATA,
+					adaptive_service_data, sizeof(adaptive_service_data) /
 					sizeof(adaptive_service_data[ 0]), TRUE);
 		}
 
@@ -3066,38 +3104,38 @@ int ndomod_broker_data(int event_type, void *data){
 			struct ndo_broker_data adaptive_contact_data[] = {
 				{ NDO_DATA_TYPE, BD_INT, { .integer = acdata->type }},
 				{ NDO_DATA_FLAGS, BD_INT, { .integer = acdata->flags }},
-				{ NDO_DATA_ATTRIBUTES, BD_INT, 
+				{ NDO_DATA_ATTRIBUTES, BD_INT,
 						{ .integer = acdata->attr }},
-				{ NDO_DATA_TIMESTAMP, BD_TIMEVAL, 
+				{ NDO_DATA_TIMESTAMP, BD_TIMEVAL,
 						{ .timestamp = acdata->timestamp }},
-				{ NDO_DATA_COMMANDTYPE, BD_INT, 
+				{ NDO_DATA_COMMANDTYPE, BD_INT,
 						{ .integer = acdata->command_type }},
-				{ NDO_DATA_MODIFIEDCONTACTATTRIBUTE, BD_UNSIGNED_LONG, 
+				{ NDO_DATA_MODIFIEDCONTACTATTRIBUTE, BD_UNSIGNED_LONG,
 						{ .unsigned_long = acdata->modified_attribute }},
-				{ NDO_DATA_MODIFIEDCONTACTATTRIBUTES, BD_UNSIGNED_LONG, 
+				{ NDO_DATA_MODIFIEDCONTACTATTRIBUTES, BD_UNSIGNED_LONG,
 						{ .unsigned_long = acdata->modified_attributes }},
-				{ NDO_DATA_MODIFIEDHOSTATTRIBUTE, BD_UNSIGNED_LONG, 
+				{ NDO_DATA_MODIFIEDHOSTATTRIBUTE, BD_UNSIGNED_LONG,
 						{ .unsigned_long = acdata->modified_host_attribute }},
-				{ NDO_DATA_MODIFIEDHOSTATTRIBUTES, BD_UNSIGNED_LONG, 
+				{ NDO_DATA_MODIFIEDHOSTATTRIBUTES, BD_UNSIGNED_LONG,
 						{ .unsigned_long = acdata->modified_host_attributes }},
-				{ NDO_DATA_MODIFIEDSERVICEATTRIBUTE, BD_UNSIGNED_LONG, 
-						{ .unsigned_long = 
+				{ NDO_DATA_MODIFIEDSERVICEATTRIBUTE, BD_UNSIGNED_LONG,
+						{ .unsigned_long =
 						acdata->modified_service_attribute }},
-				{ NDO_DATA_MODIFIEDSERVICEATTRIBUTES, BD_UNSIGNED_LONG, 
-						{ .unsigned_long = 
+				{ NDO_DATA_MODIFIEDSERVICEATTRIBUTES, BD_UNSIGNED_LONG,
+						{ .unsigned_long =
 						acdata->modified_service_attributes }},
-				{ NDO_DATA_CONTACTNAME, BD_STRING, 
+				{ NDO_DATA_CONTACTNAME, BD_STRING,
 						{ .string = (es[0]==NULL) ? "" : es[0] }},
-				{ NDO_DATA_HOSTNOTIFICATIONSENABLED, BD_INT, 
-						{ .integer = 
+				{ NDO_DATA_HOSTNOTIFICATIONSENABLED, BD_INT,
+						{ .integer =
 						temp_contact->host_notifications_enabled }},
-				{ NDO_DATA_SERVICENOTIFICATIONSENABLED, BD_INT, 
-						{ .integer = 
+				{ NDO_DATA_SERVICENOTIFICATIONSENABLED, BD_INT,
+						{ .integer =
 						temp_contact->service_notifications_enabled }},
 				};
 
-			ndomod_broker_data_serialize(&dbuf, NDO_API_ADAPTIVECONTACTDATA, 
-					adaptive_contact_data, sizeof(adaptive_contact_data) / 
+			ndomod_broker_data_serialize(&dbuf, NDO_API_ADAPTIVECONTACTDATA,
+					adaptive_contact_data, sizeof(adaptive_contact_data) /
 					sizeof(adaptive_contact_data[ 0]), TRUE);
 		}
 
@@ -3115,22 +3153,22 @@ int ndomod_broker_data(int event_type, void *data){
 			struct ndo_broker_data external_command_data[] = {
 				{ NDO_DATA_TYPE, BD_INT, { .integer = ecdata->type }},
 				{ NDO_DATA_FLAGS, BD_INT, { .integer = ecdata->flags }},
-				{ NDO_DATA_ATTRIBUTES, BD_INT, 
+				{ NDO_DATA_ATTRIBUTES, BD_INT,
 						{ .integer = ecdata->attr }},
-				{ NDO_DATA_TIMESTAMP, BD_TIMEVAL, 
+				{ NDO_DATA_TIMESTAMP, BD_TIMEVAL,
 						{ .timestamp = ecdata->timestamp }},
-				{ NDO_DATA_COMMANDTYPE, BD_INT, 
+				{ NDO_DATA_COMMANDTYPE, BD_INT,
 						{ .integer = ecdata->command_type }},
-				{ NDO_DATA_ENTRYTIME, BD_UNSIGNED_LONG, 
+				{ NDO_DATA_ENTRYTIME, BD_UNSIGNED_LONG,
 						{ .unsigned_long = (unsigned long)ecdata->entry_time }},
-				{ NDO_DATA_COMMANDSTRING, BD_STRING, 
+				{ NDO_DATA_COMMANDSTRING, BD_STRING,
 						{ .string = (es[0]==NULL) ? "" : es[0] }},
-				{ NDO_DATA_COMMANDARGS, BD_STRING, 
+				{ NDO_DATA_COMMANDARGS, BD_STRING,
 						{ .string = (es[1]==NULL) ? "" : es[1] }},
 				};
 
-			ndomod_broker_data_serialize(&dbuf, NDO_API_EXTERNALCOMMANDDATA, 
-					external_command_data, sizeof(external_command_data) / 
+			ndomod_broker_data_serialize(&dbuf, NDO_API_EXTERNALCOMMANDDATA,
+					external_command_data, sizeof(external_command_data) /
 					sizeof(external_command_data[ 0]), TRUE);
 		}
 
@@ -3144,14 +3182,14 @@ int ndomod_broker_data(int event_type, void *data){
 			struct ndo_broker_data aggregated_status_data[] = {
 				{ NDO_DATA_TYPE, BD_INT, { .integer = agsdata->type }},
 				{ NDO_DATA_FLAGS, BD_INT, { .integer = agsdata->flags }},
-				{ NDO_DATA_ATTRIBUTES, BD_INT, 
+				{ NDO_DATA_ATTRIBUTES, BD_INT,
 						{ .integer = agsdata->attr }},
-				{ NDO_DATA_TIMESTAMP, BD_TIMEVAL, 
+				{ NDO_DATA_TIMESTAMP, BD_TIMEVAL,
 						{ .timestamp = agsdata->timestamp }},
 				};
 
-			ndomod_broker_data_serialize(&dbuf, NDO_API_AGGREGATEDSTATUSDATA, 
-					aggregated_status_data, sizeof(aggregated_status_data) / 
+			ndomod_broker_data_serialize(&dbuf, NDO_API_AGGREGATEDSTATUSDATA,
+					aggregated_status_data, sizeof(aggregated_status_data) /
 					sizeof(aggregated_status_data[ 0]), TRUE);
 		}
 
@@ -3165,14 +3203,14 @@ int ndomod_broker_data(int event_type, void *data){
 			struct ndo_broker_data retention_data[] = {
 				{ NDO_DATA_TYPE, BD_INT, { .integer = rdata->type }},
 				{ NDO_DATA_FLAGS, BD_INT, { .integer = rdata->flags }},
-				{ NDO_DATA_ATTRIBUTES, BD_INT, 
+				{ NDO_DATA_ATTRIBUTES, BD_INT,
 						{ .integer = rdata->attr }},
-				{ NDO_DATA_TIMESTAMP, BD_TIMEVAL, 
+				{ NDO_DATA_TIMESTAMP, BD_TIMEVAL,
 						{ .timestamp = rdata->timestamp }},
 				};
 
-			ndomod_broker_data_serialize(&dbuf, NDO_API_RETENTIONDATA, 
-					retention_data, 
+			ndomod_broker_data_serialize(&dbuf, NDO_API_RETENTIONDATA,
+					retention_data,
 					sizeof(retention_data) / sizeof(retention_data[ 0]), TRUE);
 		}
 
@@ -3197,40 +3235,40 @@ int ndomod_broker_data(int event_type, void *data){
 			struct ndo_broker_data contact_notification_data[] = {
 				{ NDO_DATA_TYPE, BD_INT, { .integer = cnotdata->type }},
 				{ NDO_DATA_FLAGS, BD_INT, { .integer = cnotdata->flags }},
-				{ NDO_DATA_ATTRIBUTES, BD_INT, 
+				{ NDO_DATA_ATTRIBUTES, BD_INT,
 						{ .integer = cnotdata->attr }},
-				{ NDO_DATA_TIMESTAMP, BD_TIMEVAL, 
+				{ NDO_DATA_TIMESTAMP, BD_TIMEVAL,
 						{ .timestamp = cnotdata->timestamp }},
-				{ NDO_DATA_NOTIFICATIONTYPE, BD_INT, 
+				{ NDO_DATA_NOTIFICATIONTYPE, BD_INT,
 						{ .integer = cnotdata->notification_type }},
-				{ NDO_DATA_STARTTIME, BD_TIMEVAL, 
+				{ NDO_DATA_STARTTIME, BD_TIMEVAL,
 						{ .timestamp = cnotdata->start_time }},
-				{ NDO_DATA_ENDTIME, BD_TIMEVAL, 
+				{ NDO_DATA_ENDTIME, BD_TIMEVAL,
 						{ .timestamp = cnotdata->end_time }},
-				{ NDO_DATA_HOST, BD_STRING, 
+				{ NDO_DATA_HOST, BD_STRING,
 						{ .string = (es[0]==NULL) ? "" : es[0] }},
-				{ NDO_DATA_SERVICE, BD_STRING, 
+				{ NDO_DATA_SERVICE, BD_STRING,
 						{ .string = (es[1]==NULL) ? "" : es[1] }},
-				{ NDO_DATA_CONTACTNAME, BD_STRING, 
+				{ NDO_DATA_CONTACTNAME, BD_STRING,
 						{ .string = (es[7]==NULL) ? "" : es[7] }},
-				{ NDO_DATA_NOTIFICATIONREASON, BD_INT, 
+				{ NDO_DATA_NOTIFICATIONREASON, BD_INT,
 						{ .integer = cnotdata->reason_type }},
 				{ NDO_DATA_STATE, BD_INT, { .integer = cnotdata->state }},
-				{ NDO_DATA_OUTPUT, BD_STRING, 
+				{ NDO_DATA_OUTPUT, BD_STRING,
 						{ .string = (es[2]==NULL) ? "" : es[2] }},
-				{ NDO_DATA_LONGOUTPUT, BD_STRING, 
+				{ NDO_DATA_LONGOUTPUT, BD_STRING,
 						{ .string = (es[3]==NULL) ? "" : es[3] }},
-				{ NDO_DATA_OUTPUT, BD_STRING, 
+				{ NDO_DATA_OUTPUT, BD_STRING,
 						{ .string = (es[4]==NULL) ? "" : es[4] }},
-				{ NDO_DATA_ACKAUTHOR, BD_STRING, 
+				{ NDO_DATA_ACKAUTHOR, BD_STRING,
 						{ .string = (es[5]==NULL) ? "" : es[5] }},
-				{ NDO_DATA_ACKDATA, BD_STRING, 
+				{ NDO_DATA_ACKDATA, BD_STRING,
 						{ .string = (es[6]==NULL) ? "" : es[6] }},
 				};
 
 			ndomod_broker_data_serialize(&dbuf,
-					NDO_API_CONTACTNOTIFICATIONDATA, contact_notification_data, 
-					sizeof(contact_notification_data) / 
+					NDO_API_CONTACTNOTIFICATIONDATA, contact_notification_data,
+					sizeof(contact_notification_data) /
 					sizeof(contact_notification_data[ 0]), TRUE);
 		}
 
@@ -3253,41 +3291,41 @@ int ndomod_broker_data(int event_type, void *data){
 			struct ndo_broker_data contact_notification_method_data[] = {
 				{ NDO_DATA_TYPE, BD_INT, { .integer = cnotmdata->type }},
 				{ NDO_DATA_FLAGS, BD_INT, { .integer = cnotmdata->flags }},
-				{ NDO_DATA_ATTRIBUTES, BD_INT, 
+				{ NDO_DATA_ATTRIBUTES, BD_INT,
 						{ .integer = cnotmdata->attr }},
-				{ NDO_DATA_TIMESTAMP, BD_TIMEVAL, 
+				{ NDO_DATA_TIMESTAMP, BD_TIMEVAL,
 						{ .timestamp = cnotmdata->timestamp }},
-				{ NDO_DATA_NOTIFICATIONTYPE, BD_INT, 
+				{ NDO_DATA_NOTIFICATIONTYPE, BD_INT,
 						{ .integer = cnotmdata->notification_type }},
-				{ NDO_DATA_STARTTIME, BD_TIMEVAL, 
+				{ NDO_DATA_STARTTIME, BD_TIMEVAL,
 						{ .timestamp = cnotmdata->start_time }},
-				{ NDO_DATA_ENDTIME, BD_TIMEVAL, 
+				{ NDO_DATA_ENDTIME, BD_TIMEVAL,
 						{ .timestamp = cnotmdata->end_time }},
-				{ NDO_DATA_HOST, BD_STRING, 
+				{ NDO_DATA_HOST, BD_STRING,
 						{ .string = (es[0]==NULL) ? "" : es[0] }},
-				{ NDO_DATA_SERVICE, BD_STRING, 
+				{ NDO_DATA_SERVICE, BD_STRING,
 						{ .string = (es[1]==NULL) ? "" : es[1] }},
-				{ NDO_DATA_CONTACTNAME, BD_STRING, 
+				{ NDO_DATA_CONTACTNAME, BD_STRING,
 						{ .string = (es[5]==NULL) ? "" : es[5] }},
-				{ NDO_DATA_COMMANDNAME, BD_STRING, 
+				{ NDO_DATA_COMMANDNAME, BD_STRING,
 						{ .string = (es[6]==NULL) ? "" : es[6] }},
-				{ NDO_DATA_COMMANDARGS, BD_STRING, 
+				{ NDO_DATA_COMMANDARGS, BD_STRING,
 						{ .string = (es[7]==NULL) ? "" : es[7] }},
-				{ NDO_DATA_NOTIFICATIONREASON, BD_INT, 
+				{ NDO_DATA_NOTIFICATIONREASON, BD_INT,
 						{ .integer = cnotmdata->reason_type }},
 				{ NDO_DATA_STATE, BD_INT, { .integer = cnotmdata->state }},
-				{ NDO_DATA_OUTPUT, BD_STRING, 
+				{ NDO_DATA_OUTPUT, BD_STRING,
 						{ .string = (es[2]==NULL) ? "" : es[2] }},
-				{ NDO_DATA_ACKAUTHOR, BD_STRING, 
+				{ NDO_DATA_ACKAUTHOR, BD_STRING,
 						{ .string = (es[3]==NULL) ? "" : es[3] }},
-				{ NDO_DATA_ACKDATA, BD_STRING, 
+				{ NDO_DATA_ACKDATA, BD_STRING,
 						{ .string = (es[4]==NULL) ? "" : es[4] }},
 				};
 
 			ndomod_broker_data_serialize(&dbuf,
-					NDO_API_CONTACTNOTIFICATIONMETHODDATA, 
-					contact_notification_method_data, 
-					sizeof(contact_notification_method_data) / 
+					NDO_API_CONTACTNOTIFICATIONMETHODDATA,
+					contact_notification_method_data,
+					sizeof(contact_notification_method_data) /
 					sizeof(contact_notification_method_data[ 0]), TRUE);
 		}
 
@@ -3306,30 +3344,30 @@ int ndomod_broker_data(int event_type, void *data){
 			struct ndo_broker_data acknowledgement_data[] = {
 				{ NDO_DATA_TYPE, BD_INT, { .integer = ackdata->type }},
 				{ NDO_DATA_FLAGS, BD_INT, { .integer = ackdata->flags }},
-				{ NDO_DATA_ATTRIBUTES, BD_INT, 
+				{ NDO_DATA_ATTRIBUTES, BD_INT,
 						{ .integer = ackdata->attr }},
-				{ NDO_DATA_TIMESTAMP, BD_TIMEVAL, 
+				{ NDO_DATA_TIMESTAMP, BD_TIMEVAL,
 						{ .timestamp = ackdata->timestamp }},
-				{ NDO_DATA_ACKNOWLEDGEMENTTYPE, BD_INT, 
+				{ NDO_DATA_ACKNOWLEDGEMENTTYPE, BD_INT,
 						{ .integer = ackdata->acknowledgement_type }},
-				{ NDO_DATA_HOST, BD_STRING, 
+				{ NDO_DATA_HOST, BD_STRING,
 						{ .string = (es[0]==NULL) ? "" : es[0] }},
-				{ NDO_DATA_SERVICE, BD_STRING, 
+				{ NDO_DATA_SERVICE, BD_STRING,
 						{ .string = (es[1]==NULL) ? "" : es[1] }},
-				{ NDO_DATA_AUTHORNAME, BD_STRING, 
+				{ NDO_DATA_AUTHORNAME, BD_STRING,
 						{ .string = (es[2]==NULL) ? "" : es[2] }},
-				{ NDO_DATA_COMMENT, BD_STRING, 
+				{ NDO_DATA_COMMENT, BD_STRING,
 						{ .string = (es[3]==NULL) ? "" : es[3] }},
 				{ NDO_DATA_STATE, BD_INT, { .integer = ackdata->state }},
 				{ NDO_DATA_STICKY, BD_INT, { .integer = ackdata->is_sticky }},
-				{ NDO_DATA_PERSISTENT, BD_INT, 
+				{ NDO_DATA_PERSISTENT, BD_INT,
 						{ .integer = ackdata->persistent_comment }},
-				{ NDO_DATA_NOTIFYCONTACTS, BD_INT, 
+				{ NDO_DATA_NOTIFYCONTACTS, BD_INT,
 						{ .integer = ackdata->notify_contacts }},
 				};
 
-			ndomod_broker_data_serialize(&dbuf, NDO_API_ACKNOWLEDGEMENTDATA, 
-					acknowledgement_data, sizeof(acknowledgement_data) / 
+			ndomod_broker_data_serialize(&dbuf, NDO_API_ACKNOWLEDGEMENTDATA,
+					acknowledgement_data, sizeof(acknowledgement_data) /
 					sizeof(acknowledgement_data[ 0]), TRUE);
 		}
 
@@ -3378,43 +3416,49 @@ int ndomod_broker_data(int event_type, void *data){
 		es[0]=ndo_escape_buffer(schangedata->host_name);
 		es[1]=ndo_escape_buffer(schangedata->service_description);
 		es[2]=ndo_escape_buffer(schangedata->output);
-		/* Preparing for long_output in the future */
+#ifdef BUILD_NAGIOS_4X
+		if (CURRENT_OBJECT_STRUCTURE_VERSION >= 403 && has_ver403_long_output)
+			es[3]=ndo_escape_buffer(schangedata->longoutput);
+		else
+			es[3]=ndo_escape_buffer(schangedata->output);
+#else
 		es[3]=ndo_escape_buffer(schangedata->output);
+#endif
 
 		{
 			struct ndo_broker_data state_change_data[] = {
 				{ NDO_DATA_TYPE, BD_INT, { .integer = schangedata->type }},
 				{ NDO_DATA_FLAGS, BD_INT, { .integer = schangedata->flags }},
-				{ NDO_DATA_ATTRIBUTES, BD_INT, 
+				{ NDO_DATA_ATTRIBUTES, BD_INT,
 						{ .integer = schangedata->attr }},
-				{ NDO_DATA_TIMESTAMP, BD_TIMEVAL, 
+				{ NDO_DATA_TIMESTAMP, BD_TIMEVAL,
 						{ .timestamp = schangedata->timestamp }},
-				{ NDO_DATA_STATECHANGETYPE, BD_INT, 
+				{ NDO_DATA_STATECHANGETYPE, BD_INT,
 						{ .integer = schangedata->statechange_type }},
-				{ NDO_DATA_HOST, BD_STRING, 
+				{ NDO_DATA_HOST, BD_STRING,
 						{ .string = (es[0]==NULL) ? "" : es[0] }},
-				{ NDO_DATA_SERVICE, BD_STRING, 
+				{ NDO_DATA_SERVICE, BD_STRING,
 						{ .string = (es[1]==NULL) ? "" : es[1] }},
 				{ NDO_DATA_STATECHANGE, BD_INT, { .integer = TRUE }},
 				{ NDO_DATA_STATE, BD_INT, { .integer = schangedata->state }},
-				{ NDO_DATA_STATETYPE, BD_INT, 
+				{ NDO_DATA_STATETYPE, BD_INT,
 						{ .integer = schangedata->state_type }},
-				{ NDO_DATA_CURRENTCHECKATTEMPT, BD_INT, 
+				{ NDO_DATA_CURRENTCHECKATTEMPT, BD_INT,
 						{ .integer = schangedata->current_attempt }},
-				{ NDO_DATA_MAXCHECKATTEMPTS, BD_INT, 
+				{ NDO_DATA_MAXCHECKATTEMPTS, BD_INT,
 						{ .integer = schangedata->max_attempts }},
 				{ NDO_DATA_LASTSTATE, BD_INT, { .integer = last_state }},
-				{ NDO_DATA_LASTHARDSTATE, BD_INT, 
+				{ NDO_DATA_LASTHARDSTATE, BD_INT,
 						{ .integer = last_hard_state }},
-				{ NDO_DATA_OUTPUT, BD_STRING, 
+				{ NDO_DATA_OUTPUT, BD_STRING,
 						{ .string = (es[2]==NULL) ? "" : es[2] }},
-				{ NDO_DATA_LONGOUTPUT, BD_STRING, 
+				{ NDO_DATA_LONGOUTPUT, BD_STRING,
 						{ .string = (es[3]==NULL) ? "" : es[3] }},
 				};
 
-			ndomod_broker_data_serialize(&dbuf, NDO_API_STATECHANGEDATA, 
-					state_change_data, 
-					sizeof(state_change_data) / sizeof(state_change_data[ 0]), 
+			ndomod_broker_data_serialize(&dbuf, NDO_API_STATECHANGEDATA,
+					state_change_data,
+					sizeof(state_change_data) / sizeof(state_change_data[ 0]),
 					TRUE);
 		}
 
@@ -3440,7 +3484,7 @@ int ndomod_broker_data(int event_type, void *data){
 	ndo_dbuf_free(&dbuf);
 
 
-	
+
 	/* POST PROCESSING... */
 
 	switch(event_type){
@@ -3498,7 +3542,7 @@ int ndomod_write_config(int config_type){
 
 	/* record start of config dump */
 	snprintf(temp_buffer,sizeof(temp_buffer)-1
-		 ,"\n\n%d:\n%d=%s\n%d=%ld.%ld\n%d\n\n"
+		 ,"\n\n%d:\n%d=%s\n%d=%ld.%06ld\n%d\n\n"
 		 ,NDO_API_STARTCONFIGDUMP
 		 ,NDO_DATA_CONFIGDUMPTYPE
 		 ,(config_type==NDOMOD_CONFIG_DUMP_ORIGINAL)?NDO_API_CONFIGDUMP_ORIGINAL:NDO_API_CONFIGDUMP_RETAINED
@@ -3510,6 +3554,8 @@ int ndomod_write_config(int config_type){
 	temp_buffer[sizeof(temp_buffer)-1]='\x0';
 	ndomod_write_to_sink(temp_buffer,NDO_TRUE,NDO_TRUE);
 
+/*	ndomod_write_active_objects(); */
+
 	/* dump object config info */
 	result=ndomod_write_object_config(config_type);
 	if(result!=NDO_OK)
@@ -3517,7 +3563,7 @@ int ndomod_write_config(int config_type){
 
 	/* record end of config dump */
 	snprintf(temp_buffer,sizeof(temp_buffer)-1
-		 ,"\n\n%d:\n%d=%ld.%ld\n%d\n\n"
+		 ,"\n\n%d:\n%d=%ld.%06ld\n%d\n\n"
 		 ,NDO_API_ENDCONFIGDUMP
 		 ,NDO_DATA_TIMESTAMP
 		 ,now.tv_sec
@@ -3531,7 +3577,257 @@ int ndomod_write_config(int config_type){
         }
 
 
+/*************************************************************
+ * Get a list of all active objects, so the "is_active" flag *
+ * can be set on them in batches, instead of one at a time.  *
+ *************************************************************/
+void ndomod_write_active_objects()
+{
+	command					*temp_command;
+	timeperiod				*temp_timeperiod;
+	contact					*temp_contact;
+	contactgroup			*temp_contactgroup;
+	host					*temp_host;
+	hostgroup				*temp_hostgroup;
+	service					*temp_service;
+	servicegroup			*temp_servicegroup;
+	ndo_dbuf				dbuf;
+	struct ndo_broker_data	active_objects[256];
+	struct timeval			now;
+	int						i, obj_count;
+	char					*name1, *name2;
+
+	gettimeofday(&now,NULL);		/* get current time */
+	ndo_dbuf_init(&dbuf, 2048);		/* initialize dynamic buffer (2KB chunk size) */
+
+
+	active_objects[0].key = NDO_DATA_ACTIVEOBJECTSTYPE;
+	active_objects[0].datatype = BD_INT;
+
+	active_objects[0].value.integer = NDO_API_COMMANDDEFINITION;
+	obj_count = 1;
+	for (temp_command = command_list; temp_command != NULL; temp_command = temp_command->next) {
+		name1 = ndo_escape_buffer(temp_command->name);
+		active_objects[obj_count].key = obj_count;
+		active_objects[obj_count].datatype = BD_STRING;
+		active_objects[obj_count].value.string = (name1 == NULL) ? "" : name1;
+		if (++obj_count > 250) {
+			ndomod_broker_data_serialize(&dbuf, NDO_API_ACTIVEOBJECTSLIST,
+					active_objects, obj_count, TRUE);
+			ndomod_write_to_sink(dbuf.buf,NDO_TRUE,NDO_TRUE);
+			ndo_dbuf_free(&dbuf);
+			while (--obj_count)
+				free(active_objects[obj_count].value.string);
+			obj_count = 1;
+		}
+	}
+	if (obj_count > 1) {
+		ndomod_broker_data_serialize(&dbuf, NDO_API_ACTIVEOBJECTSLIST,
+				active_objects, obj_count, TRUE);
+		ndomod_write_to_sink(dbuf.buf,NDO_TRUE,NDO_TRUE);
+		ndo_dbuf_free(&dbuf);
+		while (--obj_count)
+			free(active_objects[obj_count].value.string);
+	}
+
+
+	active_objects[0].value.integer = NDO_API_TIMEPERIODDEFINITION;
+	obj_count = 1;
+	for (temp_timeperiod = timeperiod_list; temp_timeperiod != NULL; temp_timeperiod = temp_timeperiod->next) {
+		name1 = ndo_escape_buffer(temp_timeperiod->name);
+		active_objects[obj_count].key = obj_count;
+		active_objects[obj_count].datatype = BD_STRING;
+		active_objects[obj_count].value.string = (name1 == NULL) ? "" : name1;
+		if (++obj_count > 250) {
+			ndomod_broker_data_serialize(&dbuf, NDO_API_ACTIVEOBJECTSLIST,
+					active_objects, obj_count, TRUE);
+			ndomod_write_to_sink(dbuf.buf,NDO_TRUE,NDO_TRUE);
+			ndo_dbuf_free(&dbuf);
+			while (--obj_count)
+				free(active_objects[obj_count].value.string);
+			obj_count = 1;
+		}
+	}
+	if (obj_count > 1) {
+		ndomod_broker_data_serialize(&dbuf, NDO_API_ACTIVEOBJECTSLIST,
+				active_objects, obj_count, TRUE);
+		ndomod_write_to_sink(dbuf.buf,NDO_TRUE,NDO_TRUE);
+		ndo_dbuf_free(&dbuf);
+		while (--obj_count)
+			free(active_objects[obj_count].value.string);
+	}
+
+
+	active_objects[0].value.integer = NDO_API_CONTACTDEFINITION;
+	obj_count = 1;
+	for (temp_contact = contact_list; temp_contact != NULL; temp_contact = temp_contact->next) {
+		name1 = ndo_escape_buffer(temp_contact->name);
+		active_objects[obj_count].key = obj_count;
+		active_objects[obj_count].datatype = BD_STRING;
+		active_objects[obj_count].value.string = (name1 == NULL) ? "" : name1;
+		if (++obj_count > 250) {
+			ndomod_broker_data_serialize(&dbuf, NDO_API_ACTIVEOBJECTSLIST,
+					active_objects, obj_count, TRUE);
+			ndomod_write_to_sink(dbuf.buf,NDO_TRUE,NDO_TRUE);
+			ndo_dbuf_free(&dbuf);
+			while (--obj_count)
+				free(active_objects[obj_count].value.string);
+			obj_count = 1;
+		}
+	}
+	if (obj_count > 1) {
+		ndomod_broker_data_serialize(&dbuf, NDO_API_ACTIVEOBJECTSLIST,
+				active_objects, obj_count, TRUE);
+		ndomod_write_to_sink(dbuf.buf,NDO_TRUE,NDO_TRUE);
+		ndo_dbuf_free(&dbuf);
+		while (--obj_count)
+			free(active_objects[obj_count].value.string);
+	}
+
+
+	active_objects[0].value.integer = NDO_API_CONTACTGROUPDEFINITION;
+	obj_count = 1;
+	for (temp_contactgroup = contactgroup_list; temp_contactgroup != NULL; temp_contactgroup = temp_contactgroup->next) {
+		name1 = ndo_escape_buffer(temp_contactgroup->group_name);
+		active_objects[obj_count].key = obj_count;
+		active_objects[obj_count].datatype = BD_STRING;
+		active_objects[obj_count].value.string = (name1 == NULL) ? "" : name1;
+		if (++obj_count > 250) {
+			ndomod_broker_data_serialize(&dbuf, NDO_API_ACTIVEOBJECTSLIST,
+					active_objects, obj_count, TRUE);
+			ndomod_write_to_sink(dbuf.buf,NDO_TRUE,NDO_TRUE);
+			ndo_dbuf_free(&dbuf);
+			while (--obj_count)
+				free(active_objects[obj_count].value.string);
+			obj_count = 1;
+		}
+	}
+	if (obj_count > 1) {
+		ndomod_broker_data_serialize(&dbuf, NDO_API_ACTIVEOBJECTSLIST,
+				active_objects, obj_count, TRUE);
+		ndomod_write_to_sink(dbuf.buf,NDO_TRUE,NDO_TRUE);
+		ndo_dbuf_free(&dbuf);
+		while (--obj_count)
+			free(active_objects[obj_count].value.string);
+	}
+
+
+	active_objects[0].value.integer = NDO_API_HOSTDEFINITION;
+	obj_count = 1;
+	for (temp_host = host_list; temp_host != NULL; temp_host = temp_host->next) {
+		name1 = ndo_escape_buffer(temp_host->name);
+		active_objects[obj_count].key = obj_count;
+		active_objects[obj_count].datatype = BD_STRING;
+		active_objects[obj_count].value.string = (name1 == NULL) ? "" : name1;
+		if (++obj_count > 250) {
+			ndomod_broker_data_serialize(&dbuf, NDO_API_ACTIVEOBJECTSLIST,
+					active_objects, obj_count, TRUE);
+			ndomod_write_to_sink(dbuf.buf,NDO_TRUE,NDO_TRUE);
+			ndo_dbuf_free(&dbuf);
+			while (--obj_count)
+				free(active_objects[obj_count].value.string);
+			obj_count = 1;
+		}
+	}
+	if (obj_count > 1) {
+		ndomod_broker_data_serialize(&dbuf, NDO_API_ACTIVEOBJECTSLIST,
+				active_objects, obj_count, TRUE);
+		ndomod_write_to_sink(dbuf.buf,NDO_TRUE,NDO_TRUE);
+		ndo_dbuf_free(&dbuf);
+		while (--obj_count)
+			free(active_objects[obj_count].value.string);
+	}
+
+
+	active_objects[0].value.integer = NDO_API_HOSTGROUPDEFINITION;
+	obj_count = 1;
+	for (temp_hostgroup = hostgroup_list; temp_hostgroup != NULL; temp_hostgroup = temp_hostgroup->next) {
+		name1 = ndo_escape_buffer(temp_hostgroup->group_name);
+		active_objects[obj_count].key = obj_count;
+		active_objects[obj_count].datatype = BD_STRING;
+		active_objects[obj_count].value.string = (name1 == NULL) ? "" : name1;
+		if (++obj_count > 250) {
+			ndomod_broker_data_serialize(&dbuf, NDO_API_ACTIVEOBJECTSLIST,
+					active_objects, obj_count, TRUE);
+			ndomod_write_to_sink(dbuf.buf,NDO_TRUE,NDO_TRUE);
+			ndo_dbuf_free(&dbuf);
+			while (--obj_count)
+				free(active_objects[obj_count].value.string);
+			obj_count = 1;
+		}
+	}
+	if (obj_count > 1) {
+		ndomod_broker_data_serialize(&dbuf, NDO_API_ACTIVEOBJECTSLIST,
+				active_objects, obj_count, TRUE);
+		ndomod_write_to_sink(dbuf.buf,NDO_TRUE,NDO_TRUE);
+		ndo_dbuf_free(&dbuf);
+		while (--obj_count)
+			free(active_objects[obj_count].value.string);
+	}
+
+
+	active_objects[0].value.integer = NDO_API_SERVICEDEFINITION;
+	obj_count = 1;
+	for (temp_service = service_list; temp_service != NULL; temp_service = temp_service->next) {
+		name1 = ndo_escape_buffer(temp_service->host_name);
+		name2 = ndo_escape_buffer(temp_service->description);
+		active_objects[obj_count].key = obj_count;
+		active_objects[obj_count].datatype = BD_STRING;
+		active_objects[obj_count].value.string = (name1 == NULL) ? "" : name1;
+		++obj_count;
+		active_objects[obj_count].key = obj_count;
+		active_objects[obj_count].datatype = BD_STRING;
+		active_objects[obj_count].value.string = (name2 == NULL) ? "" : name2;
+		if (++obj_count > 250) {
+			ndomod_broker_data_serialize(&dbuf, NDO_API_ACTIVEOBJECTSLIST,
+					active_objects, obj_count, TRUE);
+			ndomod_write_to_sink(dbuf.buf,NDO_TRUE,NDO_TRUE);
+			ndo_dbuf_free(&dbuf);
+			while (--obj_count)
+				free(active_objects[obj_count].value.string);
+			obj_count = 1;
+		}
+	}
+	if (obj_count > 1) {
+		ndomod_broker_data_serialize(&dbuf, NDO_API_ACTIVEOBJECTSLIST,
+				active_objects, obj_count, TRUE);
+		ndomod_write_to_sink(dbuf.buf,NDO_TRUE,NDO_TRUE);
+		ndo_dbuf_free(&dbuf);
+		while (--obj_count)
+			free(active_objects[obj_count].value.string);
+	}
+
+
+	active_objects[0].value.integer = NDO_API_SERVICEGROUPDEFINITION;
+	obj_count = 1;
+	for (temp_servicegroup = servicegroup_list; temp_servicegroup !=NULL ; temp_servicegroup = temp_servicegroup->next) {
+		name1 = ndo_escape_buffer(temp_servicegroup->group_name);
+		active_objects[obj_count].key = obj_count;
+		active_objects[obj_count].datatype = BD_STRING;
+		active_objects[obj_count].value.string = (name1 == NULL) ? "" : name1;
+		if (++obj_count > 250) {
+			ndomod_broker_data_serialize(&dbuf, NDO_API_ACTIVEOBJECTSLIST,
+					active_objects, obj_count, TRUE);
+			ndomod_write_to_sink(dbuf.buf,NDO_TRUE,NDO_TRUE);
+			ndo_dbuf_free(&dbuf);
+			while (--obj_count)
+				free(active_objects[obj_count].value.string);
+			obj_count = 1;
+		}
+	}
+	if (obj_count > 1) {
+		ndomod_broker_data_serialize(&dbuf, NDO_API_ACTIVEOBJECTSLIST,
+				active_objects, obj_count, TRUE);
+		ndomod_write_to_sink(dbuf.buf,NDO_TRUE,NDO_TRUE);
+		ndo_dbuf_free(&dbuf);
+		while (--obj_count)
+			free(active_objects[obj_count].value.string);
+	}
+}
+
+
 #define OBJECTCONFIG_ES_ITEMS 16
+
 
 /* dumps object configuration data to sink */
 int ndomod_write_object_config(int config_type){
@@ -3615,29 +3911,26 @@ int ndomod_write_object_config(int config_type){
 
 		{
 			struct ndo_broker_data command_definition[] = {
-				{ NDO_DATA_TIMESTAMP, BD_TIMEVAL, 
+				{ NDO_DATA_TIMESTAMP, BD_TIMEVAL,
 						{ .timestamp = now }},
-				{ NDO_DATA_COMMANDNAME, BD_STRING, 
+				{ NDO_DATA_COMMANDNAME, BD_STRING,
 						{ .string = (es[0]==NULL) ? "" : es[0] }},
-				{ NDO_DATA_COMMANDLINE, BD_STRING, 
+				{ NDO_DATA_COMMANDLINE, BD_STRING,
 						{ .string = (es[1]==NULL) ? "" : es[1] }},
 				};
 
-			ndomod_broker_data_serialize(&dbuf, NDO_API_COMMANDDEFINITION, 
-					command_definition, 
+			ndomod_broker_data_serialize(&dbuf, NDO_API_COMMANDDEFINITION,
+					command_definition,
 					sizeof(command_definition) / sizeof(command_definition[ 0]),
 					TRUE);
 		}
 
+		/* free buffers */
+		NDOMOD_FREE_ESC_BUFFERS(es, 2);
+
 		/* write data to sink */
 		ndomod_write_to_sink(dbuf.buf,NDO_TRUE,NDO_TRUE);
 		ndo_dbuf_free(&dbuf);
-	        }
-
-	/* free buffers */
-	for(x=0;x<OBJECTCONFIG_ES_ITEMS;x++){
-		free(es[x]);
-		es[x]=NULL;
 	        }
 
 	/****** dump timeperiod config ******/
@@ -3648,18 +3941,20 @@ int ndomod_write_object_config(int config_type){
 
 		{
 			struct ndo_broker_data timeperiod_definition[] = {
-				{ NDO_DATA_TIMESTAMP, BD_TIMEVAL, 
+				{ NDO_DATA_TIMESTAMP, BD_TIMEVAL,
 						{ .timestamp = now }},
-				{ NDO_DATA_TIMEPERIODNAME, BD_STRING, 
+				{ NDO_DATA_TIMEPERIODNAME, BD_STRING,
 						{ .string = (es[0]==NULL) ? "" : es[0] }},
-				{ NDO_DATA_TIMEPERIODALIAS, BD_STRING, 
+				{ NDO_DATA_TIMEPERIODALIAS, BD_STRING,
 						{ .string = (es[1]==NULL) ? "" : es[1] }},
 				};
 
-			ndomod_broker_data_serialize(&dbuf, NDO_API_TIMEPERIODDEFINITION, 
-					timeperiod_definition, sizeof(timeperiod_definition) / 
+			ndomod_broker_data_serialize(&dbuf, NDO_API_TIMEPERIODDEFINITION,
+					timeperiod_definition, sizeof(timeperiod_definition) /
 					sizeof(timeperiod_definition[ 0]), FALSE);
 		}
+
+		NDOMOD_FREE_ESC_BUFFERS(es, 2);
 
 		/* dump timeranges for each day */
 		for(x=0;x<7;x++){
@@ -3725,70 +4020,70 @@ int ndomod_write_object_config(int config_type){
 
 		{
 			struct ndo_broker_data contact_definition[] = {
-				{ NDO_DATA_TIMESTAMP, BD_TIMEVAL, 
+				{ NDO_DATA_TIMESTAMP, BD_TIMEVAL,
 						{ .timestamp = now }},
-				{ NDO_DATA_CONTACTNAME, BD_STRING, 
+				{ NDO_DATA_CONTACTNAME, BD_STRING,
 						{ .string = (es[0]==NULL) ? "" : es[0] }},
-				{ NDO_DATA_CONTACTALIAS, BD_STRING, 
+				{ NDO_DATA_CONTACTALIAS, BD_STRING,
 						{ .string = (es[1]==NULL) ? "" : es[1] }},
-				{ NDO_DATA_EMAILADDRESS, BD_STRING, 
+				{ NDO_DATA_EMAILADDRESS, BD_STRING,
 						{ .string = (es[2]==NULL) ? "" : es[2] }},
-				{ NDO_DATA_PAGERADDRESS, BD_STRING, 
+				{ NDO_DATA_PAGERADDRESS, BD_STRING,
 						{ .string = (es[3]==NULL) ? "" : es[3] }},
-				{ NDO_DATA_HOSTNOTIFICATIONPERIOD, BD_STRING, 
+				{ NDO_DATA_HOSTNOTIFICATIONPERIOD, BD_STRING,
 						{ .string = (es[4]==NULL) ? "" : es[4] }},
-				{ NDO_DATA_SERVICENOTIFICATIONPERIOD, BD_STRING, 
+				{ NDO_DATA_SERVICENOTIFICATIONPERIOD, BD_STRING,
 						{ .string = (es[5]==NULL) ? "" : es[5] }},
-				{ NDO_DATA_SERVICENOTIFICATIONSENABLED, BD_INT, 
+				{ NDO_DATA_SERVICENOTIFICATIONSENABLED, BD_INT,
 						{ .integer = service_notifications_enabled }},
-				{ NDO_DATA_HOSTNOTIFICATIONSENABLED, BD_INT, 
+				{ NDO_DATA_HOSTNOTIFICATIONSENABLED, BD_INT,
 						{ .integer = host_notifications_enabled }},
-				{ NDO_DATA_CANSUBMITCOMMANDS, BD_INT, 
+				{ NDO_DATA_CANSUBMITCOMMANDS, BD_INT,
 						{ .integer = can_submit_commands }},
-				{ NDO_DATA_NOTIFYSERVICEUNKNOWN, BD_INT, 
-						{ .integer = 
+				{ NDO_DATA_NOTIFYSERVICEUNKNOWN, BD_INT,
+						{ .integer =
 #ifdef BUILD_NAGIOS_4X
 			 				flag_isset(temp_contact->service_notification_options,OPT_UNKNOWN)
 #else
 			 				temp_contact->notify_on_service_unknown
 #endif
 						}},
-				{ NDO_DATA_NOTIFYSERVICEWARNING, BD_INT, 
-						{ .integer = 
+				{ NDO_DATA_NOTIFYSERVICEWARNING, BD_INT,
+						{ .integer =
 #ifdef BUILD_NAGIOS_4X
 			 				flag_isset(temp_contact->service_notification_options,OPT_WARNING)
 #else
 			 				temp_contact->notify_on_service_warning
 #endif
 						}},
-				{ NDO_DATA_NOTIFYSERVICECRITICAL, BD_INT, 
-						{ .integer = 
+				{ NDO_DATA_NOTIFYSERVICECRITICAL, BD_INT,
+						{ .integer =
 #ifdef BUILD_NAGIOS_4X
 			 				flag_isset(temp_contact->service_notification_options,OPT_CRITICAL)
 #else
 			 				temp_contact->notify_on_service_critical
 #endif
 						}},
-				{ NDO_DATA_NOTIFYSERVICERECOVERY, BD_INT, 
-						{ .integer = 
+				{ NDO_DATA_NOTIFYSERVICERECOVERY, BD_INT,
+						{ .integer =
 #ifdef BUILD_NAGIOS_4X
 			 				flag_isset(temp_contact->service_notification_options,OPT_RECOVERY)
 #else
 			 				temp_contact->notify_on_service_recovery
 #endif
 						}},
-				{ NDO_DATA_NOTIFYSERVICEFLAPPING, BD_INT, 
-						{ .integer = 
+				{ NDO_DATA_NOTIFYSERVICEFLAPPING, BD_INT,
+						{ .integer =
 #ifdef BUILD_NAGIOS_4X
 			 				flag_isset(temp_contact->service_notification_options,OPT_FLAPPING)
 #else
 			 				temp_contact->notify_on_service_flapping
 #endif
 						}},
-				{ NDO_DATA_NOTIFYSERVICEDOWNTIME, BD_INT, 
+				{ NDO_DATA_NOTIFYSERVICEDOWNTIME, BD_INT,
 						{ .integer = notify_on_service_downtime }},
-				{ NDO_DATA_NOTIFYHOSTDOWN, BD_INT, 
-						{ .integer = 
+				{ NDO_DATA_NOTIFYHOSTDOWN, BD_INT,
+						{ .integer =
 #ifdef BUILD_NAGIOS_4X
 			 				flag_isset(temp_contact->host_notification_options,
 							OPT_DOWN)
@@ -3796,8 +4091,8 @@ int ndomod_write_object_config(int config_type){
 			 				temp_contact->notify_on_host_down
 #endif
 						}},
-				{ NDO_DATA_NOTIFYHOSTUNREACHABLE, BD_INT, 
-						{ .integer = 
+				{ NDO_DATA_NOTIFYHOSTUNREACHABLE, BD_INT,
+						{ .integer =
 #ifdef BUILD_NAGIOS_4X
 			 				flag_isset(temp_contact->host_notification_options,
 							OPT_UNREACHABLE)
@@ -3805,8 +4100,8 @@ int ndomod_write_object_config(int config_type){
 			 				temp_contact->notify_on_host_unreachable
 #endif
 						}},
-				{ NDO_DATA_NOTIFYHOSTRECOVERY, BD_INT, 
-						{ .integer = 
+				{ NDO_DATA_NOTIFYHOSTRECOVERY, BD_INT,
+						{ .integer =
 #ifdef BUILD_NAGIOS_4X
 			 				flag_isset(temp_contact->host_notification_options,
 							OPT_RECOVERY)
@@ -3814,8 +4109,8 @@ int ndomod_write_object_config(int config_type){
 			 				temp_contact->notify_on_host_recovery
 #endif
 						}},
-				{ NDO_DATA_NOTIFYHOSTFLAPPING, BD_INT, 
-						{ .integer = 
+				{ NDO_DATA_NOTIFYHOSTFLAPPING, BD_INT,
+						{ .integer =
 #ifdef BUILD_NAGIOS_4X
 			 				flag_isset(temp_contact->host_notification_options,
 							OPT_FLAPPING)
@@ -3823,21 +4118,20 @@ int ndomod_write_object_config(int config_type){
 			 				temp_contact->notify_on_host_flapping
 #endif
 						}},
-				{ NDO_DATA_NOTIFYHOSTDOWNTIME, BD_INT, 
+				{ NDO_DATA_NOTIFYHOSTDOWNTIME, BD_INT,
 						{ .integer = notify_on_host_downtime }},
 #ifdef BUILD_NAGIOS_4X
-				{ NDO_DATA_MINIMUMIMPORTANCE, BD_INT, 
+				{ NDO_DATA_MINIMUMIMPORTANCE, BD_INT,
 						{ .integer = temp_contact->minimum_value }},
 #endif
 				};
 
-			ndomod_broker_data_serialize(&dbuf, NDO_API_CONTACTDEFINITION, 
-					contact_definition, sizeof(contact_definition) / 
+			ndomod_broker_data_serialize(&dbuf, NDO_API_CONTACTDEFINITION,
+					contact_definition, sizeof(contact_definition) /
 					sizeof(contact_definition[ 0]), FALSE);
 		}
 
-		free(es[0]);
-		es[0]=NULL;
+		NDOMOD_FREE_ESC_BUFFERS(es, 6);
 
 		/* dump addresses for each contact */
 		for(x=0;x<MAX_CONTACT_ADDRESSES;x++){
@@ -3853,16 +4147,15 @@ int ndomod_write_object_config(int config_type){
 			temp_buffer[sizeof(temp_buffer)-1]='\x0';
 			ndo_dbuf_strcat(&dbuf,temp_buffer);
 
-			free(es[0]);
-			es[0]=NULL;
+			NDOMOD_FREE_ESC_BUFFERS(es, 1);
 		        }
 
 		/* dump host notification commands for each contact */
-		ndomod_commands_serialize(temp_contact->host_notification_commands, 
+		ndomod_commands_serialize(temp_contact->host_notification_commands,
 				&dbuf, NDO_DATA_HOSTNOTIFICATIONCOMMAND);
 
 		/* dump service notification commands for each contact */
-		ndomod_commands_serialize(temp_contact->service_notification_commands, 
+		ndomod_commands_serialize(temp_contact->service_notification_commands,
 				&dbuf, NDO_DATA_SERVICENOTIFICATIONCOMMAND);
 
 #if ( defined( BUILD_NAGIOS_3X) || defined( BUILD_NAGIOS_4X))
@@ -3879,10 +4172,7 @@ int ndomod_write_object_config(int config_type){
 
 
 	/* free buffers */
-	for(x=0;x<OBJECTCONFIG_ES_ITEMS;x++){
-		free(es[x]);
-		es[x]=NULL;
-	        }
+	NDOMOD_FREE_ESC_BUFFERS(es, OBJECTCONFIG_ES_ITEMS);
 
 	/****** dump contactgroup config ******/
 	for(temp_contactgroup=contactgroup_list;temp_contactgroup!=NULL;temp_contactgroup=temp_contactgroup->next){
@@ -3892,24 +4182,23 @@ int ndomod_write_object_config(int config_type){
 
 		{
 			struct ndo_broker_data contactgroup_definition[] = {
-				{ NDO_DATA_TIMESTAMP, BD_TIMEVAL, 
+				{ NDO_DATA_TIMESTAMP, BD_TIMEVAL,
 						{ .timestamp = now }},
-				{ NDO_DATA_CONTACTGROUPNAME, BD_STRING, 
+				{ NDO_DATA_CONTACTGROUPNAME, BD_STRING,
 						{ .string = (es[0]==NULL) ? "" : es[0] }},
-				{ NDO_DATA_CONTACTGROUPALIAS, BD_STRING, 
+				{ NDO_DATA_CONTACTGROUPALIAS, BD_STRING,
 						{ .string = (es[1]==NULL) ? "" : es[1] }},
 				};
 
-			ndomod_broker_data_serialize(&dbuf, NDO_API_CONTACTGROUPDEFINITION, 
-					contactgroup_definition, sizeof(contactgroup_definition) / 
+			ndomod_broker_data_serialize(&dbuf, NDO_API_CONTACTGROUPDEFINITION,
+					contactgroup_definition, sizeof(contactgroup_definition) /
 					sizeof(contactgroup_definition[ 0]), FALSE);
 		}
 
-		free(es[0]);
-		es[0]=NULL;
+		NDOMOD_FREE_ESC_BUFFERS(es, 2);
 
 		/* dump members for each contactgroup */
-		ndomod_contacts_serialize(temp_contactgroup->members, &dbuf, 
+		ndomod_contacts_serialize(temp_contactgroup->members, &dbuf,
 				NDO_DATA_CONTACTGROUPMEMBER);
 
 		ndomod_enddata_serialize(&dbuf);
@@ -3921,10 +4210,7 @@ int ndomod_write_object_config(int config_type){
 
 
 	/* free buffers */
-	for(x=0;x<OBJECTCONFIG_ES_ITEMS;x++){
-		free(es[x]);
-		es[x]=NULL;
-	        }
+	NDOMOD_FREE_ESC_BUFFERS(es, OBJECTCONFIG_ES_ITEMS);
 
 	/****** dump host config ******/
 	for(temp_host=host_list;temp_host!=NULL;temp_host=temp_host->next){
@@ -4022,39 +4308,39 @@ int ndomod_write_object_config(int config_type){
 
 		{
 			struct ndo_broker_data host_definition[] = {
-				{ NDO_DATA_TIMESTAMP, BD_TIMEVAL, 
+				{ NDO_DATA_TIMESTAMP, BD_TIMEVAL,
 						{ .timestamp = now }},
-				{ NDO_DATA_HOSTNAME, BD_STRING, 
+				{ NDO_DATA_HOSTNAME, BD_STRING,
 						{ .string = (es[0]==NULL) ? "" : es[0] }},
-				{ NDO_DATA_DISPLAYNAME, BD_STRING, 
+				{ NDO_DATA_DISPLAYNAME, BD_STRING,
 						{ .string = (es[15]==NULL) ? "" : es[15] }},
-				{ NDO_DATA_HOSTALIAS, BD_STRING, 
+				{ NDO_DATA_HOSTALIAS, BD_STRING,
 						{ .string = (es[1]==NULL) ? "" : es[1] }},
-				{ NDO_DATA_HOSTADDRESS, BD_STRING, 
+				{ NDO_DATA_HOSTADDRESS, BD_STRING,
 						{ .string = (es[2]==NULL) ? "" : es[2] }},
-				{ NDO_DATA_HOSTCHECKCOMMAND, BD_STRING, 
+				{ NDO_DATA_HOSTCHECKCOMMAND, BD_STRING,
 						{ .string = (es[3]==NULL) ? "" : es[3] }},
-				{ NDO_DATA_HOSTEVENTHANDLER, BD_STRING, 
+				{ NDO_DATA_HOSTEVENTHANDLER, BD_STRING,
 						{ .string = (es[4]==NULL) ? "" : es[4] }},
-				{ NDO_DATA_HOSTNOTIFICATIONPERIOD, BD_STRING, 
+				{ NDO_DATA_HOSTNOTIFICATIONPERIOD, BD_STRING,
 						{ .string = (es[5]==NULL) ? "" : es[5] }},
-				{ NDO_DATA_HOSTCHECKPERIOD, BD_STRING, 
+				{ NDO_DATA_HOSTCHECKPERIOD, BD_STRING,
 						{ .string = (es[6]==NULL) ? "" : es[6] }},
-				{ NDO_DATA_HOSTFAILUREPREDICTIONOPTIONS, BD_STRING, 
+				{ NDO_DATA_HOSTFAILUREPREDICTIONOPTIONS, BD_STRING,
 						{ .string = (es[7]==NULL) ? "" : es[7] }},
-				{ NDO_DATA_HOSTCHECKINTERVAL, BD_FLOAT, 
-						{ .floating_point = 
+				{ NDO_DATA_HOSTCHECKINTERVAL, BD_FLOAT,
+						{ .floating_point =
 						(double)temp_host->check_interval }},
-				{ NDO_DATA_HOSTRETRYINTERVAL, BD_FLOAT, 
+				{ NDO_DATA_HOSTRETRYINTERVAL, BD_FLOAT,
 						{ .floating_point = (double)retry_interval }},
-				{ NDO_DATA_HOSTMAXCHECKATTEMPTS, BD_INT, 
+				{ NDO_DATA_HOSTMAXCHECKATTEMPTS, BD_INT,
 						{ .integer = temp_host->max_attempts }},
-				{ NDO_DATA_FIRSTNOTIFICATIONDELAY, BD_FLOAT, 
+				{ NDO_DATA_FIRSTNOTIFICATIONDELAY, BD_FLOAT,
 						{ .floating_point = first_notification_delay }},
-				{ NDO_DATA_HOSTNOTIFICATIONINTERVAL, BD_FLOAT, 
-						{ .floating_point = 
+				{ NDO_DATA_HOSTNOTIFICATIONINTERVAL, BD_FLOAT,
+						{ .floating_point =
 						(double)temp_host->notification_interval }},
-				{ NDO_DATA_NOTIFYHOSTDOWN, BD_INT, 
+				{ NDO_DATA_NOTIFYHOSTDOWN, BD_INT,
 						{ .integer =
 #ifdef BUILD_NAGIOS_4X
 			 				flag_isset(temp_host->notification_options,
@@ -4063,7 +4349,7 @@ int ndomod_write_object_config(int config_type){
 			 				temp_host->notify_on_down
 #endif
 						}},
-				{ NDO_DATA_NOTIFYHOSTUNREACHABLE, BD_INT, 
+				{ NDO_DATA_NOTIFYHOSTUNREACHABLE, BD_INT,
 						{ .integer =
 #ifdef BUILD_NAGIOS_4X
 			 				flag_isset(temp_host->notification_options,
@@ -4072,7 +4358,7 @@ int ndomod_write_object_config(int config_type){
 			 				temp_host->notify_on_unreachable
 #endif
 						}},
-				{ NDO_DATA_NOTIFYHOSTRECOVERY, BD_INT, 
+				{ NDO_DATA_NOTIFYHOSTRECOVERY, BD_INT,
 						{ .integer =
 #ifdef BUILD_NAGIOS_4X
 			 				flag_isset(temp_host->notification_options,
@@ -4081,7 +4367,7 @@ int ndomod_write_object_config(int config_type){
 			 				temp_host->notify_on_recovery
 #endif
 						}},
-				{ NDO_DATA_NOTIFYHOSTFLAPPING, BD_INT, 
+				{ NDO_DATA_NOTIFYHOSTFLAPPING, BD_INT,
 						{ .integer =
 #ifdef BUILD_NAGIOS_4X
 			 				flag_isset(temp_host->notification_options,
@@ -4090,21 +4376,21 @@ int ndomod_write_object_config(int config_type){
 			 				temp_host->notify_on_flapping
 #endif
 						}},
-				{ NDO_DATA_NOTIFYHOSTDOWNTIME, BD_INT, 
+				{ NDO_DATA_NOTIFYHOSTDOWNTIME, BD_INT,
 						{ .integer = notify_on_host_downtime }},
-				{ NDO_DATA_HOSTFLAPDETECTIONENABLED, BD_INT, 
+				{ NDO_DATA_HOSTFLAPDETECTIONENABLED, BD_INT,
 						{ .integer = temp_host->flap_detection_enabled }},
-				{ NDO_DATA_FLAPDETECTIONONUP, BD_INT, 
+				{ NDO_DATA_FLAPDETECTIONONUP, BD_INT,
 						{ .integer = flap_detection_on_up }},
-				{ NDO_DATA_FLAPDETECTIONONDOWN, BD_INT, 
+				{ NDO_DATA_FLAPDETECTIONONDOWN, BD_INT,
 						{ .integer = flap_detection_on_down }},
-				{ NDO_DATA_FLAPDETECTIONONUNREACHABLE, BD_INT, 
+				{ NDO_DATA_FLAPDETECTIONONUNREACHABLE, BD_INT,
 						{ .integer = flap_detection_on_unreachable }},
-				{ NDO_DATA_LOWHOSTFLAPTHRESHOLD, BD_FLOAT, 
+				{ NDO_DATA_LOWHOSTFLAPTHRESHOLD, BD_FLOAT,
 						{ .floating_point = temp_host->low_flap_threshold }},
-				{ NDO_DATA_HIGHHOSTFLAPTHRESHOLD, BD_FLOAT, 
+				{ NDO_DATA_HIGHHOSTFLAPTHRESHOLD, BD_FLOAT,
 						{ .floating_point = temp_host->high_flap_threshold }},
-				{ NDO_DATA_STALKHOSTONUP, BD_INT, 
+				{ NDO_DATA_STALKHOSTONUP, BD_INT,
 						{ .integer =
 #ifdef BUILD_NAGIOS_4X
 			 				flag_isset(temp_host->stalking_options,
@@ -4113,7 +4399,7 @@ int ndomod_write_object_config(int config_type){
 			 				temp_host->stalk_on_up
 #endif
 						}},
-				{ NDO_DATA_STALKHOSTONDOWN, BD_INT, 
+				{ NDO_DATA_STALKHOSTONDOWN, BD_INT,
 						{ .integer =
 #ifdef BUILD_NAGIOS_4X
 			 				flag_isset(temp_host->stalking_options,
@@ -4122,7 +4408,7 @@ int ndomod_write_object_config(int config_type){
 			 				temp_host->stalk_on_down
 #endif
 						}},
-				{ NDO_DATA_STALKHOSTONUNREACHABLE, BD_INT, 
+				{ NDO_DATA_STALKHOSTONUNREACHABLE, BD_INT,
 						{ .integer =
 #ifdef BUILD_NAGIOS_4X
 			 				flag_isset(temp_host->stalking_options,
@@ -4131,15 +4417,15 @@ int ndomod_write_object_config(int config_type){
 			 				temp_host->stalk_on_unreachable
 #endif
 						}},
-				{ NDO_DATA_HOSTFRESHNESSCHECKSENABLED, BD_INT, 
+				{ NDO_DATA_HOSTFRESHNESSCHECKSENABLED, BD_INT,
 						{ .integer = temp_host->check_freshness }},
-				{ NDO_DATA_HOSTFRESHNESSTHRESHOLD, BD_INT, 
+				{ NDO_DATA_HOSTFRESHNESSTHRESHOLD, BD_INT,
 						{ .integer = temp_host->freshness_threshold }},
-				{ NDO_DATA_PROCESSHOSTPERFORMANCEDATA, BD_INT, 
+				{ NDO_DATA_PROCESSHOSTPERFORMANCEDATA, BD_INT,
 						{ .integer = temp_host->process_performance_data }},
-				{ NDO_DATA_ACTIVEHOSTCHECKSENABLED, BD_INT, 
+				{ NDO_DATA_ACTIVEHOSTCHECKSENABLED, BD_INT,
 						{ .integer = temp_host->checks_enabled }},
-				{ NDO_DATA_PASSIVEHOSTCHECKSENABLED, BD_INT, 
+				{ NDO_DATA_PASSIVEHOSTCHECKSENABLED, BD_INT,
 						{ .integer =
 #ifdef BUILD_NAGIOS_4X
 			 				temp_host->accept_passive_checks
@@ -4147,15 +4433,15 @@ int ndomod_write_object_config(int config_type){
 			 				temp_host->accept_passive_host_checks
 #endif
 						}},
-				{ NDO_DATA_HOSTEVENTHANDLERENABLED, BD_INT, 
+				{ NDO_DATA_HOSTEVENTHANDLERENABLED, BD_INT,
 						{ .integer = temp_host->event_handler_enabled }},
-				{ NDO_DATA_RETAINHOSTSTATUSINFORMATION, BD_INT, 
+				{ NDO_DATA_RETAINHOSTSTATUSINFORMATION, BD_INT,
 						{ .integer = temp_host->retain_status_information }},
-				{ NDO_DATA_RETAINHOSTNONSTATUSINFORMATION, BD_INT, 
+				{ NDO_DATA_RETAINHOSTNONSTATUSINFORMATION, BD_INT,
 						{ .integer = temp_host->retain_nonstatus_information }},
-				{ NDO_DATA_HOSTNOTIFICATIONSENABLED, BD_INT, 
+				{ NDO_DATA_HOSTNOTIFICATIONSENABLED, BD_INT,
 						{ .integer = temp_host->notifications_enabled }},
-				{ NDO_DATA_HOSTFAILUREPREDICTIONENABLED, BD_INT, 
+				{ NDO_DATA_HOSTFAILUREPREDICTIONENABLED, BD_INT,
 						{ .integer =
 #ifdef BUILD_NAGIOS_4X
 			 				0
@@ -4163,7 +4449,7 @@ int ndomod_write_object_config(int config_type){
 			 				temp_host->failure_prediction_enabled
 #endif
 						}},
-				{ NDO_DATA_OBSESSOVERHOST, BD_INT, 
+				{ NDO_DATA_OBSESSOVERHOST, BD_INT,
 						{ .integer =
 #ifdef BUILD_NAGIOS_4X
 			 				temp_host->obsess
@@ -4171,19 +4457,19 @@ int ndomod_write_object_config(int config_type){
 			 				temp_host->obsess_over_host
 #endif
 						}},
-				{ NDO_DATA_NOTES, BD_STRING, 
+				{ NDO_DATA_NOTES, BD_STRING,
 						{ .string = (es[8]==NULL) ? "" : es[8] }},
-				{ NDO_DATA_NOTESURL, BD_STRING, 
+				{ NDO_DATA_NOTESURL, BD_STRING,
 						{ .string = (es[9]==NULL) ? "" : es[9] }},
-				{ NDO_DATA_ACTIONURL, BD_STRING, 
+				{ NDO_DATA_ACTIONURL, BD_STRING,
 						{ .string = (es[10]==NULL) ? "" : es[10] }},
-				{ NDO_DATA_ICONIMAGE, BD_STRING, 
+				{ NDO_DATA_ICONIMAGE, BD_STRING,
 						{ .string = (es[11]==NULL) ? "" : es[11] }},
-				{ NDO_DATA_ICONIMAGEALT, BD_STRING, 
+				{ NDO_DATA_ICONIMAGEALT, BD_STRING,
 						{ .string = (es[12]==NULL) ? "" : es[12] }},
-				{ NDO_DATA_VRMLIMAGE, BD_STRING, 
+				{ NDO_DATA_VRMLIMAGE, BD_STRING,
 						{ .string = (es[13]==NULL) ? "" : es[13] }},
-				{ NDO_DATA_STATUSMAPIMAGE, BD_STRING, 
+				{ NDO_DATA_STATUSMAPIMAGE, BD_STRING,
 						{ .string = (es[14]==NULL) ? "" : es[14] }},
 				{ NDO_DATA_HAVE2DCOORDS, BD_INT, { .integer = have_2d_coords }},
 				{ NDO_DATA_X2D, BD_INT, { .integer = x_2d }},
@@ -4193,21 +4479,20 @@ int ndomod_write_object_config(int config_type){
 				{ NDO_DATA_Y3D, BD_FLOAT, { .floating_point = y_3d }},
 				{ NDO_DATA_Z3D, BD_FLOAT, { .floating_point = z_3d }},
 #ifdef BUILD_NAGIOS_4X
-				{ NDO_DATA_IMPORTANCE, BD_INT, 
+				{ NDO_DATA_IMPORTANCE, BD_INT,
 						{ .integer = temp_host->hourly_value }},
 #endif
 				};
 
-			ndomod_broker_data_serialize(&dbuf, NDO_API_HOSTDEFINITION, 
-					host_definition, sizeof(host_definition) / 
+			ndomod_broker_data_serialize(&dbuf, NDO_API_HOSTDEFINITION,
+					host_definition, sizeof(host_definition) /
 					sizeof(host_definition[ 0]), FALSE);
 		}
 
-		free(es[0]);
-		es[0]=NULL;
+		NDOMOD_FREE_ESC_BUFFERS(es, OBJECTCONFIG_ES_ITEMS);
 
 		/* dump parent hosts */
-		ndomod_hosts_serialize(temp_host->parent_hosts, &dbuf, 
+		ndomod_hosts_serialize(temp_host->parent_hosts, &dbuf,
 				NDO_DATA_PARENTHOST);
 
 		/* dump contactgroups */
@@ -4232,10 +4517,7 @@ int ndomod_write_object_config(int config_type){
 
 
 	/* free buffers */
-	for(x=0;x<OBJECTCONFIG_ES_ITEMS;x++){
-		free(es[x]);
-		es[x]=NULL;
-	        }
+	NDOMOD_FREE_ESC_BUFFERS(es, OBJECTCONFIG_ES_ITEMS);
 
 	/****** dump hostgroup config ******/
 	for(temp_hostgroup=hostgroup_list;temp_hostgroup!=NULL;temp_hostgroup=temp_hostgroup->next){
@@ -4245,28 +4527,27 @@ int ndomod_write_object_config(int config_type){
 
 		{
 			struct ndo_broker_data hostgroup_definition[] = {
-				{ NDO_DATA_TIMESTAMP, BD_TIMEVAL, 
+				{ NDO_DATA_TIMESTAMP, BD_TIMEVAL,
 						{ .timestamp = now }},
-				{ NDO_DATA_HOSTGROUPNAME, BD_STRING, 
+				{ NDO_DATA_HOSTGROUPNAME, BD_STRING,
 						{ .string = (es[0]==NULL) ? "" : es[0] }},
-				{ NDO_DATA_HOSTGROUPALIAS, BD_STRING, 
+				{ NDO_DATA_HOSTGROUPALIAS, BD_STRING,
 						{ .string = (es[1]==NULL) ? "" : es[1] }},
 				};
 
-			ndomod_broker_data_serialize(&dbuf, NDO_API_HOSTGROUPDEFINITION, 
-					hostgroup_definition, sizeof(hostgroup_definition) / 
+			ndomod_broker_data_serialize(&dbuf, NDO_API_HOSTGROUPDEFINITION,
+					hostgroup_definition, sizeof(hostgroup_definition) /
 					sizeof(hostgroup_definition[ 0]), FALSE);
 		}
 
-		free(es[0]);
-		es[0]=NULL;
+		NDOMOD_FREE_ESC_BUFFERS(es, 2);
 
 		/* dump members for each hostgroup */
 #ifdef BUILD_NAGIOS_2X
-		ndomod_hosts_serialize_2x(temp_hostgroup->members, &dbuf, 
+		ndomod_hosts_serialize_2x(temp_hostgroup->members, &dbuf,
 				NDO_DATA_HOSTGROUPMEMBER);
 #else
-		ndomod_hosts_serialize(temp_hostgroup->members, &dbuf, 
+		ndomod_hosts_serialize(temp_hostgroup->members, &dbuf,
 				NDO_DATA_HOSTGROUPMEMBER);
 #endif
 
@@ -4275,13 +4556,6 @@ int ndomod_write_object_config(int config_type){
 		ndomod_write_to_sink(dbuf.buf,NDO_TRUE,NDO_TRUE);
 
 		ndo_dbuf_free(&dbuf);
-	        }
-
-
-	/* free buffers */
-	for(x=0;x<OBJECTCONFIG_ES_ITEMS;x++){
-		free(es[x]);
-		es[x]=NULL;
 	        }
 
 	/****** dump service config ******/
@@ -4352,38 +4626,38 @@ int ndomod_write_object_config(int config_type){
 
 		{
 			struct ndo_broker_data service_definition[] = {
-				{ NDO_DATA_TIMESTAMP, BD_TIMEVAL, 
+				{ NDO_DATA_TIMESTAMP, BD_TIMEVAL,
 						{ .timestamp = now }},
-				{ NDO_DATA_HOSTNAME, BD_STRING, 
+				{ NDO_DATA_HOSTNAME, BD_STRING,
 						{ .string = (es[0]==NULL) ? "" : es[0] }},
-				{ NDO_DATA_DISPLAYNAME, BD_STRING, 
+				{ NDO_DATA_DISPLAYNAME, BD_STRING,
 						{ .string = (es[12]==NULL) ? "" : es[12] }},
-				{ NDO_DATA_SERVICEDESCRIPTION, BD_STRING, 
+				{ NDO_DATA_SERVICEDESCRIPTION, BD_STRING,
 						{ .string = (es[1]==NULL) ? "" : es[1] }},
-				{ NDO_DATA_SERVICECHECKCOMMAND, BD_STRING, 
+				{ NDO_DATA_SERVICECHECKCOMMAND, BD_STRING,
 						{ .string = (es[2]==NULL) ? "" : es[2] }},
-				{ NDO_DATA_SERVICEEVENTHANDLER, BD_STRING, 
+				{ NDO_DATA_SERVICEEVENTHANDLER, BD_STRING,
 						{ .string = (es[3]==NULL) ? "" : es[3] }},
-				{ NDO_DATA_SERVICENOTIFICATIONPERIOD, BD_STRING, 
+				{ NDO_DATA_SERVICENOTIFICATIONPERIOD, BD_STRING,
 						{ .string = (es[4]==NULL) ? "" : es[4] }},
-				{ NDO_DATA_SERVICECHECKPERIOD, BD_STRING, 
+				{ NDO_DATA_SERVICECHECKPERIOD, BD_STRING,
 						{ .string = (es[5]==NULL) ? "" : es[5] }},
-				{ NDO_DATA_SERVICEFAILUREPREDICTIONOPTIONS, BD_STRING, 
+				{ NDO_DATA_SERVICEFAILUREPREDICTIONOPTIONS, BD_STRING,
 						{ .string = (es[6]==NULL) ? "" : es[6] }},
-				{ NDO_DATA_SERVICECHECKINTERVAL, BD_FLOAT, 
-						{ .floating_point = 
+				{ NDO_DATA_SERVICECHECKINTERVAL, BD_FLOAT,
+						{ .floating_point =
 						(double)temp_service->check_interval }},
-				{ NDO_DATA_SERVICERETRYINTERVAL, BD_FLOAT, 
-						{ .floating_point = 
+				{ NDO_DATA_SERVICERETRYINTERVAL, BD_FLOAT,
+						{ .floating_point =
 						(double)temp_service->retry_interval }},
-				{ NDO_DATA_MAXSERVICECHECKATTEMPTS, BD_INT, 
+				{ NDO_DATA_MAXSERVICECHECKATTEMPTS, BD_INT,
 						{ .integer = temp_service->max_attempts }},
-				{ NDO_DATA_FIRSTNOTIFICATIONDELAY, BD_FLOAT, 
+				{ NDO_DATA_FIRSTNOTIFICATIONDELAY, BD_FLOAT,
 						{ .floating_point = first_notification_delay }},
-				{ NDO_DATA_SERVICENOTIFICATIONINTERVAL, BD_FLOAT, 
-						{ .floating_point = 
+				{ NDO_DATA_SERVICENOTIFICATIONINTERVAL, BD_FLOAT,
+						{ .floating_point =
 						(double)temp_service->notification_interval }},
-				{ NDO_DATA_NOTIFYSERVICEUNKNOWN, BD_INT, 
+				{ NDO_DATA_NOTIFYSERVICEUNKNOWN, BD_INT,
 						{ .integer =
 #ifdef BUILD_NAGIOS_4X
 			 			flag_isset(temp_service->notification_options,
@@ -4392,7 +4666,7 @@ int ndomod_write_object_config(int config_type){
 			 			temp_service->notify_on_unknown
 #endif
 						}},
-				{ NDO_DATA_NOTIFYSERVICEWARNING, BD_INT, 
+				{ NDO_DATA_NOTIFYSERVICEWARNING, BD_INT,
 						{ .integer =
 #ifdef BUILD_NAGIOS_4X
 			 			flag_isset(temp_service->notification_options,
@@ -4401,7 +4675,7 @@ int ndomod_write_object_config(int config_type){
 			 			temp_service->notify_on_warning
 #endif
 						}},
-				{ NDO_DATA_NOTIFYSERVICECRITICAL, BD_INT, 
+				{ NDO_DATA_NOTIFYSERVICECRITICAL, BD_INT,
 						{ .integer =
 #ifdef BUILD_NAGIOS_4X
 			 			flag_isset(temp_service->notification_options,
@@ -4410,7 +4684,7 @@ int ndomod_write_object_config(int config_type){
 			 			temp_service->notify_on_critical
 #endif
 						}},
-				{ NDO_DATA_NOTIFYSERVICERECOVERY, BD_INT, 
+				{ NDO_DATA_NOTIFYSERVICERECOVERY, BD_INT,
 						{ .integer =
 #ifdef BUILD_NAGIOS_4X
 			 			flag_isset(temp_service->notification_options,
@@ -4419,7 +4693,7 @@ int ndomod_write_object_config(int config_type){
 			 			temp_service->notify_on_recovery
 #endif
 						}},
-				{ NDO_DATA_NOTIFYSERVICEFLAPPING, BD_INT, 
+				{ NDO_DATA_NOTIFYSERVICEFLAPPING, BD_INT,
 						{ .integer =
 #ifdef BUILD_NAGIOS_4X
 			 			flag_isset(temp_service->notification_options,
@@ -4428,9 +4702,9 @@ int ndomod_write_object_config(int config_type){
 			 			temp_service->notify_on_flapping
 #endif
 						}},
-				{ NDO_DATA_NOTIFYSERVICEDOWNTIME, BD_INT, 
+				{ NDO_DATA_NOTIFYSERVICEDOWNTIME, BD_INT,
 						{ .integer = notify_on_service_downtime }},
-				{ NDO_DATA_STALKSERVICEONOK, BD_INT, 
+				{ NDO_DATA_STALKSERVICEONOK, BD_INT,
 						{ .integer =
 #ifdef BUILD_NAGIOS_4X
 			 				flag_isset(temp_service->stalking_options,
@@ -4439,7 +4713,7 @@ int ndomod_write_object_config(int config_type){
 			 				temp_service->stalk_on_ok
 #endif
 						}},
-				{ NDO_DATA_STALKSERVICEONWARNING, BD_INT, 
+				{ NDO_DATA_STALKSERVICEONWARNING, BD_INT,
 						{ .integer =
 #ifdef BUILD_NAGIOS_4X
 			 				flag_isset(temp_service->stalking_options,
@@ -4448,7 +4722,7 @@ int ndomod_write_object_config(int config_type){
 			 				temp_service->stalk_on_warning
 #endif
 						}},
-				{ NDO_DATA_STALKSERVICEONUNKNOWN, BD_INT, 
+				{ NDO_DATA_STALKSERVICEONUNKNOWN, BD_INT,
 						{ .integer =
 #ifdef BUILD_NAGIOS_4X
 			 				flag_isset(temp_service->stalking_options,
@@ -4457,7 +4731,7 @@ int ndomod_write_object_config(int config_type){
 			 				temp_service->stalk_on_unknown
 #endif
 						}},
-				{ NDO_DATA_STALKSERVICEONCRITICAL, BD_INT, 
+				{ NDO_DATA_STALKSERVICEONCRITICAL, BD_INT,
 						{ .integer =
 #ifdef BUILD_NAGIOS_4X
 			 				flag_isset(temp_service->stalking_options,
@@ -4466,30 +4740,30 @@ int ndomod_write_object_config(int config_type){
 			 				temp_service->stalk_on_critical
 #endif
 						}},
-				{ NDO_DATA_SERVICEISVOLATILE, BD_INT, 
+				{ NDO_DATA_SERVICEISVOLATILE, BD_INT,
 						{ .integer = temp_service->is_volatile }},
-				{ NDO_DATA_SERVICEFLAPDETECTIONENABLED, BD_INT, 
+				{ NDO_DATA_SERVICEFLAPDETECTIONENABLED, BD_INT,
 						{ .integer = temp_service->flap_detection_enabled }},
-				{ NDO_DATA_FLAPDETECTIONONOK, BD_INT, 
+				{ NDO_DATA_FLAPDETECTIONONOK, BD_INT,
 						{ .integer = flap_detection_on_ok }},
-				{ NDO_DATA_FLAPDETECTIONONWARNING, BD_INT, 
+				{ NDO_DATA_FLAPDETECTIONONWARNING, BD_INT,
 						{ .integer = flap_detection_on_warning }},
-				{ NDO_DATA_FLAPDETECTIONONUNKNOWN, BD_INT, 
+				{ NDO_DATA_FLAPDETECTIONONUNKNOWN, BD_INT,
 						{ .integer = flap_detection_on_unknown }},
-				{ NDO_DATA_FLAPDETECTIONONCRITICAL, BD_INT, 
+				{ NDO_DATA_FLAPDETECTIONONCRITICAL, BD_INT,
 						{ .integer = flap_detection_on_critical }},
-				{ NDO_DATA_LOWSERVICEFLAPTHRESHOLD, BD_FLOAT, 
+				{ NDO_DATA_LOWSERVICEFLAPTHRESHOLD, BD_FLOAT,
 						{ .floating_point = temp_service->low_flap_threshold }},
-				{ NDO_DATA_HIGHSERVICEFLAPTHRESHOLD, BD_FLOAT, 
-						{ .floating_point = 
+				{ NDO_DATA_HIGHSERVICEFLAPTHRESHOLD, BD_FLOAT,
+						{ .floating_point =
 						temp_service->high_flap_threshold }},
-				{ NDO_DATA_PROCESSSERVICEPERFORMANCEDATA, BD_INT, 
+				{ NDO_DATA_PROCESSSERVICEPERFORMANCEDATA, BD_INT,
 						{ .integer = temp_service->process_performance_data }},
-				{ NDO_DATA_SERVICEFRESHNESSCHECKSENABLED, BD_INT, 
+				{ NDO_DATA_SERVICEFRESHNESSCHECKSENABLED, BD_INT,
 						{ .integer = temp_service->check_freshness }},
-				{ NDO_DATA_SERVICEFRESHNESSTHRESHOLD, BD_INT, 
+				{ NDO_DATA_SERVICEFRESHNESSTHRESHOLD, BD_INT,
 						{ .integer = temp_service->freshness_threshold }},
-				{ NDO_DATA_PASSIVESERVICECHECKSENABLED, BD_INT, 
+				{ NDO_DATA_PASSIVESERVICECHECKSENABLED, BD_INT,
 						{ .integer =
 #ifdef BUILD_NAGIOS_4X
 			 				temp_service->accept_passive_checks
@@ -4497,18 +4771,18 @@ int ndomod_write_object_config(int config_type){
 			 				temp_service->accept_passive_service_checks
 #endif
 						}},
-				{ NDO_DATA_SERVICEEVENTHANDLERENABLED, BD_INT, 
+				{ NDO_DATA_SERVICEEVENTHANDLERENABLED, BD_INT,
 						{ .integer = temp_service->event_handler_enabled }},
-				{ NDO_DATA_ACTIVESERVICECHECKSENABLED, BD_INT, 
+				{ NDO_DATA_ACTIVESERVICECHECKSENABLED, BD_INT,
 						{ .integer = temp_service->checks_enabled }},
-				{ NDO_DATA_RETAINSERVICESTATUSINFORMATION, BD_INT, 
+				{ NDO_DATA_RETAINSERVICESTATUSINFORMATION, BD_INT,
 						{ .integer = temp_service->retain_status_information }},
-				{ NDO_DATA_RETAINSERVICENONSTATUSINFORMATION, BD_INT, 
-						{ .integer = 
+				{ NDO_DATA_RETAINSERVICENONSTATUSINFORMATION, BD_INT,
+						{ .integer =
 						temp_service->retain_nonstatus_information }},
-				{ NDO_DATA_SERVICENOTIFICATIONSENABLED, BD_INT, 
+				{ NDO_DATA_SERVICENOTIFICATIONSENABLED, BD_INT,
 						{ .integer = temp_service->notifications_enabled }},
-				{ NDO_DATA_OBSESSOVERSERVICE, BD_INT, 
+				{ NDO_DATA_OBSESSOVERSERVICE, BD_INT,
 						{ .integer =
 #ifdef BUILD_NAGIOS_4X
 			 				temp_service->obsess
@@ -4516,7 +4790,7 @@ int ndomod_write_object_config(int config_type){
 			 				temp_service->obsess_over_service
 #endif
 						}},
-				{ NDO_DATA_FAILUREPREDICTIONENABLED, BD_INT, 
+				{ NDO_DATA_FAILUREPREDICTIONENABLED, BD_INT,
 						{ .integer =
 #ifdef BUILD_NAGIOS_4X
 			 				0
@@ -4524,33 +4798,32 @@ int ndomod_write_object_config(int config_type){
 			 				temp_service->failure_prediction_enabled
 #endif
 						}},
-				{ NDO_DATA_NOTES, BD_STRING, 
+				{ NDO_DATA_NOTES, BD_STRING,
 						{ .string = (es[7]==NULL) ? "" : es[7] }},
-				{ NDO_DATA_NOTESURL, BD_STRING, 
+				{ NDO_DATA_NOTESURL, BD_STRING,
 						{ .string = (es[8]==NULL) ? "" : es[8] }},
-				{ NDO_DATA_ACTIONURL, BD_STRING, 
+				{ NDO_DATA_ACTIONURL, BD_STRING,
 						{ .string = (es[9]==NULL) ? "" : es[9] }},
-				{ NDO_DATA_ICONIMAGE, BD_STRING, 
+				{ NDO_DATA_ICONIMAGE, BD_STRING,
 						{ .string = (es[10]==NULL) ? "" : es[10] }},
-				{ NDO_DATA_ICONIMAGEALT, BD_STRING, 
+				{ NDO_DATA_ICONIMAGEALT, BD_STRING,
 						{ .string = (es[11]==NULL) ? "" : es[11] }},
 #ifdef BUILD_NAGIOS_4X
-				{ NDO_DATA_IMPORTANCE, BD_INT, 
+				{ NDO_DATA_IMPORTANCE, BD_INT,
 						{ .integer = temp_service->hourly_value }},
 #endif
 				};
 
-			ndomod_broker_data_serialize(&dbuf, NDO_API_SERVICEDEFINITION, 
-					service_definition, sizeof(service_definition) / 
+			ndomod_broker_data_serialize(&dbuf, NDO_API_SERVICEDEFINITION,
+					service_definition, sizeof(service_definition) /
 					sizeof(service_definition[ 0]), FALSE);
 		}
 
-		free(es[0]);
-		es[0]=NULL;
+		NDOMOD_FREE_ESC_BUFFERS(es, OBJECTCONFIG_ES_ITEMS);
 
 #ifdef BUILD_NAGIOS_4X
 		/* dump parent services */
-		ndomod_services_serialize(temp_service->parents, &dbuf, 
+		ndomod_services_serialize(temp_service->parents, &dbuf,
 				NDO_DATA_PARENTSERVICE);
 #endif
 
@@ -4559,7 +4832,7 @@ int ndomod_write_object_config(int config_type){
 
 		/* dump individual contacts (not supported in Nagios 2.x) */
 #ifndef BUILD_NAGIOS_2X
-		ndomod_contacts_serialize(temp_service->contacts, &dbuf, 
+		ndomod_contacts_serialize(temp_service->contacts, &dbuf,
 				NDO_DATA_CONTACT);
 #endif
 
@@ -4576,12 +4849,6 @@ int ndomod_write_object_config(int config_type){
 	        }
 
 
-	/* free buffers */
-	for(x=0;x<OBJECTCONFIG_ES_ITEMS;x++){
-		free(es[x]);
-		es[x]=NULL;
-	        }
-
 	/****** dump servicegroup config ******/
 	for(temp_servicegroup=servicegroup_list;temp_servicegroup!=NULL;temp_servicegroup=temp_servicegroup->next){
 
@@ -4590,26 +4857,23 @@ int ndomod_write_object_config(int config_type){
 
 		{
 			struct ndo_broker_data servicegroup_definition[] = {
-				{ NDO_DATA_TIMESTAMP, BD_TIMEVAL, 
+				{ NDO_DATA_TIMESTAMP, BD_TIMEVAL,
 						{ .timestamp = now }},
-				{ NDO_DATA_SERVICEGROUPNAME, BD_STRING, 
+				{ NDO_DATA_SERVICEGROUPNAME, BD_STRING,
 						{ .string = (es[0]==NULL) ? "" : es[0] }},
-				{ NDO_DATA_SERVICEGROUPALIAS, BD_STRING, 
+				{ NDO_DATA_SERVICEGROUPALIAS, BD_STRING,
 						{ .string = (es[1]==NULL) ? "" : es[1] }},
 				};
 
-			ndomod_broker_data_serialize(&dbuf, NDO_API_SERVICEGROUPDEFINITION, 
-					servicegroup_definition, sizeof(servicegroup_definition) / 
+			ndomod_broker_data_serialize(&dbuf, NDO_API_SERVICEGROUPDEFINITION,
+					servicegroup_definition, sizeof(servicegroup_definition) /
 					sizeof(servicegroup_definition[ 0]), FALSE);
 		}
 
-		free(es[0]);
-		free(es[1]);
-		es[0]=NULL;
-		es[1]=NULL;
+		NDOMOD_FREE_ESC_BUFFERS(es, 2);
 
 		/* dump members for each servicegroup */
-		ndomod_services_serialize(temp_servicegroup->members, &dbuf, 
+		ndomod_services_serialize(temp_servicegroup->members, &dbuf,
 				NDO_DATA_SERVICEGROUPMEMBER);
 
 		ndomod_enddata_serialize(&dbuf);
@@ -4619,12 +4883,6 @@ int ndomod_write_object_config(int config_type){
 		ndo_dbuf_free(&dbuf);
 	        }
 
-
-	/* free buffers */
-	for(x=0;x<OBJECTCONFIG_ES_ITEMS;x++){
-		free(es[x]);
-		es[x]=NULL;
-	        }
 
 	/****** dump host escalation config ******/
 #ifdef BUILD_NAGIOS_4X
@@ -4638,20 +4896,20 @@ int ndomod_write_object_config(int config_type){
 
 		{
 			struct ndo_broker_data hostescalation_definition[] = {
-				{ NDO_DATA_TIMESTAMP, BD_TIMEVAL, 
+				{ NDO_DATA_TIMESTAMP, BD_TIMEVAL,
 						{ .timestamp = now }},
-				{ NDO_DATA_HOSTNAME, BD_STRING, 
+				{ NDO_DATA_HOSTNAME, BD_STRING,
 						{ .string = (es[0]==NULL) ? "" : es[0] }},
-				{ NDO_DATA_ESCALATIONPERIOD, BD_STRING, 
+				{ NDO_DATA_ESCALATIONPERIOD, BD_STRING,
 						{ .string = (es[1]==NULL) ? "" : es[1] }},
-				{ NDO_DATA_FIRSTNOTIFICATION, BD_INT, 
+				{ NDO_DATA_FIRSTNOTIFICATION, BD_INT,
 						{ .integer = temp_hostescalation->first_notification }},
-				{ NDO_DATA_LASTNOTIFICATION, BD_INT, 
+				{ NDO_DATA_LASTNOTIFICATION, BD_INT,
 						{ .integer = temp_hostescalation->last_notification }},
-				{ NDO_DATA_NOTIFICATIONINTERVAL, BD_FLOAT, 
-						{ .floating_point = 
+				{ NDO_DATA_NOTIFICATIONINTERVAL, BD_FLOAT,
+						{ .floating_point =
 						(double)temp_hostescalation->notification_interval }},
-				{ NDO_DATA_ESCALATEONRECOVERY, BD_INT, 
+				{ NDO_DATA_ESCALATEONRECOVERY, BD_INT,
 						{ .integer =
 #ifdef BUILD_NAGIOS_4X
 			 				flag_isset(temp_hostescalation->escalation_options,
@@ -4660,7 +4918,7 @@ int ndomod_write_object_config(int config_type){
 			 				temp_hostescalation->escalate_on_recovery
 #endif
 						}},
-				{ NDO_DATA_ESCALATEONDOWN, BD_INT, 
+				{ NDO_DATA_ESCALATEONDOWN, BD_INT,
 						{ .integer =
 #ifdef BUILD_NAGIOS_4X
 			 				flag_isset(temp_hostescalation->escalation_options,
@@ -4669,7 +4927,7 @@ int ndomod_write_object_config(int config_type){
 			 				temp_hostescalation->escalate_on_down
 #endif
 						}},
-				{ NDO_DATA_ESCALATEONUNREACHABLE, BD_INT, 
+				{ NDO_DATA_ESCALATEONUNREACHABLE, BD_INT,
 						{ .integer =
 #ifdef BUILD_NAGIOS_4X
 			 				flag_isset(temp_hostescalation->escalation_options,
@@ -4680,23 +4938,22 @@ int ndomod_write_object_config(int config_type){
 						}},
 				};
 
-			ndomod_broker_data_serialize(&dbuf, 
-					NDO_API_HOSTESCALATIONDEFINITION, 
-					hostescalation_definition, 
-					sizeof(hostescalation_definition) / 
+			ndomod_broker_data_serialize(&dbuf,
+					NDO_API_HOSTESCALATIONDEFINITION,
+					hostescalation_definition,
+					sizeof(hostescalation_definition) /
 					sizeof(hostescalation_definition[ 0]), FALSE);
 		}
 
-		free(es[0]);
-		es[0]=NULL;
+		NDOMOD_FREE_ESC_BUFFERS(es, 2);
 
 		/* dump contactgroups */
-		ndomod_contactgroups_serialize(temp_hostescalation->contact_groups, 
+		ndomod_contactgroups_serialize(temp_hostescalation->contact_groups,
 				&dbuf);
 
 		/* dump individual contacts (not supported in Nagios 2.x) */
 #ifndef BUILD_NAGIOS_2X
-		ndomod_contacts_serialize(temp_hostescalation->contacts, &dbuf, 
+		ndomod_contacts_serialize(temp_hostescalation->contacts, &dbuf,
 				NDO_DATA_CONTACT);
 #endif
 
@@ -4707,12 +4964,6 @@ int ndomod_write_object_config(int config_type){
 		ndo_dbuf_free(&dbuf);
 	        }
 
-
-	/* free buffers */
-	for(x=0;x<OBJECTCONFIG_ES_ITEMS;x++){
-		free(es[x]);
-		es[x]=NULL;
-	        }
 
 	/****** dump service escalation config ******/
 #ifdef BUILD_NAGIOS_4X
@@ -4728,24 +4979,24 @@ int ndomod_write_object_config(int config_type){
 
 		{
 			struct ndo_broker_data serviceescalation_definition[] = {
-				{ NDO_DATA_TIMESTAMP, BD_TIMEVAL, 
+				{ NDO_DATA_TIMESTAMP, BD_TIMEVAL,
 						{ .timestamp = now }},
-				{ NDO_DATA_HOSTNAME, BD_STRING, 
+				{ NDO_DATA_HOSTNAME, BD_STRING,
 						{ .string = (es[0]==NULL) ? "" : es[0] }},
-				{ NDO_DATA_SERVICEDESCRIPTION, BD_STRING, 
+				{ NDO_DATA_SERVICEDESCRIPTION, BD_STRING,
 						{ .string = (es[1]==NULL) ? "" : es[1] }},
-				{ NDO_DATA_ESCALATIONPERIOD, BD_STRING, 
+				{ NDO_DATA_ESCALATIONPERIOD, BD_STRING,
 						{ .string = (es[2]==NULL) ? "" : es[2] }},
-				{ NDO_DATA_FIRSTNOTIFICATION, BD_INT, 
-						{ .integer = 
+				{ NDO_DATA_FIRSTNOTIFICATION, BD_INT,
+						{ .integer =
 						temp_serviceescalation->first_notification }},
-				{ NDO_DATA_LASTNOTIFICATION, BD_INT, 
-						{ .integer = 
+				{ NDO_DATA_LASTNOTIFICATION, BD_INT,
+						{ .integer =
 						temp_serviceescalation->last_notification }},
-				{ NDO_DATA_NOTIFICATIONINTERVAL, BD_FLOAT, 
-						{ .floating_point = 
+				{ NDO_DATA_NOTIFICATIONINTERVAL, BD_FLOAT,
+						{ .floating_point =
 						(double)temp_serviceescalation->notification_interval }},
-				{ NDO_DATA_ESCALATEONRECOVERY, BD_INT, 
+				{ NDO_DATA_ESCALATEONRECOVERY, BD_INT,
 						{ .integer =
 #ifdef BUILD_NAGIOS_4X
 			 				flag_isset(temp_serviceescalation->escalation_options,
@@ -4754,7 +5005,7 @@ int ndomod_write_object_config(int config_type){
 			 				temp_serviceescalation->escalate_on_recovery
 #endif
 						}},
-				{ NDO_DATA_ESCALATEONWARNING, BD_INT, 
+				{ NDO_DATA_ESCALATEONWARNING, BD_INT,
 						{ .integer =
 #ifdef BUILD_NAGIOS_4X
 			 				flag_isset(temp_serviceescalation->escalation_options,
@@ -4764,7 +5015,7 @@ int ndomod_write_object_config(int config_type){
 #endif
 						}},
 
-				{ NDO_DATA_ESCALATEONUNKNOWN, BD_INT, 
+				{ NDO_DATA_ESCALATEONUNKNOWN, BD_INT,
 						{ .integer =
 #ifdef BUILD_NAGIOS_4X
 			 				flag_isset(temp_serviceescalation->escalation_options,
@@ -4773,7 +5024,7 @@ int ndomod_write_object_config(int config_type){
 			 				temp_serviceescalation->escalate_on_unknown
 #endif
 						}},
-				{ NDO_DATA_ESCALATEONCRITICAL, BD_INT, 
+				{ NDO_DATA_ESCALATEONCRITICAL, BD_INT,
 						{ .integer =
 #ifdef BUILD_NAGIOS_4X
 			 				flag_isset(temp_serviceescalation->escalation_options,
@@ -4784,10 +5035,12 @@ int ndomod_write_object_config(int config_type){
 						}},
 				};
 
-			ndomod_broker_data_serialize(&dbuf, 
-					NDO_API_SERVICEESCALATIONDEFINITION, 
-					serviceescalation_definition, 
-					sizeof(serviceescalation_definition) / 
+			NDOMOD_FREE_ESC_BUFFERS(es, 3);
+
+			ndomod_broker_data_serialize(&dbuf,
+					NDO_API_SERVICEESCALATIONDEFINITION,
+					serviceescalation_definition,
+					sizeof(serviceescalation_definition) /
 					sizeof(serviceescalation_definition[ 0]), FALSE);
 		}
 
@@ -4795,12 +5048,12 @@ int ndomod_write_object_config(int config_type){
 		es[0]=NULL;
 
 		/* dump contactgroups */
-		ndomod_contactgroups_serialize(temp_serviceescalation->contact_groups, 
+		ndomod_contactgroups_serialize(temp_serviceescalation->contact_groups,
 				&dbuf);
 
 		/* dump individual contacts (not supported in Nagios 2.x) */
 #ifndef BUILD_NAGIOS_2X
-		ndomod_contacts_serialize(temp_serviceescalation->contacts, &dbuf, 
+		ndomod_contacts_serialize(temp_serviceescalation->contacts, &dbuf,
 				NDO_DATA_CONTACT);
 #endif
 
@@ -4811,12 +5064,6 @@ int ndomod_write_object_config(int config_type){
 		ndo_dbuf_free(&dbuf);
 	        }
 
-
-	/* free buffers */
-	for(x=0;x<OBJECTCONFIG_ES_ITEMS;x++){
-		free(es[x]);
-		es[x]=NULL;
-	        }
 
 	/****** dump host dependency config ******/
 #ifdef BUILD_NAGIOS_4X
@@ -4838,19 +5085,19 @@ int ndomod_write_object_config(int config_type){
 
 		{
 			struct ndo_broker_data hostdependency_definition[] = {
-				{ NDO_DATA_TIMESTAMP, BD_TIMEVAL, 
+				{ NDO_DATA_TIMESTAMP, BD_TIMEVAL,
 						{ .timestamp = now }},
-				{ NDO_DATA_HOSTNAME, BD_STRING, 
+				{ NDO_DATA_HOSTNAME, BD_STRING,
 						{ .string = (es[0]==NULL) ? "" : es[0] }},
-				{ NDO_DATA_DEPENDENTHOSTNAME, BD_STRING, 
+				{ NDO_DATA_DEPENDENTHOSTNAME, BD_STRING,
 						{ .string = (es[1]==NULL) ? "" : es[1] }},
-				{ NDO_DATA_DEPENDENCYTYPE, BD_INT, 
+				{ NDO_DATA_DEPENDENCYTYPE, BD_INT,
 						{ .integer = temp_hostdependency->dependency_type }},
-				{ NDO_DATA_INHERITSPARENT, BD_INT, 
+				{ NDO_DATA_INHERITSPARENT, BD_INT,
 						{ .integer = temp_hostdependency->inherits_parent }},
-				{ NDO_DATA_DEPENDENCYPERIOD, BD_STRING, 
+				{ NDO_DATA_DEPENDENCYPERIOD, BD_STRING,
 						{ .string = (es[2]==NULL) ? "" : es[2] }},
-				{ NDO_DATA_FAILONUP, BD_INT, 
+				{ NDO_DATA_FAILONUP, BD_INT,
 						{ .integer =
 #ifdef BUILD_NAGIOS_4X
 			 				flag_isset(temp_hostdependency->failure_options,
@@ -4859,7 +5106,7 @@ int ndomod_write_object_config(int config_type){
 			 				temp_hostdependency->fail_on_up
 #endif
 						}},
-				{ NDO_DATA_FAILONDOWN, BD_INT, 
+				{ NDO_DATA_FAILONDOWN, BD_INT,
 						{ .integer =
 #ifdef BUILD_NAGIOS_4X
 			 				flag_isset(temp_hostdependency->failure_options,
@@ -4868,7 +5115,7 @@ int ndomod_write_object_config(int config_type){
 			 				temp_hostdependency->fail_on_down
 #endif
 						}},
-				{ NDO_DATA_FAILONUNREACHABLE, BD_INT, 
+				{ NDO_DATA_FAILONUNREACHABLE, BD_INT,
 						{ .integer =
 #ifdef BUILD_NAGIOS_4X
 			 				flag_isset(temp_hostdependency->failure_options,
@@ -4879,10 +5126,12 @@ int ndomod_write_object_config(int config_type){
 						}},
 				};
 
-			ndomod_broker_data_serialize(&dbuf, 
-					NDO_API_HOSTDEPENDENCYDEFINITION, 
-					hostdependency_definition, 
-					sizeof(hostdependency_definition) / 
+		NDOMOD_FREE_ESC_BUFFERS(es, 3);
+
+			ndomod_broker_data_serialize(&dbuf,
+					NDO_API_HOSTDEPENDENCYDEFINITION,
+					hostdependency_definition,
+					sizeof(hostdependency_definition) /
 					sizeof(hostdependency_definition[ 0]), TRUE);
 		}
 
@@ -4891,12 +5140,6 @@ int ndomod_write_object_config(int config_type){
 		ndo_dbuf_free(&dbuf);
 	        }
 
-
-	/* free buffers */
-	for(x=0;x<OBJECTCONFIG_ES_ITEMS;x++){
-		free(es[x]);
-		es[x]=NULL;
-	        }
 
 	/****** dump service dependency config ******/
 #ifdef BUILD_NAGIOS_4X
@@ -4920,23 +5163,23 @@ int ndomod_write_object_config(int config_type){
 
 		{
 			struct ndo_broker_data servicedependency_definition[] = {
-				{ NDO_DATA_TIMESTAMP, BD_TIMEVAL, 
+				{ NDO_DATA_TIMESTAMP, BD_TIMEVAL,
 						{ .timestamp = now }},
-				{ NDO_DATA_HOSTNAME, BD_STRING, 
+				{ NDO_DATA_HOSTNAME, BD_STRING,
 						{ .string = (es[0]==NULL) ? "" : es[0] }},
-				{ NDO_DATA_SERVICEDESCRIPTION, BD_STRING, 
+				{ NDO_DATA_SERVICEDESCRIPTION, BD_STRING,
 						{ .string = (es[1]==NULL) ? "" : es[1] }},
-				{ NDO_DATA_DEPENDENTHOSTNAME, BD_STRING, 
+				{ NDO_DATA_DEPENDENTHOSTNAME, BD_STRING,
 						{ .string = (es[2]==NULL) ? "" : es[2] }},
-				{ NDO_DATA_DEPENDENTSERVICEDESCRIPTION, BD_STRING, 
+				{ NDO_DATA_DEPENDENTSERVICEDESCRIPTION, BD_STRING,
 						{ .string = (es[3]==NULL) ? "" : es[3] }},
-				{ NDO_DATA_DEPENDENCYTYPE, BD_INT, 
+				{ NDO_DATA_DEPENDENCYTYPE, BD_INT,
 						{ .integer = temp_servicedependency->dependency_type }},
-				{ NDO_DATA_INHERITSPARENT, BD_INT, 
+				{ NDO_DATA_INHERITSPARENT, BD_INT,
 						{ .integer = temp_servicedependency->inherits_parent }},
-				{ NDO_DATA_DEPENDENCYPERIOD, BD_STRING, 
+				{ NDO_DATA_DEPENDENCYPERIOD, BD_STRING,
 						{ .string = (es[4]==NULL) ? "" : es[4] }},
-				{ NDO_DATA_FAILONOK, BD_INT, 
+				{ NDO_DATA_FAILONOK, BD_INT,
 						{ .integer =
 #ifdef BUILD_NAGIOS_4X
 			 				flag_isset(temp_servicedependency->failure_options,
@@ -4945,7 +5188,7 @@ int ndomod_write_object_config(int config_type){
 			 				temp_servicedependency->fail_on_ok
 #endif
 						}},
-				{ NDO_DATA_FAILONWARNING, BD_INT, 
+				{ NDO_DATA_FAILONWARNING, BD_INT,
 						{ .integer =
 #ifdef BUILD_NAGIOS_4X
 			 				flag_isset(temp_servicedependency->failure_options,
@@ -4954,7 +5197,7 @@ int ndomod_write_object_config(int config_type){
 			 				temp_servicedependency->fail_on_warning
 #endif
 						}},
-				{ NDO_DATA_FAILONUNKNOWN, BD_INT, 
+				{ NDO_DATA_FAILONUNKNOWN, BD_INT,
 						{ .integer =
 #ifdef BUILD_NAGIOS_4X
 			 				flag_isset(temp_servicedependency->failure_options,
@@ -4963,7 +5206,7 @@ int ndomod_write_object_config(int config_type){
 			 				temp_servicedependency->fail_on_unknown
 #endif
 						}},
-				{ NDO_DATA_FAILONCRITICAL, BD_INT, 
+				{ NDO_DATA_FAILONCRITICAL, BD_INT,
 						{ .integer =
 #ifdef BUILD_NAGIOS_4X
 			 				flag_isset(temp_servicedependency->failure_options,
@@ -4974,10 +5217,12 @@ int ndomod_write_object_config(int config_type){
 						}},
 				};
 
-			ndomod_broker_data_serialize(&dbuf, 
-					NDO_API_SERVICEDEPENDENCYDEFINITION, 
-					servicedependency_definition, 
-					sizeof(servicedependency_definition) / 
+			NDOMOD_FREE_ESC_BUFFERS(es, 5);
+
+			ndomod_broker_data_serialize(&dbuf,
+					NDO_API_SERVICEDEPENDENCYDEFINITION,
+					servicedependency_definition,
+					sizeof(servicedependency_definition) /
 					sizeof(servicedependency_definition[ 0]), TRUE);
 		}
 
@@ -4987,30 +5232,15 @@ int ndomod_write_object_config(int config_type){
 	        }
 
 
-	/* free buffers */
-	for(x=0;x<OBJECTCONFIG_ES_ITEMS;x++){
-		free(es[x]);
-		es[x]=NULL;
-	        }
-
 	return NDO_OK;
         }
 
 
 
-/* dumps config files to data sink */
-int ndomod_write_config_files(void){
-	int result=NDO_OK;
-
-	if((result=ndomod_write_main_config_file())==NDO_ERROR)
-		return NDO_ERROR;
-
-	if((result=ndomod_write_resource_config_files())==NDO_ERROR)
-		return NDO_ERROR;
-
-	return result;
-        }
-
+/* Dumps config files to the data sink. */
+int ndomod_write_config_files(void) {
+	return ndomod_write_main_config_file();
+}
 
 
 /* dumps main config file data to sink */
@@ -5026,7 +5256,7 @@ int ndomod_write_main_config_file(void){
 	gettimeofday(&now,NULL);
 
 	asprintf(&temp_buffer
-		 ,"\n%d:\n%d=%ld.%ld\n%d=%s\n"
+		 ,"\n%d:\n%d=%ld.%06ld\n%d=%s\n"
 		 ,NDO_API_MAINCONFIGFILEVARIABLES
 		 ,NDO_DATA_TIMESTAMP
 		 ,now.tv_sec
@@ -5084,30 +5314,6 @@ int ndomod_write_main_config_file(void){
 
 
 
-/* dumps all resource config files to sink */
-int ndomod_write_resource_config_files(void){
-
-	/* TODO */
-	/* loop through main config file to find all resource config files, and then process them */
-	/* this should probably NOT be done, as the resource file is supposed to remain private... */
-
-	return NDO_OK;
-        }
-
-
-
-/* dumps a single resource config file to sink */
-int ndomod_write_resource_config_file(char *filename){
-
-	/* TODO */
-	/* loop through main config file to find all resource config files, and then process them */
-	/* this should probably NOT be done, as the resource file is supposed to remain private... */
-
-	return NDO_OK;
-        }
-
-
-
 /* dumps runtime variables to sink */
 int ndomod_write_runtime_variables(void){
 	char *temp_buffer=NULL;
@@ -5117,7 +5323,7 @@ int ndomod_write_runtime_variables(void){
 	gettimeofday(&now,NULL);
 
 	asprintf(&temp_buffer
-		 ,"\n%d:\n%d=%ld.%ld\n"
+		 ,"\n%d:\n%d=%ld.%06ld\n"
 		 ,NDO_API_RUNTIMEVARIABLES
 		 ,NDO_DATA_TIMESTAMP
 		 ,now.tv_sec

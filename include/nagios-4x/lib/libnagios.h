@@ -1,5 +1,5 @@
-#ifndef LIBNAGIOS_libnagios_h__
-#define LIBNAGIOS_libnagios_h__
+#ifndef LIBNAGIOS_LIBNAGIOS_H_INCLUDED
+#define LIBNAGIOS_LIBNAGIOS_H_INCLUDED
 /**
  * @file libnagios.h
  *
@@ -9,7 +9,7 @@
 #include "lnag-utils.h"
 #include "fanout.h"
 #include "nsutils.h"
-#include "pqueue.h"
+/* #include "pqueue.h" */
 #include "squeue.h"
 #include "kvvec.h"
 #include "iobroker.h"

@@ -1,5 +1,5 @@
-#ifndef LIBNAGIOS_iobroker_h__
-#define LIBNAGIOS_iobroker_h__
+#ifndef LIBNAGIOS_IOBROKER_H_INCLUDED
+#define LIBNAGIOS_IOBROKER_H_INCLUDED
 
 /**
  * @file iobroker.h

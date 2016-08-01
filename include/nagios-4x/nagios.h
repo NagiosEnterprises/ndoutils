@@ -17,8 +17,8 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  ************************************************************************/
 
-#ifndef _NAGIOS_H
-#define _NAGIOS_H
+#ifndef NAGIOS_NAGIOS_H_INCLUDED
+#define NAGIOS_NAGIOS_H_INCLUDED
 
 #ifndef NSCORE
 # define NSCORE
@@ -187,6 +187,8 @@ extern unsigned long max_debug_file_size;
 
 extern int allow_empty_hostgroup_assignment;
 
+extern int host_down_disable_service_checks;
+
 extern time_t last_program_stop;
 extern time_t event_start;
 
@@ -197,7 +199,6 @@ extern int currently_running_host_checks;
 extern unsigned long next_event_id;
 extern unsigned long next_problem_id;
 extern unsigned long next_comment_id;
-extern unsigned long next_downtime_id;
 extern unsigned long next_notification_id;
 
 extern unsigned long modified_process_attributes;
@@ -423,7 +424,7 @@ NAGIOS_BEGIN_DECL
 #define normal_check_window(o) ((time_t)(o->check_interval * interval_length))
 #define retry_check_window(o) ((time_t)(o->retry_interval * interval_length))
 #define check_window(o) \
-	((!o->current_state && o->state_type == SOFT_STATE) ? \
+	((o->current_state && o->state_type == SOFT_STATE) ? \
 		retry_check_window(o) : \
 		normal_check_window(o))
 
@@ -484,6 +485,7 @@ extern void handle_sigxfsz(int);				/* handle SIGXFSZ */
 int daemon_init(void);				     		/* switches to daemon mode */
 int drop_privileges(char *, char *);				/* drops privileges before startup */
 void display_scheduling_info(void);				/* displays service check scheduling information */
+void init_main_cfg_vars(int); /* Initialize the non-shared main configuration variables */
 
 
 /**** Event Queue Functions ****/
@@ -528,9 +530,9 @@ int my_system_r(nagios_macros *mac, char *, int, int *, double *, char **, int);
 void check_for_service_flapping(service *, int, int);	      /* determines whether or not a service is "flapping" between states */
 void check_for_host_flapping(host *, int, int, int);		/* determines whether or not a host is "flapping" between states */
 void set_service_flap(service *, double, double, double, int);	/* handles a service that is flapping */
-void clear_service_flap(service *, double, double, double);	/* handles a service that has stopped flapping */
+void clear_service_flap(service *, double, double, double, int);	/* handles a service that has stopped flapping */
 void set_host_flap(host *, double, double, double, int);		/* handles a host that is flapping */
-void clear_host_flap(host *, double, double, double);		/* handles a host that has stopped flapping */
+void clear_host_flap(host *, double, double, double, int);		/* handles a host that has stopped flapping */
 void enable_flap_detection_routines(void);			/* enables flap detection on a program-wide basis */
 void disable_flap_detection_routines(void);			/* disables flap detection on a program-wide basis */
 void enable_host_flap_detection(host *);			/* enables flap detection for a particular host */
@@ -620,6 +622,20 @@ void my_system_sighandler(int);				/* handles timeouts when executing commands v
 char *get_next_string_from_buf(char *buf, int *start_index, int bufsize);
 int compare_strings(char *, char *);                    /* compares two strings for equality */
 char *escape_newlines(char *);
+/**
+ * Unescapes newlines and backslashes in a check result output string read from
+ * a source that uses newlines as a delimiter (e.g., files in the checkresults
+ * spool dir, or the command pipe).
+ * @note: There is an unescape_newlines() in cgi/cgiutils.c that unescapes more
+ * than '\\' and '\n' in place. Since this function is specifically intended
+ * for processing escaped plugin output, we'll use a more specific name to
+ * avoid confusion and conflicts.
+ * @param rawbuf Input string tp unescape.
+ * @return An unescaped copy of rawbuf in a newly allocated string, or NULL if
+ * rawbuf is NULL or no memory could be allocated for the new string.
+ */
+char *unescape_check_result_output(const char *rawbuf);
+
 int contains_illegal_object_chars(char *);		/* tests whether or not an object name (host, service, etc.) contains illegal characters */
 int my_rename(char *, char *);                          /* renames a file - works across filesystems */
 int my_fcopy(char *, char *);                           /* copies a file - works across filesystems */

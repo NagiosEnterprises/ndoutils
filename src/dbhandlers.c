@@ -1,12 +1,24 @@
-/***************************************************************
- * DBHANDLERS.C - Data handler routines for NDO2DB daemon
+/**
+ * @file dbhandlers.c Database handler routines for ndo2db daemon
+ */
+/*
+ * Copyright 2009-2014 Nagios Core Development Team and Community Contributors
+ * Copyright 2005-2009 Ethan Galstad
  *
- * Copyright (c) 2009-2012 Nagios Core Development Team and Community Contributors
- * Copyright (c) 2005-2009 Ethan Galstad
+ * This file is part of NDOUtils.
  *
- * Last Modified: 09-27-2012
+ * NDOUtils is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
  *
- **************************************************************/
+ * NDOUtils is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with NDOUtils. If not, see <http://www.gnu.org/licenses/>.
+ */
 
 /* include our project's header files */
 #include "../include/config.h"
@@ -17,6 +29,8 @@
 #include "../include/ndo2db.h"
 #include "../include/db.h"
 #include "../include/dbhandlers.h"
+
+#include <pthread.h>
 
 /* Nagios header files */
 
@@ -88,7 +102,7 @@ int ndo2db_get_object_id(ndo2db_idi *idi, int object_type, char *n1, char *n2, u
 		es[0]=ndo2db_db_escape_string(idi,name1);
 		/* HINT: HB 10/27/2009
 		 * BINARY operator is just a MySQL special to provide case sensitive queries
-		 * Think about it in the future if not only MySQL is supported 
+		 * Think about it in the future if not only MySQL is supported
 		 */
 		if(asprintf(&buf1,"BINARY name1='%s'",es[0])==-1)
 			buf1=NULL;
@@ -103,12 +117,12 @@ int ndo2db_get_object_id(ndo2db_idi *idi, int object_type, char *n1, char *n2, u
 		es[1]=ndo2db_db_escape_string(idi,name2);
 		/* HINT: HB 10/27/2009
 		 * BINARY operator is just a MySQL special to provide case sensitive queries
-		 * Think about it in the future if not only MySQL is supported 
+		 * Think about it in the future if not only MySQL is supported
 		 */
 		if(asprintf(&buf2,"BINARY name2='%s'",es[1])==-1)
 			buf2=NULL;
 	        }
-	
+
 	if(asprintf(&buf,"SELECT * FROM %s WHERE instance_id='%lu' AND objecttype_id='%d' AND %s AND %s"
 		    ,ndo2db_db_tablenames[NDO2DB_DBTABLE_OBJECTS]
 		    ,idi->dbinfo.instance_id
@@ -118,22 +132,14 @@ int ndo2db_get_object_id(ndo2db_idi *idi, int object_type, char *n1, char *n2, u
 		   )==-1)
 		buf=NULL;
 	if((result=ndo2db_db_query(idi,buf))==NDO_OK){
-		switch(idi->dbinfo.server_type){
-		case NDO2DB_DBSERVER_MYSQL:
-#ifdef USE_MYSQL
-			idi->dbinfo.mysql_result=mysql_store_result(&idi->dbinfo.mysql_conn);
-			if((idi->dbinfo.mysql_row=mysql_fetch_row(idi->dbinfo.mysql_result))!=NULL){
-				ndo2db_convert_string_to_unsignedlong(idi->dbinfo.mysql_row[0],object_id);
-				found_object=NDO_TRUE;
-			        }
-			mysql_free_result(idi->dbinfo.mysql_result);
-			idi->dbinfo.mysql_result=NULL;
-#endif
-			break;
-		default:
-			break;
-	                }
-	        }
+		idi->dbinfo.mysql_result=mysql_store_result(&idi->dbinfo.mysql_conn);
+		if((idi->dbinfo.mysql_row=mysql_fetch_row(idi->dbinfo.mysql_result))!=NULL){
+			ndo2db_convert_string_to_unsignedlong(idi->dbinfo.mysql_row[0],object_id);
+			found_object=NDO_TRUE;
+		}
+		mysql_free_result(idi->dbinfo.mysql_result);
+		idi->dbinfo.mysql_result=NULL;
+	}
 	free(buf);
 
 	/* free memory */
@@ -192,7 +198,7 @@ int ndo2db_get_object_id_with_insert(ndo2db_idi *idi, int object_type, char *n1,
 	        }
 	else
 		es[1]=NULL;
-	
+
 	if(asprintf(&buf,"INSERT INTO %s SET instance_id='%lu', objecttype_id='%d' %s %s"
 		    ,ndo2db_db_tablenames[NDO2DB_DBTABLE_OBJECTS]
 		    ,idi->dbinfo.instance_id
@@ -202,16 +208,8 @@ int ndo2db_get_object_id_with_insert(ndo2db_idi *idi, int object_type, char *n1,
 		   )==-1)
 		buf=NULL;
 	if((result=ndo2db_db_query(idi,buf))==NDO_OK){
-		switch(idi->dbinfo.server_type){
-		case NDO2DB_DBSERVER_MYSQL:
-#ifdef USE_MYSQL
-			*object_id=mysql_insert_id(&idi->dbinfo.mysql_conn);
-#endif
-			break;
-		default:
-			break;
-	                }
-	        }
+		*object_id=mysql_insert_id(&idi->dbinfo.mysql_conn);
+	}
 	free(buf);
 
 	/* cache object id for later lookups */
@@ -244,32 +242,24 @@ int ndo2db_get_cached_object_ids(ndo2db_idi *idi){
 		buf=NULL;
 
 	if((result=ndo2db_db_query(idi,buf))==NDO_OK){
-		switch(idi->dbinfo.server_type){
-		case NDO2DB_DBSERVER_MYSQL:
-#ifdef USE_MYSQL
-			idi->dbinfo.mysql_result=mysql_store_result(&idi->dbinfo.mysql_conn);
-			if(NULL != idi->dbinfo.mysql_result) {
-				while((idi->dbinfo.mysql_row=mysql_fetch_row(idi->dbinfo.mysql_result))!=NULL){
+		idi->dbinfo.mysql_result=mysql_store_result(&idi->dbinfo.mysql_conn);
+		if(NULL != idi->dbinfo.mysql_result) {
+			while((idi->dbinfo.mysql_row=mysql_fetch_row(idi->dbinfo.mysql_result))!=NULL){
 
-					ndo2db_convert_string_to_unsignedlong(idi->dbinfo.mysql_row[0],&object_id);
-					ndo2db_convert_string_to_int(idi->dbinfo.mysql_row[1],&objecttype_id);
+				ndo2db_convert_string_to_unsignedlong(idi->dbinfo.mysql_row[0],&object_id);
+				ndo2db_convert_string_to_int(idi->dbinfo.mysql_row[1],&objecttype_id);
 
-					/* add object to cached list */
-					ndo2db_add_cached_object_id(idi,objecttype_id,idi->dbinfo.mysql_row[2],idi->dbinfo.mysql_row[3],object_id);
-					}
-				mysql_free_result(idi->dbinfo.mysql_result);
+				/* add object to cached list */
+				ndo2db_add_cached_object_id(idi,objecttype_id,idi->dbinfo.mysql_row[2],idi->dbinfo.mysql_row[3],object_id);
 				}
-			else if(mysql_errno(&idi->dbinfo.mysql_conn) != 0) {
-				syslog(LOG_USER|LOG_INFO,
-						"Error: mysql_store_result() failed for '%s'\n", buf);
-				}
-			idi->dbinfo.mysql_result=NULL;
-#endif
-			break;
-		default:
-			break;
-	                }
-	        }
+			mysql_free_result(idi->dbinfo.mysql_result);
+			}
+		else if(mysql_errno(&idi->dbinfo.mysql_conn) != 0) {
+			syslog(LOG_USER|LOG_INFO,
+					"Error: mysql_store_result() failed for '%s'\n", buf);
+		}
+		idi->dbinfo.mysql_result=NULL;
+	}
 	free(buf);
 
 	return result;
@@ -355,7 +345,7 @@ int ndo2db_add_cached_object_id(ndo2db_idi *idi, int object_type, char *n1, char
 		idi->dbinfo.object_hashlist=(ndo2db_dbobject **)malloc(sizeof(ndo2db_dbobject *)*NDO2DB_OBJECT_HASHSLOTS);
 		if(idi->dbinfo.object_hashlist==NULL)
 			return NDO_ERROR;
-		
+
 		for(x=0;x<NDO2DB_OBJECT_HASHSLOTS;x++)
 			idi->dbinfo.object_hashlist[x]=NULL;
 	        }
@@ -492,7 +482,7 @@ int ndo2db_set_all_objects_as_inactive(ndo2db_idi *idi){
 int ndo2db_set_object_as_active(ndo2db_idi *idi, int object_type, unsigned long object_id){
 	int result=NDO_OK;
 	char *buf=NULL;
-	
+
 	/* mark the object as being active */
 	if(asprintf(&buf,"UPDATE %s SET is_active='1' WHERE instance_id='%lu' AND objecttype_id='%d' AND object_id='%lu'"
 		    ,ndo2db_db_tablenames[NDO2DB_DBTABLE_OBJECTS]
@@ -560,20 +550,12 @@ int ndo2db_handle_logentry(ndo2db_idi *idi){
 		   )==-1)
 		buf=NULL;
 	if((result=ndo2db_db_query(idi,buf))==NDO_OK){
-		switch(idi->dbinfo.server_type){
-		case NDO2DB_DBSERVER_MYSQL:
-#ifdef USE_MYSQL
-			idi->dbinfo.mysql_result=mysql_store_result(&idi->dbinfo.mysql_conn);
-			if((idi->dbinfo.mysql_row=mysql_fetch_row(idi->dbinfo.mysql_result))!=NULL)
-				duplicate_record=NDO_TRUE;
-			mysql_free_result(idi->dbinfo.mysql_result);
-			idi->dbinfo.mysql_result=NULL;
-#endif
-			break;
-		default:
-			break;
-	                }
-	        }
+		idi->dbinfo.mysql_result=mysql_store_result(&idi->dbinfo.mysql_conn);
+		if((idi->dbinfo.mysql_row=mysql_fetch_row(idi->dbinfo.mysql_result))!=NULL)
+			duplicate_record=NDO_TRUE;
+		mysql_free_result(idi->dbinfo.mysql_result);
+		idi->dbinfo.mysql_result=NULL;
+	}
 	free(buf);
 
 	/*if(duplicate_record==NDO_TRUE && idi->last_logentry_time!=etime){*/
@@ -732,7 +714,7 @@ int ndo2db_handle_processdata(ndo2db_idi *idi){
 			buf=NULL;
 		result=ndo2db_db_query(idi,buf);
 		free(buf);
-#endif		
+#endif
 	        }
 
 	/* if process is shutting down or restarting, update process status data */
@@ -1266,16 +1248,8 @@ int ndo2db_handle_notificationdata(ndo2db_idi *idi){
 	if(type==NEBTYPE_NOTIFICATION_START)
 		idi->dbinfo.last_notification_id=0L;
 	if(result==NDO_OK && type==NEBTYPE_NOTIFICATION_START){
-		switch(idi->dbinfo.server_type){
-		case NDO2DB_DBSERVER_MYSQL:
-#ifdef USE_MYSQL
-			idi->dbinfo.last_notification_id=mysql_insert_id(&idi->dbinfo.mysql_conn);
-#endif
-			break;
-		default:
-			break;
-	                }
-	        }
+		idi->dbinfo.last_notification_id=mysql_insert_id(&idi->dbinfo.mysql_conn);
+	}
 	free(buf);
 	free(buf1);
 
@@ -1344,16 +1318,8 @@ int ndo2db_handle_contactnotificationdata(ndo2db_idi *idi){
 	if(type==NEBTYPE_CONTACTNOTIFICATION_START)
 		idi->dbinfo.last_contact_notification_id=0L;
 	if(result==NDO_OK && type==NEBTYPE_CONTACTNOTIFICATION_START){
-		switch(idi->dbinfo.server_type){
-		case NDO2DB_DBSERVER_MYSQL:
-#ifdef USE_MYSQL
-			idi->dbinfo.last_contact_notification_id=mysql_insert_id(&idi->dbinfo.mysql_conn);
-#endif
-			break;
-		default:
-			break;
-	                }
-	        }
+		idi->dbinfo.last_contact_notification_id=mysql_insert_id(&idi->dbinfo.mysql_conn);
+	}
 	free(buf);
 	free(buf1);
 
@@ -1393,7 +1359,7 @@ int ndo2db_handle_contactnotificationmethoddata(ndo2db_idi *idi){
 
 	ts[0]=ndo2db_db_timet_to_sql(idi,start_time.tv_sec);
 	ts[1]=ndo2db_db_timet_to_sql(idi,end_time.tv_sec);
-	
+
 
 	/* get the command id */
 	result=ndo2db_get_object_id_with_insert(idi,NDO2DB_OBJECTTYPE_COMMAND,idi->buffered_input[NDO_DATA_COMMANDNAME],NULL,&command_id);
@@ -2893,14 +2859,14 @@ int ndo2db_handle_acknowledgementdata(ndo2db_idi *idi){
 		    ,notify_contacts
 		   )==-1)
 		buf=NULL;
-	
+
 	if(asprintf(&buf1,"INSERT INTO %s SET %s ON DUPLICATE KEY UPDATE %s"
 		    ,ndo2db_db_tablenames[NDO2DB_DBTABLE_ACKNOWLEDGEMENTS]
 		    ,buf
 		    ,buf
 		   )==-1)
 		buf1=NULL;
-	
+
 	result=ndo2db_db_query(idi,buf1);
 	free(buf);
 	free(buf1);
@@ -3040,7 +3006,7 @@ int ndo2db_handle_configfilevariables(ndo2db_idi *idi, int configfile_type){
 		    ,es[0]
 		   )==-1)
 		buf=NULL;
-	
+
 	if(asprintf(&buf1,"INSERT INTO %s SET %s ON DUPLICATE KEY UPDATE %s"
 		    ,ndo2db_db_tablenames[NDO2DB_DBTABLE_CONFIGFILES]
 		    ,buf
@@ -3049,16 +3015,8 @@ int ndo2db_handle_configfilevariables(ndo2db_idi *idi, int configfile_type){
 		buf1=NULL;
 
 	if((result=ndo2db_db_query(idi,buf1))==NDO_OK){
-		switch(idi->dbinfo.server_type){
-		case NDO2DB_DBSERVER_MYSQL:
-#ifdef USE_MYSQL
-			configfile_id=mysql_insert_id(&idi->dbinfo.mysql_conn);
-#endif
-			break;
-		default:
-			break;
-	                }
-	        }
+		configfile_id=mysql_insert_id(&idi->dbinfo.mysql_conn);
+	}
 	free(buf);
 	free(buf1);
 
@@ -3085,7 +3043,7 @@ int ndo2db_handle_configfilevariables(ndo2db_idi *idi, int configfile_type){
 			    ,es[2]
 			   )==-1)
 			buf=NULL;
-	
+
 		if(asprintf(&buf1,"INSERT INTO %s SET %s"
 			    ,ndo2db_db_tablenames[NDO2DB_DBTABLE_CONFIGFILEVARIABLES]
 			    ,buf
@@ -3164,7 +3122,7 @@ int ndo2db_handle_runtimevariables(ndo2db_idi *idi){
 			    ,es[1]
 			   )==-1)
 			buf=NULL;
-	
+
 		if(asprintf(&buf1,"INSERT INTO %s SET %s ON DUPLICATE KEY UPDATE %s"
 			    ,ndo2db_db_tablenames[NDO2DB_DBTABLE_RUNTIMEVARIABLES]
 			    ,buf
@@ -3332,13 +3290,13 @@ int ndo2db_handle_hostdefinition(ndo2db_idi *idi){
 	argptr=strtok(NULL,"\x0");
 	result=ndo2db_get_object_id_with_insert(idi,NDO2DB_OBJECTTYPE_COMMAND,cmdptr,NULL,&check_command_id);
 	es[2]=ndo2db_db_escape_string(idi,argptr);
-	
+
 	/* get the event handler command */
 	cmdptr=strtok(idi->buffered_input[NDO_DATA_HOSTEVENTHANDLER],"!");
 	argptr=strtok(NULL,"\x0");
 	result=ndo2db_get_object_id_with_insert(idi,NDO2DB_OBJECTTYPE_COMMAND,cmdptr,NULL,&eventhandler_command_id);
 	es[3]=ndo2db_db_escape_string(idi,argptr);
-	
+
 	es[4]=ndo2db_db_escape_string(idi,idi->buffered_input[NDO_DATA_NOTES]);
 	es[5]=ndo2db_db_escape_string(idi,idi->buffered_input[NDO_DATA_NOTESURL]);
 	es[6]=ndo2db_db_escape_string(idi,idi->buffered_input[NDO_DATA_ACTIONURL]);
@@ -3426,7 +3384,7 @@ int ndo2db_handle_hostdefinition(ndo2db_idi *idi){
 #endif
 		   )==-1)
 		buf=NULL;
-	
+
 	if(asprintf(&buf1,"INSERT INTO %s SET %s ON DUPLICATE KEY UPDATE %s"
 		    ,ndo2db_db_tablenames[NDO2DB_DBTABLE_HOSTS]
 		    ,buf
@@ -3435,16 +3393,8 @@ int ndo2db_handle_hostdefinition(ndo2db_idi *idi){
 		buf1=NULL;
 
 	if((result=ndo2db_db_query(idi,buf1))==NDO_OK){
-		switch(idi->dbinfo.server_type){
-		case NDO2DB_DBSERVER_MYSQL:
-#ifdef USE_MYSQL
-			host_id=mysql_insert_id(&idi->dbinfo.mysql_conn);
-#endif
-			break;
-		default:
-			break;
-	                }
-	        }
+		host_id=mysql_insert_id(&idi->dbinfo.mysql_conn);
+	}
 	free(buf);
 	free(buf1);
 
@@ -3467,7 +3417,7 @@ int ndo2db_handle_hostdefinition(ndo2db_idi *idi){
 			    ,member_id
 			   )==-1)
 			buf=NULL;
-	
+
 		if(asprintf(&buf1,"INSERT INTO %s SET %s ON DUPLICATE KEY UPDATE %s"
 			    ,ndo2db_db_tablenames[NDO2DB_DBTABLE_HOSTPARENTHOSTS]
 			    ,buf
@@ -3496,7 +3446,7 @@ int ndo2db_handle_hostdefinition(ndo2db_idi *idi){
 			    ,member_id
 			   )==-1)
 			buf=NULL;
-	
+
 		if(asprintf(&buf1,"INSERT INTO %s SET %s ON DUPLICATE KEY UPDATE %s"
 			    ,ndo2db_db_tablenames[NDO2DB_DBTABLE_HOSTCONTACTGROUPS]
 			    ,buf
@@ -3525,7 +3475,7 @@ int ndo2db_handle_hostdefinition(ndo2db_idi *idi){
 			    ,member_id
 			   )==-1)
 			buf=NULL;
-	
+
 		if(asprintf(&buf1,"INSERT INTO %s SET %s ON DUPLICATE KEY UPDATE %s"
 			    ,ndo2db_db_tablenames[NDO2DB_DBTABLE_HOSTCONTACTS]
 			    ,buf
@@ -3584,7 +3534,7 @@ int ndo2db_handle_hostgroupdefinition(ndo2db_idi *idi){
 		    ,es[0]
 		   )==-1)
 		buf=NULL;
-	
+
 	if(asprintf(&buf1,"INSERT INTO %s SET %s ON DUPLICATE KEY UPDATE %s"
 		    ,ndo2db_db_tablenames[NDO2DB_DBTABLE_HOSTGROUPS]
 		    ,buf
@@ -3593,16 +3543,8 @@ int ndo2db_handle_hostgroupdefinition(ndo2db_idi *idi){
 		buf1=NULL;
 
 	if((result=ndo2db_db_query(idi,buf1))==NDO_OK){
-		switch(idi->dbinfo.server_type){
-		case NDO2DB_DBSERVER_MYSQL:
-#ifdef USE_MYSQL
-			group_id=mysql_insert_id(&idi->dbinfo.mysql_conn);
-#endif
-			break;
-		default:
-			break;
-	                }
-	        }
+		group_id=mysql_insert_id(&idi->dbinfo.mysql_conn);
+	}
 	free(buf);
 	free(buf1);
 
@@ -3624,7 +3566,7 @@ int ndo2db_handle_hostgroupdefinition(ndo2db_idi *idi){
 			    ,member_id
 			   )==-1)
 			buf=NULL;
-	
+
 		if(asprintf(&buf1,"INSERT INTO %s SET %s ON DUPLICATE KEY UPDATE %s"
 			    ,ndo2db_db_tablenames[NDO2DB_DBTABLE_HOSTGROUPMEMBERS]
 			    ,buf
@@ -3756,13 +3698,13 @@ int ndo2db_handle_servicedefinition(ndo2db_idi *idi){
 	argptr=strtok(NULL,"\x0");
 	result=ndo2db_get_object_id_with_insert(idi,NDO2DB_OBJECTTYPE_COMMAND,cmdptr,NULL,&check_command_id);
 	es[1]=ndo2db_db_escape_string(idi,argptr);
-	
+
 	/* get the event handler command */
 	cmdptr=strtok(idi->buffered_input[NDO_DATA_SERVICEEVENTHANDLER],"!");
 	argptr=strtok(NULL,"\x0");
 	result=ndo2db_get_object_id_with_insert(idi,NDO2DB_OBJECTTYPE_COMMAND,cmdptr,NULL,&eventhandler_command_id);
 	es[2]=ndo2db_db_escape_string(idi,argptr);
-	
+
 	es[3]=ndo2db_db_escape_string(idi,idi->buffered_input[NDO_DATA_NOTES]);
 	es[4]=ndo2db_db_escape_string(idi,idi->buffered_input[NDO_DATA_NOTESURL]);
 	es[5]=ndo2db_db_escape_string(idi,idi->buffered_input[NDO_DATA_ACTIONURL]);
@@ -3842,7 +3784,7 @@ int ndo2db_handle_servicedefinition(ndo2db_idi *idi){
 #endif
 		   )==-1)
 		buf=NULL;
-	
+
 	if(asprintf(&buf1,"INSERT INTO %s SET %s ON DUPLICATE KEY UPDATE %s"
 		    ,ndo2db_db_tablenames[NDO2DB_DBTABLE_SERVICES]
 		    ,buf
@@ -3851,16 +3793,8 @@ int ndo2db_handle_servicedefinition(ndo2db_idi *idi){
 		buf1=NULL;
 
 	if((result=ndo2db_db_query(idi,buf1))==NDO_OK){
-		switch(idi->dbinfo.server_type){
-		case NDO2DB_DBSERVER_MYSQL:
-#ifdef USE_MYSQL
-			service_id=mysql_insert_id(&idi->dbinfo.mysql_conn);
-#endif
-			break;
-		default:
-			break;
-	                }
-	        }
+		service_id=mysql_insert_id(&idi->dbinfo.mysql_conn);
+	}
 	free(buf);
 	free(buf1);
 
@@ -3879,7 +3813,7 @@ int ndo2db_handle_servicedefinition(ndo2db_idi *idi){
 		sptr=strtok(NULL,"\x0");
 
 		/* get the object id of the member */
-		result = ndo2db_get_object_id_with_insert(idi, 
+		result = ndo2db_get_object_id_with_insert(idi,
 				NDO2DB_OBJECTTYPE_SERVICE, hptr, sptr, &member_id);
 
 		if(asprintf(&buf,
@@ -3887,7 +3821,7 @@ int ndo2db_handle_servicedefinition(ndo2db_idi *idi){
 				idi->dbinfo.instance_id, service_id, member_id) == -1) {
 			buf = NULL;
 			}
-	
+
 		if(asprintf(&buf1, "INSERT INTO %s SET %s ON DUPLICATE KEY UPDATE %s",
 				ndo2db_db_tablenames[NDO2DB_DBTABLE_SERVICEPARENTSERVICES],
 				buf, buf) == -1) {
@@ -3916,7 +3850,7 @@ int ndo2db_handle_servicedefinition(ndo2db_idi *idi){
 			    ,member_id
 			   )==-1)
 			buf=NULL;
-	
+
 		if(asprintf(&buf1,"INSERT INTO %s SET %s ON DUPLICATE KEY UPDATE %s"
 			    ,ndo2db_db_tablenames[NDO2DB_DBTABLE_SERVICECONTACTGROUPS]
 			    ,buf
@@ -3945,7 +3879,7 @@ int ndo2db_handle_servicedefinition(ndo2db_idi *idi){
 			    ,member_id
 			   )==-1)
 			buf=NULL;
-	
+
 		if(asprintf(&buf1,"INSERT INTO %s SET %s ON DUPLICATE KEY UPDATE %s"
 			    ,ndo2db_db_tablenames[NDO2DB_DBTABLE_SERVICECONTACTS]
 			    ,buf
@@ -3957,7 +3891,7 @@ int ndo2db_handle_servicedefinition(ndo2db_idi *idi){
 		free(buf);
 		free(buf1);
 	}
-	
+
 	/* save custom variables to db */
 	result=ndo2db_save_custom_variables(idi,NDO2DB_DBTABLE_CUSTOMVARIABLES,object_id,NULL);
 
@@ -4006,7 +3940,7 @@ int ndo2db_handle_servicegroupdefinition(ndo2db_idi *idi){
 		    ,es[0]
 		   )==-1)
 		buf=NULL;
-	
+
 	if(asprintf(&buf1,"INSERT INTO %s SET %s ON DUPLICATE KEY UPDATE %s"
 		    ,ndo2db_db_tablenames[NDO2DB_DBTABLE_SERVICEGROUPS]
 		    ,buf
@@ -4015,16 +3949,8 @@ int ndo2db_handle_servicegroupdefinition(ndo2db_idi *idi){
 		buf1=NULL;
 
 	if((result=ndo2db_db_query(idi,buf1))==NDO_OK){
-		switch(idi->dbinfo.server_type){
-		case NDO2DB_DBSERVER_MYSQL:
-#ifdef USE_MYSQL
-			group_id=mysql_insert_id(&idi->dbinfo.mysql_conn);
-#endif
-			break;
-		default:
-			break;
-	                }
-	        }
+		group_id=mysql_insert_id(&idi->dbinfo.mysql_conn);
+	}
 	free(buf);
 	free(buf1);
 
@@ -4050,7 +3976,7 @@ int ndo2db_handle_servicegroupdefinition(ndo2db_idi *idi){
 			    ,member_id
 			   )==-1)
 			buf=NULL;
-	
+
 		if(asprintf(&buf1,"INSERT INTO %s SET %s ON DUPLICATE KEY UPDATE %s"
 			    ,ndo2db_db_tablenames[NDO2DB_DBTABLE_SERVICEGROUPMEMBERS]
 			    ,buf
@@ -4118,7 +4044,7 @@ int ndo2db_handle_hostdependencydefinition(ndo2db_idi *idi){
 		    ,fail_on_unreachable
 		   )==-1)
 		buf=NULL;
-	
+
 	if(asprintf(&buf1,"INSERT INTO %s SET %s ON DUPLICATE KEY UPDATE %s"
 		    ,ndo2db_db_tablenames[NDO2DB_DBTABLE_HOSTDEPENDENCIES]
 		    ,buf
@@ -4188,7 +4114,7 @@ int ndo2db_handle_servicedependencydefinition(ndo2db_idi *idi){
 		    ,fail_on_critical
 		   )==-1)
 		buf=NULL;
-	
+
 	if(asprintf(&buf1,"INSERT INTO %s SET %s ON DUPLICATE KEY UPDATE %s"
 		    ,ndo2db_db_tablenames[NDO2DB_DBTABLE_SERVICEDEPENDENCIES]
 		    ,buf
@@ -4261,7 +4187,7 @@ int ndo2db_handle_hostescalationdefinition(ndo2db_idi *idi){
 		    ,escalate_unreachable
 		   )==-1)
 		buf=NULL;
-	
+
 	if(asprintf(&buf1,"INSERT INTO %s SET %s ON DUPLICATE KEY UPDATE %s"
 		    ,ndo2db_db_tablenames[NDO2DB_DBTABLE_HOSTESCALATIONS]
 		    ,buf
@@ -4270,16 +4196,8 @@ int ndo2db_handle_hostescalationdefinition(ndo2db_idi *idi){
 		buf1=NULL;
 
 	if((result=ndo2db_db_query(idi,buf1))==NDO_OK){
-		switch(idi->dbinfo.server_type){
-		case NDO2DB_DBSERVER_MYSQL:
-#ifdef USE_MYSQL
-			escalation_id=mysql_insert_id(&idi->dbinfo.mysql_conn);
-#endif
-			break;
-		default:
-			break;
-	                }
-	        }
+		escalation_id=mysql_insert_id(&idi->dbinfo.mysql_conn);
+	}
 	free(buf);
 	free(buf1);
 
@@ -4299,7 +4217,7 @@ int ndo2db_handle_hostescalationdefinition(ndo2db_idi *idi){
 			    ,member_id
 			   )==-1)
 			buf=NULL;
-	
+
 		if(asprintf(&buf1,"INSERT INTO %s SET %s ON DUPLICATE KEY UPDATE %s"
 			    ,ndo2db_db_tablenames[NDO2DB_DBTABLE_HOSTESCALATIONCONTACTGROUPS]
 			    ,buf
@@ -4328,7 +4246,7 @@ int ndo2db_handle_hostescalationdefinition(ndo2db_idi *idi){
 			    ,member_id
 			   )==-1)
 			buf=NULL;
-	
+
 		if(asprintf(&buf1,"INSERT INTO %s SET %s ON DUPLICATE KEY UPDATE %s"
 			    ,ndo2db_db_tablenames[NDO2DB_DBTABLE_HOSTESCALATIONCONTACTS]
 			    ,buf
@@ -4405,7 +4323,7 @@ int ndo2db_handle_serviceescalationdefinition(ndo2db_idi *idi){
 		    ,escalate_critical
 		   )==-1)
 		buf=NULL;
-	
+
 	if(asprintf(&buf1,"INSERT INTO %s SET %s ON DUPLICATE KEY UPDATE %s"
 		    ,ndo2db_db_tablenames[NDO2DB_DBTABLE_SERVICEESCALATIONS]
 		    ,buf
@@ -4414,16 +4332,8 @@ int ndo2db_handle_serviceescalationdefinition(ndo2db_idi *idi){
 		buf1=NULL;
 
 	if((result=ndo2db_db_query(idi,buf1))==NDO_OK){
-		switch(idi->dbinfo.server_type){
-		case NDO2DB_DBSERVER_MYSQL:
-#ifdef USE_MYSQL
-			escalation_id=mysql_insert_id(&idi->dbinfo.mysql_conn);
-#endif
-			break;
-		default:
-			break;
-	                }
-	        }
+		escalation_id=mysql_insert_id(&idi->dbinfo.mysql_conn);
+	}
 	free(buf);
 	free(buf1);
 
@@ -4443,7 +4353,7 @@ int ndo2db_handle_serviceescalationdefinition(ndo2db_idi *idi){
 			    ,member_id
 			   )==-1)
 			buf=NULL;
-	
+
 		if(asprintf(&buf1,"INSERT INTO %s SET %s ON DUPLICATE KEY UPDATE %s"
 			    ,ndo2db_db_tablenames[NDO2DB_DBTABLE_SERVICEESCALATIONCONTACTGROUPS]
 			    ,buf
@@ -4472,7 +4382,7 @@ int ndo2db_handle_serviceescalationdefinition(ndo2db_idi *idi){
 			    ,member_id
 			   )==-1)
 			buf=NULL;
-	
+
 		if(asprintf(&buf1,"INSERT INTO %s SET %s ON DUPLICATE KEY UPDATE %s"
 			    ,ndo2db_db_tablenames[NDO2DB_DBTABLE_SERVICEESCALATIONCONTACTS]
 			    ,buf
@@ -4525,7 +4435,7 @@ int ndo2db_handle_commanddefinition(ndo2db_idi *idi){
 		    ,es[0]
 		   )==-1)
 		buf=NULL;
-	
+
 	if(asprintf(&buf1,"INSERT INTO %s SET %s ON DUPLICATE KEY UPDATE %s"
 		    ,ndo2db_db_tablenames[NDO2DB_DBTABLE_COMMANDS]
 		    ,buf
@@ -4588,7 +4498,7 @@ int ndo2db_handle_timeperiodefinition(ndo2db_idi *idi){
 		    ,es[0]
 		   )==-1)
 		buf=NULL;
-	
+
 	if(asprintf(&buf1,"INSERT INTO %s SET %s ON DUPLICATE KEY UPDATE %s"
 		    ,ndo2db_db_tablenames[NDO2DB_DBTABLE_TIMEPERIODS]
 		    ,buf
@@ -4597,16 +4507,8 @@ int ndo2db_handle_timeperiodefinition(ndo2db_idi *idi){
 		buf1=NULL;
 
 	if((result=ndo2db_db_query(idi,buf1))==NDO_OK){
-		switch(idi->dbinfo.server_type){
-		case NDO2DB_DBSERVER_MYSQL:
-#ifdef USE_MYSQL
-			timeperiod_id=mysql_insert_id(&idi->dbinfo.mysql_conn);
-#endif
-			break;
-		default:
-			break;
-	                }
-	        }
+		timeperiod_id=mysql_insert_id(&idi->dbinfo.mysql_conn);
+	}
 	free(buf);
 	free(buf1);
 
@@ -4639,7 +4541,7 @@ int ndo2db_handle_timeperiodefinition(ndo2db_idi *idi){
 			    ,end_sec
 			   )==-1)
 			buf=NULL;
-	
+
 		if(asprintf(&buf1,"INSERT INTO %s SET %s ON DUPLICATE KEY UPDATE %s"
 			    ,ndo2db_db_tablenames[NDO2DB_DBTABLE_TIMEPERIODTIMERANGES]
 			    ,buf
@@ -4767,7 +4669,7 @@ int ndo2db_handle_contactdefinition(ndo2db_idi *idi){
 #endif
 		   )==-1)
 		buf=NULL;
-	
+
 	if(asprintf(&buf1,"INSERT INTO %s SET %s ON DUPLICATE KEY UPDATE %s"
 		    ,ndo2db_db_tablenames[NDO2DB_DBTABLE_CONTACTS]
 		    ,buf
@@ -4776,16 +4678,8 @@ int ndo2db_handle_contactdefinition(ndo2db_idi *idi){
 		buf1=NULL;
 
 	if((result=ndo2db_db_query(idi,buf1))==NDO_OK){
-		switch(idi->dbinfo.server_type){
-		case NDO2DB_DBSERVER_MYSQL:
-#ifdef USE_MYSQL
-			contact_id=mysql_insert_id(&idi->dbinfo.mysql_conn);
-#endif
-			break;
-		default:
-			break;
-	                }
-	        }
+		contact_id=mysql_insert_id(&idi->dbinfo.mysql_conn);
+	}
 	free(buf);
 	free(buf1);
 
@@ -4815,7 +4709,7 @@ int ndo2db_handle_contactdefinition(ndo2db_idi *idi){
 			    ,es[0]
 			   )==-1)
 			buf=NULL;
-	
+
 		if(asprintf(&buf1,"INSERT INTO %s SET %s ON DUPLICATE KEY UPDATE %s"
 			    ,ndo2db_db_tablenames[NDO2DB_DBTABLE_CONTACTADDRESSES]
 			    ,buf
@@ -4856,7 +4750,7 @@ int ndo2db_handle_contactdefinition(ndo2db_idi *idi){
 			    ,(es[0]==NULL)?"":es[0]
 			   )==-1)
 			buf=NULL;
-	
+
 		if(asprintf(&buf1,"INSERT INTO %s SET %s ON DUPLICATE KEY UPDATE %s"
 			    ,ndo2db_db_tablenames[NDO2DB_DBTABLE_CONTACTNOTIFICATIONCOMMANDS]
 			    ,buf
@@ -4897,7 +4791,7 @@ int ndo2db_handle_contactdefinition(ndo2db_idi *idi){
 			    ,(es[0]==NULL)?"":es[0]
 			   )==-1)
 			buf=NULL;
-	
+
 		if(asprintf(&buf1,"INSERT INTO %s SET %s ON DUPLICATE KEY UPDATE %s"
 			    ,ndo2db_db_tablenames[NDO2DB_DBTABLE_CONTACTNOTIFICATIONCOMMANDS]
 			    ,buf
@@ -4911,7 +4805,7 @@ int ndo2db_handle_contactdefinition(ndo2db_idi *idi){
 
 		free(es[0]);
 	}
-	
+
 	/* save custom variables to db */
 	result=ndo2db_save_custom_variables(idi,NDO2DB_DBTABLE_CUSTOMVARIABLES,contact_id,NULL);
 
@@ -4958,7 +4852,7 @@ int ndo2db_handle_contactgroupdefinition(ndo2db_idi *idi){
 		    ,es[0]
 		   )==-1)
 		buf=NULL;
-	
+
 	if(asprintf(&buf1,"INSERT INTO %s SET %s ON DUPLICATE KEY UPDATE %s"
 		    ,ndo2db_db_tablenames[NDO2DB_DBTABLE_CONTACTGROUPS]
 		    ,buf
@@ -4967,16 +4861,8 @@ int ndo2db_handle_contactgroupdefinition(ndo2db_idi *idi){
 		buf1=NULL;
 
 	if((result=ndo2db_db_query(idi,buf1))==NDO_OK){
-		switch(idi->dbinfo.server_type){
-		case NDO2DB_DBSERVER_MYSQL:
-#ifdef USE_MYSQL
-			group_id=mysql_insert_id(&idi->dbinfo.mysql_conn);
-#endif
-			break;
-		default:
-			break;
-	                }
-	        }
+		group_id=mysql_insert_id(&idi->dbinfo.mysql_conn);
+	}
 	free(buf);
 	free(buf1);
 
@@ -4998,7 +4884,7 @@ int ndo2db_handle_contactgroupdefinition(ndo2db_idi *idi){
 			    ,member_id
 			   )==-1)
 			buf=NULL;
-	
+
 		if(asprintf(&buf1,"INSERT INTO %s SET %s ON DUPLICATE KEY UPDATE %s"
 			    ,ndo2db_db_tablenames[NDO2DB_DBTABLE_CONTACTGROUPMEMBERS]
 			    ,buf
@@ -5013,6 +4899,129 @@ int ndo2db_handle_contactgroupdefinition(ndo2db_idi *idi){
 
 	return NDO_OK;
         }
+
+/*
+ * In this function, we get a list of up to 250 objects, with the object type
+ * stored in idi->buffered_input[NDO_DATA_ACTIVEOBJECTSTYPE]. The list of
+ * object names are in the idi->buffered_input with indexes from 1 to 250.
+ * We generate an UPDATE query to set them all active at one time.
+ */
+int ndo2db_handle_activeobjectlist(ndo2db_idi *idi)
+{
+	ndo_dbuf	dbuf;
+	char		*buf = NULL, *name1, *name2 = NULL;
+	int			rc, i, object_type, num_objs = 0, sz, first = 1;
+
+	if(idi==NULL)
+		return NDO_ERROR;
+
+	/* What type of object are we dealing with? */
+	ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_ACTIVEOBJECTSTYPE], &object_type);
+
+	/* Find out how many objects we're daling with */
+	while (idi->buffered_input[num_objs])
+		++num_objs;
+
+	/* Estimate the number of bytes we'll need for the SQL statement */
+	sz = ((num_objs * 25) & !0x3ff) | 0x800;
+
+	/* Convert object type into correct value for the table */
+	switch (object_type) {
+		case NDO_API_HOSTDEFINITION:
+			object_type = NDO2DB_OBJECTTYPE_HOST;
+			break;
+		case NDO_API_HOSTGROUPDEFINITION:
+			object_type = NDO2DB_OBJECTTYPE_HOSTGROUP;
+			break;
+		case NDO_API_SERVICEDEFINITION:
+			object_type = NDO2DB_OBJECTTYPE_SERVICE;
+			break;
+		case NDO_API_SERVICEGROUPDEFINITION:
+			object_type = NDO2DB_OBJECTTYPE_SERVICEGROUP;
+			break;
+		case NDO_API_COMMANDDEFINITION:
+			object_type = NDO2DB_OBJECTTYPE_COMMAND;
+			break;
+		case NDO_API_TIMEPERIODDEFINITION:
+			object_type = NDO2DB_OBJECTTYPE_TIMEPERIOD;
+			break;
+		case NDO_API_CONTACTDEFINITION:
+			object_type = NDO2DB_OBJECTTYPE_CONTACT;
+			break;
+		case NDO_API_CONTACTGROUPDEFINITION:
+			object_type = NDO2DB_OBJECTTYPE_CONTACTGROUP;
+			break;
+		default:
+			return NDO_ERROR;
+	}
+
+	ndo_dbuf_init(&dbuf, sz);
+
+	/* Build the first part of the query */
+	rc = asprintf(
+			&buf, "UPDATE %s SET is_active='1' WHERE instance_id='%lu' "
+			"AND objecttype_id='%d' AND ("
+		    ,ndo2db_db_tablenames[NDO2DB_DBTABLE_OBJECTS],
+			idi->dbinfo.instance_id, object_type);
+	if (rc == -1) {
+		ndo_dbuf_free(&dbuf);
+		syslog(LOG_ERR, "Error: memory allocation error in ndo2db_handle_activeobjectlist()");
+		return NDO_ERROR;
+	}
+	if (ndo_dbuf_strcat(&dbuf, buf) == NDO_ERROR) {
+		ndo_dbuf_free(&dbuf);
+		free(buf);
+		syslog(LOG_ERR, "Error: memory allocation error in ndo2db_handle_activeobjectlist()");
+		return NDO_ERROR;
+	}
+	free(buf);
+
+	while (num_objs) {
+		if (first)
+			first = 0;
+		else
+			ndo_dbuf_strcat(&dbuf, "OR ");
+
+		if (object_type == NDO2DB_OBJECTTYPE_SERVICE) {
+			name2 = ndo2db_db_escape_string(idi, idi->buffered_input[num_objs--]);
+			name1 = ndo2db_db_escape_string(idi, idi->buffered_input[num_objs--]);
+			rc = asprintf(&buf, "(name1='%s' AND name2='%s')", name1, name2);
+
+		} else {
+			name1 = ndo2db_db_escape_string(idi, idi->buffered_input[num_objs--]);
+			rc = asprintf(&buf, "name1='%s'", name1);
+		}
+
+		free(name1);
+		free(name2);
+
+		if (rc == -1) {
+			ndo_dbuf_free(&dbuf);
+			free(buf);
+			syslog(LOG_ERR, "Error: memory allocation error in ndo2db_handle_activeobjectlist()");
+			return NDO_ERROR;
+		}
+		if (ndo_dbuf_strcat(&dbuf, buf) == NDO_ERROR) {
+			ndo_dbuf_free(&dbuf);
+			free(buf);
+			syslog(LOG_ERR, "Error: memory allocation error in ndo2db_handle_activeobjectlist()");
+			return NDO_ERROR;
+		}
+
+		free(buf);
+	}
+
+	if (ndo_dbuf_strcat(&dbuf, ")") == NDO_ERROR) {
+		ndo_dbuf_free(&dbuf);
+		syslog(LOG_ERR, "Error: memory allocation error in ndo2db_handle_activeobjectlist()");
+		return NDO_ERROR;
+	}
+
+	if (!first)
+		rc = ndo2db_db_query(idi, dbuf.buf);
+	ndo_dbuf_free(&dbuf);
+	return rc;
+}
 
 int ndo2db_save_custom_variables(ndo2db_idi *idi,int table_idx, unsigned long o_id, char *ts ){
 	char *buf=NULL;
@@ -5084,4 +5093,3 @@ int ndo2db_save_custom_variables(ndo2db_idi *idi,int table_idx, unsigned long o_
 	}
 	return result;
 }
-

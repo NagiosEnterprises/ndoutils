@@ -1,0 +1,39 @@
+#!/sbin/runscript
+#
+# Copyright (c) 2016 Nagios(R) Core(TM) Development Team
+#
+# Start/stop the Nagios Data Out Daemon.
+#
+# Goes in /etc/init.d - Config is in /etc/conf.d/ndo2db
+
+NDO2DB_BIN="@sbindir@/ndo2db"
+NDO2DB_PID="@piddir@/ndo2db.pid"
+
+depend() {
+	use logger dns net localmount netmount nfsmount
+}
+
+checkconfig() {
+	# Make sure the config file exists
+	if [ ! -f $NDO2DB_CFG ]; then
+		eerror "You need to setup $NDO2DB_CFG.
+		return 1
+	fi
+	return 0
+}
+
+start() {
+	checkconfig || return 1
+	ebegin "Starting ndo2db"
+	# Make sure we have a sane current directory
+	cd /
+	start-stop-daemon --start --exec $NDO2DB_BIN --pidfile $PID_FILE \
+		-- -c $NDO2DB_CFG -f
+	eend $?
+}
+
+stop() {
+	ebegin "Stopping ndo2db"
+	start-stop-daemon --stop --exec $NDO2DB_BIN --pidfile $PID_FILE
+	eend $?
+}

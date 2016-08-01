@@ -1,0 +1,4 @@
+# /etc/conf.d/ndo2db : config file for /etc/init.d/ndo2db
+
+# Configuration file - default is @sysconfdir@/ndo2db.cfg
+NDO2DB_CFG="@pkgsysconfdir@/ndo2db.cfg"

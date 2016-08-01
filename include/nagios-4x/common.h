@@ -19,13 +19,13 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  ************************************************************************/
 
-#ifndef INCLUDE_COMMON_H
-#define INCLUDE_COMMON_H
+#ifndef NAGIOS_COMMON_H_INCLUDED
+#define NAGIOS_COMMON_H_INCLUDED
 
 #include "shared.h"
 
-#define PROGRAM_VERSION "4.0.0beta4"
-#define PROGRAM_MODIFICATION_DATE "09-01-2013"
+#define PROGRAM_VERSION "4.1.2-Pre1"
+#define PROGRAM_MODIFICATION_DATE "11-16-2015"
 
 NAGIOS_BEGIN_DECL
 
@@ -41,6 +41,7 @@ extern int log_rotation_method;
 extern int check_external_commands;
 /* set this if you're going to add a ton of comments at once */
 extern int defer_comment_sorting;
+extern unsigned long next_downtime_id;
 
 extern char *object_cache_file;
 extern char *status_file;
@@ -527,4 +528,4 @@ extern const char *cmd_error_strerror(int error_code);
 #define MODATTR_CHECK_TIMEPERIOD                16384
 #define MODATTR_CUSTOM_VARIABLE                 32768
 #define MODATTR_NOTIFICATION_TIMEPERIOD         65536
-#endif /* INCLUDE_COMMON_H */
+#endif /* NAGIOS_COMMON_H_INCLUDED */

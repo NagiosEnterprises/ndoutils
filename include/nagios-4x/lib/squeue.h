@@ -1,5 +1,5 @@
-#ifndef LIBNAGIOS_squeue_h__
-#define LIBNAGIOS_squeue_h__
+#ifndef LIBNAGIOS_SQUEUE_H_INCLUDED
+#define LIBNAGIOS_SQUEUE_H_INCLUDED
 #include <sys/time.h>
 #include <time.h>
 #include "pqueue.h"
@@ -114,6 +114,15 @@ extern squeue_event *squeue_add_usec(squeue_t *q, time_t when, time_t usec, void
 extern squeue_event *squeue_add_msec(squeue_t *q, time_t when, time_t msec, void *data);
 
 /**
+ * Change an event's priority to a new time.
+ *
+ * @param q The scheduling queue holding the event.
+ * @param evt The event to reschedule.
+ * @param tv When the event should be rescheduled to.
+ */
+extern void squeue_change_priority_tv(squeue_t *q, squeue_event *evt, struct timeval *tv);
+
+/**
  * Returns the data of the next scheduled event from the scheduling
  * queue without removing it from the queue.
  *
@@ -147,5 +156,15 @@ extern int squeue_remove(squeue_t *q, squeue_event *evt);
  * @return number of events in the inspected queue
  */
 extern unsigned int squeue_size(squeue_t *q);
+
+
+/**
+ * Returns true if passed timeval is after the time for the event
+ *
+ * @param[in] evt The queue event to inspect
+ * @param[in] reftime The reference time to compare to the queue event time
+ * @return 1 if reftime > event time, 0 otherwise
+ */
+extern int squeue_evt_when_is_after(squeue_event *evt, struct timeval *reftime);
 #endif
 /** @} */

@@ -1,13 +1,27 @@
-/************************************************************************
+/**
+ * @file protoapi.h NDO protocol definition
+ */
+/*
+ * Copyright 2009-2014 Nagios Core Development Team and Community Contributors
+ * Copyright 2005-2009 Ethan Galstad
  *
- * PROTOAPI.H - NDO Protocol Definition
- * Copyright (c) 2005-2006 Ethan Galstad
- * Last Modified: 09-27-2006
+ * This file is part of NDOUtils.
  *
- ************************************************************************/
+ * NDOUtils is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ *
+ * NDOUtils is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with NDOUtils. If not, see <http://www.gnu.org/licenses/>.
+ */
 
-#ifndef _NDO_PROTOAPI_H
-#define _NDO_PROTOAPI_H
+#ifndef NDO_PROTOAPI_H_INCLUDED
+#define NDO_PROTOAPI_H_INCLUDED
 
 
 /****************** PROTOCOL VERSION ***************/
@@ -103,11 +117,12 @@
 #define NDO_API_CONTACTGROUPDEFINITION               411
 #define NDO_API_HOSTEXTINFODEFINITION                412    /* no longer used */
 #define NDO_API_SERVICEEXTINFODEFINITION             413    /* no longer used */
+#define NDO_API_ACTIVEOBJECTSLIST                    414
 
 
 /************** COMMON DATA ATTRIBUTES **************/
 
-#define NDO_MAX_DATA_TYPES                           269
+#define NDO_MAX_DATA_TYPES                           270
 
 #define NDO_DATA_NONE                                0
 
@@ -390,5 +405,6 @@
 #define NDO_DATA_IMPORTANCE                          266
 #define NDO_DATA_MINIMUMIMPORTANCE                   267
 #define NDO_DATA_PARENTSERVICE                       268
+#define NDO_DATA_ACTIVEOBJECTSTYPE                   269
 
 #endif

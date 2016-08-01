@@ -1,4 +1,21 @@
 dnl Process this -*-m4-*- file with autoconf to produce a configure script.
+dnl
+dnl Copyright 2009-2014 Nagios Core Development Team and Community Contributors
+dnl Copyright 2005-2009 Ethan Galstad
+dnl
+dnl This file is part of NDOUtils.
+dnl
+dnl NDOUtils is free software: you can redistribute it and/or modify
+dnl it under the terms of the GNU General Public License version 2 as
+dnl published by the Free Software Foundation.
+dnl
+dnl NDOUtils is distributed in the hope that it will be useful,
+dnl but WITHOUT ANY WARRANTY; without even the implied warranty of
+dnl MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+dnl GNU General Public License for more details.
+dnl
+dnl You should have received a copy of the GNU General Public License
+dnl along with NDOUtils. If not, see <http://www.gnu.org/licenses/>.
 
 dnl Disable caching
 define([AC_CACHE_LOAD],)
@@ -12,9 +29,10 @@ AC_DEFINE([DEFAULT_NAGIOS_USER], [nagios], [Default Nagios User])
 AC_DEFINE([DEFAULT_NAGIOS_GROUP], [nagios], [Default Nagios Group])
 
 PKG_NAME=ndoutils
-PKG_VERSION="2.0.0"
+INIT_PROG=ndo2db
+PKG_VERSION="2.1"
 PKG_HOME_URL="http://www.nagios.org/"
-PKG_REL_DATE="02-28-2014"
+PKG_REL_DATE="07-28-2016"
 
 dnl Figure out how to invoke "install" and what install options to use.
 AC_PROG_INSTALL
@@ -29,6 +47,14 @@ AC_CANONICAL_HOST
 dnl Checks for programs.
 AC_PROG_CC
 AC_PROG_MAKE_SET
+
+dnl Nagios O/S, Distribution, Startup, Paths, Files macros
+AC_NAGIOS_GET_OS
+AC_NAGIOS_GET_DISTRIB_TYPE
+AC_NAGIOS_GET_INIT
+AC_NAGIOS_GET_INETD
+AC_NAGIOS_GET_PATHS
+AC_NAGIOS_GET_FILES
 
 dnl Checks for header files.
 AC_HEADER_STDC
@@ -89,8 +115,8 @@ fi
 
 
 dnl Check for getopt_long (Solaris)
-AC_CHECK_FUNCS([getopt_long],,AC_CHECK_LIB([iberty],[getopt_long],OTHERLIBS="$OTHERLIBS -liberty"))
-AC_SUBST(OTHERLIBS)
+# AC_CHECK_FUNCS([getopt_long],,AC_CHECK_LIB([iberty],[getopt_long],OTHERLIBS="$OTHERLIBS -liberty"))
+# AC_SUBST(OTHERLIBS)
 
 dnl Checks for library functions.
 AC_CHECK_LIB(nsl,main,SOCKETLIBS="$SOCKETLIBS -lnsl")
@@ -101,7 +127,30 @@ AC_CHECK_LIB(wrap,main,[
 	AC_DEFINE(HAVE_LIBWRAP)
 	])
 AC_SUBST(LIBWRAPLIBS)
-AC_CHECK_FUNCS(strdup strstr strtoul initgroups strtof)
+AC_CHECK_FUNCS(getopt_long strdup strstr strtoul initgroups strtof nanosleep)
+
+dnl Check for asprintf() and friends...
+AC_CACHE_CHECK([for va_copy],ac_cv_HAVE_VA_COPY,[
+AC_TRY_LINK([#include <stdarg.h>
+va_list ap1,ap2;], [va_copy(ap1,ap2);],
+ac_cv_HAVE_VA_COPY=yes,
+ac_cv_HAVE_VA_COPY=no)])
+if test x"$ac_cv_HAVE_VA_COPY" = x"yes"; then
+	AC_DEFINE(HAVE_VA_COPY,1,[Whether va_copy() is available])
+else
+	AC_CACHE_CHECK([for __va_copy],ac_cv_HAVE___VA_COPY,[
+	AC_TRY_LINK([#include <stdarg.h>
+	va_list ap1,ap2;], [__va_copy(ap1,ap2);],
+	ac_cv_HAVE___VA_COPY=yes,
+	ac_cv_HAVE___VA_COPY=no)])
+	if test x"$ac_cv_HAVE___VA_COPY" = x"yes"; then
+		AC_DEFINE(HAVE___VA_COPY,1,[Whether __va_copy() is available])
+	fi
+fi
+AC_SUBST(SNPRINTF_O)
+
+AC_CHECK_FUNC(snprintf,,SNPRINTF_O=./snprintf.o)
+AC_CHECK_FUNC(asprintf,,SNPRINTF_O=./snprintf.o)
 
 AC_MSG_CHECKING(for type of socket size)
 AC_TRY_COMPILE([#include <stdlib.h>
@@ -145,9 +194,13 @@ elif test -d /sbin/init.d; then
     init_dir="/sbin/init.d"
 fi
 
-dnl User can override init script location
-AC_ARG_WITH(init_dir,AC_HELP_STRING([--with-init-dir=<path>],[sets directory to place init script into]),init_dir=$withval)
-AC_SUBST(init_dir)
+AC_ARG_WITH([ndo2db_port],
+	AS_HELP_STRING([--with-ndo2db-port=<port>],
+		[sets port number for NDO2DB to listen on]),
+	[ndo2db_port=$withval],
+	[ndo2db_port=5668])
+AC_DEFINE_UNQUOTED(DEFAULT_SERVER_PORT,$ndo2db_port,[Default port for NDO2DB daemon])
+AC_SUBST(ndo2db_port)
 
 dnl - Modified version from www.erlang.org
 dnl - Some 12/15/05 mods made after reading http://xaxxon.slackworks.com/phuku/dl.html
@@ -180,6 +233,11 @@ case $host_os in
 		MOD_LDFLAGS="-shared"
 	;;
 esac
+
+if test "$dist_type" = aix; then
+	MOD_LDFLAGS="$MOD_LDFLAGS -Wl,-berok"
+fi
+
 AC_MSG_RESULT([$MOD_LDFLAGS])
 AC_SUBST(MOD_CFLAGS)
 AC_SUBST(MOD_LDFLAGS)
@@ -187,11 +245,8 @@ AC_SUBST(MOD_LDFLAGS)
 
 dnl DB support options
 USE_MYSQL=yes
-dnl USE_PGSQL=yes
 AC_ARG_ENABLE(mysql,AC_HELP_STRING([--enable-mysql],[enables MySQL database support]))
 AS_IF([test x$enable_mysql = xno], [USE_MYSQL=no])
-dnl AC_ARG_ENABLE(pgsql,--enable-pgsql enables PostgreSQL database support)
-dnl AS_IF([test x$enable_pgsql = xno], [USE_PGSQL=no])
 
 
 dnl Are we using any MySQL routines?
@@ -230,16 +285,7 @@ if test $USE_MYSQL = yes; then
 		DBLIBS="$DBLIBS $np_mysql_libs"
 		CFLAGS="$CFLAGS $np_mysql_include"
 	fi
-fi	
-
-dnl Optional PostgreSQL library and include paths
-dnl AC_ARG_WITH(pgsql-lib,AC_HELP_STRING([--with-pgsql-lib=DIR],[sets location of the PostgreSQL client library]),[
-dnl 	DBLDFLAGS="-L${withval}"
-dnl 	LD_RUN_PATH="${withval}${LD_RUN_PATH:+:}${LD_RUN_PATH}"
-dnl 	])
-dnl AC_ARG_WITH(pgsql-inc,AC_HELP_STRING([--with-pgsql-inc=DIR],[sets location of the PostgreSQL client include files]),[
-dnl 	DBCFLAGS="${DBCFLAGS} -I${withval}"
-dnl 	])
+fi
 
 save_LDFLAGS="$LDFLAGS"
 LDFLAGS="${LDFLAGS} ${DBLDFLAGS}"
@@ -267,6 +313,26 @@ INSTALL_OPTS="-o $ndo2db_user -g $ndo2db_group"
 AC_SUBST(INSTALL_OPTS)
 
 
+dnl Does the user want to check for systemd?
+AC_ARG_ENABLE([systemd-sockets],
+	AC_HELP_STRING([--enable-systemd-sockets],[enables systemd socket activation]),
+	[],[enable_systemd_sockets=auto])
+
+dnl Try to compile and link a program that checks for systemd sockets.
+if test x$enable_systemd_sockets != xno; then
+	have_systemd=no
+
+	AC_SEARCH_LIBS([sd_listen_fds],[systemd systemd-daemon],
+		AC_TRY_LINK([#include <systemd/sd-daemon.h>],[sd_listen_fds(0);],[have_systemd=yes]))
+
+	if test x$have_systemd = xyes; then
+		AC_DEFINE([HAVE_SYSTEMD])
+	elif test x$enable_systemd_sockets = xyes; then
+		AC_MSG_ERROR([systemd was requested, but could not be found])
+	fi
+fi
+
+
 dnl Does user want to check for SSL?
 AC_ARG_ENABLE(ssl,AC_HELP_STRING([--enable-ssl],[enables native SSL support]),[
 	if test x$enableval = xyes; then
@@ -277,135 +343,56 @@ AC_ARG_ENABLE(ssl,AC_HELP_STRING([--enable-ssl],[enables native SSL support]),[
 	],check_for_ssl=no)
 
 dnl Optional SSL library and include paths
-ssl_dir=
-ssl_inc_dir=
-ssl_lib_dir=
-AC_ARG_WITH(ssl,AC_HELP_STRING([--with-ssl=DIR],[sets location of the SSL installation]),[
-	ssl_dir=$withval
-	])
-AC_ARG_WITH(ssl-inc,AC_HELP_STRING([--with-ssl-inc=DIR],[sets location of the SSL include files]),[
-	ssl_inc_dir=$withval
-	])
-AC_ARG_WITH(ssl-lib,AC_HELP_STRING([--with-ssl-lib=DIR], [sets location of the SSL libraries]),[
-	ssl_lib_dir=$withval
-	])
-AC_ARG_WITH(kerberos-inc,AC_HELP_STRING([--with-kerberos-inc=DIR],[sets location of the Kerberos include files]),[
-	kerberos_inc_dir=$withval
-	])
-
-dnl Check for SSL support
-dnl Modified version of Mark Ethan Trostler's macro <trostler@juniper.net>
 if test x$check_for_ssl = xyes; then
-	AC_MSG_CHECKING(for SSL headers)
-	found_ssl=no
-	for dir in $ssl_inc_dir $ssl_dir /usr/local/openssl /usr/local/ssl /usr/lib/ssl /usr/ssl /usr/pkg /usr/local /usr /usr/freeware/lib/openssl; do
-		ssldir="$dir"
-		if test -f "$dir/include/openssl/ssl.h"; then
-			found_ssl=yes
-			CFLAGS="$CFLAGS -I$dir/include/openssl -I$ssldir/include"
-			sslincdir="$dir/include/openssl"
-		        break
-		fi
-		if test -f "$dir/include/ssl.h"; then
-			found_ssl=yes
-			CFLAGS="$CFLAGS -I$dir/include"
-			sslincdir="$dir/include"
-		        break
-		fi
-		if test -f "$dir/ssl.h"; then
-			found_ssl=yes
-			CFLAGS="$CFLAGS -I$dir"
-			sslincdir="$dir"
-			ssldir="$dir/.."
-		        break
-		fi
-		if test -f "$dir/openssl/ssl.h"; then
-			found_ssl=yes
-			CFLAGS="$CFLAGS -I$dir/openssl"
-			sslincdir="$dir/openssl"
-			ssldir="$dir/.."
-		        break
-		fi
-	done
-
-	if test x_$found_ssl != x_yes; then
-        	AC_MSG_ERROR(Cannot find ssl headers)
-	else
-
-	        printf "SSL headers found in $ssldir\n";
-
-		dnl Now try and find SSL libraries
-		AC_MSG_CHECKING(for SSL libraries)
-		found_ssl=no
-		for dir in $ssl_lib_dir $ssl_dir /usr/lib64 /usr/lib /usr/local/lib /usr/lib/ssl /usr/ssl/lib /usr/openssl/lib /usr/pkg/lib  /usr/freeware/lib/openssl; do
-			ssllibdir="$dir"
-			if test -f "$dir/libssl.so"; then
-				found_ssl=yes
-			        break
-			fi
-		done	
-
-		if test x_$found_ssl != x_yes; then
-        		AC_MSG_ERROR(Cannot find ssl libraries)
-		else
-		        printf "SSL libraries found in $ssllibdir\n";
-
-			LDFLAGS="$LDFLAGS -L$ssllibdir";
-		        LIBS="$LIBS -lssl -lcrypto";
-
-			AC_DEFINE_UNQUOTED(HAVE_SSL)
-			AC_SUBST(HAVE_SSL)
-	
-			dnl Generate DH parameters
-			echo ""
-			echo "*** Generating DH Parameters for SSL/TLS ***"
-			if test -f "$ssldir/sbin/openssl"; then
-				sslbin=$ssldir/sbin/openssl
-			else
-				sslbin=$ssldir/bin/openssl
-			fi
-			# awk to strip off meta data at bottom of dhparam output
-			$sslbin dhparam -C 512 | awk '/^-----/ {exit} {print}' > include/dh.h
-		fi
-	fi
-
-	dnl RedHat 8.0 and 9.0 include openssl compiled with kerberos, so we must include header file
-	AC_MSG_CHECKING(for Kerberos include files)
-	found_kerberos=no
-	for dir in $kerberos_inc_dir /usr/kerberos/include; do
-		kerbdir="$dir"
-		if test -f "$dir/krb5.h"; then
-			found_kerberos=yes
-			CFLAGS="$CFLAGS -I$kerbdir"
-			AC_DEFINE_UNQUOTED(HAVE_KRB5_H)
-			dnl AC_CHECK_HEADERS(krb5.h)
-			break
-		fi
-	done
-
-	if test x_$found_kerberos != x_yes; then
-		printf "could not find include files\n";
-	else
-		printf "found Kerberos include files in $kerbdir\n";
-	fi
-	
-
+	# need_dh should only be set for NRPE and NDOUTILS
+	need_dh=yes
+	AC_NAGIOS_GET_SSL
 fi
 
-USE_NANOSLEEP=yes
-AC_ARG_ENABLE(nanosleep,AC_HELP_STRING([--enable-nanosleep],[enables use of nanosleep (instead of sleep) in event timing]))
-AS_IF([test x$enable_nanosleep = xno],[USE_NANOSLEEP=no],[USE_NANOSLEEP=yes])
-if test x$USE_NANOSLEEP = xyes ; then
-	AC_DEFINE_UNQUOTED(USE_NANOSLEEP)
+
+if test x$HAVE_NANOSLEEP = x; then
+	USE_NANOSLEEP=no
+else
+	USE_NANOSLEEP=yes
+	AC_ARG_ENABLE(nanosleep,AC_HELP_STRING([--enable-nanosleep],[enables use of nanosleep (instead of sleep) in event timing]))
+	AS_IF([test x$enable_nanosleep = xno],[USE_NANOSLEEP=no],[USE_NANOSLEEP=yes])
+	if test x$USE_NANOSLEEP = xyes ; then
+		AC_DEFINE_UNQUOTED(USE_NANOSLEEP)
+	fi
 fi
 
-AC_OUTPUT(Makefile src/Makefile docs/docbook/en-en/Makefile subst)
+AC_CONFIG_FILES([Makefile
+	src/Makefile
+	config/ndo2db.cfg-sample
+	config/ndomod.cfg-sample
+	config/nagios.cfg
+	config/misccommands.cfg
+	docs/docbook/en-en/Makefile
+	include/io.h
+	include/common.h
+	startup/bsd-init
+	startup/debian-init
+	startup/default-init
+	startup/default-inetd
+	startup/default-service
+	startup/default-socket
+	startup/default-socket-svc
+	startup/default-xinetd
+	startup/mac-init.plist
+	startup/mac-inetd.plist
+	startup/newbsd-init
+	startup/openbsd-init
+	startup/openrc-conf
+	startup/openrc-init
+	startup/solaris-init.xml
+	startup/solaris-inetd.xml
+	startup/tmpfile.conf
+	startup/upstart-init
+	startup/rh-upstart-init
+])
 
-$PERL subst daemon-init
-$PERL subst config/ndo2db.cfg-sample
-$PERL subst config/ndomod.cfg-sample
-$PERL subst config/nagios.cfg
-$PERL subst config/misccommands.cfg
+AC_OUTPUT()
+
 
 dnl Review options
 echo ""
@@ -416,12 +403,14 @@ echo ""
 echo " General Options:"
 echo " -------------------------"
 
-AC_MSG_RESULT([ NDO2DB user:    $ndo2db_user])
-AC_MSG_RESULT([ NDO2DB group:   $ndo2db_group])
+AC_MSG_RESULT([ NDO2DB user:      $ndo2db_user])
+AC_MSG_RESULT([ NDO2DB group:     $ndo2db_group])
+AC_MSG_RESULT([ NDO2DB tcp port:  $ndo2db_port])
 
 
-echo ""
-echo ""
-echo "Review the options above for accuracy.  If they look okay,"
-echo "type 'make' to compile the NDO utilities."
+echo "";\
+echo "";\
+echo "Review the options above for accuracy.  If they look";\
+echo "okay, type 'make all' to compile the NDO utilities,";\
+echo "or type 'make' to get a list of make options.";\
 echo ""

@@ -2,6 +2,29 @@
 NDO Utils Changelog
 ===================
 
+2.1.0 - 2016-08-01
+------------------
+* Probable fix for ndo2db not responding & growing queue issue (John Frickson)
+* Got rid of uninitialized variable used for sleep() and increased the listen backlog (John Frickson)
+* ndoutils clears all entries from SQL table causing slow startup (John Frickson)
+* Clean up bad returns (John Frickson)
+* Update nagios headers to (mostly) match the ones actually in core (John Frickson)
+* cannot open /xxxx/ndo2db.lock for reading: No such file or directory (box293)
+* Added option to specify alternative mysql TCP port on installdb script (JR Dalrymple)
+* State History does not use actual plugin long_output
+* Have the parent process wait until the lock file is written (David Michael)
+* Accept a socket fd passed from systemd (David Michael)
+* Cross-platform changes (John Frickson)
+* Remove PostgreSQL support stub code (Eric Mislivec)
+* db/upgrade: Fix a schema version typo (Eric Mislivec)
+* Pad usecs to six digits when printing timevals (Eric Mislivec)
+* Make the MySQL socket path a configurable option (Eric Mislivec)
+* Patch situation where db table nagios_logentries has items where `instance_id`,`logentry_time`,`entry_time`,`entry_time_usec` isn't unique enough. - (Scott Wilkerson)
+* Truncate all tables we should (Eric Mislivec)
+* Free memory allocated for config options (Eric Mislivec)
+
+
+
 2.0.0 - 02/28/2014
 ------------------
 * Updated database schema upgrade script to support multiple updates (Eric Stanley, Scott Wilkerson)
@@ -13,15 +36,21 @@ NDO Utils Changelog
 * Replaced ndomod.cfg data_processing_options variable with single options for easier customization (See README) (Mike Guthrie)
 * Added missing maintenance options for table trimming (Mike Guthrie)
 
+
+
 1.5.2 - 06/08/2012
 ------------------
 * Added Linux kernel tuning instructions (Eric Stanley)
 * Added code to limit retries when system resources are too low (Eric Stanley)
 * Added code to retry sending messages queue is full (Mike Guthrie)
 
+
+
 1.5.1 - 05/15/2012
 ------------------
 * Fixed off-by-one error packing data in ndomod.
+
+
 
 1.5 - 02/03/2012
 ----------------
@@ -29,6 +58,7 @@ NDO Utils Changelog
 * Added asynchronous data spooling to increase performance (andree)
 * Fixed to small es array (Michael Friedrich)
 * Fixed wrong type of object_id in ndo2db_save_custom_variables() (Michael Friedrich)
+
 
 
 1.4b9 - 10/27/2009

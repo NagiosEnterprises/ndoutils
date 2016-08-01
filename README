@@ -64,9 +64,9 @@ additional utilities:
 	./configure
 	make
 
-If the configure script is unable to locate your MySQL or PostgreSQL development
-libraries, you may need to help it out by using the --with-mysql-lib or
---with-pgsql-lib options.  Here's an example:
+If the configure script is unable to locate your MySQL development libraries,
+you may need to help it out by using the --with-mysql-lib or option. Here's an
+example:
 
 	./configure --with-mysql-lib=/usr/lib/mysql
 
@@ -79,8 +79,7 @@ INITIALIZING THE SQL DATABASE
 Before you start using the NDO utilities, you should create the database where
 you will be storing all Nagios-related information.
 
-NOTE:  As of 02/12/2006, only MySQL databases are supported.  PostgreSQL support
-       will likely be added in the future.
+NOTE:  As of 02/12/2006, only MySQL databases are supported.
 
 
 1.  Create a database for storing the data (e.g. 'nagios')

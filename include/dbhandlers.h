@@ -1,13 +1,27 @@
-/************************************************************************
+/**
+ * @file dbhandlers.h Database handler declarations for ndo2db daemon
+ */
+/*
+ * Copyright 2009-2014 Nagios Core Development Team and Community Contributors
+ * Copyright 2005-2009 Ethan Galstad
  *
- * DBHANDLERS.H - NDO2DB DB Handler Include File
- * Copyright (c) 2005-2006 Ethan Galstad
- * Last Modified: 07-11-2009
+ * This file is part of NDOUtils.
  *
- ************************************************************************/
+ * NDOUtils is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ *
+ * NDOUtils is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with NDOUtils. If not, see <http://www.gnu.org/licenses/>.
+ */
 
-#ifndef _NDO2DB_DBHANDLERS_H
-#define _NDO2DB_DBHANDLERS_H
+#ifndef NDO2DB_DBHANDLERS_H_INCLUDED
+#define NDO2DB_DBHANDLERS_H_INCLUDED
 
 #include "ndo2db.h"
 #define NAGIOS_SIZEOF_ARRAY(var)       (sizeof(var)/sizeof(var[0]))
@@ -70,5 +84,6 @@ int ndo2db_handle_commanddefinition(ndo2db_idi *);
 int ndo2db_handle_timeperiodefinition(ndo2db_idi *);
 int ndo2db_handle_contactdefinition(ndo2db_idi *);
 int ndo2db_handle_contactgroupdefinition(ndo2db_idi *);
+int ndo2db_handle_activeobjectlist(ndo2db_idi *);
 int ndo2db_save_custom_variables(ndo2db_idi *,int, unsigned long, char *);
 #endif

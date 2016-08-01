@@ -1,6 +1,7 @@
-#ifndef LIBNAGIOS_nsutils_h__
-#define LIBNAGIOS_nsutils_h__
+#ifndef LIBNAGIOS_NSUTILS_H_INCLUDED
+#define LIBNAGIOS_NSUTILS_H_INCLUDED
 #include <sys/types.h>
+#include <sys/time.h>
 
 /**
  * @file nsutils.h
@@ -67,7 +68,14 @@ static inline unsigned int ranged_urand(unsigned int low, unsigned int high)
 
 /**
  * Get number of online cpus
- * @return Number of kernel-handled cpu cores
+ * @return Active cpu cores detected on success. 0 on failure.
+ */
+extern int real_online_cpus(void);
+
+/**
+ * Wrapper for real_online_cpus(), returning 1 in case we can't
+ * detect any active cpus.
+ * @return Number of active cpu cores on success. 1 on failure.
  */
 extern int online_cpus(void);
 
@@ -101,4 +109,4 @@ extern int tv_delta_msec(const struct timeval *start, const struct timeval *stop
 extern float tv_delta_f(const struct timeval *start, const struct timeval *stop);
 
 /** @} */
-#endif /* LIBNAGIOS_nsutils_h__ */
+#endif /* LIBNAGIOS_NSUTILS_H_INCLUDED */

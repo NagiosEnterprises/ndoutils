@@ -1,21 +1,35 @@
-/***************************************************************
- * LOG2NDO.C - Sends archived logs files to NDO2DB daemon
+/**
+ * @file log2ndo.c Sends archived logs files to ndo2db daemon
+ */
+/*
+ * Copyright 2009-2014 Nagios Core Development Team and Community Contributors
+ * Copyright 2005-2009 Ethan Galstad
  *
- * Copyright (c) 2009 Nagios Core Development Team and Community Contributors
- * Copyright (c) 2005-2009 Ethan Galstad
+ * Last Modified: 07-28-2016
  *
- * Last Modified: 02-28-2014
+ * This file is part of NDOUtils.
  *
- **************************************************************/
+ * NDOUtils is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ *
+ * NDOUtils is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with NDOUtils. If not, see <http://www.gnu.org/licenses/>.
+ */
 
 #include "../include/config.h"
 #include "../include/common.h"
 #include "../include/io.h"
 #include "../include/protoapi.h"
 
-#define LOG2NDO_VERSION "2.0.0"
+#define LOG2NDO_VERSION "2.1"
 #define LOG2NDO_NAME "LOG2NDO"
-#define LOG2NDO_DATE "02-28-2014"
+#define LOG2NDO_DATE "07-28-2016"
 
 
 

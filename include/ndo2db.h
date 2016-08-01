@@ -1,13 +1,27 @@
-/************************************************************************
+/**
+ * @file ndo2db.h Nagios Data Output to Database Daemon declarations
+ */
+/*
+ * Copyright 2009-2014 Nagios Core Development Team and Community Contributors
+ * Copyright 2005-2009 Ethan Galstad
  *
- * NDO2DB.H - NDO2DB Include File
- * Copyright (c) 2005-2007 Ethan Galstad
- * Last Modified: 07-11-2009
+ * This file is part of NDOUtils.
  *
- ************************************************************************/
+ * NDOUtils is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ *
+ * NDOUtils is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with NDOUtils. If not, see <http://www.gnu.org/licenses/>.
+ */
 
-#ifndef _NDO2DB_NDO2DB_H
-#define _NDO2DB_NDO2DB_H
+#ifndef NDO2DB_NDO2DB_H_INCLUDED
+#define NDO2DB_NDO2DB_H_INCLUDED
 
 #include "config.h"
 #include "utils.h"
@@ -59,10 +73,6 @@ typedef struct ndo2db_dbconninfo_struct{
 	MYSQL mysql_conn;
 	MYSQL_RES *mysql_result;
 	MYSQL_ROW mysql_row;
-#endif
-#ifdef USE_PGSQL
-	PGconn *pgsql_conn;
-	PGresult *pgsql_result;
 #endif
 	unsigned long instance_id;
 	unsigned long conninfo_id;
@@ -122,7 +132,6 @@ typedef struct ndo2db_input_data_info_struct{
 /*************** DB server types ***************/
 #define NDO2DB_DBSERVER_NONE                            0
 #define NDO2DB_DBSERVER_MYSQL                           1
-#define NDO2DB_DBSERVER_PGSQL                           2
 
 
 /*************** misc definitions **************/
@@ -191,6 +200,7 @@ typedef struct ndo2db_input_data_info_struct{
 #define NDO2DB_INPUT_DATA_CONTACTGROUPDEFINITION        72
 #define NDO2DB_INPUT_DATA_HOSTEXTINFODEFINITION         73
 #define NDO2DB_INPUT_DATA_SERVICEEXTINFODEFINITION      74
+#define NDO2DB_INPUT_DATA_ACTIVEOBJECTSLIST             75
 
 
 /************* types of config data *************/

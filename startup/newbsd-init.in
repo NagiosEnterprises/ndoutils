@@ -1,0 +1,35 @@
+#!/bin/sh
+#
+# Copyright (c) 2016 Nagios(R) Core(TM) Development Team
+#
+# PROVIDE: ndo2db
+# REQUIRE: DAEMON
+# KEYWORD: shutdown
+
+. /etc/rc.subr
+
+: ${ndo2db@bsd_enable@:="NO"}
+: ${ndo2db_configfile:="@pkgsysconfdir@/ndo2db.cfg"}
+
+name=ndo2db
+command="@sbindir@/ndo2db"
+command_args="-c $ndo2db_configfile"
+pidfile="@piddir@/ndo2db.pid"
+extra_commands=reload
+sig_reload=HUP
+rcvar=ndo2db@bsd_enable@
+load_rc_config "$name"
+required_files="$ndo2db_configfile"
+sig_reload=HUP
+
+start_precmd=ndo2db_prestart
+
+ndo2db_prestart()
+{
+	[ -n "$ndo2db_pidfile" ] &&
+		warn "No longer necessary to set ndo2db_pidfile in rc.conf[.local]"
+
+	install -d -o @ndo2db_user@ ${pidfile%/*}
+}
+
+run_rc_command "$1"

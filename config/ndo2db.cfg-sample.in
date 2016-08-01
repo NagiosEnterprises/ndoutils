@@ -10,7 +10,7 @@
 # This is the lockfile that NDO2DB will use to store its PID number
 # in when it is running in daemon mode.
 
-lock_file=@localstatedir@/ndo2db.lock
+lock_file=@localstatedir@/ndo2db.pid
 
 
 
@@ -19,7 +19,7 @@ lock_file=@localstatedir@/ndo2db.lock
 # You can specify a number (uid/gid) or a name for either option.
 
 ndo2db_user=@ndo2db_user@
-ndo2db_group=@ndo2db_user@
+ndo2db_group=@ndo2db_group@
 
 
 
@@ -50,7 +50,7 @@ socket_name=@localstatedir@/ndo.sock
 # connections on.  This option is only vlaid if the socket type
 # specified above is "tcp".
 
-tcp_port=5668
+tcp_port=@ndo2db_port@
 
 
 
@@ -69,11 +69,9 @@ use_ssl=0
 
 
 # DATABASE SERVER TYPE
-# This option determines what type of DB server the daemon should
-# connect to.
+# This option determines what type of DB server the daemon should connect to.
 # Values:
-# 	mysql = MySQL
-#       pgsql = PostgreSQL
+#   mysql = MySQL
 
 db_servertype=mysql
 
@@ -89,10 +87,24 @@ db_host=localhost
 # DATABASE PORT
 # This option specifies the port that the DB server is running on.
 # Values:
-# 	3306 = Default MySQL port
-#	5432 = Default PostgreSQL port
+#  3306 = Default MySQL port
 
 db_port=3306
+
+
+
+# DATABASE SOCKET
+# This option specifies the path to the socket to use for local DB connections.
+#
+# MySQL's default location is /tmp/mysql.sock, but /var/lib/mysql/mysql.sock
+# is common for RPM distributions, and /var/run/mysqld/mysqld.sock is seen on
+# Ubuntu...
+#
+# You normally do not need to set this option unless you experience connection
+# problems with messages in NDO2DB's log like:
+#   "Can't connect to local MySQL server through socket ..."
+
+#db_socket=/var/lib/mysql/mysql.sock
 
 
 
@@ -152,10 +164,10 @@ max_externalcommands_age=44640
 max_notifications_age=44640
 
 # Keep contactnotifications for 31 days
-max_contactnotifications=44640
+max_contactnotifications_age=44640
 
 # Keep contactnotificationmethods for 31 days
-max_contactnotificationmethods=44640
+max_contactnotificationmethods_age=44640
 
 # Keep logentries for 90 days
 max_logentries_age=129600

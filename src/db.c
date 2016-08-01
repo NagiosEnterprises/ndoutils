@@ -1,12 +1,24 @@
-/***************************************************************
- * DB.C - Datatabase routines for NDO2DB daemon
+/**
+ * @file db.c Database routines for ndo2db daemon
+ */
+/*
+ * Copyright 2009-2014 Nagios Core Development Team and Community Contributors
+ * Copyright 2005-2009 Ethan Galstad
  *
- * Copyright (c) 2009 Nagios Core Development Team and Community Contributors
- * Copyright (c) 2005-2009 Ethan Galstad
+ * This file is part of NDOUtils.
  *
- * Last Modified: 07-11-2009
+ * NDOUtils is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
  *
- **************************************************************/
+ * NDOUtils is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with NDOUtils. If not, see <http://www.gnu.org/licenses/>.
+ */
 
 /* include our project's header files */
 #include "../include/config.h"
@@ -154,24 +166,10 @@ int ndo2db_db_init(ndo2db_idi *idi){
 	idi->dbinfo.object_hashlist=NULL;
 
 	/* initialize db structures, etc. */
-	switch(idi->dbinfo.server_type){
-	case NDO2DB_DBSERVER_MYSQL:
-#ifdef USE_MYSQL
-		if(!mysql_init(&idi->dbinfo.mysql_conn)){
-			syslog(LOG_USER|LOG_INFO,"Error: mysql_init() failed\n");
-			return NDO_ERROR;
-	                }
-#endif
-		break;
-	case NDO2DB_DBSERVER_PGSQL:
-#ifdef USE_PGSQL
-		idi->dbinfo.pgsql_conn=NULL;
-		idi->dbinfo.pgsql_result=NULL;
-#endif
-		break;
-	default:
-		break;
-	        }
+	if(!mysql_init(&idi->dbinfo.mysql_conn)){
+		syslog(LOG_USER|LOG_INFO,"Error: mysql_init() failed\n");
+		return NDO_ERROR;
+	}
 
 	return NDO_OK;
         }
@@ -209,43 +207,24 @@ int ndo2db_db_connect(ndo2db_idi *idi){
 	if(idi->dbinfo.connected==NDO_TRUE)
 		return NDO_OK;
 
-	switch(idi->dbinfo.server_type){
-	case NDO2DB_DBSERVER_MYSQL:
-#ifdef USE_MYSQL
-		if(!mysql_real_connect(&idi->dbinfo.mysql_conn,ndo2db_db_settings.host,ndo2db_db_settings.username,ndo2db_db_settings.password,ndo2db_db_settings.dbname,ndo2db_db_settings.port,NULL,0)){
-
-			mysql_close(&idi->dbinfo.mysql_conn);
-			syslog(LOG_USER|LOG_INFO,"Error: Could not connect to MySQL database: %s",mysql_error(&idi->dbinfo.mysql_conn));
-			result=NDO_ERROR;
-			idi->disconnect_client=NDO_TRUE;
-		        }
-		else{
-			idi->dbinfo.connected=NDO_TRUE;
-			syslog(LOG_USER|LOG_DEBUG,"Successfully connected to MySQL database");
-		        }
-#endif
-		break;
-	case NDO2DB_DBSERVER_PGSQL:
-#ifdef USE_PGSQL
-		snprintf(connect_string,sizeof(connect_string)-1,"host='%s' port=%d dbname='%s' user='%s' password='%s'",ndo2db_db_settings.host,ndo2db_db_settings.port,ndo2db_db_settings.dbname,ndo2db_db_settings.username,ndo2db_db_settings.password);
-		connect_string[sizeof(connect_string)-1]='\x0';
-		idi->dbinfo.pgsql_conn=PQconnectdb(connect_string);
-
-		if(PQstatus(idi->dbinfo.pgsql_conn)==CONNECTION_BAD){
-			PQfinish(idi->dbinfo.pgsql_conn);
-			syslog(LOG_USER|LOG_INFO,"Error: Could not connect to PostgreSQL database: %s",PQerrorMessage(idi->dbinfo.pgsql_conn));
-			result=NDO_ERROR;
-			idi->disconnect_client=NDO_TRUE;
-		        }
-		else{
-			idi->dbinfo.connected=NDO_TRUE;
-			syslog(LOG_USER|LOG_DEBUG,"Successfully connected to PostgreSQL database");
-		        }
-#endif
-		break;
-	default:
-		break;
-	        }
+	if (!mysql_real_connect(
+			&idi->dbinfo.mysql_conn,
+			ndo2db_db_settings.host,
+			ndo2db_db_settings.username,
+			ndo2db_db_settings.password,
+			ndo2db_db_settings.dbname,
+			ndo2db_db_settings.port,
+			ndo2db_db_settings.socket,
+			CLIENT_REMEMBER_OPTIONS
+	)) {
+		mysql_close(&idi->dbinfo.mysql_conn);
+		syslog(LOG_USER|LOG_INFO,"Error: Could not connect to MySQL database: %s",mysql_error(&idi->dbinfo.mysql_conn));
+		result=NDO_ERROR;
+		idi->disconnect_client=NDO_TRUE;
+	} else {
+		idi->dbinfo.connected=NDO_TRUE;
+		syslog(LOG_USER|LOG_DEBUG,"Successfully connected to MySQL database");
+	}
 
 	return result;
         }
@@ -261,27 +240,10 @@ int ndo2db_db_disconnect(ndo2db_idi *idi){
 	if(idi->dbinfo.connected==NDO_FALSE)
 		return NDO_OK;
 
-	switch(idi->dbinfo.server_type){
-	case NDO2DB_DBSERVER_MYSQL:
-#ifdef USE_MYSQL
-		/* close the connection to the database server */		
-		mysql_close(&idi->dbinfo.mysql_conn);
-		idi->dbinfo.connected=NDO_FALSE;
-		syslog(LOG_USER|LOG_DEBUG,"Successfully disconnected from MySQL database");
-#endif
-		break;
-	case NDO2DB_DBSERVER_PGSQL:
-#ifdef USE_PGSQL
-		/* close database connection and cleanup */
-		if(PQstatus(idi->dbinfo.pgsql_conn)!=CONNECTION_BAD)
-			PQfinish(idi->dbinfo.pgsql_conn);
-		idi->dbinfo.connected=NDO_FALSE;
-		syslog(LOG_USER|LOG_DEBUG,"Successfully disconnected from PostgreSQL database");
-#endif
-		break;
-	default:
-		break;
-	        }
+	/* close the connection to the database server */
+	mysql_close(&idi->dbinfo.mysql_conn);
+	idi->dbinfo.connected=NDO_FALSE;
+	syslog(LOG_USER|LOG_DEBUG,"Successfully disconnected from MySQL database");
 
 	return NDO_OK;
         }
@@ -303,22 +265,14 @@ int ndo2db_db_hello(ndo2db_idi *idi){
 	if(asprintf(&buf,"SELECT instance_id FROM %s WHERE instance_name='%s'",ndo2db_db_tablenames[NDO2DB_DBTABLE_INSTANCES],idi->instance_name)==-1)
 		buf=NULL;
 	if((result=ndo2db_db_query(idi,buf))==NDO_OK){
-		switch(idi->dbinfo.server_type){
-		case NDO2DB_DBSERVER_MYSQL:
-#ifdef USE_MYSQL
-			idi->dbinfo.mysql_result=mysql_store_result(&idi->dbinfo.mysql_conn);
-			if((idi->dbinfo.mysql_row=mysql_fetch_row(idi->dbinfo.mysql_result))!=NULL){
-				ndo2db_convert_string_to_unsignedlong(idi->dbinfo.mysql_row[0],&idi->dbinfo.instance_id);
-				have_instance=NDO_TRUE;
-		                }
-			mysql_free_result(idi->dbinfo.mysql_result);
-			idi->dbinfo.mysql_result=NULL;
-#endif
-			break;
-		default:
-			break;
-		        }
-	        }
+		idi->dbinfo.mysql_result=mysql_store_result(&idi->dbinfo.mysql_conn);
+		if((idi->dbinfo.mysql_row=mysql_fetch_row(idi->dbinfo.mysql_result))!=NULL){
+			ndo2db_convert_string_to_unsignedlong(idi->dbinfo.mysql_row[0],&idi->dbinfo.instance_id);
+			have_instance=NDO_TRUE;
+		}
+		mysql_free_result(idi->dbinfo.mysql_result);
+		idi->dbinfo.mysql_result=NULL;
+	}
 	free(buf);
 
 	/* insert new instance if necessary */
@@ -326,16 +280,8 @@ int ndo2db_db_hello(ndo2db_idi *idi){
 		if(asprintf(&buf,"INSERT INTO %s SET instance_name='%s'",ndo2db_db_tablenames[NDO2DB_DBTABLE_INSTANCES],idi->instance_name)==-1)
 			buf=NULL;
 		if((result=ndo2db_db_query(idi,buf))==NDO_OK){
-			switch(idi->dbinfo.server_type){
-			case NDO2DB_DBSERVER_MYSQL:
-#ifdef USE_MYSQL
-				idi->dbinfo.instance_id=mysql_insert_id(&idi->dbinfo.mysql_conn);
-#endif
-				break;
-			default:
-				break;
-			        }
-	                }
+			idi->dbinfo.instance_id=mysql_insert_id(&idi->dbinfo.mysql_conn);
+		}
 		free(buf);
 	        }
 	
@@ -354,16 +300,8 @@ int ndo2db_db_hello(ndo2db_idi *idi){
 		   )==-1)
 		buf=NULL;
 	if((result=ndo2db_db_query(idi,buf))==NDO_OK){
-		switch(idi->dbinfo.server_type){
-		case NDO2DB_DBSERVER_MYSQL:
-#ifdef USE_MYSQL
-			idi->dbinfo.conninfo_id=mysql_insert_id(&idi->dbinfo.mysql_conn);
-#endif
-			break;
-		default:
-			break;
-		        }
-	        }
+		idi->dbinfo.conninfo_id=mysql_insert_id(&idi->dbinfo.mysql_conn);
+	}
 	free(buf);
 	free(ts);
 
@@ -480,14 +418,8 @@ char *ndo2db_db_escape_string(ndo2db_idi *idi, char *buf){
 	/* escape characters */
 	for(x=0,y=0;x<z;x++){
 
-		if(idi->dbinfo.server_type==NDO2DB_DBSERVER_MYSQL){
-			if(buf[x]=='\'' || buf[x]=='\"' || buf[x]=='*' || buf[x]=='\\' || buf[x]=='$' || buf[x]=='?' || buf[x]=='.' || buf[x]=='^' || buf[x]=='+' || buf[x]=='[' || buf[x]==']' || buf[x]=='(' || buf[x]==')')
-				newbuf[y++]='\\';
-		        }
-		else if(idi->dbinfo.server_type==NDO2DB_DBSERVER_PGSQL){
-			if(! (isspace(buf[x]) || isalnum(buf[x]) || (buf[x]=='_')) )
-				newbuf[y++]='\\';
-		        }
+		if(buf[x]=='\'' || buf[x]=='\"' || buf[x]=='*' || buf[x]=='\\' || buf[x]=='$' || buf[x]=='?' || buf[x]=='.' || buf[x]=='^' || buf[x]=='+' || buf[x]=='[' || buf[x]==']' || buf[x]=='(' || buf[x]==')')
+			newbuf[y++]='\\';
 
 		newbuf[y++]=buf[x];
 	        }
@@ -502,22 +434,10 @@ char *ndo2db_db_escape_string(ndo2db_idi *idi, char *buf){
 /* SQL query conversion of time_t format to date/time format */
 char *ndo2db_db_timet_to_sql(ndo2db_idi *idi, time_t t){
 	char *buf=NULL;
+	(void)idi; /* Unused, don't warn. */
 
-	switch(idi->dbinfo.server_type){
-	case NDO2DB_DBSERVER_MYSQL:
-#ifdef USE_MYSQL
-		asprintf(&buf,"FROM_UNIXTIME(%lu)",(unsigned long)t);
-#endif
-		break;
-	case NDO2DB_DBSERVER_PGSQL:
-#ifdef USE_PGSQL
-		asprintf(&buf,"FROM_UNIXTIME(%lu)",(unsigned long)t);
-#endif
-		break;
-	default:
-		break;
-	        }
-	
+	asprintf(&buf,"FROM_UNIXTIME(%lu)",(unsigned long)t);
+
 	return buf;
         }
 
@@ -525,22 +445,10 @@ char *ndo2db_db_timet_to_sql(ndo2db_idi *idi, time_t t){
 /* SQL query conversion of date/time format to time_t format */
 char *ndo2db_db_sql_to_timet(ndo2db_idi *idi, char *field){
 	char *buf=NULL;
-
-	switch(idi->dbinfo.server_type){
-	case NDO2DB_DBSERVER_MYSQL:
-#ifdef USE_MYSQL
-		asprintf(&buf,"UNIX_TIMESTAMP(%s)",(field==NULL)?"":field);
-#endif
-		break;
-	case NDO2DB_DBSERVER_PGSQL:
-#ifdef USE_PGSQL
-		asprintf(&buf,"UNIX_TIMESTAMP(%s",(field==NULL)?"":field);
-#endif
-		break;
-	default:
-		break;
-	        }
+	(void)idi; /* Unused, don't warn. */
 	
+	asprintf(&buf,"UNIX_TIMESTAMP(%s)",(field==NULL)?"":field);
+
 	return buf;
         }
 
@@ -566,29 +474,11 @@ int ndo2db_db_query(ndo2db_idi *idi, char *buf){
 
 	ndo2db_log_debug_info(NDO2DB_DEBUGL_SQL,0,"%s\n",buf);
 
-	switch(idi->dbinfo.server_type){
-	case NDO2DB_DBSERVER_MYSQL:
-#ifdef USE_MYSQL
-		if((query_result=mysql_query(&idi->dbinfo.mysql_conn,buf))){
-			syslog(LOG_USER|LOG_INFO,"Error: mysql_query() failed for '%s'\n",buf);
-			syslog(LOG_USER|LOG_INFO,"mysql_error: '%s'\n", mysql_error(&idi->dbinfo.mysql_conn));
-			result=NDO_ERROR;
-		        }
-#endif
-		break;
-	case NDO2DB_DBSERVER_PGSQL:
-#ifdef USE_PGSQL
-		idi->dbinfo.pgsql_result==PQexec(idi->dbinfo.pgsql_conn,buf);
-		if((query_result=PQresultStatus(idi->dbinfo.pgsql_result))!=PGRES_COMMAND_OK){
-			syslog(LOG_USER|LOG_INFO,"Error: PQexec() failed for '%s'\n",buf);
-			PQclear(idi->dbinfo.pgsql_result);
-			result=NDO_ERROR;
-	                }
-#endif
-		break;
-	default:
-		break;
-	        }
+	if (mysql_query(&idi->dbinfo.mysql_conn,buf)) {
+		syslog(LOG_USER|LOG_INFO,"Error: mysql_query() failed for '%s'\n",buf);
+		syslog(LOG_USER|LOG_INFO,"mysql_error: '%s'\n", mysql_error(&idi->dbinfo.mysql_conn));
+		result=NDO_ERROR;
+	}
 
 	/* handle errors */
 	if(result==NDO_ERROR)
@@ -603,20 +493,6 @@ int ndo2db_db_free_query(ndo2db_idi *idi){
 
 	if(idi==NULL)
 		return NDO_ERROR;
-
-	switch(idi->dbinfo.server_type){
-	case NDO2DB_DBSERVER_MYSQL:
-#ifdef USE_MYSQL
-#endif
-		break;
-	case NDO2DB_DBSERVER_PGSQL:
-#ifdef USE_PGSQL
-		PQclear(idi->dbinfo.pgsql_result);
-#endif
-		break;
-	default:
-		break;
-	        }
 
 	return NDO_OK;
         }
@@ -633,30 +509,12 @@ int ndo2db_handle_db_error(ndo2db_idi *idi, int query_result){
 	if(idi->dbinfo.connected==NDO_FALSE)
 		return NDO_OK;
 
-	switch(idi->dbinfo.server_type){
-	case NDO2DB_DBSERVER_MYSQL:
-#ifdef USE_MYSQL
-		result=mysql_errno(&idi->dbinfo.mysql_conn);
-		if(result==CR_SERVER_LOST || result==CR_SERVER_GONE_ERROR){
-			syslog(LOG_USER|LOG_INFO,"Error: Connection to MySQL database has been lost!\n");
-			ndo2db_db_disconnect(idi);
-			idi->disconnect_client=NDO_TRUE;
-		        }
-#endif
-		break;
-	case NDO2DB_DBSERVER_PGSQL:
-#ifdef USE_PGSQL
-		result=PQstatus(idi->dbinfo.pgsql_conn);
-		if(result!=CONNECTION_OK){
-			syslog(LOG_USER|LOG_INFO,"Error: Connection to PostgreSQL database has been lost!\n");
-			ndo2db_db_disconnect(idi);
-			idi->disconnect_client=NDO_TRUE;
-	                }
-#endif
-		break;
-	default:
-		break;
-	        }
+	result=mysql_errno(&idi->dbinfo.mysql_conn);
+	if(result==CR_SERVER_LOST || result==CR_SERVER_GONE_ERROR){
+		syslog(LOG_USER|LOG_INFO,"Error: Connection to MySQL database has been lost!\n");
+		ndo2db_db_disconnect(idi);
+		idi->disconnect_client=NDO_TRUE;
+	}
 
 	return NDO_OK;
         }
@@ -704,21 +562,13 @@ int ndo2db_db_get_latest_data_time(ndo2db_idi *idi, char *table_name, char *fiel
 		buf=NULL;
 
 	if((result=ndo2db_db_query(idi,buf))==NDO_OK){
-		switch(idi->dbinfo.server_type){
-		case NDO2DB_DBSERVER_MYSQL:
-#ifdef USE_MYSQL
-			idi->dbinfo.mysql_result=mysql_store_result(&idi->dbinfo.mysql_conn);
-			if((idi->dbinfo.mysql_row=mysql_fetch_row(idi->dbinfo.mysql_result))!=NULL){
-				ndo2db_convert_string_to_unsignedlong(idi->dbinfo.mysql_row[0],t);
-		                }
-			mysql_free_result(idi->dbinfo.mysql_result);
-			idi->dbinfo.mysql_result=NULL;
-#endif
-			break;
-		default:
-			break;
-		        }
-	        }
+		idi->dbinfo.mysql_result=mysql_store_result(&idi->dbinfo.mysql_conn);
+		if((idi->dbinfo.mysql_row=mysql_fetch_row(idi->dbinfo.mysql_result))!=NULL){
+			ndo2db_convert_string_to_unsignedlong(idi->dbinfo.mysql_row[0],t);
+		}
+		mysql_free_result(idi->dbinfo.mysql_result);
+		idi->dbinfo.mysql_result=NULL;
+	}
 	free(buf);
 	free(ts[0]);
 
@@ -761,33 +611,53 @@ int ndo2db_db_perform_maintenance(ndo2db_idi *idi){
 	time(&current_time);
 
 	/* trim tables */
-	if(((unsigned long)current_time-60)>(unsigned long)idi->dbinfo.last_table_trim_time){
-		if(idi->dbinfo.max_timedevents_age>0L)
+	if ((current_time-(time_t)60)>idi->dbinfo.last_table_trim_time) {
+		if (idi->dbinfo.max_timedevents_age>0L) {
+			syslog(LOG_USER|LOG_INFO,"Trimming timedevents.");
 			ndo2db_db_trim_data_table(idi,ndo2db_db_tablenames[NDO2DB_DBTABLE_TIMEDEVENTS],"scheduled_time",(time_t)((unsigned long)current_time-idi->dbinfo.max_timedevents_age));
-		if(idi->dbinfo.max_systemcommands_age>0L)
+		}
+		if (idi->dbinfo.max_systemcommands_age>0L) {
+			syslog(LOG_USER|LOG_INFO,"Trimming systemcommands.");
 			ndo2db_db_trim_data_table(idi,ndo2db_db_tablenames[NDO2DB_DBTABLE_SYSTEMCOMMANDS],"start_time",(time_t)((unsigned long)current_time-idi->dbinfo.max_systemcommands_age));
-		if(idi->dbinfo.max_servicechecks_age>0L)
+		}
+		if (idi->dbinfo.max_servicechecks_age>0L) {
+			syslog(LOG_USER|LOG_INFO,"Trimming servicechecks.");
 			ndo2db_db_trim_data_table(idi,ndo2db_db_tablenames[NDO2DB_DBTABLE_SERVICECHECKS],"start_time",(time_t)((unsigned long)current_time-idi->dbinfo.max_servicechecks_age));
-		if(idi->dbinfo.max_hostchecks_age>0L)
+		}
+		if (idi->dbinfo.max_hostchecks_age>0L) {
+			syslog(LOG_USER|LOG_INFO,"Trimming hostchecks.");
 			ndo2db_db_trim_data_table(idi,ndo2db_db_tablenames[NDO2DB_DBTABLE_HOSTCHECKS],"start_time",(time_t)((unsigned long)current_time-idi->dbinfo.max_hostchecks_age));
-		if(idi->dbinfo.max_eventhandlers_age>0L)
+		}
+		if (idi->dbinfo.max_eventhandlers_age>0L) {
+			syslog(LOG_USER|LOG_INFO,"Trimming eventhandlers.");
 			ndo2db_db_trim_data_table(idi,ndo2db_db_tablenames[NDO2DB_DBTABLE_EVENTHANDLERS],"start_time",(time_t)((unsigned long)current_time-idi->dbinfo.max_eventhandlers_age));
-		if(idi->dbinfo.max_externalcommands_age>0L)
+		}
+		if (idi->dbinfo.max_externalcommands_age>0L) {
+			syslog(LOG_USER|LOG_INFO,"Trimming externalcommands.");
 			ndo2db_db_trim_data_table(idi,ndo2db_db_tablenames[NDO2DB_DBTABLE_EXTERNALCOMMANDS],"entry_time",(time_t)((unsigned long)current_time-idi->dbinfo.max_externalcommands_age));
-		if(idi->dbinfo.max_notifications_age>0L)
-			ndo2db_db_trim_data_table(idi,ndo2db_db_tablenames[NDO2DB_DBTABLE_NOTIFICATIONS],"entry_time",(time_t)((unsigned long)current_time-idi->dbinfo.max_notifications_age));
-
-		if(idi->dbinfo.max_contactnotifications_age>0L)
-			ndo2db_db_trim_data_table(idi,ndo2db_db_tablenames[NDO2DB_DBTABLE_CONTACTNOTIFICATIONS],"entry_time",(time_t)((unsigned long)current_time-idi->dbinfo.max_contactnotifications_age));
-		if(idi->dbinfo.max_contactnotificationmethods_age>0L)
-			ndo2db_db_trim_data_table(idi,ndo2db_db_tablenames[NDO2DB_DBTABLE_CONTACTNOTIFICATIONMETHODS],"entry_time",(time_t)((unsigned long)current_time-idi->dbinfo.max_contactnotificationmethods_age));
-		if(idi->dbinfo.max_logentries_age>0L)
+		}
+		if (idi->dbinfo.max_notifications_age>0L) {
+			syslog(LOG_USER|LOG_INFO,"Trimming notifications.");
+			ndo2db_db_trim_data_table(idi,ndo2db_db_tablenames[NDO2DB_DBTABLE_NOTIFICATIONS],"start_time",(time_t)((unsigned long)current_time-idi->dbinfo.max_notifications_age));
+		}
+		if (idi->dbinfo.max_contactnotifications_age>0L) {
+			syslog(LOG_USER|LOG_INFO,"Trimming contactnotifications.");
+			ndo2db_db_trim_data_table(idi,ndo2db_db_tablenames[NDO2DB_DBTABLE_CONTACTNOTIFICATIONS],"start_time",(time_t)((unsigned long)current_time-idi->dbinfo.max_contactnotifications_age));
+		}
+		if (idi->dbinfo.max_contactnotificationmethods_age>0L) {
+			syslog(LOG_USER|LOG_INFO,"Trimming contactnotificationmethods.");
+			ndo2db_db_trim_data_table(idi,ndo2db_db_tablenames[NDO2DB_DBTABLE_CONTACTNOTIFICATIONMETHODS],"start_time",(time_t)((unsigned long)current_time-idi->dbinfo.max_contactnotificationmethods_age));
+		}
+		if (idi->dbinfo.max_logentries_age>0L) {
+			syslog(LOG_USER|LOG_INFO,"Trimming logentries.");
 			ndo2db_db_trim_data_table(idi,ndo2db_db_tablenames[NDO2DB_DBTABLE_LOGENTRIES],"entry_time",(time_t)((unsigned long)current_time-idi->dbinfo.max_logentries_age));
-		if(idi->dbinfo.max_acknowledgements_age>0L)
-			ndo2db_db_trim_data_table(idi,ndo2db_db_tablenames[NDO2DB_DBTABLE_ACKNOWLEDGEMENTS],"entry_time",(time_t)((unsigned long)current_time-idi->dbinfo.max_acknowledgements_age));			
-			
-			idi->dbinfo.last_table_trim_time=current_time;
-	        }
+		}
+		if (idi->dbinfo.max_acknowledgements_age>0L) {
+			syslog(LOG_USER|LOG_INFO,"Trimming acknowledgements.");
+			ndo2db_db_trim_data_table(idi,ndo2db_db_tablenames[NDO2DB_DBTABLE_ACKNOWLEDGEMENTS],"entry_time",(time_t)((unsigned long)current_time-idi->dbinfo.max_acknowledgements_age));
+		}
+		idi->dbinfo.last_table_trim_time=current_time;
+	}
 
 	return NDO_OK;
-        }
+}

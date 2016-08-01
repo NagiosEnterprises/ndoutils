@@ -146,8 +146,7 @@
     <title>NDO2DB</title>
 
     <para>The NDO2DB utility is designed to take the data output from the
-    NDOMOD and LOG2NDO components and store it in a MySQL or PostgreSQL
-    database.</para>
+    NDOMOD and LOG2NDO components and store it in a MySQL database.</para>
 
     <para>When it starts, the NDO2DB daemon creates either a TCP or Unix
     domain socket and waits for clients to connect. NDO2DB can run either as a
@@ -179,8 +178,5 @@
         </imageobject>
       </mediaobject>
     </figure>
-
-    <para>The NDO2DB daemon currently supports only MySQL databases, but
-    future support for PostgreSQL databases is planned.</para>
   </section>
 </section>

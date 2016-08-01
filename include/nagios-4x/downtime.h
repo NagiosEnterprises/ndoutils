@@ -21,8 +21,8 @@
  *****************************************************************************/
 
 
-#ifndef _DOWNTIME_H
-#define _DOWNTIME_H
+#ifndef NAGIOS_DOWNTIME_H_INCLUDED
+#define NAGIOS_DOWNTIME_H_INCLUDED
 
 #include "common.h"
 #include "objects.h"
@@ -58,15 +58,16 @@ typedef struct scheduled_downtime {
 #ifndef NSCGI
 	struct timed_event *start_event, *stop_event;
 #endif
+	struct scheduled_downtime *prev;
 	} scheduled_downtime;
 
 extern struct scheduled_downtime *scheduled_downtime_list;
 
 
-#ifndef NSCGI
 int initialize_downtime_data(void);        /* initializes scheduled downtime data */
 int cleanup_downtime_data(void);           /* cleans up scheduled downtime data */
 
+#ifndef NSCGI
 int add_new_downtime(int, char *, char *, time_t, char *, char *, time_t, time_t, int, unsigned long, unsigned long, unsigned long *, int, int);
 int add_new_host_downtime(char *, time_t, char *, char *, time_t, time_t, int, unsigned long, unsigned long, unsigned long *, int, int);
 int add_new_service_downtime(char *, char *, time_t, char *, char *, time_t, time_t, int, unsigned long, unsigned long, unsigned long *, int, int);
