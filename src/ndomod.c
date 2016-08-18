@@ -1807,9 +1807,9 @@ int ndomod_broker_data(int event_type, void *data){
 
 	case NEBCALLBACK_PROCESS_DATA:
 
-		ndomod_write_active_objects();
-
 		procdata=(nebstruct_process_data *)data;
+		if (procdata->type == NEBTYPE_PROCESS_START)
+			ndomod_write_active_objects();
 
 		{
 			struct ndo_broker_data process_data[] = {
