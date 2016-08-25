@@ -2,6 +2,11 @@
 NDO Utils Changelog
 ===================
 
+2.1.x - 2016-xx-xx
+------------------
+* /usr/lib/tmpfiles.d/ndo2db.conf should have 'd' type, not 'D' (John Frickson)
+
+
 2.1.0 - 2016-08-01
 ------------------
 * Probable fix for ndo2db not responding & growing queue issue (John Frickson)

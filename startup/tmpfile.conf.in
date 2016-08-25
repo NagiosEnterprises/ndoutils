@@ -1,2 +1,2 @@
 #Type	Path			Mode	UID				GID				Age	Argument
-D		@piddir@	0755	@ndo2db_user@	@ndo2db_group@	-	-
+d		@piddir@	0755	@ndo2db_user@	@ndo2db_group@	-	-
