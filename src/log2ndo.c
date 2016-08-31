@@ -5,7 +5,7 @@
  * Copyright 2009-2014 Nagios Core Development Team and Community Contributors
  * Copyright 2005-2009 Ethan Galstad
  *
- * Last Modified: 08-01-2016
+ * Last Modified: 08-31-2016
  *
  * This file is part of NDOUtils.
  *
@@ -27,9 +27,9 @@
 #include "../include/io.h"
 #include "../include/protoapi.h"
 
-#define LOG2NDO_VERSION "2.1.0"
+#define LOG2NDO_VERSION "2.1.1-RC1"
 #define LOG2NDO_NAME "LOG2NDO"
-#define LOG2NDO_DATE "08-01-2016"
+#define LOG2NDO_DATE "08-31-2016"
 
 
 
