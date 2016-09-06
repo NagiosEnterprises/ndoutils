@@ -967,7 +967,7 @@ CREATE TABLE IF NOT EXISTS `nagios_scheduleddowntime` (
   `internal_downtime_id` int(11) NOT NULL default '0',
   `triggered_by_id` int(11) NOT NULL default '0',
   `is_fixed` smallint(6) NOT NULL default '0',
-  `duration` smallint(6) NOT NULL default '0',
+  `duration` int NOT NULL default '0',
   `scheduled_start_time` datetime NOT NULL default '0000-00-00 00:00:00',
   `scheduled_end_time` datetime NOT NULL default '0000-00-00 00:00:00',
   `was_started` smallint(6) NOT NULL default '0',
