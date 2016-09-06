@@ -6,7 +6,7 @@
  * Copyright 2005-2009 Ethan Galstad
  *
  * First Written: 05-19-2005
- * Last Modified: 07-28-2016
+ * Last Modified: 09-06-2016
  *
  * This file is part of NDOUtils.
  *
@@ -50,9 +50,9 @@
 
 #include <pthread.h>
 
-#define NDO2DB_VERSION "2.1"
+#define NDO2DB_VERSION "2.1.1"
 #define NDO2DB_NAME "NDO2DB"
-#define NDO2DB_DATE "07-28-2016"
+#define NDO2DB_DATE "09-06-2016"
 
 #ifdef HAVE_SSL
 # if (defined(__sun) && defined(SOLARIS_10)) || defined(_AIX) || defined(__hpux)

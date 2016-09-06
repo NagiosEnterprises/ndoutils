@@ -3,16 +3,6 @@ NDO README
 ----------
 
 
-***************
-!! IMPORTANT !!
-***************
-This code is still an alpha/beta quality, so expect problems if you intend to use
-it.  Make sure that you aren't using it with your only production installation of
-Nagios, or it could take down the Nagios process if the NDOMOD module segfaults.
-Nagios could segfault silently and you might never know that Nagios crashed...
-
-
-
 ****************
 ABOUT THIS ADDON
 ****************

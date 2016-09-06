@@ -41,6 +41,7 @@ STAT_MSG="echo -n Checking for ndo2db daemon... "
 STAT_CMD="status ndo2db"
 EXIT_CMD="exit"
 
+_set_rc (){ return; }
 
 # Source the function library
 if [ -f /etc/rc.status ]; then
