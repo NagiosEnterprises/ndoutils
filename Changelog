@@ -2,8 +2,12 @@
 NDO Utils Changelog
 ===================
 
-2.1.x - 2016-xx-xx
+2.1.1 - 2016-09-06
 ------------------
+* Changed version number from '2.1' to '2.1.0' (and now to 2.1.1) (John Frickson)
+* startup/default-init.in needed a default _set_rc function (John Frickson)
+* Removed the alpha/beta quality warning from README (John Frickson)
+* Fixed a segfault in ndomod when nagios is reloaded (SIGHUP) (John Frickson)
 * /usr/lib/tmpfiles.d/ndo2db.conf should have 'd' type, not 'D' (John Frickson)
 
 
