@@ -6,6 +6,7 @@ NDO Utils Changelog
 ------------------
 * Database creation fails in mysql.sql in fresh install (John Frickson)
 * duration column in nagios_scheduleddowntime needs to be larger (John Frickson)
+* Removed "(unstable)" qualifier from the README (John Frickson)
 
 
 2.1.1 - 2016-09-06
