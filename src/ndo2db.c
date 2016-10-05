@@ -795,7 +795,7 @@ int ndo2db_daemonize(void){
 			syslog(LOG_ERR, "Warning: Unable to truncate lockfile (errno %d): %s",
 					errno, strerror(errno));
 		}
-		sprintf(buf, "%d\n", (int)getpid);
+		sprintf(buf, "%d\n", (int)getpid());
 		n = (int)strlen(buf);
 		if (write(lockfile, buf, n) < n) {
 			syslog(LOG_ERR, "Warning: Unable to write pid to lockfile (errno %d): %s",
