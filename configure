@@ -3661,10 +3661,12 @@ fi
   bsd) :
     dist_type=`uname -s | tr "A-Z" "a-z"`
 						dist_ver=`uname -r` ;; #(
-  aix|hp-ux) :
-    dist_ver=$OSTYPE ;; #(
+  aix) :
+    dist_ver="`uname -v`.`uname -r`" ;; #(
+  hp-ux) :
+    dist_ver=`uname -r | cut -d'.' -f1-3` ;; #(
   solaris) :
-    dist_ver=`echo $OSTYPE | cut -d'.' -f2` ;; #(
+    dist_ver=`uname -r | cut -d'.' -f2` ;; #(
   *) :
     dist_ver=$OSTYPE
 				 ;; #(
@@ -4786,6 +4788,15 @@ fi
 $as_echo "$src_inetd" >&6; }
 
 
+
+case $host_os in
+*bsd*|darwin*)
+	root_grp=wheel
+	;;
+*)
+	root_grp=root
+	;;
+esac
 
 
 ac_ext=c
@@ -6023,6 +6034,7 @@ $as_echo_n "checking for linker flags for loadable modules... " >&6; }
 case $host_os in
 	solaris2*|sysv4*)
 		MOD_LDFLAGS="-G"
+		MOD_CFLAGS="-fPIC"
 	;;
 	aix4*|aix5*)
 		#MOD_LDFLAGS="-G -bnoentry -bexpall"

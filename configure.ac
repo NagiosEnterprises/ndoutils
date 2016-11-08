@@ -56,6 +56,15 @@ AC_NAGIOS_GET_INETD
 AC_NAGIOS_GET_PATHS
 AC_NAGIOS_GET_FILES
 
+case $host_os in
+*bsd*|darwin*)
+	root_grp=wheel
+	;;
+*)
+	root_grp=root
+	;;
+esac
+
 dnl Checks for header files.
 AC_HEADER_STDC
 AC_HEADER_TIME
@@ -208,6 +217,7 @@ AC_MSG_CHECKING(for linker flags for loadable modules)
 case $host_os in
 	solaris2*|sysv4*)
 		MOD_LDFLAGS="-G"
+		MOD_CFLAGS="-fPIC"
 	;;
 	aix4*|aix5*)
 		#MOD_LDFLAGS="-G -bnoentry -bexpall"

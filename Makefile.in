@@ -43,7 +43,7 @@ DIST=@dist_type@
 
 INIT_TYPE=@init_type@
 INIT_DIR=@initdir@
-INIT_OPTS=-o root -g root
+INIT_OPTS=-o root -g @root_grp@
 INIT_FILE=@initname@
 INETD_TYPE=@inetd_type@
 INETD_DIR=@inetddir@
