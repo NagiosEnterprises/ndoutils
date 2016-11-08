@@ -8,6 +8,7 @@ NDO Utils Changelog
 * duration column in nagios_scheduleddowntime needs to be larger (John Frickson)
 * Removed "(unstable)" qualifier from the README (John Frickson)
 * No root group in FreeBSD and Apple OS X (John Frickson)
+* Incorrect argument in message when MySQL library could not be located (John Frickson)
 
 
 2.1.1 - 2016-09-06
