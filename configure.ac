@@ -30,9 +30,9 @@ AC_DEFINE([DEFAULT_NAGIOS_GROUP], [nagios], [Default Nagios Group])
 
 PKG_NAME=ndoutils
 INIT_PROG=ndo2db
-PKG_VERSION="2.1.1"
+PKG_VERSION="2.1.2"
 PKG_HOME_URL="http://www.nagios.org/"
-PKG_REL_DATE="09-06-2016"
+PKG_REL_DATE="11-14-2016"
 
 dnl Figure out how to invoke "install" and what install options to use.
 AC_PROG_INSTALL
@@ -55,6 +55,15 @@ AC_NAGIOS_GET_INIT
 AC_NAGIOS_GET_INETD
 AC_NAGIOS_GET_PATHS
 AC_NAGIOS_GET_FILES
+
+case $host_os in
+*bsd*|darwin*)
+	root_grp=wheel
+	;;
+*)
+	root_grp=root
+	;;
+esac
 
 dnl Checks for header files.
 AC_HEADER_STDC
@@ -208,6 +217,7 @@ AC_MSG_CHECKING(for linker flags for loadable modules)
 case $host_os in
 	solaris2*|sysv4*)
 		MOD_LDFLAGS="-G"
+		MOD_CFLAGS="-fPIC"
 	;;
 	aix4*|aix5*)
 		#MOD_LDFLAGS="-G -bnoentry -bexpall"
@@ -259,10 +269,8 @@ if test $USE_MYSQL = yes; then
 		echo ""
 		echo "You chose to compile NDOutils with MySQL support, but I was unable to"
 		echo "locate the MySQL library on your system.  If the library is"
-		echo "installed,  use the --with-mysql-lib argument to specify the"
-		echo "location of the MySQL library."
 		echo "installed, use the --with-mysql=DIR argument to specify the"
-		echo "location of the MySQL library, We assume mysql_config is in DIR/dir"
+		echo "location of the MySQL library, We assume mysql_config is in DIR/bin"
 		echo "NOTE: After you install the necessary libraries on your system:"
 		echo "      1. Make sure /etc/ld.so.conf has an entry for the directory in"
 		echo "         which the MySQL libraries are installed."

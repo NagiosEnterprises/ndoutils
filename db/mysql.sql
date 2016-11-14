@@ -38,7 +38,7 @@ CREATE TABLE IF NOT EXISTS `nagios_acknowledgements` (
   `persistent_comment` smallint(6) NOT NULL default '0',
   `notify_contacts` smallint(6) NOT NULL default '0',
   PRIMARY KEY  (`acknowledgement_id`),
-  UNIQUE KEY `instance_id` (`instance_id`, `entry_time`, `entry_time_usec`, `logentry_id`)
+  UNIQUE KEY `instance_id` (`instance_id`, `entry_time`, `entry_time_usec`)
 ) ENGINE=MyISAM COMMENT='Current and historical host and service acknowledgements';
 
 -- --------------------------------------------------------
@@ -835,7 +835,7 @@ CREATE TABLE IF NOT EXISTS `nagios_logentries` (
   `realtime_data` smallint(6) NOT NULL default '0',
   `inferred_data_extracted` smallint(6) NOT NULL default '0',
   PRIMARY KEY  (`logentry_id`),
-  UNIQUE KEY `instance_id` (`instance_id`, `logentry_time`,`entry_time`,`entry_time_usec`)
+  UNIQUE KEY `instance_id` (`instance_id`,`logentry_time`,`entry_time`,`entry_time_usec`,`logentry_id`)
 ) ENGINE=MyISAM COMMENT='Historical record of log entries';
 
 -- --------------------------------------------------------
@@ -967,7 +967,7 @@ CREATE TABLE IF NOT EXISTS `nagios_scheduleddowntime` (
   `internal_downtime_id` int(11) NOT NULL default '0',
   `triggered_by_id` int(11) NOT NULL default '0',
   `is_fixed` smallint(6) NOT NULL default '0',
-  `duration` smallint(6) NOT NULL default '0',
+  `duration` int NOT NULL default '0',
   `scheduled_start_time` datetime NOT NULL default '0000-00-00 00:00:00',
   `scheduled_end_time` datetime NOT NULL default '0000-00-00 00:00:00',
   `was_started` smallint(6) NOT NULL default '0',

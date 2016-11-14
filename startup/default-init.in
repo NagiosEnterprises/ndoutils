@@ -20,6 +20,7 @@
 #                     to store data in a database
 ### END INIT INFO
 
+export SYSTEMCTL_SKIP_REDIRECT=1
 
 NDO2DB_BIN=@sbindir@/ndo2db
 NDO2DB_CFG=@pkgsysconfdir@/ndo2db.cfg

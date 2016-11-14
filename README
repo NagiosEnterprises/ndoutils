@@ -102,7 +102,7 @@ below to fit the name of the module version you're using.
 
 	ndomod-2x.o = NDOMOD module for Nagios 2.x
 	ndomod-3x.o = NDOMOD module for Nagios 3.x
-	ndomod-4x.o = NDOMOD module for Nagios 4.x (unstable)
+	ndomod-4x.o = NDOMOD module for Nagios 4.x
 
 
 1.  Copy the compiled NDOMOD module to your Nagios installation:

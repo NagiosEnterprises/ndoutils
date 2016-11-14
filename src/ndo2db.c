@@ -6,7 +6,7 @@
  * Copyright 2005-2009 Ethan Galstad
  *
  * First Written: 05-19-2005
- * Last Modified: 09-06-2016
+ * Last Modified: 11-14-2016
  *
  * This file is part of NDOUtils.
  *
@@ -50,9 +50,9 @@
 
 #include <pthread.h>
 
-#define NDO2DB_VERSION "2.1.1"
+#define NDO2DB_VERSION "2.1.2"
 #define NDO2DB_NAME "NDO2DB"
-#define NDO2DB_DATE "09-06-2016"
+#define NDO2DB_DATE "11-14-2016"
 
 #ifdef HAVE_SSL
 # if (defined(__sun) && defined(SOLARIS_10)) || defined(_AIX) || defined(__hpux)
@@ -795,7 +795,7 @@ int ndo2db_daemonize(void){
 			syslog(LOG_ERR, "Warning: Unable to truncate lockfile (errno %d): %s",
 					errno, strerror(errno));
 		}
-		sprintf(buf, "%d\n", (int)pid);
+		sprintf(buf, "%d\n", (int)getpid());
 		n = (int)strlen(buf);
 		if (write(lockfile, buf, n) < n) {
 			syslog(LOG_ERR, "Warning: Unable to write pid to lockfile (errno %d): %s",
