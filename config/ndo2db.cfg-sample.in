@@ -216,3 +216,10 @@ debug_file=@localstatedir@/ndo2db.debug
 
 max_debug_file_size=1000000
 
+
+# MAX OUTPUT BUFFER SIZE
+# This option determines the maximum size (in bytes) of the output buffer. 
+# NDO2DB will start truncating characters after this value.
+# If you have very large long output and you're not seeing it all in the database,
+# try increasing this number.
+max_output_buffer_size=65536

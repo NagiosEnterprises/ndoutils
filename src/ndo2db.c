@@ -89,6 +89,7 @@ int ndo2db_debug_level=NDO2DB_DEBUGL_NONE;
 int ndo2db_debug_verbosity=NDO2DB_DEBUGV_BASIC;
 FILE *ndo2db_debug_file_fp=NULL;
 unsigned long ndo2db_max_debug_file_size=0L;
+unsigned long ndo2db_max_output_buffer_size=65536;
 
 extern char *ndo2db_db_tablenames[NDO2DB_MAX_DBTABLES];
 
@@ -512,6 +513,8 @@ int ndo2db_process_config_var(char *arg){
 		ndo2db_debug_verbosity=atoi(val);
 	else if(!strcmp(var,"max_debug_file_size"))
 		ndo2db_max_debug_file_size=strtoul(val,NULL,0);
+	else if(!strcmp(var, "max_output_buffer_size"))
+		ndo2db_max_output_buffer_size=strtoul(val,NULL,0);
 	else if(!strcmp(var,"use_ssl")){
 		if (strlen(val) == 1) {
 			if (isdigit((int)val[strlen(val)-1]) != NDO_FALSE)
@@ -1295,10 +1298,17 @@ int ndo2db_check_for_client_input(ndo2db_idi *idi,ndo_dbuf *dbuf){
 /* asynchronous handle clients events */
 void ndo2db_async_client_handle() {
 	ndo2db_idi idi;
-	size_t len = 0, curlen, insz, maxbuf = 1024 * 64, bufsz = 1024 * 66;
+
+	size_t len = 0, curlen, insz, maxbuf = ndo2db_max_output_buffer_size, bufsz = ndo2db_max_output_buffer_size + (1024 * 2);
     int i;
 	char *buf = (char*)calloc(bufsz, sizeof(char));
 	char *temp_buf;
+
+	/* double check max output buffer size sanity */
+	if (bufsz < maxbuf) {
+		bufsz = maxbuf;
+		maxbuf -= 1024 * 2;
+	}
 
 	/* initialize input data information */
 	ndo2db_idi_init(&idi);
