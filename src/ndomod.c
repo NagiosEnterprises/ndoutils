@@ -161,14 +161,7 @@ extern int __nagios_object_structure_version;
 
 extern int use_ssl;
 
-#define NDOMOD_FREE_ESC_BUFFERS(ary, num) { \
-		int i = num; \
-		if (i < 0) \
-			i = 0; \
-		while (i--) { \
-			free(ary[i]); \
-			ary[i] = NULL; \
-		} }
+static inline void ndomod_free_esc_buffers(char **ary, int num);
 
 #define DEBUG_NDO 1
 
@@ -3826,8 +3819,15 @@ void ndomod_write_active_objects()
 }
 
 
-#define OBJECTCONFIG_ES_ITEMS 16
+static inline void ndomod_free_esc_buffers(char **ary, int num) {
+	int i = (num < 0 ? 0 : num);
+	while (i--) {
+		free(ary[i]);
+		ary[i] = NULL;
+	}
+}
 
+#define OBJECTCONFIG_ES_ITEMS 16
 
 /* dumps object configuration data to sink */
 int ndomod_write_object_config(int config_type){
@@ -3925,13 +3925,13 @@ int ndomod_write_object_config(int config_type){
 					TRUE);
 		}
 
-		/* free buffers */
-		NDOMOD_FREE_ESC_BUFFERS(es, 2);
-
 		/* write data to sink */
 		ndomod_write_to_sink(dbuf.buf,NDO_TRUE,NDO_TRUE);
 		ndo_dbuf_free(&dbuf);
-	        }
+
+		/* free buffers */
+		ndomod_free_esc_buffers(es, 2);
+       }
 
 	/****** dump timeperiod config ******/
 	for(temp_timeperiod=timeperiod_list;temp_timeperiod!=NULL;temp_timeperiod=temp_timeperiod->next){
@@ -3954,7 +3954,7 @@ int ndomod_write_object_config(int config_type){
 					sizeof(timeperiod_definition[ 0]), FALSE);
 		}
 
-		NDOMOD_FREE_ESC_BUFFERS(es, 2);
+		ndomod_free_esc_buffers(es, 2);
 
 		/* dump timeranges for each day */
 		for(x=0;x<7;x++){
@@ -4131,7 +4131,7 @@ int ndomod_write_object_config(int config_type){
 					sizeof(contact_definition[ 0]), FALSE);
 		}
 
-		NDOMOD_FREE_ESC_BUFFERS(es, 6);
+		ndomod_free_esc_buffers(es, 6);
 
 		/* dump addresses for each contact */
 		for(x=0;x<MAX_CONTACT_ADDRESSES;x++){
@@ -4147,8 +4147,8 @@ int ndomod_write_object_config(int config_type){
 			temp_buffer[sizeof(temp_buffer)-1]='\x0';
 			ndo_dbuf_strcat(&dbuf,temp_buffer);
 
-			NDOMOD_FREE_ESC_BUFFERS(es, 1);
-		        }
+			ndomod_free_esc_buffers(es, 1);
+		}
 
 		/* dump host notification commands for each contact */
 		ndomod_commands_serialize(temp_contact->host_notification_commands,
@@ -4172,7 +4172,7 @@ int ndomod_write_object_config(int config_type){
 
 
 	/* free buffers */
-	NDOMOD_FREE_ESC_BUFFERS(es, OBJECTCONFIG_ES_ITEMS);
+	ndomod_free_esc_buffers(es, OBJECTCONFIG_ES_ITEMS);
 
 	/****** dump contactgroup config ******/
 	for(temp_contactgroup=contactgroup_list;temp_contactgroup!=NULL;temp_contactgroup=temp_contactgroup->next){
@@ -4195,7 +4195,7 @@ int ndomod_write_object_config(int config_type){
 					sizeof(contactgroup_definition[ 0]), FALSE);
 		}
 
-		NDOMOD_FREE_ESC_BUFFERS(es, 2);
+		ndomod_free_esc_buffers(es, 2);
 
 		/* dump members for each contactgroup */
 		ndomod_contacts_serialize(temp_contactgroup->members, &dbuf,
@@ -4210,7 +4210,7 @@ int ndomod_write_object_config(int config_type){
 
 
 	/* free buffers */
-	NDOMOD_FREE_ESC_BUFFERS(es, OBJECTCONFIG_ES_ITEMS);
+	ndomod_free_esc_buffers(es, OBJECTCONFIG_ES_ITEMS);
 
 	/****** dump host config ******/
 	for(temp_host=host_list;temp_host!=NULL;temp_host=temp_host->next){
@@ -4489,7 +4489,7 @@ int ndomod_write_object_config(int config_type){
 					sizeof(host_definition[ 0]), FALSE);
 		}
 
-		NDOMOD_FREE_ESC_BUFFERS(es, OBJECTCONFIG_ES_ITEMS);
+		ndomod_free_esc_buffers(es, OBJECTCONFIG_ES_ITEMS);
 
 		/* dump parent hosts */
 		ndomod_hosts_serialize(temp_host->parent_hosts, &dbuf,
@@ -4517,7 +4517,7 @@ int ndomod_write_object_config(int config_type){
 
 
 	/* free buffers */
-	NDOMOD_FREE_ESC_BUFFERS(es, OBJECTCONFIG_ES_ITEMS);
+	ndomod_free_esc_buffers(es, OBJECTCONFIG_ES_ITEMS);
 
 	/****** dump hostgroup config ******/
 	for(temp_hostgroup=hostgroup_list;temp_hostgroup!=NULL;temp_hostgroup=temp_hostgroup->next){
@@ -4540,7 +4540,7 @@ int ndomod_write_object_config(int config_type){
 					sizeof(hostgroup_definition[ 0]), FALSE);
 		}
 
-		NDOMOD_FREE_ESC_BUFFERS(es, 2);
+		ndomod_free_esc_buffers(es, 2);
 
 		/* dump members for each hostgroup */
 #ifdef BUILD_NAGIOS_2X
@@ -4819,7 +4819,7 @@ int ndomod_write_object_config(int config_type){
 					sizeof(service_definition[ 0]), FALSE);
 		}
 
-		NDOMOD_FREE_ESC_BUFFERS(es, OBJECTCONFIG_ES_ITEMS);
+		ndomod_free_esc_buffers(es, OBJECTCONFIG_ES_ITEMS);
 
 #ifdef BUILD_NAGIOS_4X
 		/* dump parent services */
@@ -4870,7 +4870,7 @@ int ndomod_write_object_config(int config_type){
 					sizeof(servicegroup_definition[ 0]), FALSE);
 		}
 
-		NDOMOD_FREE_ESC_BUFFERS(es, 2);
+		ndomod_free_esc_buffers(es, 2);
 
 		/* dump members for each servicegroup */
 		ndomod_services_serialize(temp_servicegroup->members, &dbuf,
@@ -4945,7 +4945,7 @@ int ndomod_write_object_config(int config_type){
 					sizeof(hostescalation_definition[ 0]), FALSE);
 		}
 
-		NDOMOD_FREE_ESC_BUFFERS(es, 2);
+		ndomod_free_esc_buffers(es, 2);
 
 		/* dump contactgroups */
 		ndomod_contactgroups_serialize(temp_hostescalation->contact_groups,
@@ -5035,13 +5035,13 @@ int ndomod_write_object_config(int config_type){
 						}},
 				};
 
-			NDOMOD_FREE_ESC_BUFFERS(es, 3);
-
 			ndomod_broker_data_serialize(&dbuf,
 					NDO_API_SERVICEESCALATIONDEFINITION,
 					serviceescalation_definition,
 					sizeof(serviceescalation_definition) /
 					sizeof(serviceescalation_definition[ 0]), FALSE);
+
+			ndomod_free_esc_buffers(es, 3);
 		}
 
 		free(es[0]);
@@ -5126,13 +5126,13 @@ int ndomod_write_object_config(int config_type){
 						}},
 				};
 
-		NDOMOD_FREE_ESC_BUFFERS(es, 3);
-
 			ndomod_broker_data_serialize(&dbuf,
 					NDO_API_HOSTDEPENDENCYDEFINITION,
 					hostdependency_definition,
 					sizeof(hostdependency_definition) /
 					sizeof(hostdependency_definition[ 0]), TRUE);
+
+		ndomod_free_esc_buffers(es, 3);
 		}
 
 		ndomod_write_to_sink(dbuf.buf,NDO_TRUE,NDO_TRUE);
@@ -5217,13 +5217,13 @@ int ndomod_write_object_config(int config_type){
 						}},
 				};
 
-			NDOMOD_FREE_ESC_BUFFERS(es, 5);
-
 			ndomod_broker_data_serialize(&dbuf,
 					NDO_API_SERVICEDEPENDENCYDEFINITION,
 					servicedependency_definition,
 					sizeof(servicedependency_definition) /
 					sizeof(servicedependency_definition[ 0]), TRUE);
+
+			ndomod_free_esc_buffers(es, 5);
 		}
 
 		ndomod_write_to_sink(dbuf.buf,NDO_TRUE,NDO_TRUE);
