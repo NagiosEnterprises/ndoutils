@@ -104,7 +104,7 @@ for(; $x < @schemaversions; $x++) {
 	if (-e $file){
 		print "** DB upgrade required for $thisversion",$/;
 		print "     Using $file for upgrade...",$/;
-		my $p = "-p$password" if $password;	# Not required if password is blank
+		my $p = "-p\"$password\"" if $password;	# Not required if password is blank
 		system("mysql -u $username $p -D$database -h$hostname < $file") == 0 or die "Upgrade from $file failed";
 		print "** Upgrade to $thisversion complete",$/;
 	}
