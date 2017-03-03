@@ -14,6 +14,7 @@ FIXES
 * upgradedb script didn't have `2.1.2` in `schemaversions` array. (John Frickson)
 * In three places, ndomod was freeing a buffer before it was done using it
   causing nagios to crash under certain circumstances (John Frickson)
+* Changed release date to ISO format (yyyy-mm-dd) (John Frickson)
 
 
 2.1.2 - 2016-11-14
