@@ -14,7 +14,7 @@ lock_file=@localstatedir@/ndo2db.pid
 
 
 
-# USER/GROUP PRIVILIGES
+# USER/GROUP PRIVILEGES
 # These options determine the user/group that the daemon should run as.
 # You can specify a number (uid/gid) or a name for either option.
 
