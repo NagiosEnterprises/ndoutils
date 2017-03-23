@@ -76,7 +76,7 @@
       </listitem>
 
       <listitem>
-        <para>The NDO2DB daemon (which is a seperate process from the Nagios
+        <para>The NDO2DB daemon (which is a separate process from the Nagios
         daemon) is running.</para>
       </listitem>
     </orderedlist>
@@ -133,7 +133,7 @@
 
       <listitem>
         <para>The processed data is stored in a database for later retrieval
-        and processing. Data from each instance of Nagios is kept seperate
+        and processing. Data from each instance of Nagios is kept separate
         (using the instance names as unique identifiers) in the
         database.</para>
       </listitem>
