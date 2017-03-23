@@ -2225,7 +2225,7 @@ int ndo2db_free_connection_memory(ndo2db_idi *idi){
 
 
 /****************************************************************************/
-/* DATA TYPE CONVERTION ROUTINES                                            */
+/* DATA TYPE CONVERSION ROUTINES                                            */
 /****************************************************************************/
 
 int ndo2db_convert_standard_data_elements(ndo2db_idi *idi, int *type, int *flags, int *attr, struct timeval *tstamp){
