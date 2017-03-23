@@ -1969,7 +1969,7 @@ int ndo2db_end_input_data(ndo2db_idi *idi){
 	if(idi==NULL)
 		return NDO_ERROR;
 
-	/* update db stats occassionally */
+	/* update db stats occasionally */
 	if(ndo2db_db_last_checkin_time<(time(NULL)-60))
 		ndo2db_db_checkin(idi);
 
