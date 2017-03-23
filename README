@@ -124,7 +124,7 @@ below to fit the name of the module version you're using.
 	broker_module=/usr/local/nagios/bin/ndomod.o config_file=/usr/local/nagios/etc/ndomod.cfg
 
     The config directive above will cause Nagios to load the NDOMOD
-    event broker the next time it starts.  Of course, this requres that
+    event broker the next time it starts.  Of course, this requires that
     you compiled Nagios with support for the event broker in the first
     place. :-)
 
