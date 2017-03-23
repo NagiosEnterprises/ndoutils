@@ -245,13 +245,13 @@ struct pr_chunk_x {
 
 static size_t dopr(char *buffer, size_t maxlen, const char *format, 
 		   va_list args_in);
-static void fmtstr(char *buffer, size_t *currlen, size_t maxlen,
+static void fmtstr(char *buffer, size_t *curlen, size_t maxlen,
 		    char *value, int flags, int min, int max);
-static void fmtint(char *buffer, size_t *currlen, size_t maxlen,
+static void fmtint(char *buffer, size_t *curlen, size_t maxlen,
 		    long value, int base, int min, int max, int flags);
-static void fmtfp(char *buffer, size_t *currlen, size_t maxlen,
+static void fmtfp(char *buffer, size_t *curlen, size_t maxlen,
 		   LDOUBLE fvalue, int min, int max, int flags);
-static void dopr_outch(char *buffer, size_t *currlen, size_t maxlen, char c);
+static void dopr_outch(char *buffer, size_t *curlen, size_t maxlen, char c);
 static struct pr_chunk *new_chunk(void);
 static int add_cnk_list_entry(struct pr_chunk_x **list,
 				int max_num, struct pr_chunk *chunk);
@@ -263,7 +263,7 @@ static size_t dopr(char *buffer, size_t maxlen, const char *format, va_list args
 	int pflag;
 	int pnum;
 	int pfirst;
-	size_t currlen;
+	size_t curlen;
 	va_list args;
 	const char *base;
 	struct pr_chunk *chunks = NULL;
@@ -662,7 +662,7 @@ static size_t dopr(char *buffer, size_t maxlen, const char *format, va_list args
 		}
 	}
 	/* print out the actual string from chunks */
-	currlen = 0;
+	curlen = 0;
 	cnk = chunks;
 	while (cnk) {
 		int len, min, max;
@@ -675,63 +675,63 @@ static size_t dopr(char *buffer, size_t maxlen, const char *format, va_list args
 		switch (cnk->type) {
 
 		case CNK_FMT_STR:
-			if (maxlen != 0 && maxlen > currlen) {
-				if (maxlen > (currlen + cnk->len)) len = cnk->len;
-				else len = maxlen - currlen;
+			if (maxlen != 0 && maxlen > curlen) {
+				if (maxlen > (curlen + cnk->len)) len = cnk->len;
+				else len = maxlen - curlen;
 
-				memcpy(&(buffer[currlen]), &(base[cnk->start]), len);
+				memcpy(&(buffer[curlen]), &(base[cnk->start]), len);
 			}
-			currlen += cnk->len;
+			curlen += cnk->len;
 				
 			break;
 
 		case CNK_INT:
 		case CNK_UINT:
-			fmtint (buffer, &currlen, maxlen, cnk->value, 10, min, max, cnk->flags);
+			fmtint (buffer, &curlen, maxlen, cnk->value, 10, min, max, cnk->flags);
 			break;
 
 		case CNK_OCTAL:
-			fmtint (buffer, &currlen, maxlen, cnk->value, 8, min, max, cnk->flags);
+			fmtint (buffer, &curlen, maxlen, cnk->value, 8, min, max, cnk->flags);
 			break;
 
 		case CNK_HEX:
-			fmtint (buffer, &currlen, maxlen, cnk->value, 16, min, max, cnk->flags);
+			fmtint (buffer, &curlen, maxlen, cnk->value, 16, min, max, cnk->flags);
 			break;
 
 		case CNK_FLOAT:
-			fmtfp (buffer, &currlen, maxlen, cnk->fvalue, min, max, cnk->flags);
+			fmtfp (buffer, &curlen, maxlen, cnk->fvalue, min, max, cnk->flags);
 			break;
 
 		case CNK_CHAR:
-			dopr_outch (buffer, &currlen, maxlen, cnk->value);
+			dopr_outch (buffer, &curlen, maxlen, cnk->value);
 			break;
 
 		case CNK_STRING:
 			if (max == -1) {
 				max = strlen(cnk->strvalue);
 			}
-			fmtstr (buffer, &currlen, maxlen, cnk->strvalue, cnk->flags, min, max);
+			fmtstr (buffer, &curlen, maxlen, cnk->strvalue, cnk->flags, min, max);
 			break;
 
 		case CNK_PTR:
-			fmtint (buffer, &currlen, maxlen, (long)(cnk->strvalue), 16, min, max, cnk->flags);
+			fmtint (buffer, &curlen, maxlen, (long)(cnk->strvalue), 16, min, max, cnk->flags);
 			break;
 
 		case CNK_NUM:
 			if (cnk->cflags == DP_C_CHAR)
-				*((char *)(cnk->pnum)) = (char)currlen;
+				*((char *)(cnk->pnum)) = (char)curlen;
 			else if (cnk->cflags == DP_C_SHORT)
-				*((short int *)(cnk->pnum)) = (short int)currlen;
+				*((short int *)(cnk->pnum)) = (short int)curlen;
 			else if (cnk->cflags == DP_C_LONG)
-				*((long int *)(cnk->pnum)) = (long int)currlen;
+				*((long int *)(cnk->pnum)) = (long int)curlen;
 			else if (cnk->cflags == DP_C_LLONG)
-				*((LLONG *)(cnk->pnum)) = (LLONG)currlen;
+				*((LLONG *)(cnk->pnum)) = (LLONG)curlen;
 			else
-				*((int *)(cnk->pnum)) = (int)currlen;
+				*((int *)(cnk->pnum)) = (int)curlen;
 			break;
 
 		case CNK_PRCNT:
-			dopr_outch (buffer, &currlen, maxlen, '%');
+			dopr_outch (buffer, &curlen, maxlen, '%');
 			break;
 
 		default:
@@ -741,12 +741,12 @@ static size_t dopr(char *buffer, size_t maxlen, const char *format, va_list args
 		cnk = cnk->next;
 	}
 	if (maxlen != 0) {
-		if (currlen < maxlen - 1) 
-			buffer[currlen] = '\0';
+		if (curlen < maxlen - 1) 
+			buffer[curlen] = '\0';
 		else if (maxlen > 0) 
 			buffer[maxlen - 1] = '\0';
 	}
-	ret = currlen;
+	ret = curlen;
 
 done:
 	while (chunks) {
@@ -763,7 +763,7 @@ done:
 	return ret;
 }
 
-static void fmtstr(char *buffer, size_t *currlen, size_t maxlen,
+static void fmtstr(char *buffer, size_t *curlen, size_t maxlen,
 		    char *value, int flags, int min, int max)
 {
 	int padlen, strln;     /* amount to pad */
@@ -784,22 +784,22 @@ static void fmtstr(char *buffer, size_t *currlen, size_t maxlen,
 		padlen = -padlen; /* Left Justify */
 	
 	while (padlen > 0) {
-		dopr_outch (buffer, currlen, maxlen, ' ');
+		dopr_outch (buffer, curlen, maxlen, ' ');
 		--padlen;
 	}
 	while (*value && (cnt < max)) {
-		dopr_outch (buffer, currlen, maxlen, *value++);
+		dopr_outch (buffer, curlen, maxlen, *value++);
 		++cnt;
 	}
 	while (padlen < 0) {
-		dopr_outch (buffer, currlen, maxlen, ' ');
+		dopr_outch (buffer, curlen, maxlen, ' ');
 		++padlen;
 	}
 }
 
 /* Have to handle DP_F_NUM (ie 0x and 0 alternates) */
 
-static void fmtint(char *buffer, size_t *currlen, size_t maxlen,
+static void fmtint(char *buffer, size_t *curlen, size_t maxlen,
 		    long value, int base, int min, int max, int flags)
 {
 	int signvalue = 0;
@@ -856,29 +856,29 @@ static void fmtint(char *buffer, size_t *currlen, size_t maxlen,
 
 	/* Spaces */
 	while (spadlen > 0) {
-		dopr_outch (buffer, currlen, maxlen, ' ');
+		dopr_outch (buffer, curlen, maxlen, ' ');
 		--spadlen;
 	}
 
 	/* Sign */
 	if (signvalue) 
-		dopr_outch (buffer, currlen, maxlen, signvalue);
+		dopr_outch (buffer, curlen, maxlen, signvalue);
 
 	/* Zeros */
 	if (zpadlen > 0) {
 		while (zpadlen > 0) {
-			dopr_outch (buffer, currlen, maxlen, '0');
+			dopr_outch (buffer, curlen, maxlen, '0');
 			--zpadlen;
 		}
 	}
 
 	/* Digits */
 	while (place > 0) 
-		dopr_outch (buffer, currlen, maxlen, convert[--place]);
+		dopr_outch (buffer, curlen, maxlen, convert[--place]);
   
 	/* Left Justified spaces */
 	while (spadlen < 0) {
-		dopr_outch (buffer, currlen, maxlen, ' ');
+		dopr_outch (buffer, curlen, maxlen, ' ');
 		++spadlen;
 	}
 }
@@ -952,7 +952,7 @@ static double my_modf(double x0, double *iptr)
 }
 
 
-static void fmtfp (char *buffer, size_t *currlen, size_t maxlen,
+static void fmtfp (char *buffer, size_t *curlen, size_t maxlen,
 		   LDOUBLE fvalue, int min, int max, int flags)
 {
 	int signvalue = 0;
@@ -1059,24 +1059,24 @@ static void fmtfp (char *buffer, size_t *currlen, size_t maxlen,
 	
 	if ((flags & DP_F_ZERO) && (padlen > 0)) {
 		if (signvalue) {
-			dopr_outch (buffer, currlen, maxlen, signvalue);
+			dopr_outch (buffer, curlen, maxlen, signvalue);
 			--padlen;
 			signvalue = 0;
 		}
 		while (padlen > 0) {
-			dopr_outch (buffer, currlen, maxlen, '0');
+			dopr_outch (buffer, curlen, maxlen, '0');
 			--padlen;
 		}
 	}
 	while (padlen > 0) {
-		dopr_outch (buffer, currlen, maxlen, ' ');
+		dopr_outch (buffer, curlen, maxlen, ' ');
 		--padlen;
 	}
 	if (signvalue) 
-		dopr_outch (buffer, currlen, maxlen, signvalue);
+		dopr_outch (buffer, curlen, maxlen, signvalue);
 	
 	while (iplace > 0) 
-		dopr_outch (buffer, currlen, maxlen, iconvert[--iplace]);
+		dopr_outch (buffer, curlen, maxlen, iconvert[--iplace]);
 
 #ifdef DEBUG_SNPRINTF
 	printf("fmtfp: fplace=%d zpadlen=%d\n", fplace, zpadlen);
@@ -1087,29 +1087,29 @@ static void fmtfp (char *buffer, size_t *currlen, size_t maxlen,
 	 * char to print out.
 	 */
 	if (max > 0) {
-		dopr_outch (buffer, currlen, maxlen, '.');
+		dopr_outch (buffer, curlen, maxlen, '.');
 		
 		while (zpadlen > 0) {
-			dopr_outch (buffer, currlen, maxlen, '0');
+			dopr_outch (buffer, curlen, maxlen, '0');
 			--zpadlen;
 		}
 
 		while (fplace > 0) 
-			dopr_outch (buffer, currlen, maxlen, fconvert[--fplace]);
+			dopr_outch (buffer, curlen, maxlen, fconvert[--fplace]);
 	}
 
 	while (padlen < 0) {
-		dopr_outch (buffer, currlen, maxlen, ' ');
+		dopr_outch (buffer, curlen, maxlen, ' ');
 		++padlen;
 	}
 }
 
-static void dopr_outch(char *buffer, size_t *currlen, size_t maxlen, char c)
+static void dopr_outch(char *buffer, size_t *curlen, size_t maxlen, char c)
 {
-	if (*currlen < maxlen) {
-		buffer[(*currlen)] = c;
+	if (*curlen < maxlen) {
+		buffer[(*curlen)] = c;
 	}
-	(*currlen)++;
+	(*curlen)++;
 }
 
 static struct pr_chunk *new_chunk(void) {
