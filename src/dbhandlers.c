@@ -4918,7 +4918,7 @@ int ndo2db_handle_activeobjectlist(ndo2db_idi *idi)
 	/* What type of object are we dealing with? */
 	ndo2db_convert_string_to_int(idi->buffered_input[NDO_DATA_ACTIVEOBJECTSTYPE], &object_type);
 
-	/* Find out how many objects we're daling with */
+	/* Find out how many objects we're dealing with */
 	while (idi->buffered_input[num_objs])
 		++num_objs;
 
