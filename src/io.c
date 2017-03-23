@@ -350,7 +350,7 @@ int ndo_sink_close(int fd){
 
 
 /* This code was taken from Fyodor's nmap utility, which was originally taken from
-   the GLIBC 2.0.6 libraries because Solaris doesn't contain the inet_aton() funtion. */
+   the GLIBC 2.0.6 libraries because Solaris doesn't contain the inet_aton() function. */
 int ndo_inet_aton(register const char *cp, struct in_addr *addr){
 	register unsigned int val;	/* changed from u_long --david */
 	register int base, n;
