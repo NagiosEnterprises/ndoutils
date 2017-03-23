@@ -3,7 +3,7 @@
  #ifdef __cplusplus
  'extern "C" {'
  #endif
- * as if it was a real block, which is just godsdamn annoying.
+ * as if it was a real block, which is just goddamn annoying.
  */
 #ifndef _COMPAT_H
 #define _COMPAT_H
