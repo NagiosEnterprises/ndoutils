@@ -66,7 +66,7 @@ int main(int argc, char **argv){
 		printf("%s %s\n",LOG2NDO_NAME,LOG2NDO_VERSION);
 		printf("Copyright (c) 2009 Nagios Core Development Team and Community Contributors\n");
 		printf("Copyright (c) 2005-2007 Ethan Galstad\n");
-		printf("Last Mofieid: %s\n",LOG2NDO_DATE);
+		printf("Last Modified: %s\n",LOG2NDO_DATE);
 		printf("License: GPL v2\n");
 		printf("\n");
 		printf("Sends the contents of an archived Nagios or NetSaint log file to STDOUT,\n");
