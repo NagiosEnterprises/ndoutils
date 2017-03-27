@@ -1,5 +1,5 @@
 /**
- * @file utils.h Miscellaneous common utility functionns for NDO
+ * @file utils.h Miscellaneous common utility functions for NDO
  */
 /*
  * Copyright 2009-2014 Nagios Core Development Team and Community Contributors

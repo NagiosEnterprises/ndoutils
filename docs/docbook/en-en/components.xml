@@ -164,7 +164,7 @@
     </figure>
 
     <para>Multiple clients can connect to the NDO2DB daemon's socket and
-    transmit data simultaneously. A seperate NDO2DB process is spawned to
+    transmit data simultaneously. A separate NDO2DB process is spawned to
     handle each new client that connects. Data is read from each client and
     stored in a user-specified database for later retrieval and
     processing.</para>

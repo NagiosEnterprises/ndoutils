@@ -7,7 +7,7 @@
 
 # INSTANCE NAME
 # This option identifies the "name" associated with this particular
-# instance of Nagios and is used to seperate data coming from multiple
+# instance of Nagios and is used to separate data coming from multiple
 # instances.  Defaults to 'default' (without quotes).
 
 instance_name=default
