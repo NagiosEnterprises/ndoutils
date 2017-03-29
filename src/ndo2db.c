@@ -41,7 +41,7 @@
 #include "../include/queue.h"
 
 #ifdef HAVE_SYSTEMD
-#include <systemd/sd_daemon.h>
+#include <systemd/sd-daemon.h>
 #endif
 
 #ifdef HAVE_SSL
