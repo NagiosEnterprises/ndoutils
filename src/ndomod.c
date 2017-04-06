@@ -5,12 +5,12 @@
  * Copyright 2009-2014 Nagios Core Development Team and Community Contributors
  * Copyright 2005-2009 Ethan Galstad
  *
- * Last Modified: 11-14-2016
+ * Last Modified: 2017-04-06
  *
  * This file is part of NDOUtils.
  *
  * First Written: 05-19-2005
- * Last Modified: 11-14-2016
+ * Last Modified: 2017-04-06
  *
  *****************************************************************************
  * NDOUtils is free software: you can redistribute it and/or modify
@@ -86,9 +86,9 @@
 NEB_API_VERSION(CURRENT_NEB_API_VERSION)
 
 
-#define NDOMOD_VERSION "2.1.2"
+#define NDOMOD_VERSION "2.1.3-rc1"
 #define NDOMOD_NAME "NDOMOD"
-#define NDOMOD_DATE "11-14-2016"
+#define NDOMOD_DATE "2017-04-06"
 
 #define BD_INT				0
 #define BD_TIMEVAL			1
