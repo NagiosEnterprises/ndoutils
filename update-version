@@ -3,17 +3,17 @@
 # Get date (two formats)
 if [ -n "$2" ]; then
     LONGDATE=`date -d "$2" "+%B %d, %Y"`
-    SHORTDATE=`date -d "$2" "+%m-%d-%Y"`
+    SHORTDATE=`date -d "$2" "+%Y-%m-%d"`
 else
     LONGDATE=`date "+%B %d, %Y"`
-    SHORTDATE=`date "+%m-%d-%Y"`
+    SHORTDATE=`date "+%Y-%m-%d"`
 fi
 
 # Current version number
-CURRENTVERSION=2.1.2
+CURRENTVERSION=2.1.3
 
 # Last date
-LASTDATE=11-14-2016
+LASTDATE=2017-04-13
 
 if [ "x$1" = "x" ]
 then

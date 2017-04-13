@@ -5,7 +5,7 @@
 #
 # NOTES:
 #    - configure scripts must be run on Nagios CVS repos before this can be done
-#    - config.h files are emptied, so it won't interefere with the local config.h
+#    - config.h files are emptied, so it won't interfere with the local config.h
 #      generated for this project
 #################################################################################
 

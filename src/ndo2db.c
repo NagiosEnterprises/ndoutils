@@ -6,7 +6,7 @@
  * Copyright 2005-2009 Ethan Galstad
  *
  * First Written: 05-19-2005
- * Last Modified: 11-14-2016
+ * Last Modified: 2017-04-13
  *
  * This file is part of NDOUtils.
  *
@@ -41,7 +41,7 @@
 #include "../include/queue.h"
 
 #ifdef HAVE_SYSTEMD
-#include <systemd/sd_daemon.h>
+#include <systemd/sd-daemon.h>
 #endif
 
 #ifdef HAVE_SSL
@@ -50,9 +50,9 @@
 
 #include <pthread.h>
 
-#define NDO2DB_VERSION "2.1.2"
+#define NDO2DB_VERSION "2.1.3"
 #define NDO2DB_NAME "NDO2DB"
-#define NDO2DB_DATE "11-14-2016"
+#define NDO2DB_DATE "2017-04-13"
 
 #ifdef HAVE_SSL
 # if (defined(__sun) && defined(SOLARIS_10)) || defined(_AIX) || defined(__hpux)
@@ -89,6 +89,7 @@ int ndo2db_debug_level=NDO2DB_DEBUGL_NONE;
 int ndo2db_debug_verbosity=NDO2DB_DEBUGV_BASIC;
 FILE *ndo2db_debug_file_fp=NULL;
 unsigned long ndo2db_max_debug_file_size=0L;
+unsigned long ndo2db_max_output_buffer_size=65536;
 
 extern char *ndo2db_db_tablenames[NDO2DB_MAX_DBTABLES];
 
@@ -512,6 +513,8 @@ int ndo2db_process_config_var(char *arg){
 		ndo2db_debug_verbosity=atoi(val);
 	else if(!strcmp(var,"max_debug_file_size"))
 		ndo2db_max_debug_file_size=strtoul(val,NULL,0);
+	else if(!strcmp(var, "max_output_buffer_size"))
+		ndo2db_max_output_buffer_size=strtoul(val,NULL,0);
 	else if(!strcmp(var,"use_ssl")){
 		if (strlen(val) == 1) {
 			if (isdigit((int)val[strlen(val)-1]) != NDO_FALSE)
@@ -1295,10 +1298,17 @@ int ndo2db_check_for_client_input(ndo2db_idi *idi,ndo_dbuf *dbuf){
 /* asynchronous handle clients events */
 void ndo2db_async_client_handle() {
 	ndo2db_idi idi;
-	size_t len = 0, curlen, insz, maxbuf = 1024 * 64, bufsz = 1024 * 66;
+
+	size_t len = 0, curlen, insz, maxbuf = ndo2db_max_output_buffer_size, bufsz = ndo2db_max_output_buffer_size + (1024 * 2);
     int i;
 	char *buf = (char*)calloc(bufsz, sizeof(char));
 	char *temp_buf;
+
+	/* double check max output buffer size sanity */
+	if (bufsz < maxbuf) {
+		bufsz = maxbuf;
+		maxbuf -= 1024 * 2;
+	}
 
 	/* initialize input data information */
 	ndo2db_idi_init(&idi);
@@ -1959,7 +1969,7 @@ int ndo2db_end_input_data(ndo2db_idi *idi){
 	if(idi==NULL)
 		return NDO_ERROR;
 
-	/* update db stats occassionally */
+	/* update db stats occasionally */
 	if(ndo2db_db_last_checkin_time<(time(NULL)-60))
 		ndo2db_db_checkin(idi);
 
@@ -2215,7 +2225,7 @@ int ndo2db_free_connection_memory(ndo2db_idi *idi){
 
 
 /****************************************************************************/
-/* DATA TYPE CONVERTION ROUTINES                                            */
+/* DATA TYPE CONVERSION ROUTINES                                            */
 /****************************************************************************/
 
 int ndo2db_convert_standard_data_elements(ndo2db_idi *idi, int *type, int *flags, int *attr, struct timeval *tstamp){

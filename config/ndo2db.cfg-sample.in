@@ -14,7 +14,7 @@ lock_file=@localstatedir@/ndo2db.pid
 
 
 
-# USER/GROUP PRIVILIGES
+# USER/GROUP PRIVILEGES
 # These options determine the user/group that the daemon should run as.
 # You can specify a number (uid/gid) or a name for either option.
 
@@ -216,3 +216,17 @@ debug_file=@localstatedir@/ndo2db.debug
 
 max_debug_file_size=1000000
 
+
+# MAX OUTPUT BUFFER SIZE
+# This option determines the maximum size (in bytes) of the output buffer. 
+# NDO2DB will start truncating characters after this value.
+# If you have very large long output and you're not seeing it all in the database,
+# try increasing this number.
+# IMPORTANT NOTE: The 'long_output' fields in the database are set to TEXT fields, and the maximum
+# size of a TEXT field is 64KB, so if you really want to make use of this field, you'll need to set
+# the long_output fields to MEDIUMTEXT OR LONGTEXT.
+# the long_output column exists in the following tables:
+#  _eventhandlers, _hostchecks, _hoststatus, _notifications, _servicechecks, _servicestatus, _statehistory, _systemcommands
+# An example sql alter statement might look like this:
+# ALTER TABLE nagios_hoststatus MODIFY COLUMN long_output LONGTEXT NOT NULL DEFAULT '';
+max_output_buffer_size=65536

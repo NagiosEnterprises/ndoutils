@@ -5,7 +5,7 @@
  * Copyright 2009-2014 Nagios Core Development Team and Community Contributors
  * Copyright 2005-2009 Ethan Galstad
  *
- * Last Modified: 11-14-2016
+ * Last Modified: 2017-04-13
  *
  * This file is part of NDOUtils.
  *
@@ -27,9 +27,9 @@
 #include "../include/io.h"
 #include "../include/protoapi.h"
 
-#define LOG2NDO_VERSION "2.1.2"
+#define LOG2NDO_VERSION "2.1.3"
 #define LOG2NDO_NAME "LOG2NDO"
-#define LOG2NDO_DATE "11-14-2016"
+#define LOG2NDO_DATE "2017-04-13"
 
 
 
@@ -66,7 +66,7 @@ int main(int argc, char **argv){
 		printf("%s %s\n",LOG2NDO_NAME,LOG2NDO_VERSION);
 		printf("Copyright (c) 2009 Nagios Core Development Team and Community Contributors\n");
 		printf("Copyright (c) 2005-2007 Ethan Galstad\n");
-		printf("Last Mofieid: %s\n",LOG2NDO_DATE);
+		printf("Last Modified: %s\n",LOG2NDO_DATE);
 		printf("License: GPL v2\n");
 		printf("\n");
 		printf("Sends the contents of an archived Nagios or NetSaint log file to STDOUT,\n");

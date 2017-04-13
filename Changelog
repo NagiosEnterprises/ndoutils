@@ -2,6 +2,22 @@
 NDO Utils Changelog
 ===================
 
+2.1.3 - 2017-04-13
+------------------
+FIXES
+* Documentation updates (John Frickson)
+* added fix for allowing variable length max output buffer size. (Bryan Heden)
+* DESTDIR support removed in commit 44dbc9b. Put back. (John Frickson)
+* Add broker-event for the end of a timed event (NEBTYPE_TIMEDEVENT_END) (John Frickson)
+* Add ability to use special shell characters in mysql password by escaping
+  the string immediately following the -p flag. (Bryan Heden)
+* upgradedb script didn't have `2.1.2` in `schemaversions` array. (John Frickson)
+* In three places, ndomod was freeing a buffer before it was done using it
+  causing nagios to crash under certain circumstances (John Frickson)
+* Changed release date to ISO format (yyyy-mm-dd) (John Frickson)
+* Fixed typo: '#include <systemd/sd_daemon.h>' => '#include <systemd/sd-daemon.h>'
+
+
 2.1.2 - 2016-11-14
 ------------------
 * Database creation fails in mysql.sql in fresh install (John Frickson)
@@ -118,7 +134,7 @@ NOTE: ** Requires Nagios 2.7 or higher, or Nagios 3.0b6 or higher
 - Fix missing SIGTERM forwarding to childs
 - Fix fmt specifier in ndo2db_daemonize()
 - Escape custom values in 'customvariablestatus' and 'customvariables'
-- Fix ndomod doesn't execute rotate_command propperly
+- Fix ndomod doesn't execute rotate_command properly
 - Fix several compiler warnings
 - Rewrite ndo2db init script, install it with 'make install-init'
 
