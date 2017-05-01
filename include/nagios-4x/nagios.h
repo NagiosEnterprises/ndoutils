@@ -205,7 +205,9 @@ extern unsigned long modified_process_attributes;
 extern unsigned long modified_host_process_attributes;
 extern unsigned long modified_service_process_attributes;
 
+#if 0
 extern squeue_t *nagios_squeue;
+#endif
 extern iobroker_set *nagios_iobs;
 
 extern struct check_stats check_statistics[MAX_CHECK_STATS_TYPES];
@@ -491,9 +493,11 @@ void init_main_cfg_vars(int); /* Initialize the non-shared main configuration va
 /**** Event Queue Functions ****/
 int init_event_queue(void); /* creates the queue nagios_squeue */
 timed_event *schedule_new_event(int, int, time_t, int, unsigned long, void *, int, void *, void *, int);	/* schedules a new timed event */
+#if 0
 void reschedule_event(squeue_t *sq, timed_event *event);   		/* reschedules an event */
 void add_event(squeue_t *sq, timed_event *event);     		/* adds an event to the execution queue */
 void remove_event(squeue_t *sq, timed_event *event);     		/* remove an event from the execution queue */
+#endif
 int event_execution_loop(void);                      		/* main monitoring/event handler loop */
 int handle_timed_event(timed_event *);		     		/* top level handler for timed events */
 void adjust_check_scheduling(void);		        	/* auto-adjusts scheduling of host and service checks */

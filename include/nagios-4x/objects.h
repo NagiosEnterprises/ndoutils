@@ -126,7 +126,9 @@ typedef struct timed_event {
 	void *event_args;
 	int event_options;
 	unsigned int priority; /* 0 is auto, 1 is highest. n+1 < n */
+#if 0
 	struct squeue_event *sq_event;
+#endif
 	} timed_event;
 
 
