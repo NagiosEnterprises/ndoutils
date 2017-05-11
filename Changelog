@@ -5,6 +5,7 @@ NDO Utils Changelog
 2.x.x - 2017-xx-xx
 ------------------
 FIXES
+* Solaris 11: cannot get ndo2db service to start when the -f argument is present (John Frickson)
 
 
 2.1.3 - 2017-04-13
