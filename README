@@ -1,247 +1,228 @@
-----------
-NDO README
-----------
+NDOUtils
+========
 
+## Nagios Data Output Utilities
 
-****************
-ABOUT THIS ADDON
-****************
+TL;DR? You can jump straight to [compiling](#compiling), [initializing](#initializing-the-database), [installing the broker module](#installing-the-broker-module), and [installing the daemon](#installing-the-daemon).
 
-The NDOUTILS (Nagios Data Output Utils) addon allows you to move status and event 
-information from Nagios to a database for later retrieval and processing.
+The NDOUtils (Nagios Data Output Utilities) addon allows you to move status and event 
+information from Nagios to a **MySQL Database** for later retrieval and processing.
 
 This addon consists of several parts.  Here are the most interesting ones...
 
-1.  The NDOMOD event broker module.  This module is intended to be loaded
-    by the Nagios process at runtime.  Its only role is to dump all events and
+1.  The NDOMOD event broker module. This module is intended to be loaded
+    by the Nagios process at runtime. Its only role is to dump all events and
     data from Nagios to a TCP socket or a regular file or Unix domain socket on 
-    the local filesystem somewhere.  If you want realtime transfer of data to MySQL,
-    dump the data to a TCP or Unix domain socket.  If you want delayed transfer of
+    the local filesystem somewhere. If you want realtime transfer of data to MySQL,
+    dump the data to a TCP or Unix domain socket. If you want delayed transfer of
     data into MySQL (i.e. you need to transfer the data to another host first),
     dump the data to a regular file.
 
-2.  The NDO2DB daemon.  This standalone daemon reads input (that was produced
+2.  The NDO2DB daemon. This standalone daemon reads input (that was produced
     by the NDOMOD broker module) from a TCP or Unix domain socket, parses that 
-    data, and then dumps it into one or more MySQL databases.  The daemon is 
+    data, and then dumps it into one or more MySQL databases. The daemon is 
     capable of handling multiple client connections simultaneously, so you can 
     have multiple instances of the NDOMOD module writing to the same TCP or Unix
     domain socket at the same time.
 
-3.  The FILE2SOCK utility.  This simple utility reads data from a standard file
-    and dumps it to either a TCP or a Unix domain socket.  This is useful if you 
+3.  The FILE2SOCK utility. This simple utility reads data from a standard file
+    and dumps it to either a TCP or a Unix domain socket. This is useful if you 
     are having the NDOMOD module write to a standard file that you later want to 
-    send to the NDO2DB daemon.  If the module and the daemon are running on 
+    send to the NDO2DB daemon. If the module and the daemon are running on 
     different machines, you can periodically use SSH to transfer the file from the 
     monitoring machine to the machine running the NDO2DB daemon, and then use the 
     FILE2SOCK utility to send the contents of that file to the TCP socket or Unix
     domain socket that the NDO2DB daemon is reading.
 
-4.  The LOG2NDO utility.  This utility is used for importing historical log
+4.  The LOG2NDO utility. This utility is used for importing historical log
     archives from NetSaint and Nagios and sending them to the NDO2DB daemon. 
     It takes a single log file as its input and can output data to either a
     TCP socket, a Unix domain socket or standard output.
 
-
-
-
-**********************
-COMPILING INSTRUCTIONS
-**********************
+Compiling
+---------
 
 Use the following commands to compile the NDO broker module, NDO2DB daemon, and
 additional utilities:
 
-	./configure
-	make
+    ./configure
+    make all
 
 If the configure script is unable to locate your MySQL development libraries,
-you may need to help it out by using the --with-mysql-lib or option. Here's an
+you may need to help it out by using the `--with-mysql-lib` option. Here's an
 example:
 
-	./configure --with-mysql-lib=/usr/lib/mysql
+    ./configure --with-mysql-lib=/usr/lib/mysql
 
 
 
-*****************************
-INITIALIZING THE SQL DATABASE
-*****************************
+Initializing the Database
+-------------------------
 
-Before you start using the NDO utilities, you should create the database where
-you will be storing all Nagios-related information.
+Before you start using NDOUtils, you should create the database where
+you will be storing all Nagios related information.
 
-NOTE:  As of 02/12/2006, only MySQL databases are supported.
+**Note: Only MySQL Databases are supported!**
 
-
-1.  Create a database for storing the data (e.g. 'nagios')
+1.  Create a database for storing the data (e.g. `nagios`)
 
 2.  Create a username/password that has at least the following privileges for
     the database:
 
-	SELECT, INSERT, UPDATE, DELETE
+        SELECT, INSERT, UPDATE, DELETE
 
-3.  Run the DB installation script in the db/ subdirectory of the NDO distribution
+3.  Run the DB installation script in the `db/` subdirectory of the NDO distribution
     to create the necessary tables in the database.
 
-	cd db
-	./installdb
+        cd db
+        ./installdb
 
 4.  Make sure the database name, prefix, and username/password you just created
     and setup match the variable specified in the NDO2DB config file (see below).
 
 
 
-***********************************
-INSTALLING THE NDOMOD BROKER MODULE
-***********************************
+Installing the Broker Module
+----------------------------
 
-NOTE:
-There are two different versions of the NDOMOD module that 
+There are three different versions of the NDOMOD module that 
 get compiled, so make sure you use the module that matches the
 version of Nagios you are running, and adjust the directions given
 below to fit the name of the module version you're using.  
 
-	ndomod-2x.o = NDOMOD module for Nagios 2.x
-	ndomod-3x.o = NDOMOD module for Nagios 3.x
-	ndomod-4x.o = NDOMOD module for Nagios 4.x
-
+ * `ndomod-2x.o` = NDOMOD module for Nagios 2.x
+ * `ndomod-3x.o` = NDOMOD module for Nagios 3.x
+ * `ndomod-4x.o` = NDOMOD module for Nagios 4.x
 
 1.  Copy the compiled NDOMOD module to your Nagios installation:
 
-	cp src/ndomod-2x.o /usr/local/nagios/bin/ndomod.o
+        cp src/ndomod-4x.o /usr/local/nagios/bin/ndomod.o
 
-    The command above assumes that you are using Nagios 2.x, and thus
-    are installing the 2.x version of the NDOMOD module.
+    *The command above assumes that you are using Nagios 4.x, and thus
+    are installing the 4.x version of the NDOMOD module.*
 
 2.  Copy the sample NDOMOD config file to your Nagios installation
     after modifying it to suit your needs:
 
-	cp config/ndomod.cfg /usr/local/nagios/etc
+        cp config/ndomod.cfg /usr/local/nagios/etc
 
-
-3.  Add a line similar to the following to the *main* Nagios config 
-    file (usually /usr/local/nagios/etc/nagios.cfg):
+3.  Add a line similar to the following to the main Nagios config 
+    file (usually `/usr/local/nagios/etc/nagios.cfg`):
       
-	broker_module=/usr/local/nagios/bin/ndomod.o config_file=/usr/local/nagios/etc/ndomod.cfg
+        broker_module=/usr/local/nagios/bin/ndomod.o config_file=/usr/local/nagios/etc/ndomod.cfg
 
-    The config directive above will cause Nagios to load the NDOMOD
-    event broker the next time it starts.  Of course, this requires that
-    you compiled Nagios with support for the event broker in the first
-    place. :-)
+    *The config directive above will cause Nagios to load the NDOMOD
+    event broker the next time it starts. Of course, this requires that
+    you compiled Nagios with **support for the event broker** in the first
+    place.*
 
+4.  Make sure you have a line similar to the following in the main Nagios
+    config file (usually `/usr/local/nagios/etc/nagios.cfg`):
 
-4.  Make sure you have a line similar to the following in the *main* Nagios
-    config file (usually /usr/local/nagios/etc/nagios.cfg):
+        event_broker_options=-1
 
-	event_broker_options=-1
+    *That directive will cause the Nagios daemon to send data to the NDOMOD
+    module. Without that option, NDOMOD won't get any information.*
 
-    That directive will cause the Nagios daemon to send data to the NDOMOD
-    module.  Without that option, NDOMOD won't get any information.
+5.  NDOMOD processing options. Users can define which 
+    types of data are processed and stored by ndoutils. Each of these options
+    can be defined in the `ndomod.cfg` file, and are considered a replacement for 
+    previous `ndomod_processing_options` config option, which used a bitmask. The 
+    following processing options are available.
+    
+        acknowledgement_data=1
+        adaptive_contact_data=1
+        adaptive_host_data=1
+        adaptive_program_data=1
+        adaptive_service_data=1
+        aggregated_status_data=1
+        comment_data=1
+        contact_status_data=1
+        downtime_data=1
+        event_handler_data=1
+        external_command_data=1
+        flapping_data=1
+        host_check_data=1
+        host_status_data=1
+        log_data=1
+        main_config_data=1
+        notification_data=1
+        object_config_data=1
+        process_data=1
+        program_status_data=1
+        retention_data=1
+        service_check_data=1
+        service_status_data=1
+        statechange_data=1
+        system_command_data=1
+        timed_event_data=1
+    
+Installing the Daemon
+---------------------
 
-5.  ndomod processing options. As of ndoutils2.x, users can define which 
-	types of data are processed and stored by ndoutils. Each of these options
-	can be defined in the ndomod.cfg file, and are considered a replacement for 
-	previous ndomod_processing_options config option, which used a bitmask. The 
-	following processing options are available.
-	
-	acknowledgement_data=1
-	adaptive_contact_data=1
-	adaptive_host_data=1
-	adaptive_program_data=1
-	adaptive_service_data=1
-	aggregated_status_data=1
-	comment_data=1
-	contact_status_data=1
-	downtime_data=1
-	event_handler_data=1
-	external_command_data=1
-	flapping_data=1
-	host_check_data=1
-	host_status_data=1
-	log_data=1
-	main_config_data=1
-	notification_data=1
-	object_config_data=1
-	process_data=1
-	program_status_data=1
-	retention_data=1
-	service_check_data=1
-	service_status_data=1
-	statechange_data=1
-	system_command_data=1
-	timed_event_data=1
-	
-
-****************************
-INSTALLING THE NDO2DB DAEMON
-****************************
-
-NOTE:
 There are two different versions of the NDO2DB daemon that 
 get compiled, so make sure you use the daemon that matches the
 version of Nagios you are running, and adjust the directions given
 below to fit the name of the daemon you're using.  
 
-	ndo2db-2x.o = NDO2DB daemon for Nagios 2.x
-	ndo2db-3x.o = NDO2DB daemon for Nagios 3.x
-	ndo2db-4x.o = NDO2DB daemon for Nagios 4.x
+ * `ndo2db-2x` = NDO2DB daemon for Nagios 2.x
+ * `ndo2db-3x` = NDO2DB daemon for Nagios 3.x
+ * `ndo2db-4x` = NDO2DB daemon for Nagios 4.x
 
+1. Copy the compiled NDO2DB daemon to your Nagios installation:
 
-1.  Copy the compiled NDO2DB daemon to your Nagios installation:
+        cp src/ndo2db-4x /usr/local/nagios/bin/ndo2db
 
-	cp src/ndo2db-2x /usr/local/nagios/bin/ndo2db
+    *The command above assumes that you are using Nagios 4.x, and thus
+    are installing the 4.x version of the NDO2DB daemon.*
 
-    The command above assumes that you are using Nagios 2.x, and thus
-    are installing the 2.x version of the NDO2DB daemon.
-
-2.  Copy the sample NDO2DB config file to your Nagios installation
+2. Copy the sample NDO2DB config file to your Nagios installation
     after modifying it to suit your needs (pay attention to the DB
     config settings).
 
-	cp config/ndo2db.cfg /usr/local/nagios/etc
+        cp config/ndo2db.cfg /usr/local/nagios/etc
 
-3.  Start the daemon running!  An init script will be developed soon...
+3. Start the daemon! Depending your particular init system, it may look
+   something like the following:
 
-	/usr/local/nagios/bin/ndo2db -c /usr/local/nagios/etc/ndo2db.cfg
+        service ndo2db start
 
-
-
-
-************************
-TUNING KERNEL PARAMETERS
-************************
+Tuning Kernel Paramters
+-----------------------
 
 NDOUTILS uses a single message queue to communicate between the broker 
 module and the NDO2DB daemon. Depending on the operating system, there 
 may be parameters that need to be tuned in order for this communication 
 to work correctly. The discussion below applies specifically to Linux, 
-but may apply generally to other Unices as well.
+but may apply generally to other Unix operating systems as well.
 
 There are three Linux kernel parameters that determine the resources 
 provided to the messaging subsystem:
-	* kernel.msgmax is the maximum size of a single message in a 
-		message queue
-	* kernel.msgmni is the maximum number of messages allowed in any 
-		one message queue
-	* kernel.msgmnb is the total number of bytes allow in all messages
-		in any one message queue
+
+ * `kernel.msgmax` is the maximum size of a single message in a 
+        message queue
+ * `kernel.msgmni` is the maximum number of messages allowed in any 
+        one message queue
+ * `kernel.msgmnb` is the total number of bytes allow in all messages
+        in any one message queue
 
 To see the current values for any of these parameters, cat 
-/proc/sys/kernel/msg{max|mni|mnb}.
+`/proc/sys/kernel/msg{max|mni|mnb}`.
 
-In order for NDOUTILS to work at all, kernel.msgmax must be greater than
-the size of the queue_msg struct (currently 1026 bytes). Most Linux
-distributions set kernel.msgmax to a default of 65536.
+In order for NDOUTILS to work at all, `kernel.msgmax` must be greater than
+the size of the `queue_msg struct` (currently 1026 bytes). Most Linux
+distributions set `kernel.msgmax` to a default of 65536.
 
 If there are insufficient resources for sending messages between the 
 broker and the daemon, you will see an entry similar to the following 
 in your logs. (This is logged via the syslog facility, using the level 
-LOG_ERR and the default facility.)
+`LOG_ERR` and the default facility.)
 
-	ndo2db: Warning: Retrying message send. This can occur because 
-	you have too few messages allowed or too few total bytes 
-	allowed in message queues. You are currently using 16 of 16 
-	mesages and 65536 of 65536 bytes in the queue.  See README for 
-	kernel tuning options.
+    ndo2db: Warning: Retrying message send. This can occur because 
+    you have too few messages allowed or too few total bytes 
+    allowed in message queues. You are currently using 16 of 16 
+    mesages and 65536 of 65536 bytes in the queue.  See README for 
+    kernel tuning options.
 
 If you see this entry, the message will likely eventually be sent, 
 but retrying uses system resources, and there is the possibility that
@@ -249,9 +230,9 @@ more messages will queued than can be handled, causing the broker
 module to stall.
 
 If you are close to or have exceeded the number of messages, you may
-need to increase kernel.msgmni. If you are close to or have exceeded
+need to increase `kernel.msgmni`. If you are close to or have exceeded
 the number of bytes in the queue, you may need to increase 
-kernel.msgmnb. In some cases you may need to increase both.
+`kernel.msgmnb`. In some cases you may need to increase both.
 
 A conservative approach would be to double the necessary value, stop 
 and restart both the NDO2DB daemon and Nagios Core, and watch for any 
@@ -259,15 +240,51 @@ further messages. Note that if NDO2DB is started after Nagios Core,
 you may see the warning above as the broker module first attempts to 
 flush its backlog of messages.
 
-To increase a value, echo the value to /proc/sys/kernel/msgmni or 
-/proc/sys/kernel/msgmnb as appropriate.
+To increase a value, echo the value to `/proc/sys/kernel/msgmni` or 
+`/proc/sys/kernel/msgmnb` as appropriate.
 
 For example, to increase the number of messages allowed in the queue
-to 32, use the command 'echo 32 > /proc/sys/kernel/msgmni' (without
-the quotes).
+to 32, use the command `echo 32 > /proc/sys/kernel/msgmni`.
 
 Once you have determine the correct parameters, you can make them
-permanent by editing /etc/sysctl.conf. Add or update the line of
-the form 'kernel.msg{mni|mnb} = <value>' with the value(s) determined
+permanent by editing `/etc/sysctl.conf`. Add or update the line of
+the form `kernel.msg{mni|mnb} = <value>` with the value(s) determined
 above. The next time the system is booted, the values of the 
-parameters in /etc/sysctl.conf will be loaded.
+parameters in `/etc/sysctl.conf` will be loaded.
+
+License Notice
+--------------
+
+NDOUtils - Nagios Data Output Utilities
+
+Copyright (c) 1999-2009:
+  Ethan Galstad <egalstad@nagios.org>
+Copyright (c) 2009 until further notice:
+  Nagios Core Development Team and Nagios Community Contributors
+
+For detailed authorship information, refer to the source control management
+history and pay particular attention to commit messages and the THANKS file.
+
+NDOUtils is free software: you can redistribute it and/or modify it under the
+terms of the GNU General Public License version 2 as published by the Free
+Software Foundation.
+
+NDOUtils is distributed in the hope that it will be useful, but WITHOUT ANY
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+PARTICULAR PURPOSE. See the GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along with
+NDOUtils. If not, see <http://www.gnu.org/licenses/>.
+
+Nagios and the Nagios logo are trademarks, servicemarks, registered trademarks
+or registered servicemarks owned by Nagios Enterprises, LLC. All other
+trademarks, servicemarks, registered trademarks, and registered servicemarks
+are the property of their respective owner(s).
+
+
+Questions?
+----------
+
+If you have questions about this addon, or encounter problems getting things
+working along the way, your best bet for an answer or quick resolution is to check the
+[Nagios Support Forums](https://support.nagios.com/forum/viewforum.php?f=5).
