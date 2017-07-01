@@ -22,6 +22,11 @@
 
 /* include our project's header files */
 #include "../include/config.h"
+/*
+this undef here patches the conflict between pqueue_t from include/nagios-4x/squeue.h
+and pqueue from libssl <openssl/ssl.h>
+*/
+#undef HAVE_SSL
 #include "../include/common.h"
 #include "../include/io.h"
 #include "../include/utils.h"

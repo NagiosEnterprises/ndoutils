@@ -37,6 +37,7 @@
 static time_t last_retry_log_time = ( time_t)0;
 static int queue_id;
 static const int queue_buff_size = sizeof(struct queue_msg) - sizeof(long);
+static char *queue_idfile_path = NULL;
 
 void zero_string(char *str, int size) {
 	int i;
@@ -52,14 +53,43 @@ void del_queue() {
 	if (msgctl(queue_id,IPC_RMID,&buf) < 0) {
 		syslog(LOG_ERR,"Error: queue remove error.\n");
 	}
+
+    if (queue_idfile_path != NULL)
+    {
+        unlink(queue_idfile_path);
+        free(queue_idfile_path);
+        queue_idfile_path = NULL;
+    }
+
 }
 
 int get_queue_id(int id) {
-	key_t key = ftok(NDO_QUEUE_PATH, NDO_QUEUE_ID+id);
 
-	if ((queue_id = msgget(key, IPC_CREAT | 0600)) < 0) {
+    int idfile;
+
+    if (queue_idfile_path == NULL)
+    {
+        asprintf(&queue_idfile_path, "/tmp/ndo2db.%d.ipc.id", id);
+
+        idfile=open(queue_idfile_path,O_RDWR | O_CREAT, S_IWUSR | S_IRUSR);
+        if (idfile < 0) {
+            free(queue_idfile_path);
+            queue_idfile_path = NULL;
+        } else {
+            close(idfile);
+        }
+    }
+
+    if (queue_idfile_path == NULL)
+        return -1;
+
+	key_t key = ftok(queue_idfile_path, NDO_QUEUE_ID+id);
+
+	if (key == -1 || (queue_id = msgget(key, IPC_CREAT | 0600)) < 0) {
 		syslog(LOG_ERR,"Error: queue init error.\n");
 	}
+
+	return queue_id;
 }
 
 long get_msgmni( void) {
@@ -171,11 +201,14 @@ void push_into_queue (char* buf) {
 char* pop_from_queue() {
 	struct queue_msg msg;
 	char *buf;
+    int err = 0;
 
 	zero_string(msg.text, NDO_MAX_MSG_SIZE);
 
 	if (msgrcv(queue_id, &msg, queue_buff_size, NDO_MSG_TYPE, MSG_NOERROR) < 0) {
-		syslog(LOG_ERR,"Error: queue recv error.\n");
+		err = errno;
+
+		syslog(LOG_ERR, "Error: queue recv error - %d.\n", err);
 	}
 
 	int size = strlen(msg.text);
