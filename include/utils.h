@@ -30,6 +30,8 @@
 #define my_free(ptr) do { if(ptr) { free(ptr); ptr = NULL; } } while(0)
 #endif
 
+/* the hash we return when a null or empty string passed to hash function */
+#define NDO_EMPTY_HASH "ncvfuhZSCu3RifhrMK62PasZ56ECMPc920IPiHHac00tfBYhhkjnN5mRqZqcPVl7"
 
 typedef struct ndo_dbuf_struct{
 	char *buf;
@@ -42,6 +44,7 @@ typedef struct ndo_dbuf_struct{
 int ndo_dbuf_init(ndo_dbuf *,int);
 int ndo_dbuf_free(ndo_dbuf *);
 int ndo_dbuf_strcat(ndo_dbuf *,char *);
+char * ndo_quick_hash(char *);
 
 int my_rename(char *,char *);
 

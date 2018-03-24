@@ -1435,3 +1435,17 @@ CREATE TABLE IF NOT EXISTS `nagios_timeperiod_timeranges` (
   PRIMARY KEY  (`timeperiod_timerange_id`),
   UNIQUE KEY `instance_id` (`timeperiod_id`,`day`,`start_sec`,`end_sec`)
 ) ENGINE=MyISAM  COMMENT='Timeperiod definitions';
+
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `startup_hashes`
+--
+
+CREATE TABLE IF NOT EXISTS `startup_hashes` (
+  `startup_hash_id` int(11) NOT NULL,
+  `hash` varchar(64) NOT NULL,
+  `hash_timestamp` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, 
+  PRIMARY KEY  (`startup_hash_id`)
+) ENGINE=MyISAM  COMMENT='Startup hashes';

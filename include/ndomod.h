@@ -125,4 +125,9 @@ int ndomod_write_main_config_file(void);
 
 int ndomod_write_runtime_variables(void);
 
+int ndomod_compare_hash(int, char *);
+int ndomod_save_hash(int, char *);
+void ndomod_close_mysql();
+int ndo_database_configured();
+
 #endif

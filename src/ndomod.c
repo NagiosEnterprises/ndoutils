@@ -38,7 +38,7 @@
 #include "../include/protoapi.h"
 #include "../include/ndomod.h"
 
-#include <pthread.h>
+#include <mysql.h>
 
 /* include (minimum required) event broker header files */
 #ifdef BUILD_NAGIOS_2X
@@ -131,6 +131,15 @@ int ndomod_config_output_options=NDOMOD_CONFIG_DUMP_ALL;
 unsigned long ndomod_sink_buffer_slots=5000;
 ndomod_sink_buffer sinkbuf;
 int has_ver403_long_output = (CURRENT_OBJECT_STRUCTURE_VERSION >= 403);
+
+unsigned int 		ndomod_max_hash_age = 86400;
+static MYSQL 		ndomod_mysql;
+int 				ndomod_mysql_connected = 0;
+char 			  * ndomod_mysql_username = NULL;
+char 			  * ndomod_mysql_password = NULL;
+char 			  * ndomod_mysql_hostname = NULL;
+char 			  * ndomod_mysql_database = NULL;
+unsigned int 		ndomod_mysql_port = 3306;
 
 extern int errno;
 
@@ -472,6 +481,33 @@ int ndomod_process_config_var(char *arg){
 
 	else if(!strcmp(var,"file_rotation_timeout"))
 		ndomod_sink_rotation_timeout=atoi(val);
+
+	else if (!strcmp(var, "ndomod_max_hash_age")) {
+		ndomod_max_hash_age = atoi(val);
+		if (ndomod_max_hash_age < 0) {
+			ndomod_max_hash_age = 0;
+		}
+	}
+
+	/* database connection options */
+	else if (!strcmp(var, "ndomod_mysql_username"))
+		ndomod_mysql_username = strdup(val);
+
+	else if (!strcmp(var, "ndomod_mysql_password"))
+		ndomod_mysql_password = strdup(val);
+
+	else if (!strcmp(var, "ndomod_mysql_hostname"))
+		ndomod_mysql_hostname = strdup(val);
+
+	else if (!strcmp(var, "ndomod_mysql_database"))
+		ndomod_mysql_database = strdup(val);
+
+	else if (!strcmp(var, "ndomod_mysql_port")) {
+		ndomod_mysql_port = atoi(val);
+		if (ndomod_mysql_port < 1 || ndomod_mysql_port > 65535) {
+			ndomod_mysql_port = 3306;
+		}
+	}
 
 	/* add bitwise processing opts */
 	else if(!strcmp(var,"process_data") && atoi(val)==1)
@@ -3570,6 +3606,31 @@ int ndomod_write_config(int config_type){
         }
 
 
+
+/* we use this and the following macro to build buffers for
+   passing into the hash function. */
+#define build_hash_buffer_1member(buf, member1, tmp, list) do { \
+		for (tmp = list; tmp != NULL; tmp = tmp->next) { \
+			tmp_len = strlen(tmp->member1); \
+			if (hash_buffer_size < (strlen(hash_buffer) + tmp_len)) { \
+				hash_buffer_size += tmp_len + (2 << 12); \
+				hash_buffer = realloc(hash_buffer, hash_buffer_size); \
+			} \
+			strncat(hash_buffer, tmp->member1, tmp_len); \
+		} \
+	} while (0)
+
+#define build_hash_buffer_2member(buf, member1, member2, tmp, list) do { \
+		for (tmp = list; tmp != NULL; tmp = tmp->next) { \
+			if (hash_buffer_size < (strlen(hash_buffer) + strlen(tmp->member1) + strlen(tmp->member2))) { \
+				hash_buffer_size += strlen(tmp->member1) + strlen(tmp->member2) + (2 << 12); \
+				hash_buffer = realloc(hash_buffer, hash_buffer_size); \
+			} \
+			strncat(hash_buffer, tmp->member1, strlen(tmp->member1)); \
+			strncat(hash_buffer, tmp->member2, strlen(tmp->member2)); \
+		} \
+	} while (0)
+
 /*************************************************************
  * Get a list of all active objects, so the "is_active" flag *
  * can be set on them in batches, instead of one at a time.  *
@@ -3589,233 +3650,303 @@ void ndomod_write_active_objects()
 	struct timeval			now;
 	int						i, obj_count;
 	char					*name1, *name2;
+	char 					*hash, *hash_buffer;
+	int 					tmp_len = 0;
+	unsigned int 			hash_buffer_size = 2 << 20;
 
 	gettimeofday(&now,NULL);		/* get current time */
 	ndo_dbuf_init(&dbuf, 2048);		/* initialize dynamic buffer (2KB chunk size) */
 
+	/* start with a reasonable size to hold most everything. it'll get bigger as it needs to */
+	hash_buffer = calloc(hash_buffer_size, sizeof(char));
+	if (!hash_buffer) {
+		ndomod_write_to_logs("calloc(hash_buffer) failed!\n", NSLOG_RUNTIME_ERROR);
+		return;
+	}
 
 	active_objects[0].key = NDO_DATA_ACTIVEOBJECTSTYPE;
 	active_objects[0].datatype = BD_INT;
 
-	active_objects[0].value.integer = NDO_API_COMMANDDEFINITION;
 	obj_count = 1;
-	for (temp_command = command_list; temp_command != NULL; temp_command = temp_command->next) {
-		name1 = ndo_escape_buffer(temp_command->name);
-		active_objects[obj_count].key = obj_count;
-		active_objects[obj_count].datatype = BD_STRING;
-		active_objects[obj_count].value.string = (name1 == NULL) ? "" : name1;
-		if (++obj_count > 250) {
-			ndomod_broker_data_serialize(&dbuf, NDO_API_ACTIVEOBJECTSLIST,
-					active_objects, obj_count, TRUE);
-			ndomod_write_to_sink(dbuf.buf,NDO_TRUE,NDO_TRUE);
-			ndo_dbuf_free(&dbuf);
-			while (--obj_count)
-				free(active_objects[obj_count].value.string);
-			obj_count = 1;
+
+	build_hash_buffer_1member(hash_buffer, name, temp_command, command_list);
+	hash = ndo_quick_hash(hash_buffer);
+	memset(hash_buffer, 0, strlen(hash_buffer));
+	if (ndomod_compare_hash(NDO_API_COMMANDDEFINITION, hash) != NDO_TRUE) {
+
+		active_objects[0].value.integer = NDO_API_COMMANDDEFINITION;
+		for (temp_command = command_list; temp_command != NULL; temp_command = temp_command->next) {
+
+			char *buf = NULL;
+			asprintf(&buf, "working with object: %s\n", temp_command->name);
+			ndomod_write_to_logs(buf, NSLOG_RUNTIME_ERROR);
+			free(buf);
+			
+			name1 = ndo_escape_buffer(temp_command->name);
+			active_objects[obj_count].key = obj_count;
+			active_objects[obj_count].datatype = BD_STRING;
+			active_objects[obj_count].value.string = (name1 == NULL) ? "" : name1;
+			if (++obj_count > 250 || temp_command->next == NULL) {
+				ndomod_broker_data_serialize(&dbuf, NDO_API_ACTIVEOBJECTSLIST, active_objects, obj_count, TRUE);
+				ndomod_write_to_sink(dbuf.buf,NDO_TRUE,NDO_TRUE);
+				ndo_dbuf_free(&dbuf);
+				while (--obj_count) { 
+					free(active_objects[obj_count].value.string);
+				}
+				obj_count = 1;
+			}
 		}
-	}
-	if (obj_count > 1) {
-		ndomod_broker_data_serialize(&dbuf, NDO_API_ACTIVEOBJECTSLIST,
-				active_objects, obj_count, TRUE);
-		ndomod_write_to_sink(dbuf.buf,NDO_TRUE,NDO_TRUE);
-		ndo_dbuf_free(&dbuf);
-		while (--obj_count)
-			free(active_objects[obj_count].value.string);
-	}
 
+		ndomod_save_hash(NDO_API_COMMANDDEFINITION, hash);
+	}
+	free(hash);
 
-	active_objects[0].value.integer = NDO_API_TIMEPERIODDEFINITION;
-	obj_count = 1;
-	for (temp_timeperiod = timeperiod_list; temp_timeperiod != NULL; temp_timeperiod = temp_timeperiod->next) {
-		name1 = ndo_escape_buffer(temp_timeperiod->name);
-		active_objects[obj_count].key = obj_count;
-		active_objects[obj_count].datatype = BD_STRING;
-		active_objects[obj_count].value.string = (name1 == NULL) ? "" : name1;
-		if (++obj_count > 250) {
-			ndomod_broker_data_serialize(&dbuf, NDO_API_ACTIVEOBJECTSLIST,
-					active_objects, obj_count, TRUE);
-			ndomod_write_to_sink(dbuf.buf,NDO_TRUE,NDO_TRUE);
-			ndo_dbuf_free(&dbuf);
-			while (--obj_count)
-				free(active_objects[obj_count].value.string);
-			obj_count = 1;
+	build_hash_buffer_1member(hash_buffer, name, temp_timeperiod, timeperiod_list);
+	hash = ndo_quick_hash(hash_buffer);
+	memset(hash_buffer, 0, strlen(hash_buffer));
+	if (ndomod_compare_hash(NDO_API_COMMANDDEFINITION, hash) != NDO_TRUE) {
+
+		active_objects[0].value.integer = NDO_API_TIMEPERIODDEFINITION;
+		for (temp_timeperiod = timeperiod_list; temp_timeperiod != NULL; temp_timeperiod = temp_timeperiod->next) {
+
+			char *buf = NULL;
+			asprintf(&buf, "working with object: %s\n", temp_timeperiod->name);
+			ndomod_write_to_logs(buf, NSLOG_RUNTIME_ERROR);
+			free(buf);
+
+			name1 = ndo_escape_buffer(temp_timeperiod->name);
+			active_objects[obj_count].key = obj_count;
+			active_objects[obj_count].datatype = BD_STRING;
+			active_objects[obj_count].value.string = (name1 == NULL) ? "" : name1;
+			if (++obj_count > 250 || temp_timeperiod->next == NULL) {
+				ndomod_broker_data_serialize(&dbuf, NDO_API_ACTIVEOBJECTSLIST, active_objects, obj_count, TRUE);
+				ndomod_write_to_sink(dbuf.buf,NDO_TRUE,NDO_TRUE);
+				ndo_dbuf_free(&dbuf);
+				while (--obj_count) {
+					free(active_objects[obj_count].value.string);
+				}
+				obj_count = 1;
+			}
 		}
+
+		ndomod_save_hash(NDO_API_TIMEPERIODDEFINITION, hash);
 	}
-	if (obj_count > 1) {
-		ndomod_broker_data_serialize(&dbuf, NDO_API_ACTIVEOBJECTSLIST,
-				active_objects, obj_count, TRUE);
-		ndomod_write_to_sink(dbuf.buf,NDO_TRUE,NDO_TRUE);
-		ndo_dbuf_free(&dbuf);
-		while (--obj_count)
-			free(active_objects[obj_count].value.string);
-	}
+	free(hash);
+
+	/**************************************************/
 
 
-	active_objects[0].value.integer = NDO_API_CONTACTDEFINITION;
-	obj_count = 1;
-	for (temp_contact = contact_list; temp_contact != NULL; temp_contact = temp_contact->next) {
-		name1 = ndo_escape_buffer(temp_contact->name);
-		active_objects[obj_count].key = obj_count;
-		active_objects[obj_count].datatype = BD_STRING;
-		active_objects[obj_count].value.string = (name1 == NULL) ? "" : name1;
-		if (++obj_count > 250) {
-			ndomod_broker_data_serialize(&dbuf, NDO_API_ACTIVEOBJECTSLIST,
-					active_objects, obj_count, TRUE);
-			ndomod_write_to_sink(dbuf.buf,NDO_TRUE,NDO_TRUE);
-			ndo_dbuf_free(&dbuf);
-			while (--obj_count)
-				free(active_objects[obj_count].value.string);
-			obj_count = 1;
+	build_hash_buffer_1member(hash_buffer, name, temp_contact, contact_list);
+	hash = ndo_quick_hash(hash_buffer);
+	memset(hash_buffer, 0, strlen(hash_buffer));
+	if (!ndomod_compare_hash(NDO_API_CONTACTDEFINITION, hash)) {
+
+		active_objects[0].value.integer = NDO_API_CONTACTDEFINITION;
+		obj_count = 1;
+		for (temp_contact = contact_list; temp_contact != NULL; temp_contact = temp_contact->next) {
+
+			char *buf = NULL;
+			asprintf(&buf, "working with object: %s\n", temp_contact->name);
+			ndomod_write_to_logs(buf, NSLOG_RUNTIME_ERROR);
+			free(buf);
+			
+			name1 = ndo_escape_buffer(temp_contact->name);
+			active_objects[obj_count].key = obj_count;
+			active_objects[obj_count].datatype = BD_STRING;
+			active_objects[obj_count].value.string = (name1 == NULL) ? "" : name1;
+			if (++obj_count > 250 || temp_contact->next == NULL) {
+				ndomod_broker_data_serialize(&dbuf, NDO_API_ACTIVEOBJECTSLIST, active_objects, obj_count, TRUE);
+				ndomod_write_to_sink(dbuf.buf,NDO_TRUE,NDO_TRUE);
+				ndo_dbuf_free(&dbuf);
+				while (--obj_count) {
+					free(active_objects[obj_count].value.string);
+				}
+				obj_count = 1;
+			}
 		}
+
+		ndomod_save_hash(NDO_API_CONTACTDEFINITION, hash);
 	}
-	if (obj_count > 1) {
-		ndomod_broker_data_serialize(&dbuf, NDO_API_ACTIVEOBJECTSLIST,
-				active_objects, obj_count, TRUE);
-		ndomod_write_to_sink(dbuf.buf,NDO_TRUE,NDO_TRUE);
-		ndo_dbuf_free(&dbuf);
-		while (--obj_count)
-			free(active_objects[obj_count].value.string);
-	}
+	free(hash);
+	/**************************************************/
 
 
-	active_objects[0].value.integer = NDO_API_CONTACTGROUPDEFINITION;
-	obj_count = 1;
-	for (temp_contactgroup = contactgroup_list; temp_contactgroup != NULL; temp_contactgroup = temp_contactgroup->next) {
-		name1 = ndo_escape_buffer(temp_contactgroup->group_name);
-		active_objects[obj_count].key = obj_count;
-		active_objects[obj_count].datatype = BD_STRING;
-		active_objects[obj_count].value.string = (name1 == NULL) ? "" : name1;
-		if (++obj_count > 250) {
-			ndomod_broker_data_serialize(&dbuf, NDO_API_ACTIVEOBJECTSLIST,
-					active_objects, obj_count, TRUE);
-			ndomod_write_to_sink(dbuf.buf,NDO_TRUE,NDO_TRUE);
-			ndo_dbuf_free(&dbuf);
-			while (--obj_count)
-				free(active_objects[obj_count].value.string);
-			obj_count = 1;
+	build_hash_buffer_1member(hash_buffer, group_name, temp_contactgroup, contactgroup_list);
+	hash = ndo_quick_hash(hash_buffer);
+	memset(hash_buffer, 0, strlen(hash_buffer));
+	if (!ndomod_compare_hash(NDO_API_CONTACTGROUPDEFINITION, hash)) {
+
+		active_objects[0].value.integer = NDO_API_CONTACTGROUPDEFINITION;
+		obj_count = 1;
+		for (temp_contactgroup = contactgroup_list; temp_contactgroup != NULL; temp_contactgroup = temp_contactgroup->next) {
+
+			char *buf = NULL;
+			asprintf(&buf, "working with object: %s\n", temp_contactgroup->group_name);
+			ndomod_write_to_logs(buf, NSLOG_RUNTIME_ERROR);
+			free(buf);
+			
+			name1 = ndo_escape_buffer(temp_contactgroup->group_name);
+			active_objects[obj_count].key = obj_count;
+			active_objects[obj_count].datatype = BD_STRING;
+			active_objects[obj_count].value.string = (name1 == NULL) ? "" : name1;
+			if (++obj_count > 250 || temp_contactgroup->next == NULL) {
+				ndomod_broker_data_serialize(&dbuf, NDO_API_ACTIVEOBJECTSLIST, active_objects, obj_count, TRUE);
+				ndomod_write_to_sink(dbuf.buf,NDO_TRUE,NDO_TRUE);
+				ndo_dbuf_free(&dbuf);
+				while (--obj_count) {
+					free(active_objects[obj_count].value.string);
+				}
+				obj_count = 1;
+			}
 		}
+
+		ndomod_save_hash(NDO_API_CONTACTGROUPDEFINITION, hash);
 	}
-	if (obj_count > 1) {
-		ndomod_broker_data_serialize(&dbuf, NDO_API_ACTIVEOBJECTSLIST,
-				active_objects, obj_count, TRUE);
-		ndomod_write_to_sink(dbuf.buf,NDO_TRUE,NDO_TRUE);
-		ndo_dbuf_free(&dbuf);
-		while (--obj_count)
-			free(active_objects[obj_count].value.string);
-	}
+	free(hash);
+	/**************************************************/
 
 
-	active_objects[0].value.integer = NDO_API_HOSTDEFINITION;
-	obj_count = 1;
-	for (temp_host = host_list; temp_host != NULL; temp_host = temp_host->next) {
-		name1 = ndo_escape_buffer(temp_host->name);
-		active_objects[obj_count].key = obj_count;
-		active_objects[obj_count].datatype = BD_STRING;
-		active_objects[obj_count].value.string = (name1 == NULL) ? "" : name1;
-		if (++obj_count > 250) {
-			ndomod_broker_data_serialize(&dbuf, NDO_API_ACTIVEOBJECTSLIST,
-					active_objects, obj_count, TRUE);
-			ndomod_write_to_sink(dbuf.buf,NDO_TRUE,NDO_TRUE);
-			ndo_dbuf_free(&dbuf);
-			while (--obj_count)
-				free(active_objects[obj_count].value.string);
-			obj_count = 1;
+	build_hash_buffer_1member(hash_buffer, name, temp_host, host_list);
+	hash = ndo_quick_hash(hash_buffer);
+	memset(hash_buffer, 0, strlen(hash_buffer));
+	if (!ndomod_compare_hash(NDO_API_HOSTDEFINITION, hash)) {
+
+		active_objects[0].value.integer = NDO_API_HOSTDEFINITION;
+		obj_count = 1;
+		for (temp_host = host_list; temp_host != NULL; temp_host = temp_host->next) {
+
+			char *buf = NULL;
+			asprintf(&buf, "working with object: %s\n", temp_host->name);
+			ndomod_write_to_logs(buf, NSLOG_RUNTIME_ERROR);
+			free(buf);
+			
+			name1 = ndo_escape_buffer(temp_host->name);
+			active_objects[obj_count].key = obj_count;
+			active_objects[obj_count].datatype = BD_STRING;
+			active_objects[obj_count].value.string = (name1 == NULL) ? "" : name1;
+			if (++obj_count > 250 || temp_host->next == NULL) {
+				ndomod_broker_data_serialize(&dbuf, NDO_API_ACTIVEOBJECTSLIST, active_objects, obj_count, TRUE);
+				ndomod_write_to_sink(dbuf.buf,NDO_TRUE,NDO_TRUE);
+				ndo_dbuf_free(&dbuf);
+				while (--obj_count) {
+					free(active_objects[obj_count].value.string);
+				}
+				obj_count = 1;
+			}
 		}
-	}
-	if (obj_count > 1) {
-		ndomod_broker_data_serialize(&dbuf, NDO_API_ACTIVEOBJECTSLIST,
-				active_objects, obj_count, TRUE);
-		ndomod_write_to_sink(dbuf.buf,NDO_TRUE,NDO_TRUE);
-		ndo_dbuf_free(&dbuf);
-		while (--obj_count)
-			free(active_objects[obj_count].value.string);
-	}
 
+		ndomod_save_hash(NDO_API_HOSTDEFINITION, hash);
+	}
+	free(hash);
+	/**************************************************/
 
-	active_objects[0].value.integer = NDO_API_HOSTGROUPDEFINITION;
-	obj_count = 1;
-	for (temp_hostgroup = hostgroup_list; temp_hostgroup != NULL; temp_hostgroup = temp_hostgroup->next) {
-		name1 = ndo_escape_buffer(temp_hostgroup->group_name);
-		active_objects[obj_count].key = obj_count;
-		active_objects[obj_count].datatype = BD_STRING;
-		active_objects[obj_count].value.string = (name1 == NULL) ? "" : name1;
-		if (++obj_count > 250) {
-			ndomod_broker_data_serialize(&dbuf, NDO_API_ACTIVEOBJECTSLIST,
-					active_objects, obj_count, TRUE);
-			ndomod_write_to_sink(dbuf.buf,NDO_TRUE,NDO_TRUE);
-			ndo_dbuf_free(&dbuf);
-			while (--obj_count)
-				free(active_objects[obj_count].value.string);
-			obj_count = 1;
+	build_hash_buffer_1member(hash_buffer, group_name, temp_hostgroup, hostgroup_list);
+	hash = ndo_quick_hash(hash_buffer);
+	memset(hash_buffer, 0, strlen(hash_buffer));
+	if (!ndomod_compare_hash(NDO_API_HOSTGROUPDEFINITION, hash)) {
+
+		active_objects[0].value.integer = NDO_API_HOSTGROUPDEFINITION;
+		obj_count = 1;
+		for (temp_hostgroup = hostgroup_list; temp_hostgroup != NULL; temp_hostgroup = temp_hostgroup->next) {
+
+			char *buf = NULL;
+			asprintf(&buf, "working with object: %s\n", temp_hostgroup->group_name);
+			ndomod_write_to_logs(buf, NSLOG_RUNTIME_ERROR);
+			free(buf);
+			
+			name1 = ndo_escape_buffer(temp_hostgroup->group_name);
+			active_objects[obj_count].key = obj_count;
+			active_objects[obj_count].datatype = BD_STRING;
+			active_objects[obj_count].value.string = (name1 == NULL) ? "" : name1;
+			if (++obj_count > 250 || temp_hostgroup->next == NULL) {
+				ndomod_broker_data_serialize(&dbuf, NDO_API_ACTIVEOBJECTSLIST, active_objects, obj_count, TRUE);
+				ndomod_write_to_sink(dbuf.buf,NDO_TRUE,NDO_TRUE);
+				ndo_dbuf_free(&dbuf);
+				while (--obj_count) {
+					free(active_objects[obj_count].value.string);
+				}
+				obj_count = 1;
+			}
 		}
-	}
-	if (obj_count > 1) {
-		ndomod_broker_data_serialize(&dbuf, NDO_API_ACTIVEOBJECTSLIST,
-				active_objects, obj_count, TRUE);
-		ndomod_write_to_sink(dbuf.buf,NDO_TRUE,NDO_TRUE);
-		ndo_dbuf_free(&dbuf);
-		while (--obj_count)
-			free(active_objects[obj_count].value.string);
-	}
 
+		ndomod_save_hash(NDO_API_HOSTGROUPDEFINITION, hash);
+	}
+	free(hash);
+	/**************************************************/
 
-	active_objects[0].value.integer = NDO_API_SERVICEDEFINITION;
-	obj_count = 1;
-	for (temp_service = service_list; temp_service != NULL; temp_service = temp_service->next) {
-		name1 = ndo_escape_buffer(temp_service->host_name);
-		name2 = ndo_escape_buffer(temp_service->description);
-		active_objects[obj_count].key = obj_count;
-		active_objects[obj_count].datatype = BD_STRING;
-		active_objects[obj_count].value.string = (name1 == NULL) ? "" : name1;
-		++obj_count;
-		active_objects[obj_count].key = obj_count;
-		active_objects[obj_count].datatype = BD_STRING;
-		active_objects[obj_count].value.string = (name2 == NULL) ? "" : name2;
-		if (++obj_count > 250) {
-			ndomod_broker_data_serialize(&dbuf, NDO_API_ACTIVEOBJECTSLIST,
-					active_objects, obj_count, TRUE);
-			ndomod_write_to_sink(dbuf.buf,NDO_TRUE,NDO_TRUE);
-			ndo_dbuf_free(&dbuf);
-			while (--obj_count)
-				free(active_objects[obj_count].value.string);
-			obj_count = 1;
+	build_hash_buffer_2member(hash_buffer, host_name, description, temp_service, service_list);
+	hash = ndo_quick_hash(hash_buffer);
+	memset(hash_buffer, 0, strlen(hash_buffer));
+	if (!ndomod_compare_hash(NDO_API_SERVICEDEFINITION, hash)) {
+
+		active_objects[0].value.integer = NDO_API_SERVICEDEFINITION;
+		obj_count = 1;
+		for (temp_service = service_list; temp_service != NULL; temp_service = temp_service->next) {
+
+			char *buf = NULL;
+			asprintf(&buf, "working with object: %s-%s\n", temp_service->host_name, temp_service->description);
+			ndomod_write_to_logs(buf, NSLOG_RUNTIME_ERROR);
+			free(buf);
+			
+			name1 = ndo_escape_buffer(temp_service->host_name);
+			name2 = ndo_escape_buffer(temp_service->description);
+			active_objects[obj_count].key = obj_count;
+			active_objects[obj_count].datatype = BD_STRING;
+			active_objects[obj_count].value.string = (name1 == NULL) ? "" : name1;
+			++obj_count;
+			active_objects[obj_count].key = obj_count;
+			active_objects[obj_count].datatype = BD_STRING;
+			active_objects[obj_count].value.string = (name2 == NULL) ? "" : name2;
+			if (++obj_count > 250 || temp_service->next == NULL) {
+				ndomod_broker_data_serialize(&dbuf, NDO_API_ACTIVEOBJECTSLIST, active_objects, obj_count, TRUE);
+				ndomod_write_to_sink(dbuf.buf,NDO_TRUE,NDO_TRUE);
+				ndo_dbuf_free(&dbuf);
+				while (--obj_count) {
+					free(active_objects[obj_count].value.string);
+				}
+				obj_count = 1;
+			}
 		}
-	}
-	if (obj_count > 1) {
-		ndomod_broker_data_serialize(&dbuf, NDO_API_ACTIVEOBJECTSLIST,
-				active_objects, obj_count, TRUE);
-		ndomod_write_to_sink(dbuf.buf,NDO_TRUE,NDO_TRUE);
-		ndo_dbuf_free(&dbuf);
-		while (--obj_count)
-			free(active_objects[obj_count].value.string);
-	}
 
+		ndomod_save_hash(NDO_API_SERVICEDEFINITION, hash);
+	}
+	free(hash);
+	/**************************************************/
 
-	active_objects[0].value.integer = NDO_API_SERVICEGROUPDEFINITION;
-	obj_count = 1;
-	for (temp_servicegroup = servicegroup_list; temp_servicegroup !=NULL ; temp_servicegroup = temp_servicegroup->next) {
-		name1 = ndo_escape_buffer(temp_servicegroup->group_name);
-		active_objects[obj_count].key = obj_count;
-		active_objects[obj_count].datatype = BD_STRING;
-		active_objects[obj_count].value.string = (name1 == NULL) ? "" : name1;
-		if (++obj_count > 250) {
-			ndomod_broker_data_serialize(&dbuf, NDO_API_ACTIVEOBJECTSLIST,
-					active_objects, obj_count, TRUE);
-			ndomod_write_to_sink(dbuf.buf,NDO_TRUE,NDO_TRUE);
-			ndo_dbuf_free(&dbuf);
-			while (--obj_count)
-				free(active_objects[obj_count].value.string);
-			obj_count = 1;
+	build_hash_buffer_1member(hash_buffer, group_name, temp_servicegroup, servicegroup_list);
+	hash = ndo_quick_hash(hash_buffer);
+	memset(hash_buffer, 0, strlen(hash_buffer));
+	if (!ndomod_compare_hash(NDO_API_SERVICEGROUPDEFINITION, hash)) {
+
+		active_objects[0].value.integer = NDO_API_SERVICEGROUPDEFINITION;
+		obj_count = 1;
+		for (temp_servicegroup = servicegroup_list; temp_servicegroup !=NULL ; temp_servicegroup = temp_servicegroup->next) {
+
+			char *buf = NULL;
+			asprintf(&buf, "working with object: %s\n", temp_servicegroup->group_name);
+			ndomod_write_to_logs(buf, NSLOG_RUNTIME_ERROR);
+			free(buf);
+			
+			name1 = ndo_escape_buffer(temp_servicegroup->group_name);
+			active_objects[obj_count].key = obj_count;
+			active_objects[obj_count].datatype = BD_STRING;
+			active_objects[obj_count].value.string = (name1 == NULL) ? "" : name1;
+			if (++obj_count > 250 || temp_servicegroup->next == NULL) {
+				ndomod_broker_data_serialize(&dbuf, NDO_API_ACTIVEOBJECTSLIST, active_objects, obj_count, TRUE);
+				ndomod_write_to_sink(dbuf.buf,NDO_TRUE,NDO_TRUE);
+				ndo_dbuf_free(&dbuf);
+				while (--obj_count) {
+					free(active_objects[obj_count].value.string);
+				}
+				obj_count = 1;
+			}
 		}
+
+		ndomod_save_hash(NDO_API_SERVICEGROUPDEFINITION, hash);
 	}
-	if (obj_count > 1) {
-		ndomod_broker_data_serialize(&dbuf, NDO_API_ACTIVEOBJECTSLIST,
-				active_objects, obj_count, TRUE);
-		ndomod_write_to_sink(dbuf.buf,NDO_TRUE,NDO_TRUE);
-		ndo_dbuf_free(&dbuf);
-		while (--obj_count)
-			free(active_objects[obj_count].value.string);
-	}
+	free(hash);
+	free(hash_buffer);
+	/**************************************************/
 }
 
 
@@ -5415,4 +5546,151 @@ int ndomod_write_runtime_variables(void){
         }
 
 
+/* compare a supplied hash with a saved db hash */
+int ndomod_compare_hash(int id, char * hash)
+{
+	char * buf;
+	register char ret;
+	MYSQL_RES *ndomod_mysql_result;
+	MYSQL_ROW ndomod_mysql_row;
 
+	if (ndo_database_configured() == NDO_FALSE) {
+		ndomod_write_to_logs("Database options not configured, skipping startup hash checks\n", NSLOG_INFO_MESSAGE);
+		return NDO_FALSE;
+	}
+
+	if (!ndomod_mysql_connected) {
+		if (!mysql_real_connect( &ndomod_mysql,
+							ndomod_mysql_hostname,
+							ndomod_mysql_username,
+							ndomod_mysql_password,
+							ndomod_mysql_database,
+							ndomod_mysql_port,
+							NULL,
+							CLIENT_REMEMBER_OPTIONS )) {
+
+			mysql_close(&ndomod_mysql);
+			ndomod_write_to_logs("Unable to connect to MySQL, check your ndomod configuration\n", NSLOG_INFO_MESSAGE);
+			return NDO_FALSE;
+		}
+
+		ndomod_mysql_connected = 1;
+	}
+
+	asprintf(&buf, "SELECT hash, TIMESTAMPDIFF(SECOND, hash_timestamp, NOW()) AS age FROM startup_hashes WHERE startup_hash_id = %d LIMIT 1", id);
+	ret = mysql_query(&ndomod_mysql, buf);
+	free(buf);
+
+	if (ret) {
+
+		asprintf(&buf, "Unable to query MySQL: %s\n", mysql_error(&ndomod_mysql));
+		ndomod_write_to_logs(buf, NSLOG_RUNTIME_ERROR);
+		free(buf);
+		return NDO_FALSE;
+	}
+
+	ndomod_mysql_result = mysql_store_result(&ndomod_mysql);
+	if (ndomod_mysql_result == NULL) {
+
+		asprintf(&buf, "Unable to store MySQL result: %s\n", mysql_error(&ndomod_mysql));
+		ndomod_write_to_logs(buf, NSLOG_RUNTIME_ERROR);
+		free(buf);
+		return NDO_FALSE;
+	}
+
+	ret = NDO_FALSE;
+
+	if (ndomod_mysql_row = mysql_fetch_row(ndomod_mysql_result)) {
+
+		
+		asprintf(&buf, "Checking supplied hash (%s) against db %s for id: %d\n", hash, ndomod_mysql_row[0], id);
+		ndomod_write_to_logs(buf, NSLOG_INFO_MESSAGE);
+		free(buf);
+		
+
+		int age = atoi(ndomod_mysql_row[1]);
+
+		/* we only say the match is good if the age
+		   is okay and the hash matches */
+		if (ndomod_max_hash_age == 0 || age <= ndomod_max_hash_age) {
+
+			if (!strncmp(hash, ndomod_mysql_row[0], 64)) {
+
+				ret = NDO_TRUE;
+			}
+		}
+	}
+
+	mysql_free_result(ndomod_mysql_result);
+	return ret;
+}
+
+/* save a supplied hash */
+int ndomod_save_hash(int id, char * hash)
+{
+	char * buf;
+	register char ret;
+
+	if (ndo_database_configured() == NDO_FALSE) {
+		ndomod_write_to_logs("Database options not configured, not saving startup hash checks\n", NSLOG_INFO_MESSAGE);
+		return NDO_FALSE;
+	}
+
+	if (!ndomod_mysql_connected) {
+		if (!mysql_real_connect( &ndomod_mysql,
+							ndomod_mysql_hostname,
+							ndomod_mysql_username,
+							ndomod_mysql_password,
+							ndomod_mysql_database,
+							ndomod_mysql_port,
+							NULL,
+							CLIENT_REMEMBER_OPTIONS )) {
+
+			mysql_close(&ndomod_mysql);
+			ndomod_write_to_logs("Unable to connect to MySQL, check your ndomod configuration\n", NSLOG_INFO_MESSAGE);
+			return NDO_FALSE;
+		}
+
+		ndomod_mysql_connected = 1;
+	}
+
+	asprintf(&buf, "REPLACE INTO startup_hashes (startup_hash_id, hash) VALUES (%d, '%s')", id, hash);
+	ret = mysql_query(&ndomod_mysql, buf);
+	free(buf);
+
+	if (!ret) {
+
+		
+		asprintf(&buf, "Inserted: %s for ID: %d\n", hash, id);
+		ndomod_write_to_logs(buf, NSLOG_INFO_MESSAGE);
+		free(buf);
+		
+
+		return NDO_TRUE;
+	}
+
+	asprintf(&buf, "Unable to query MySQL: %s\n", mysql_error(&ndomod_mysql));
+	ndomod_write_to_logs(buf, NSLOG_RUNTIME_ERROR);
+	free(buf);
+	return NDO_FALSE;
+}
+
+/* close db conn */
+void ndomod_close_mysql()
+{
+	mysql_close(&ndomod_mysql);
+}
+
+int ndo_database_configured()
+{
+	if (ndomod_mysql_hostname == NULL)
+		return NDO_FALSE;
+	if (ndomod_mysql_username == NULL)
+		return NDO_FALSE;
+	if (ndomod_mysql_password == NULL)
+		return NDO_FALSE;
+	if (ndomod_mysql_database == NULL)
+		return NDO_FALSE;
+
+	return NDO_TRUE;
+}

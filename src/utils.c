@@ -25,6 +25,110 @@
 #include "../include/utils.h"
 
 
+/****************************************************************************/
+/* HASHING FUNCTIONS                                                        */
+/****************************************************************************/
+
+/* our basic 64 element lookup table */
+static unsigned int ndo_hash_table[] = {
+    0x69a03093, 0x5dfe9970, 0x36f71d91, 0x62bf5b2a,
+    0x53fcac8a, 0x1ae50be7, 0x5ad28f83, 0x77695cb4,
+    0x3b0e64d4, 0x1f27a85e, 0x6c6e0b0a, 0x2209a9f0,
+    0x525cd481, 0x3a8c1903, 0x28bf8cf5, 0x62785dab,
+    0x57cd4c33, 0x6de62d00, 0x274510dd, 0x10953293,
+    0x14c888a3, 0x4ae79aaa, 0x1c32b588, 0x5573b029,
+    0xa69448a0, 0x74cbb216, 0x5bb35f7b, 0x511f7814,
+    0x7ef735ff, 0x41616000, 0x7446e56c, 0x4885f29f,
+    0x3f1327d5, 0x4ebe59c7, 0x19a818f4, 0x522da2b5,
+    0x6675fefe, 0x7425dd9f, 0x30e98d25, 0x37190a33,
+    0x2c1c326d, 0x5879fda2, 0x2a23986b, 0x42edd7aa,
+    0x47874e94, 0x23508db7, 0x12f2ce0a, 0x6aad41f1,
+    0x4c2b4ea2, 0x6bce3fd1, 0x4072340f, 0x482f1dbc,
+    0x2cddf1fe, 0x11b11751, 0x30db9351, 0x614ebac7,
+    0x5b8916f1, 0x7dee79f7, 0x2e57dd95, 0x368bba57,
+    0x5c42da69, 0x6507a03d, 0x4859e523, 0x7e04c0ca };
+
+/* return a human readable/printable character with no special chars */
+static inline char ndo_get_hash_char(unsigned int ch)
+{
+    register unsigned int tmp = ch % 62;
+
+    /* 0-9 = 48-57, A-Z = 65-90, a-z = 97-122 */
+
+    if (tmp < 10) {
+        return tmp + 48;
+    }
+
+    if (tmp < 36) {
+        /* 65 - 10 */
+        return tmp + 55;
+    }
+
+    /* 97 - 26 -10 */
+    return tmp + 61;
+}
+
+/* return a 64 character hash */
+char * ndo_quick_hash(char * str)
+{
+    if (str == NULL || !strcmp(str, "")) {
+        return strdup(NDO_EMPTY_HASH);
+    }
+
+    char * hash = calloc(65, sizeof(char));
+    if (!hash) {
+        return NULL;
+    }
+
+    /* i is used for str operations
+       k is used for hash operations
+       j is an intermediary for building */
+    register unsigned int i = 0;
+    register unsigned int j = 0;
+    register unsigned int k = 0;;
+    register char hash_complete = 0;
+    register char string_complete = 0;
+
+    /* initialize the hash */
+    /* either fill the hash with the first 64 chars of str
+       or repeat str until we've filled the 64 chars */
+    for (k = 0; k < 64; k++) {
+
+        hash[k] = str[i];
+
+        /* reset str if we need to */
+        if (str[i + 1] == '\0') {
+            i = 0;
+        } else {
+            i++;
+        }
+    }
+
+    i = j = k = 0;
+    while (!string_complete || !hash_complete) {
+
+        /* current j val xor with current char of hash * some lookup, bitshifted */
+        j = j ^ (hash[k] * ndo_hash_table[(str[i] % 64)]) >> (i % 4);
+
+        hash[k] = ndo_get_hash_char(j);
+
+        /* if our current char is the end, reset the str */
+        if (str[++i] == '\0') {
+            i = 0;
+            string_complete++;
+        }
+
+        /* if we've reached the end of the hash, reset */
+        if (++k == 64) {
+            hash_complete++;
+            k = 0;
+        }
+    }
+
+    return hash;
+}
+
+
 
 
 /****************************************************************************/

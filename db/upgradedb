@@ -62,7 +62,7 @@ if ($@) {
 # version and there may not be an upgrade file.
 my @schemaversions = ( "1.4b2", "1.4b3", "1.4b4", "1.4b5", "1.4b6", "1.4b7",
 		"1.4b8", "1.4b9", "1.5", "1.5.1", "1.5.2", "2.0.0", "2.0.1", "2.1.0",
-		"2.1.2" );
+		"2.1.2", "3.0.0" );
 # Get current database version
 my $version;
 my $legacyversion = $schemaversions[0];
