@@ -404,4 +404,6 @@
 #define MODATTR_FRESHNESS_CHECKS_ENABLED        8192
 
 
-	
+#ifndef ARRAY_SIZE
+# define ARRAY_SIZE(x) (sizeof(x) / sizeof(x[0]))
+#endif
