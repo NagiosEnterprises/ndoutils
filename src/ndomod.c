@@ -41,17 +41,17 @@
 #include <pthread.h>
 
 /* include (minimum required) event broker header files */
-#include "../include/nagios-4x/nebstructs.h"
-#include "../include/nagios-4x/nebmodules.h"
-#include "../include/nagios-4x/nebcallbacks.h"
-#include "../include/nagios-4x/broker.h"
+#include "../include/nagios/nebstructs.h"
+#include "../include/nagios/nebmodules.h"
+#include "../include/nagios/nebcallbacks.h"
+#include "../include/nagios/broker.h"
 
 /* include other Nagios header files for access to functions, data structs, etc. */
-#include "../include/nagios-4x/common.h"
-#include "../include/nagios-4x/nagios.h"
-#include "../include/nagios-4x/downtime.h"
-#include "../include/nagios-4x/comments.h"
-#include "../include/nagios-4x/macros.h"
+#include "../include/nagios/common.h"
+#include "../include/nagios/nagios.h"
+#include "../include/nagios/downtime.h"
+#include "../include/nagios/comments.h"
+#include "../include/nagios/macros.h"
 
 /* specify event broker API version (required) */
 NEB_API_VERSION(CURRENT_NEB_API_VERSION)
@@ -70,8 +70,8 @@ NEB_API_VERSION(CURRENT_NEB_API_VERSION)
 /* helpers to clean up the data structs be cleaner */
 #define NDODATA_INTEGER(_KEY, _INT) { _KEY, BD_INT, { .integer = _INT } }
 #define NDODATA_TIMESTAMP(_KEY, _TS) { _KEY, BD_TIMEVAL, { .timestamp = _TS } }
-#define NDODATA_STRING(_KEY, _STR) { _KEY, BD_STRING, (_STR == NULL) ? "" : _STR } }
-#define NDODATA_UNSIGNED_LONG(_KEY, _LONG) { _KEY, BD_UNSIGNED_LONG, _LONG } }
+#define NDODATA_STRING(_KEY, _STR) { _KEY, BD_STRING, { .string = (_STR == NULL ? "" : _STR) } }
+#define NDODATA_UNSIGNED_LONG(_KEY, _LONG) { _KEY, BD_UNSIGNED_LONG, { .unsigned_long = _LONG } }
 #define NDODATA_FLOATING_POINT(_KEY, _FP) { _KEY, BD_FLOAT, { .floating_point = _FP } }
 
 struct ndo_broker_data {
@@ -377,7 +377,7 @@ int ndomod_process_config_file(char *filename)
 	int result            = NDO_OK;
 
 	/* open the file */
-	thefile = ndo_mmap_fopen(filename)
+	thefile = ndo_mmap_fopen(filename);
 	if (thefile == NULL) {
 		return NDO_ERROR;
 	}
@@ -1262,7 +1262,7 @@ int ndomod_sink_buffer_set_overflow(ndomod_sink_buffer *sbuf, unsigned long num)
 				free(msg);																					\
 			}																								\
 		}																									\
-	while (0)
+	} while (0)
 
 /* registers for callbacks */
 int ndomod_register_callbacks(void)
@@ -1273,10 +1273,10 @@ int ndomod_register_callbacks(void)
 
 	NDO_REGISTER_CALLBACK(NDOMOD_PROCESS_PROCESS_DATA, NEBCALLBACK_PROCESS_DATA, "process");
 	NDO_REGISTER_CALLBACK(NDOMOD_PROCESS_TIMED_EVENT_DATA, NEBCALLBACK_TIMED_EVENT_DATA, "timed event");
-	NDO_REGISTER_CALLBACK(NDOMOD_PROCESS_LOG_DATA, NEBCALLBACK_PROCESS_LOG_DATA, "log");
-	NDO_REGISTER_CALLBACK(NDOMOD_PROCESS_SYSTEM_COMMAND_DATA, NEBCALLBACK_PROCESS_SYSTEM_COMMAND_DATA, "system command");
-	NDO_REGISTER_CALLBACK(NDOMOD_PROCESS_EVENT_HANDLER_DATA, NEBCALLBACK_PROCESS_EVENT_HANDLER_DATA, "event handler");
-	NDO_REGISTER_CALLBACK(NDOMOD_PROCESS_NOTIFICATION_DATA, NEBCALLBACK_PROCESS_NOTIFICATION_DATA, "notification");
+	NDO_REGISTER_CALLBACK(NDOMOD_PROCESS_LOG_DATA, NEBCALLBACK_LOG_DATA, "log");
+	NDO_REGISTER_CALLBACK(NDOMOD_PROCESS_SYSTEM_COMMAND_DATA, NEBCALLBACK_SYSTEM_COMMAND_DATA, "system command");
+	NDO_REGISTER_CALLBACK(NDOMOD_PROCESS_EVENT_HANDLER_DATA, NEBCALLBACK_EVENT_HANDLER_DATA, "event handler");
+	NDO_REGISTER_CALLBACK(NDOMOD_PROCESS_NOTIFICATION_DATA, NEBCALLBACK_NOTIFICATION_DATA, "notification");
 	NDO_REGISTER_CALLBACK(NDOMOD_PROCESS_SERVICE_CHECK_DATA, NEBCALLBACK_SERVICE_CHECK_DATA, "service check");
 	NDO_REGISTER_CALLBACK(NDOMOD_PROCESS_HOST_CHECK_DATA, NEBCALLBACK_HOST_CHECK_DATA, "host check");
 	NDO_REGISTER_CALLBACK(NDOMOD_PROCESS_COMMENT_DATA, NEBCALLBACK_COMMENT_DATA, "comment");
@@ -1292,7 +1292,7 @@ int ndomod_register_callbacks(void)
 	NDO_REGISTER_CALLBACK(NDOMOD_PROCESS_AGGREGATED_STATUS_DATA, NEBCALLBACK_AGGREGATED_STATUS_DATA, "aggregated status");
 	NDO_REGISTER_CALLBACK(NDOMOD_PROCESS_RETENTION_DATA, NEBCALLBACK_RETENTION_DATA, "retention");
 	NDO_REGISTER_CALLBACK(NDOMOD_PROCESS_ACKNOWLEDGEMENT_DATA, NEBCALLBACK_ACKNOWLEDGEMENT_DATA, "acknowledgement");
-	NDO_REGISTER_CALLBACK(NDOMOD_PROCESS_STATECHANGE_DATA, NEBCALLBACK_STATECHANGE_DATA, "state change");
+	NDO_REGISTER_CALLBACK(NDOMOD_PROCESS_STATECHANGE_DATA, NEBCALLBACK_STATE_CHANGE_DATA, "state change");
 	NDO_REGISTER_CALLBACK(NDOMOD_PROCESS_CONTACT_STATUS_DATA, NEBCALLBACK_CONTACT_STATUS_DATA, "contact status");
 	NDO_REGISTER_CALLBACK(NDOMOD_PROCESS_ADAPTIVE_CONTACT_DATA, NEBCALLBACK_ADAPTIVE_CONTACT_DATA, "adaptive contact");
 	NDO_REGISTER_CALLBACK(NDOMOD_PROCESS_CONTACT_NOTIFICATION_DATA, NEBCALLBACK_CONTACT_NOTIFICATION_DATA, "contact");
@@ -1303,8 +1303,8 @@ int ndomod_register_callbacks(void)
 
 
 /* deregisters callbacks */
-int ndomod_deregister_callbacks(void) {
-
+int ndomod_deregister_callbacks(void)
+{
 	neb_deregister_callback(NEBCALLBACK_PROCESS_DATA, ndomod_broker_data);
 	neb_deregister_callback(NEBCALLBACK_TIMED_EVENT_DATA, ndomod_broker_data);
 	neb_deregister_callback(NEBCALLBACK_LOG_DATA, ndomod_broker_data);
@@ -1404,7 +1404,7 @@ static void ndomod_broker_data_serialize(ndo_dbuf *dbufp, int datatype,
 	}
 
 	/* Close everything out with an NDO_API_ENDDATA marker */
-	if (add_enddata != NULL) {
+	if (add_enddata == TRUE) {
 		ndomod_enddata_serialize(dbufp);
 	}
 }
@@ -1591,7 +1591,6 @@ int ndomod_broker_data(int event_type, void *data)
 	nebstruct_statechange_data *schangedata               = NULL;
 	nebstruct_contact_status_data *csdata                 = NULL;
 	nebstruct_adaptive_contact_data *acdata               = NULL;
-	double retry_interval                                 = 0.0;
 	int last_state                                        = -1;
 	int last_hard_state                                   = -1;
 
@@ -1749,22 +1748,24 @@ int ndomod_broker_data(int event_type, void *data)
 			ndomod_write_active_objects();
 		}
 
-		struct ndo_broker_data process_data[] = {
-			NDODATA_INTEGER(NDO_DATA_TYPE, procdata->type),
-			NDODATA_INTEGER(NDO_DATA_FLAGS, procdata->flags),
-			NDODATA_INTEGER(NDO_DATA_ATTRIBUTES, procdata->attr),
-			NDODATA_TIMESTAMP(NDO_DATA_TIMESTAMP, procdata->timestamp),
-			NDODATA_STRING(NDO_DATA_PROGRAMNAME, "Nagios"),
-			NDODATA_STRING(NDO_DATA_PROGRAMVERSION, get_program_version()),
-			NDODATA_STRING(NDO_DATA_PROGRAMDATE, get_program_modification_date()),
-			NDODATA_UNSIGNED_LONG(NDO_DATA_PROCESSID, (unsigned long)getpid() )
-		};
+		{
+			struct ndo_broker_data process_data[] = {
+				NDODATA_INTEGER(NDO_DATA_TYPE, procdata->type),
+				NDODATA_INTEGER(NDO_DATA_FLAGS, procdata->flags),
+				NDODATA_INTEGER(NDO_DATA_ATTRIBUTES, procdata->attr),
+				NDODATA_TIMESTAMP(NDO_DATA_TIMESTAMP, procdata->timestamp),
+				NDODATA_STRING(NDO_DATA_PROGRAMNAME, "Nagios"),
+				NDODATA_STRING(NDO_DATA_PROGRAMVERSION, get_program_version()),
+				NDODATA_STRING(NDO_DATA_PROGRAMDATE, get_program_modification_date()),
+				NDODATA_UNSIGNED_LONG(NDO_DATA_PROCESSID, (unsigned long)getpid() )
+			};
 
-		ndomod_broker_data_serialize(&dbuf, 
-			NDO_API_PROCESSDATA,
-			process_data,
-			ARRAY_SIZE(process_data), 
-			TRUE);
+			ndomod_broker_data_serialize(&dbuf, 
+				NDO_API_PROCESSDATA,
+				process_data,
+				ARRAY_SIZE(process_data), 
+				TRUE);
+		}
 
 		break;
 
@@ -1781,23 +1782,25 @@ int ndomod_broker_data(int event_type, void *data)
 			es[0] = ndo_escape_buffer(temp_service->host_name);
 			es[1] = ndo_escape_buffer(temp_service->description);
 
-			struct ndo_broker_data timed_event_data[] = {
-				NDODATA_INTEGER(NDO_DATA_TYPE, eventdata->type),
-				NDODATA_INTEGER(NDO_DATA_FLAGS, eventdata->flags),
-				NDODATA_INTEGER(NDO_DATA_ATTRIBUTES, eventdata->attr),
-				NDODATA_TIMESTAMP(NDO_DATA_TIMESTAMP, eventdata->timestamp),
-				NDODATA_INTEGER(NDO_DATA_EVENTTYPE, eventdata->event_type),
-				NDODATA_INTEGER(NDO_DATA_RECURRING, eventdata->recurring),
-				NDODATA_UNSIGNED_LONG(NDO_DATA_RUNTIME, (unsigned long)eventdata->run_time),
-				NDODATA_STRING(NDO_DATA_HOST, es[0]),
-				NDODATA_STRING(NDO_DATA_SERVICE, es[1] )
-			};
+			{
+				struct ndo_broker_data timed_event_data[] = {
+					NDODATA_INTEGER(NDO_DATA_TYPE, eventdata->type),
+					NDODATA_INTEGER(NDO_DATA_FLAGS, eventdata->flags),
+					NDODATA_INTEGER(NDO_DATA_ATTRIBUTES, eventdata->attr),
+					NDODATA_TIMESTAMP(NDO_DATA_TIMESTAMP, eventdata->timestamp),
+					NDODATA_INTEGER(NDO_DATA_EVENTTYPE, eventdata->event_type),
+					NDODATA_INTEGER(NDO_DATA_RECURRING, eventdata->recurring),
+					NDODATA_UNSIGNED_LONG(NDO_DATA_RUNTIME, (unsigned long)eventdata->run_time),
+					NDODATA_STRING(NDO_DATA_HOST, es[0]),
+					NDODATA_STRING(NDO_DATA_SERVICE, es[1] )
+				};
 
-			ndomod_broker_data_serialize(&dbuf, 
-				NDO_API_TIMEDEVENTDATA,
-				timed_event_data,
-				ARRAY_SIZE(timed_event_data),
-				TRUE);
+				ndomod_broker_data_serialize(&dbuf, 
+					NDO_API_TIMEDEVENTDATA,
+					timed_event_data,
+					ARRAY_SIZE(timed_event_data),
+					TRUE);
+			}
 
 			ndomod_free_esc_buffers(es, 2);
 
@@ -1809,22 +1812,24 @@ int ndomod_broker_data(int event_type, void *data)
 
 			es[0] = ndo_escape_buffer(temp_host->name);
 
-			struct ndo_broker_data timed_event_data[] = {
-				NDODATA_INTEGER(NDO_DATA_TYPE, eventdata->type),
-				NDODATA_INTEGER(NDO_DATA_FLAGS, eventdata->flags),
-				NDODATA_INTEGER(NDO_DATA_ATTRIBUTES, eventdata->attr),
-				NDODATA_TIMESTAMP(NDO_DATA_TIMESTAMP, eventdata->timestamp),
-				NDODATA_INTEGER(NDO_DATA_EVENTTYPE, eventdata->event_type),
-				NDODATA_INTEGER(NDO_DATA_RECURRING, eventdata->recurring),
-				NDODATA_UNSIGNED_LONG(NDO_DATA_RUNTIME, (unsigned long)eventdata->run_time),
-				NDODATA_STRING(NDO_DATA_HOST, es[0] )
-			};
+			{
+				struct ndo_broker_data timed_event_data[] = {
+					NDODATA_INTEGER(NDO_DATA_TYPE, eventdata->type),
+					NDODATA_INTEGER(NDO_DATA_FLAGS, eventdata->flags),
+					NDODATA_INTEGER(NDO_DATA_ATTRIBUTES, eventdata->attr),
+					NDODATA_TIMESTAMP(NDO_DATA_TIMESTAMP, eventdata->timestamp),
+					NDODATA_INTEGER(NDO_DATA_EVENTTYPE, eventdata->event_type),
+					NDODATA_INTEGER(NDO_DATA_RECURRING, eventdata->recurring),
+					NDODATA_UNSIGNED_LONG(NDO_DATA_RUNTIME, (unsigned long)eventdata->run_time),
+					NDODATA_STRING(NDO_DATA_HOST, es[0] )
+				};
 
-			ndomod_broker_data_serialize(&dbuf, 
-				NDO_API_TIMEDEVENTDATA,
-				timed_event_data,
-				ARRAY_SIZE(timed_event_data),
-				TRUE);
+				ndomod_broker_data_serialize(&dbuf, 
+					NDO_API_TIMEDEVENTDATA,
+					timed_event_data,
+					ARRAY_SIZE(timed_event_data),
+					TRUE);
+			}
 
 			ndomod_free_esc_buffers(es, 1);
 
@@ -1837,25 +1842,27 @@ int ndomod_broker_data(int event_type, void *data)
 			if (temp_downtime != NULL) {
 				es[0] = ndo_escape_buffer(temp_downtime->host_name);
 				es[1] = ndo_escape_buffer(temp_downtime->service_description);
-				}
+			}
 
-			struct ndo_broker_data timed_event_data[] = {
-				NDODATA_INTEGER(NDO_DATA_TYPE, eventdata->type),
-				NDODATA_INTEGER(NDO_DATA_FLAGS, eventdata->flags),
-				NDODATA_INTEGER(NDO_DATA_ATTRIBUTES, eventdata->attr),
-				NDODATA_TIMESTAMP(NDO_DATA_TIMESTAMP, eventdata->timestamp),
-				NDODATA_INTEGER(NDO_DATA_EVENTTYPE, eventdata->event_type),
-				NDODATA_INTEGER(NDO_DATA_RECURRING, eventdata->recurring),
-				NDODATA_UNSIGNED_LONG(NDO_DATA_RUNTIME, (unsigned long)eventdata->run_time),
-				NDODATA_STRING(NDO_DATA_HOST, es[0]),
-				NDODATA_STRING(NDO_DATA_SERVICE, es[1] )
-			};
+			{
+				struct ndo_broker_data timed_event_data[] = {
+					NDODATA_INTEGER(NDO_DATA_TYPE, eventdata->type),
+					NDODATA_INTEGER(NDO_DATA_FLAGS, eventdata->flags),
+					NDODATA_INTEGER(NDO_DATA_ATTRIBUTES, eventdata->attr),
+					NDODATA_TIMESTAMP(NDO_DATA_TIMESTAMP, eventdata->timestamp),
+					NDODATA_INTEGER(NDO_DATA_EVENTTYPE, eventdata->event_type),
+					NDODATA_INTEGER(NDO_DATA_RECURRING, eventdata->recurring),
+					NDODATA_UNSIGNED_LONG(NDO_DATA_RUNTIME, (unsigned long)eventdata->run_time),
+					NDODATA_STRING(NDO_DATA_HOST, es[0]),
+					NDODATA_STRING(NDO_DATA_SERVICE, es[1] )
+				};
 
-			ndomod_broker_data_serialize(&dbuf, 
-				NDO_API_TIMEDEVENTDATA,
-				timed_event_data,
-				ARRAY_SIZE(timed_event_data),
-				TRUE);
+				ndomod_broker_data_serialize(&dbuf, 
+					NDO_API_TIMEDEVENTDATA,
+					timed_event_data,
+					ARRAY_SIZE(timed_event_data),
+					TRUE);
+			}
 
 			ndomod_free_esc_buffers(es, 2);
 
@@ -1863,21 +1870,23 @@ int ndomod_broker_data(int event_type, void *data)
 
 		default:
 
-			struct ndo_broker_data timed_event_data[] = {
-				NDODATA_INTEGER(NDO_DATA_TYPE, eventdata->type),
-				NDODATA_INTEGER(NDO_DATA_FLAGS, eventdata->flags),
-				NDODATA_INTEGER(NDO_DATA_ATTRIBUTES, eventdata->attr),
-				NDODATA_TIMESTAMP(NDO_DATA_TIMESTAMP, eventdata->timestamp),
-				NDODATA_INTEGER(NDO_DATA_EVENTTYPE, eventdata->event_type),
-				NDODATA_INTEGER(NDO_DATA_RECURRING, eventdata->recurring),
-				NDODATA_UNSIGNED_LONG(NDO_DATA_RUNTIME, (unsigned long)eventdata->run_time),
-			};
+			{
+				struct ndo_broker_data timed_event_data[] = {
+					NDODATA_INTEGER(NDO_DATA_TYPE, eventdata->type),
+					NDODATA_INTEGER(NDO_DATA_FLAGS, eventdata->flags),
+					NDODATA_INTEGER(NDO_DATA_ATTRIBUTES, eventdata->attr),
+					NDODATA_TIMESTAMP(NDO_DATA_TIMESTAMP, eventdata->timestamp),
+					NDODATA_INTEGER(NDO_DATA_EVENTTYPE, eventdata->event_type),
+					NDODATA_INTEGER(NDO_DATA_RECURRING, eventdata->recurring),
+					NDODATA_UNSIGNED_LONG(NDO_DATA_RUNTIME, (unsigned long)eventdata->run_time),
+				};
 
-			ndomod_broker_data_serialize(&dbuf, 
-				NDO_API_TIMEDEVENTDATA,
-				timed_event_data,
-				ARRAY_SIZE(timed_event_data),
-				TRUE);
+				ndomod_broker_data_serialize(&dbuf, 
+					NDO_API_TIMEDEVENTDATA,
+					timed_event_data,
+					ARRAY_SIZE(timed_event_data),
+					TRUE);
+			}
 
 			break;
 			}
@@ -1888,21 +1897,23 @@ int ndomod_broker_data(int event_type, void *data)
 
 		logdata = (nebstruct_log_data *)data;
 
-		struct ndo_broker_data log_data[] = {
-			NDODATA_INTEGER(NDO_DATA_TYPE, logdata->type),
-			NDODATA_INTEGER(NDO_DATA_FLAGS, logdata->flags),
-			NDODATA_INTEGER(NDO_DATA_ATTRIBUTES, logdata->attr),
-			NDODATA_TIMESTAMP(NDO_DATA_TIMESTAMP, logdata->timestamp),
-			NDODATA_UNSIGNED_LONG(NDO_DATA_LOGENTRYTIME, logdata->entry_time),
-			NDODATA_INTEGER(NDO_DATA_LOGENTRYTYPE, logdata->data_type),
-			NDODATA_STRING(NDO_DATA_LOGENTRY, logdata->data),
-		};
+		{
+			struct ndo_broker_data log_data[] = {
+				NDODATA_INTEGER(NDO_DATA_TYPE, logdata->type),
+				NDODATA_INTEGER(NDO_DATA_FLAGS, logdata->flags),
+				NDODATA_INTEGER(NDO_DATA_ATTRIBUTES, logdata->attr),
+				NDODATA_TIMESTAMP(NDO_DATA_TIMESTAMP, logdata->timestamp),
+				NDODATA_UNSIGNED_LONG(NDO_DATA_LOGENTRYTIME, logdata->entry_time),
+				NDODATA_INTEGER(NDO_DATA_LOGENTRYTYPE, logdata->data_type),
+				NDODATA_STRING(NDO_DATA_LOGENTRY, logdata->data),
+			};
 
-		ndomod_broker_data_serialize(&dbuf, 
-			NDO_API_LOGDATA, 
-			log_data,
-			ARRAY_SIZE(log_data),
-			TRUE);
+			ndomod_broker_data_serialize(&dbuf, 
+				NDO_API_LOGDATA, 
+				log_data,
+				ARRAY_SIZE(log_data),
+				TRUE);
+		}
 
 		break;
 
@@ -1914,27 +1925,29 @@ int ndomod_broker_data(int event_type, void *data)
 		es[1] = ndo_escape_buffer(cmddata->output);
 		es[2] = ndo_escape_buffer(cmddata->output);
 
-		struct ndo_broker_data system_command_data[] = {
-			NDODATA_INTEGER(NDO_DATA_TYPE, cmddata->type),
-			NDODATA_INTEGER(NDO_DATA_FLAGS, cmddata->flags),
-			NDODATA_INTEGER(NDO_DATA_ATTRIBUTES, cmddata->attr),
-			NDODATA_TIMESTAMP(NDO_DATA_TIMESTAMP, cmddata->timestamp),
-			NDODATA_TIMESTAMP(NDO_DATA_STARTTIME, cmddata->start_time),
-			NDODATA_TIMESTAMP(NDO_DATA_ENDTIME, cmddata->end_time),
-			NDODATA_INTEGER(NDO_DATA_TIMEOUT, cmddata->timeout),
-			NDODATA_STRING(NDO_DATA_COMMANDLINE, es[0]),
-			NDODATA_INTEGER(NDO_DATA_EARLYTIMEOUT, cmddata->early_timeout),
-			NDODATA_FLOATING_POINT(NDO_DATA_EXECUTIONTIME, cmddata->execution_time),
-			NDODATA_INTEGER(NDO_DATA_RETURNCODE, cmddata->return_code),
-			NDODATA_STRING(NDO_DATA_OUTPUT, es[1]),
-			NDODATA_STRING(NDO_DATA_LONGOUTPUT, es[2] )
-		};
+		{
+			struct ndo_broker_data system_command_data[] = {
+				NDODATA_INTEGER(NDO_DATA_TYPE, cmddata->type),
+				NDODATA_INTEGER(NDO_DATA_FLAGS, cmddata->flags),
+				NDODATA_INTEGER(NDO_DATA_ATTRIBUTES, cmddata->attr),
+				NDODATA_TIMESTAMP(NDO_DATA_TIMESTAMP, cmddata->timestamp),
+				NDODATA_TIMESTAMP(NDO_DATA_STARTTIME, cmddata->start_time),
+				NDODATA_TIMESTAMP(NDO_DATA_ENDTIME, cmddata->end_time),
+				NDODATA_INTEGER(NDO_DATA_TIMEOUT, cmddata->timeout),
+				NDODATA_STRING(NDO_DATA_COMMANDLINE, es[0]),
+				NDODATA_INTEGER(NDO_DATA_EARLYTIMEOUT, cmddata->early_timeout),
+				NDODATA_FLOATING_POINT(NDO_DATA_EXECUTIONTIME, cmddata->execution_time),
+				NDODATA_INTEGER(NDO_DATA_RETURNCODE, cmddata->return_code),
+				NDODATA_STRING(NDO_DATA_OUTPUT, es[1]),
+				NDODATA_STRING(NDO_DATA_LONGOUTPUT, es[2] )
+			};
 
-		ndomod_broker_data_serialize(&dbuf, 
-			NDO_API_SYSTEMCOMMANDDATA,
-			system_command_data, 
-			ARRAY_SIZE(system_command_data), 
-			TRUE);
+			ndomod_broker_data_serialize(&dbuf, 
+				NDO_API_SYSTEMCOMMANDDATA,
+				system_command_data, 
+				ARRAY_SIZE(system_command_data), 
+				TRUE);
+		}
 
 		ndomod_free_esc_buffers(es, 3);
 
@@ -1953,33 +1966,35 @@ int ndomod_broker_data(int event_type, void *data)
 		/* Preparing if eventhandler will have long_output in the future */
 		es[6] = ndo_escape_buffer(ehanddata->output);
 
-		struct ndo_broker_data event_handler_data[] = {
-			NDODATA_INTEGER(NDO_DATA_TYPE, ehanddata->type),
-			NDODATA_INTEGER(NDO_DATA_FLAGS, ehanddata->flags),
-			NDODATA_INTEGER(NDO_DATA_ATTRIBUTES, ehanddata->attr),
-			NDODATA_TIMESTAMP(NDO_DATA_TIMESTAMP, ehanddata->timestamp),
-			NDODATA_STRING(NDO_DATA_HOST, es[0]),
-			NDODATA_STRING(NDO_DATA_SERVICE, es[1]),
-			NDODATA_INTEGER(NDO_DATA_STATETYPE, ehanddata->state_type),
-			NDODATA_INTEGER(NDO_DATA_STATE, ehanddata->state),
-			NDODATA_TIMESTAMP(NDO_DATA_STARTTIME, ehanddata->start_time),
-			NDODATA_TIMESTAMP(NDO_DATA_ENDTIME, ehanddata->end_time),
-			NDODATA_INTEGER(NDO_DATA_TIMEOUT, ehanddata->timeout),
-			NDODATA_STRING(NDO_DATA_COMMANDNAME,, es[2]),
-			NDODATA_STRING(NDO_DATA_COMMANDARGS, es[3]),
-			NDODATA_STRING(NDO_DATA_COMMANDLINE, es[4]),
-			NDODATA_INTEGER(NDO_DATA_EARLYTIMEOUT, ehanddata->early_timeout),
-			NDODATA_FLOATING_POINT(NDO_DATA_EXECUTIONTIME, ehanddata->execution_time),
-			NDODATA_INTEGER(NDO_DATA_RETURNCODE, ehanddata->return_code),
-			NDODATA_STRING(NDO_DATA_OUTPUT, es[5]),
-			NDODATA_STRING(NDO_DATA_LONGOUTPUT, es[6] )
-		};
+		{
+			struct ndo_broker_data event_handler_data[] = {
+				NDODATA_INTEGER(NDO_DATA_TYPE, ehanddata->type),
+				NDODATA_INTEGER(NDO_DATA_FLAGS, ehanddata->flags),
+				NDODATA_INTEGER(NDO_DATA_ATTRIBUTES, ehanddata->attr),
+				NDODATA_TIMESTAMP(NDO_DATA_TIMESTAMP, ehanddata->timestamp),
+				NDODATA_STRING(NDO_DATA_HOST, es[0]),
+				NDODATA_STRING(NDO_DATA_SERVICE, es[1]),
+				NDODATA_INTEGER(NDO_DATA_STATETYPE, ehanddata->state_type),
+				NDODATA_INTEGER(NDO_DATA_STATE, ehanddata->state),
+				NDODATA_TIMESTAMP(NDO_DATA_STARTTIME, ehanddata->start_time),
+				NDODATA_TIMESTAMP(NDO_DATA_ENDTIME, ehanddata->end_time),
+				NDODATA_INTEGER(NDO_DATA_TIMEOUT, ehanddata->timeout),
+				NDODATA_STRING(NDO_DATA_COMMANDNAME, es[2]),
+				NDODATA_STRING(NDO_DATA_COMMANDARGS, es[3]),
+				NDODATA_STRING(NDO_DATA_COMMANDLINE, es[4]),
+				NDODATA_INTEGER(NDO_DATA_EARLYTIMEOUT, ehanddata->early_timeout),
+				NDODATA_FLOATING_POINT(NDO_DATA_EXECUTIONTIME, ehanddata->execution_time),
+				NDODATA_INTEGER(NDO_DATA_RETURNCODE, ehanddata->return_code),
+				NDODATA_STRING(NDO_DATA_OUTPUT, es[5]),
+				NDODATA_STRING(NDO_DATA_LONGOUTPUT, es[6] )
+			};
 
-		ndomod_broker_data_serialize(&dbuf, 
-			NDO_API_EVENTHANDLERDATA,
-			event_handler_data,
-			ARRAY_SIZE(event_handler_data),
-			TRUE);
+			ndomod_broker_data_serialize(&dbuf, 
+				NDO_API_EVENTHANDLERDATA,
+				event_handler_data,
+				ARRAY_SIZE(event_handler_data),
+				TRUE);
+		}
 
 		ndomod_free_esc_buffers(es, 7);
 
@@ -1997,31 +2012,33 @@ int ndomod_broker_data(int event_type, void *data)
 		es[4] = ndo_escape_buffer(notdata->ack_author);
 		es[5] = ndo_escape_buffer(notdata->ack_data);
 
-		struct ndo_broker_data notification_data[] = {
-			NDODATA_INTEGER(NDO_DATA_TYPE, notdata->type),
-			NDODATA_INTEGER(NDO_DATA_FLAGS, notdata->flags),
-			NDODATA_INTEGER(NDO_DATA_ATTRIBUTES, notdata->attr),
-			NDODATA_TIMESTAMP(NDO_DATA_TIMESTAMP, notdata->timestamp),
-			NDODATA_INTEGER(NDO_DATA_NOTIFICATIONTYPE, notdata->notification_type),
-			NDODATA_TIMESTAMP(NDO_DATA_STARTTIME, notdata->start_time),
-			NDODATA_TIMESTAMP(NDO_DATA_ENDTIME, notdata->end_time),
-			NDODATA_STRING(NDO_DATA_HOST, es[0]),
-			NDODATA_STRING(NDO_DATA_SERVICE, es[1]),
-			NDODATA_INTEGER(NDO_DATA_NOTIFICATIONREASON, notdata->reason_type),
-			NDODATA_INTEGER(NDO_DATA_STATE, notdata->state),
-			NDODATA_STRING(NDO_DATA_OUTPUT, es[2]),
-			NDODATA_STRING(NDO_DATA_LONGOUTPUT, es[3]),
-			NDODATA_STRING(NDO_DATA_ACKAUTHOR, es[4]),
-			NDODATA_STRING(NDO_DATA_ACKDATA, es[5]),
-			NDODATA_INTEGER(NDO_DATA_ESCALATED, notdata->escalated),
-			NDODATA_INTEGER(NDO_DATA_CONTACTSNOTIFIED, notdata->contacts_notified )
-		};
+		{
+			struct ndo_broker_data notification_data[] = {
+				NDODATA_INTEGER(NDO_DATA_TYPE, notdata->type),
+				NDODATA_INTEGER(NDO_DATA_FLAGS, notdata->flags),
+				NDODATA_INTEGER(NDO_DATA_ATTRIBUTES, notdata->attr),
+				NDODATA_TIMESTAMP(NDO_DATA_TIMESTAMP, notdata->timestamp),
+				NDODATA_INTEGER(NDO_DATA_NOTIFICATIONTYPE, notdata->notification_type),
+				NDODATA_TIMESTAMP(NDO_DATA_STARTTIME, notdata->start_time),
+				NDODATA_TIMESTAMP(NDO_DATA_ENDTIME, notdata->end_time),
+				NDODATA_STRING(NDO_DATA_HOST, es[0]),
+				NDODATA_STRING(NDO_DATA_SERVICE, es[1]),
+				NDODATA_INTEGER(NDO_DATA_NOTIFICATIONREASON, notdata->reason_type),
+				NDODATA_INTEGER(NDO_DATA_STATE, notdata->state),
+				NDODATA_STRING(NDO_DATA_OUTPUT, es[2]),
+				NDODATA_STRING(NDO_DATA_LONGOUTPUT, es[3]),
+				NDODATA_STRING(NDO_DATA_ACKAUTHOR, es[4]),
+				NDODATA_STRING(NDO_DATA_ACKDATA, es[5]),
+				NDODATA_INTEGER(NDO_DATA_ESCALATED, notdata->escalated),
+				NDODATA_INTEGER(NDO_DATA_CONTACTSNOTIFIED, notdata->contacts_notified )
+			};
 
-		ndomod_broker_data_serialize(&dbuf, 
-			NDO_API_NOTIFICATIONDATA,
-			notification_data,
-			ARRAY_SIZE(notification_data),
-			TRUE);
+			ndomod_broker_data_serialize(&dbuf, 
+				NDO_API_NOTIFICATIONDATA,
+				notification_data,
+				ARRAY_SIZE(notification_data),
+				TRUE);
+		}
 
 		ndomod_free_esc_buffers(es, 6);
 
@@ -2046,38 +2063,40 @@ int ndomod_broker_data(int event_type, void *data)
 		es[6] = ndo_escape_buffer(scdata->long_output);
 		es[7] = ndo_escape_buffer(scdata->perf_data);
 
-		struct ndo_broker_data service_check_data[] = {
-			NDODATA_INTEGER(NDO_DATA_TYPE, scdata->type),
-			NDODATA_INTEGER(NDO_DATA_FLAGS, scdata->flags),
-			NDODATA_INTEGER(NDO_DATA_ATTRIBUTES, scdata->attr),
-			NDODATA_TIMESTAMP(NDO_DATA_TIMESTAMP, scdata->timestamp),
-			NDODATA_STRING(NDO_DATA_HOST, es[0]),
-			NDODATA_STRING(NDO_DATA_SERVICE, es[1]),
-			NDODATA_INTEGER(NDO_DATA_CHECKTYPE, scdata->check_type),
-			NDODATA_INTEGER(NDO_DATA_CURRENTCHECKATTEMPT, scdata->current_attempt),
-			NDODATA_INTEGER(NDO_DATA_MAXCHECKATTEMPTS, scdata->max_attempts),
-			NDODATA_INTEGER(NDO_DATA_STATETYPE, scdata->state_type),
-			NDODATA_INTEGER(NDO_DATA_STATE, scdata->state),
-			NDODATA_INTEGER(NDO_DATA_TIMEOUT, scdata->timeout),
-			NDODATA_STRING(NDO_DATA_COMMANDNAME, es[2]),
-			NDODATA_STRING(NDO_DATA_COMMANDARGS, es[3]),
-			NDODATA_STRING(NDO_DATA_COMMANDLINE, es[4]),
-			NDODATA_TIMESTAMP(NDO_DATA_STARTTIME, scdata->start_time),
-			NDODATA_TIMESTAMP(NDO_DATA_ENDTIME, scdata->end_time),
-			NDODATA_INTEGER(NDO_DATA_EARLYTIMEOUT, scdata->early_timeout),
-			NDODATA_FLOATING_POINT(NDO_DATA_EXECUTIONTIME, scdata->execution_time),
-			NDODATA_FLOATING_POINT(NDO_DATA_LATENCY, scdata->latency),
-			NDODATA_INTEGER(NDO_DATA_RETURNCODE, scdata->return_code),
-			NDODATA_STRING(NDO_DATA_OUTPUT, es[5]),
-			NDODATA_STRING(NDO_DATA_LONGOUTPUT, es[6]),
-			NDODATA_STRING(NDO_DATA_PERFDATA, es[7] )
-		};
+		{
+			struct ndo_broker_data service_check_data[] = {
+				NDODATA_INTEGER(NDO_DATA_TYPE, scdata->type),
+				NDODATA_INTEGER(NDO_DATA_FLAGS, scdata->flags),
+				NDODATA_INTEGER(NDO_DATA_ATTRIBUTES, scdata->attr),
+				NDODATA_TIMESTAMP(NDO_DATA_TIMESTAMP, scdata->timestamp),
+				NDODATA_STRING(NDO_DATA_HOST, es[0]),
+				NDODATA_STRING(NDO_DATA_SERVICE, es[1]),
+				NDODATA_INTEGER(NDO_DATA_CHECKTYPE, scdata->check_type),
+				NDODATA_INTEGER(NDO_DATA_CURRENTCHECKATTEMPT, scdata->current_attempt),
+				NDODATA_INTEGER(NDO_DATA_MAXCHECKATTEMPTS, scdata->max_attempts),
+				NDODATA_INTEGER(NDO_DATA_STATETYPE, scdata->state_type),
+				NDODATA_INTEGER(NDO_DATA_STATE, scdata->state),
+				NDODATA_INTEGER(NDO_DATA_TIMEOUT, scdata->timeout),
+				NDODATA_STRING(NDO_DATA_COMMANDNAME, es[2]),
+				NDODATA_STRING(NDO_DATA_COMMANDARGS, es[3]),
+				NDODATA_STRING(NDO_DATA_COMMANDLINE, es[4]),
+				NDODATA_TIMESTAMP(NDO_DATA_STARTTIME, scdata->start_time),
+				NDODATA_TIMESTAMP(NDO_DATA_ENDTIME, scdata->end_time),
+				NDODATA_INTEGER(NDO_DATA_EARLYTIMEOUT, scdata->early_timeout),
+				NDODATA_FLOATING_POINT(NDO_DATA_EXECUTIONTIME, scdata->execution_time),
+				NDODATA_FLOATING_POINT(NDO_DATA_LATENCY, scdata->latency),
+				NDODATA_INTEGER(NDO_DATA_RETURNCODE, scdata->return_code),
+				NDODATA_STRING(NDO_DATA_OUTPUT, es[5]),
+				NDODATA_STRING(NDO_DATA_LONGOUTPUT, es[6]),
+				NDODATA_STRING(NDO_DATA_PERFDATA, es[7] )
+			};
 
-		ndomod_broker_data_serialize(&dbuf, 
-			NDO_API_SERVICECHECKDATA,
-			service_check_data,
-			ARRAY_SIZE(service_check_data),
-			TRUE);
+			ndomod_broker_data_serialize(&dbuf, 
+				NDO_API_SERVICECHECKDATA,
+				service_check_data,
+				ARRAY_SIZE(service_check_data),
+				TRUE);
+		}
 
 		ndomod_free_esc_buffers(es, 8);
 
@@ -2101,37 +2120,39 @@ int ndomod_broker_data(int event_type, void *data)
 		es[5] = ndo_escape_buffer(hcdata->long_output);
 		es[6] = ndo_escape_buffer(hcdata->perf_data);
 
-		struct ndo_broker_data host_check_data[] = {
-			NDODATA_INTEGER(NDO_DATA_TYPE, hcdata->type),
-			NDODATA_INTEGER(NDO_DATA_FLAGS, hcdata->flags),
-			NDODATA_INTEGER(NDO_DATA_ATTRIBUTES, hcdata->attr),
-			NDODATA_TIMESTAMP(NDO_DATA_TIMESTAMP, hcdata->timestamp),
-			NDODATA_STRING(NDO_DATA_HOST, es[0]),
-			NDODATA_INTEGER(NDO_DATA_CHECKTYPE, hcdata->check_type),
-			NDODATA_INTEGER(NDO_DATA_CURRENTCHECKATTEMPT, hcdata->current_attempt),
-			NDODATA_INTEGER(NDO_DATA_MAXCHECKATTEMPTS, hcdata->max_attempts),
-			NDODATA_INTEGER(NDO_DATA_STATETYPE, hcdata->state_type),
-			NDODATA_INTEGER(NDO_DATA_STATE, hcdata->state),
-			NDODATA_INTEGER(NDO_DATA_TIMEOUT, hcdata->timeout),
-			NDODATA_STRING(NDO_DATA_COMMANDNAME, es[1]),
-			NDODATA_STRING(NDO_DATA_COMMANDARGS, es[2]),
-			NDODATA_STRING(NDO_DATA_COMMANDLINE, es[3]),
-			NDODATA_TIMESTAMP(NDO_DATA_STARTTIME, hcdata->start_time),
-			NDODATA_TIMESTAMP(NDO_DATA_ENDTIME, hcdata->end_time),
-			NDODATA_INTEGER(NDO_DATA_EARLYTIMEOUT, hcdata->early_timeout),
-			NDODATA_FLOATING_POINT(NDO_DATA_EXECUTIONTIME, hcdata->execution_time),
-			NDODATA_FLOATING_POINT(NDO_DATA_LATENCY, hcdata->latency),
-			NDODATA_INTEGER(NDO_DATA_RETURNCODE, hcdata->return_code),
-			NDODATA_STRING(NDO_DATA_OUTPUT, es[4]),
-			NDODATA_STRING(NDO_DATA_LONGOUTPUT, es[5]),
-			NDODATA_STRING(NDO_DATA_PERFDATA, es[6] )
-		};
+		{
+			struct ndo_broker_data host_check_data[] = {
+				NDODATA_INTEGER(NDO_DATA_TYPE, hcdata->type),
+				NDODATA_INTEGER(NDO_DATA_FLAGS, hcdata->flags),
+				NDODATA_INTEGER(NDO_DATA_ATTRIBUTES, hcdata->attr),
+				NDODATA_TIMESTAMP(NDO_DATA_TIMESTAMP, hcdata->timestamp),
+				NDODATA_STRING(NDO_DATA_HOST, es[0]),
+				NDODATA_INTEGER(NDO_DATA_CHECKTYPE, hcdata->check_type),
+				NDODATA_INTEGER(NDO_DATA_CURRENTCHECKATTEMPT, hcdata->current_attempt),
+				NDODATA_INTEGER(NDO_DATA_MAXCHECKATTEMPTS, hcdata->max_attempts),
+				NDODATA_INTEGER(NDO_DATA_STATETYPE, hcdata->state_type),
+				NDODATA_INTEGER(NDO_DATA_STATE, hcdata->state),
+				NDODATA_INTEGER(NDO_DATA_TIMEOUT, hcdata->timeout),
+				NDODATA_STRING(NDO_DATA_COMMANDNAME, es[1]),
+				NDODATA_STRING(NDO_DATA_COMMANDARGS, es[2]),
+				NDODATA_STRING(NDO_DATA_COMMANDLINE, es[3]),
+				NDODATA_TIMESTAMP(NDO_DATA_STARTTIME, hcdata->start_time),
+				NDODATA_TIMESTAMP(NDO_DATA_ENDTIME, hcdata->end_time),
+				NDODATA_INTEGER(NDO_DATA_EARLYTIMEOUT, hcdata->early_timeout),
+				NDODATA_FLOATING_POINT(NDO_DATA_EXECUTIONTIME, hcdata->execution_time),
+				NDODATA_FLOATING_POINT(NDO_DATA_LATENCY, hcdata->latency),
+				NDODATA_INTEGER(NDO_DATA_RETURNCODE, hcdata->return_code),
+				NDODATA_STRING(NDO_DATA_OUTPUT, es[4]),
+				NDODATA_STRING(NDO_DATA_LONGOUTPUT, es[5]),
+				NDODATA_STRING(NDO_DATA_PERFDATA, es[6] )
+			};
 
-		ndomod_broker_data_serialize(&dbuf, 
-			NDO_API_HOSTCHECKDATA,
-			host_check_data,
-			ARRAY_SIZE(host_check_data),
-			TRUE);
+			ndomod_broker_data_serialize(&dbuf, 
+				NDO_API_HOSTCHECKDATA,
+				host_check_data,
+				ARRAY_SIZE(host_check_data),
+				TRUE);
+		}
 
 		ndomod_free_esc_buffers(es, 7);
 
@@ -2146,30 +2167,32 @@ int ndomod_broker_data(int event_type, void *data)
 		es[2] = ndo_escape_buffer(comdata->author_name);
 		es[3] = ndo_escape_buffer(comdata->comment_data);
 
-		struct ndo_broker_data comment_data[] = {
-			NDODATA_INTEGER(NDO_DATA_TYPE, comdata->type),
-			NDODATA_INTEGER(NDO_DATA_FLAGS, comdata->flags),
-			NDODATA_INTEGER(NDO_DATA_ATTRIBUTES, comdata->attr),
-			NDODATA_TIMESTAMP(NDO_DATA_TIMESTAMP, comdata->timestamp),
-			NDODATA_INTEGER(NDO_DATA_COMMENTTYPE, comdata->comment_type),
-			NDODATA_STRING(NDO_DATA_HOST, es[0]),
-			NDODATA_STRING(NDO_DATA_SERVICE, es[1]),
-			NDODATA_UNSIGNED_LONG(NDO_DATA_ENTRYTIME, (unsigned long)comdata->entry_time),
-			NDODATA_STRING(NDO_DATA_AUTHORNAME, es[2]),
-			NDODATA_STRING(NDO_DATA_COMMENT, es[3]),
-			NDODATA_INTEGER(NDO_DATA_PERSISTENT, comdata->persistent),
-			NDODATA_INTEGER(NDO_DATA_SOURCE, comdata->source),
-			NDODATA_INTEGER(NDO_DATA_ENTRYTYPE, comdata->entry_type),
-			NDODATA_INTEGER(NDO_DATA_EXPIRES, comdata->expires),
-			NDODATA_UNSIGNED_LONG(NDO_DATA_EXPIRATIONTIME, (unsigned long)comdata->expire_time),
-			NDODATA_UNSIGNED_LONG(NDO_DATA_COMMENTID, comdata->comment_id )
-		};
+		{
+			struct ndo_broker_data comment_data[] = {
+				NDODATA_INTEGER(NDO_DATA_TYPE, comdata->type),
+				NDODATA_INTEGER(NDO_DATA_FLAGS, comdata->flags),
+				NDODATA_INTEGER(NDO_DATA_ATTRIBUTES, comdata->attr),
+				NDODATA_TIMESTAMP(NDO_DATA_TIMESTAMP, comdata->timestamp),
+				NDODATA_INTEGER(NDO_DATA_COMMENTTYPE, comdata->comment_type),
+				NDODATA_STRING(NDO_DATA_HOST, es[0]),
+				NDODATA_STRING(NDO_DATA_SERVICE, es[1]),
+				NDODATA_UNSIGNED_LONG(NDO_DATA_ENTRYTIME, (unsigned long)comdata->entry_time),
+				NDODATA_STRING(NDO_DATA_AUTHORNAME, es[2]),
+				NDODATA_STRING(NDO_DATA_COMMENT, es[3]),
+				NDODATA_INTEGER(NDO_DATA_PERSISTENT, comdata->persistent),
+				NDODATA_INTEGER(NDO_DATA_SOURCE, comdata->source),
+				NDODATA_INTEGER(NDO_DATA_ENTRYTYPE, comdata->entry_type),
+				NDODATA_INTEGER(NDO_DATA_EXPIRES, comdata->expires),
+				NDODATA_UNSIGNED_LONG(NDO_DATA_EXPIRATIONTIME, (unsigned long)comdata->expire_time),
+				NDODATA_UNSIGNED_LONG(NDO_DATA_COMMENTID, comdata->comment_id )
+			};
 
-		ndomod_broker_data_serialize(&dbuf, 
-			NDO_API_COMMENTDATA,
-			comment_data,
-			ARRAY_SIZE(comment_data), 
-			TRUE);
+			ndomod_broker_data_serialize(&dbuf, 
+				NDO_API_COMMENTDATA,
+				comment_data,
+				ARRAY_SIZE(comment_data), 
+				TRUE);
+		}
 
 		ndomod_free_esc_buffers(es, 4);
 
@@ -2184,30 +2207,32 @@ int ndomod_broker_data(int event_type, void *data)
 		es[2] = ndo_escape_buffer(downdata->author_name);
 		es[3] = ndo_escape_buffer(downdata->comment_data);
 
-		struct ndo_broker_data downtime_data[] = {
-			NDODATA_INTEGER(NDO_DATA_TYPE, downdata->type),
-			NDODATA_INTEGER(NDO_DATA_FLAGS, downdata->flags),
-			NDODATA_INTEGER(NDO_DATA_ATTRIBUTES, downdata->attr),
-			NDODATA_TIMESTAMP(NDO_DATA_TIMESTAMP, downdata->timestamp),
-			NDODATA_INTEGER(NDO_DATA_DOWNTIMETYPE, downdata->downtime_type),
-			NDODATA_STRING(NDO_DATA_HOST, es[0]),
-			NDODATA_STRING(NDO_DATA_SERVICE, es[1]),
-			NDODATA_UNSIGNED_LONG(NDO_DATA_ENTRYTIME, (unsigned long)downdata->entry_time),
-			NDODATA_STRING(NDO_DATA_AUTHORNAME, es[2]),
-			NDODATA_STRING(NDO_DATA_COMMENT, es[3]),
-			NDODATA_UNSIGNED_LONG(NDO_DATA_STARTTIME, (unsigned long)downdata->start_time),
-			NDODATA_UNSIGNED_LONG(NDO_DATA_ENDTIME, (unsigned long)downdata->end_time),
-			NDODATA_INTEGER(NDO_DATA_FIXED, downdata->fixed),
-			NDODATA_UNSIGNED_LONG(NDO_DATA_DURATION, (unsigned long)downdata->duration),
-			NDODATA_UNSIGNED_LONG(NDO_DATA_TRIGGEREDBY, (unsigned long)downdata->triggered_by),
-			NDODATA_UNSIGNED_LONG(NDO_DATA_DOWNTIMEID, (unsigned long)downdata->downtime_id),
-		};
+		{
+			struct ndo_broker_data downtime_data[] = {
+				NDODATA_INTEGER(NDO_DATA_TYPE, downdata->type),
+				NDODATA_INTEGER(NDO_DATA_FLAGS, downdata->flags),
+				NDODATA_INTEGER(NDO_DATA_ATTRIBUTES, downdata->attr),
+				NDODATA_TIMESTAMP(NDO_DATA_TIMESTAMP, downdata->timestamp),
+				NDODATA_INTEGER(NDO_DATA_DOWNTIMETYPE, downdata->downtime_type),
+				NDODATA_STRING(NDO_DATA_HOST, es[0]),
+				NDODATA_STRING(NDO_DATA_SERVICE, es[1]),
+				NDODATA_UNSIGNED_LONG(NDO_DATA_ENTRYTIME, (unsigned long)downdata->entry_time),
+				NDODATA_STRING(NDO_DATA_AUTHORNAME, es[2]),
+				NDODATA_STRING(NDO_DATA_COMMENT, es[3]),
+				NDODATA_UNSIGNED_LONG(NDO_DATA_STARTTIME, (unsigned long)downdata->start_time),
+				NDODATA_UNSIGNED_LONG(NDO_DATA_ENDTIME, (unsigned long)downdata->end_time),
+				NDODATA_INTEGER(NDO_DATA_FIXED, downdata->fixed),
+				NDODATA_UNSIGNED_LONG(NDO_DATA_DURATION, (unsigned long)downdata->duration),
+				NDODATA_UNSIGNED_LONG(NDO_DATA_TRIGGEREDBY, (unsigned long)downdata->triggered_by),
+				NDODATA_UNSIGNED_LONG(NDO_DATA_DOWNTIMEID, (unsigned long)downdata->downtime_id),
+			};
 
-		ndomod_broker_data_serialize(&dbuf, 
-			NDO_API_DOWNTIMEDATA,
-			downtime_data,
-			ARRAY_SIZE(downtime_data), 
-			TRUE);
+			ndomod_broker_data_serialize(&dbuf, 
+				NDO_API_DOWNTIMEDATA,
+				downtime_data,
+				ARRAY_SIZE(downtime_data), 
+				TRUE);
+		}
 
 		ndomod_free_esc_buffers(es, 4);
 
@@ -2227,26 +2252,28 @@ int ndomod_broker_data(int event_type, void *data)
 			temp_comment = find_service_comment(flapdata->comment_id);
 		}
 
-		struct ndo_broker_data flapping_data[] = {
-			NDODATA_INTEGER(NDO_DATA_TYPE, flapdata->type),
-			NDODATA_INTEGER(NDO_DATA_FLAGS, flapdata->flags),
-			NDODATA_INTEGER(NDO_DATA_ATTRIBUTES, flapdata->attr),
-			NDODATA_TIMESTAMP(NDO_DATA_TIMESTAMP, flapdata->timestamp),
-			NDODATA_INTEGER(NDO_DATA_FLAPPINGTYPE, flapdata->flapping_type),
-			NDODATA_STRING(NDO_DATA_HOST, es[0]),
-			NDODATA_STRING(NDO_DATA_SERVICE, es[1]),
-			NDODATA_FLOATING_POINT(NDO_DATA_PERCENTSTATECHANGE, flapdata->percent_change),
-			NDODATA_FLOATING_POINT(NDO_DATA_HIGHTHRESHOLD, flapdata->high_threshold),
-			NDODATA_FLOATING_POINT(NDO_DATA_LOWTHRESHOLD, flapdata->low_threshold),
-			NDODATA_UNSIGNED_LONG(NDO_DATA_COMMENTTIME, (temp_comment == NULL) ? 0L : (unsigned long)temp_comment->entry_time),
-			NDODATA_UNSIGNED_LONG(NDO_DATA_COMMENTID, flapdata->comment_id )
-		};
+		{
+			struct ndo_broker_data flapping_data[] = {
+				NDODATA_INTEGER(NDO_DATA_TYPE, flapdata->type),
+				NDODATA_INTEGER(NDO_DATA_FLAGS, flapdata->flags),
+				NDODATA_INTEGER(NDO_DATA_ATTRIBUTES, flapdata->attr),
+				NDODATA_TIMESTAMP(NDO_DATA_TIMESTAMP, flapdata->timestamp),
+				NDODATA_INTEGER(NDO_DATA_FLAPPINGTYPE, flapdata->flapping_type),
+				NDODATA_STRING(NDO_DATA_HOST, es[0]),
+				NDODATA_STRING(NDO_DATA_SERVICE, es[1]),
+				NDODATA_FLOATING_POINT(NDO_DATA_PERCENTSTATECHANGE, flapdata->percent_change),
+				NDODATA_FLOATING_POINT(NDO_DATA_HIGHTHRESHOLD, flapdata->high_threshold),
+				NDODATA_FLOATING_POINT(NDO_DATA_LOWTHRESHOLD, flapdata->low_threshold),
+				NDODATA_UNSIGNED_LONG(NDO_DATA_COMMENTTIME, (temp_comment == NULL) ? 0L : (unsigned long)temp_comment->entry_time),
+				NDODATA_UNSIGNED_LONG(NDO_DATA_COMMENTID, flapdata->comment_id )
+			};
 
-		ndomod_broker_data_serialize(&dbuf, 
-			NDO_API_FLAPPINGDATA,
-			flapping_data,
-			ARRAY_SIZE(flapping_data), 
-			TRUE);
+			ndomod_broker_data_serialize(&dbuf, 
+				NDO_API_FLAPPINGDATA,
+				flapping_data,
+				ARRAY_SIZE(flapping_data), 
+				TRUE);
+		}
 
 		ndomod_free_esc_buffers(es, 2);
 
@@ -2259,38 +2286,40 @@ int ndomod_broker_data(int event_type, void *data)
 		es[0] = ndo_escape_buffer(psdata->global_host_event_handler);
 		es[1] = ndo_escape_buffer(psdata->global_service_event_handler);
 
-		struct ndo_broker_data program_status_data[] = {
-			NDODATA_INTEGER(NDO_DATA_TYPE, psdata->type),
-			NDODATA_INTEGER(NDO_DATA_FLAGS, psdata->flags),
-			NDODATA_INTEGER(NDO_DATA_ATTRIBUTES, psdata->attr),
-			NDODATA_TIMESTAMP(NDO_DATA_TIMESTAMP, psdata->timestamp),
-			NDODATA_UNSIGNED_LONG(NDO_DATA_PROGRAMSTARTTIME, (unsigned long)psdata->program_start),
-			NDODATA_INTEGER(NDO_DATA_PROCESSID, psdata->pid),
-			NDODATA_INTEGER(NDO_DATA_DAEMONMODE, psdata->daemon_mode),
-			NDODATA_UNSIGNED_LONG(NDO_DATA_LASTCOMMANDCHECK, 0L),
-			NDODATA_UNSIGNED_LONG(NDO_DATA_LASTLOGROTATION, psdata->last_log_rotation),
-			NDODATA_INTEGER(NDO_DATA_NOTIFICATIONSENABLED, psdata->notifications_enabled),
-			NDODATA_INTEGER(NDO_DATA_ACTIVESERVICECHECKSENABLED, psdata->active_service_checks_enabled),
-			NDODATA_INTEGER(NDO_DATA_PASSIVESERVICECHECKSENABLED, psdata->passive_service_checks_enabled),
-			NDODATA_INTEGER(NDO_DATA_ACTIVEHOSTCHECKSENABLED, psdata->active_host_checks_enabled),
-			NDODATA_INTEGER(NDO_DATA_PASSIVEHOSTCHECKSENABLED, psdata->passive_host_checks_enabled),
-			NDODATA_INTEGER(NDO_DATA_EVENTHANDLERSENABLED, psdata->event_handlers_enabled),
-			NDODATA_INTEGER(NDO_DATA_FLAPDETECTIONENABLED, psdata->flap_detection_enabled),
-			NDODATA_INTEGER(NDO_DATA_FAILUREPREDICTIONENABLED, 0),
-			NDODATA_INTEGER(NDO_DATA_PROCESSPERFORMANCEDATA, psdata->process_performance_data),
-			NDODATA_INTEGER(NDO_DATA_OBSESSOVERHOSTS, psdata->obsess_over_hosts),
-			NDODATA_INTEGER(NDO_DATA_OBSESSOVERSERVICES, psdata->obsess_over_services),
-			NDODATA_UNSIGNED_LONG(NDO_DATA_MODIFIEDHOSTATTRIBUTES, psdata->modified_host_attributes),
-			NDODATA_UNSIGNED_LONG(NDO_DATA_MODIFIEDSERVICEATTRIBUTES, psdata->modified_service_attributes),
-			NDODATA_STRING(NDO_DATA_GLOBALHOSTEVENTHANDLER, es[0]),
-			NDODATA_STRING(NDO_DATA_GLOBALSERVICEEVENTHANDLER, es[1]),
-			};
+		{
+			struct ndo_broker_data program_status_data[] = {
+				NDODATA_INTEGER(NDO_DATA_TYPE, psdata->type),
+				NDODATA_INTEGER(NDO_DATA_FLAGS, psdata->flags),
+				NDODATA_INTEGER(NDO_DATA_ATTRIBUTES, psdata->attr),
+				NDODATA_TIMESTAMP(NDO_DATA_TIMESTAMP, psdata->timestamp),
+				NDODATA_UNSIGNED_LONG(NDO_DATA_PROGRAMSTARTTIME, (unsigned long)psdata->program_start),
+				NDODATA_INTEGER(NDO_DATA_PROCESSID, psdata->pid),
+				NDODATA_INTEGER(NDO_DATA_DAEMONMODE, psdata->daemon_mode),
+				NDODATA_UNSIGNED_LONG(NDO_DATA_LASTCOMMANDCHECK, 0L),
+				NDODATA_UNSIGNED_LONG(NDO_DATA_LASTLOGROTATION, psdata->last_log_rotation),
+				NDODATA_INTEGER(NDO_DATA_NOTIFICATIONSENABLED, psdata->notifications_enabled),
+				NDODATA_INTEGER(NDO_DATA_ACTIVESERVICECHECKSENABLED, psdata->active_service_checks_enabled),
+				NDODATA_INTEGER(NDO_DATA_PASSIVESERVICECHECKSENABLED, psdata->passive_service_checks_enabled),
+				NDODATA_INTEGER(NDO_DATA_ACTIVEHOSTCHECKSENABLED, psdata->active_host_checks_enabled),
+				NDODATA_INTEGER(NDO_DATA_PASSIVEHOSTCHECKSENABLED, psdata->passive_host_checks_enabled),
+				NDODATA_INTEGER(NDO_DATA_EVENTHANDLERSENABLED, psdata->event_handlers_enabled),
+				NDODATA_INTEGER(NDO_DATA_FLAPDETECTIONENABLED, psdata->flap_detection_enabled),
+				NDODATA_INTEGER(NDO_DATA_FAILUREPREDICTIONENABLED, 0),
+				NDODATA_INTEGER(NDO_DATA_PROCESSPERFORMANCEDATA, psdata->process_performance_data),
+				NDODATA_INTEGER(NDO_DATA_OBSESSOVERHOSTS, psdata->obsess_over_hosts),
+				NDODATA_INTEGER(NDO_DATA_OBSESSOVERSERVICES, psdata->obsess_over_services),
+				NDODATA_UNSIGNED_LONG(NDO_DATA_MODIFIEDHOSTATTRIBUTES, psdata->modified_host_attributes),
+				NDODATA_UNSIGNED_LONG(NDO_DATA_MODIFIEDSERVICEATTRIBUTES, psdata->modified_service_attributes),
+				NDODATA_STRING(NDO_DATA_GLOBALHOSTEVENTHANDLER, es[0]),
+				NDODATA_STRING(NDO_DATA_GLOBALSERVICEEVENTHANDLER, es[1]),
+				};
 
-		ndomod_broker_data_serialize(&dbuf, 
-			NDO_API_PROGRAMSTATUSDATA,
-			program_status_data,
-			ARRAY_SIZE(program_status_data), 
-			TRUE);
+			ndomod_broker_data_serialize(&dbuf, 
+				NDO_API_PROGRAMSTATUSDATA,
+				program_status_data,
+				ARRAY_SIZE(program_status_data), 
+				TRUE);
+		}
 
 		ndomod_free_esc_buffers(es, 2);
 
@@ -2314,64 +2343,64 @@ int ndomod_broker_data(int event_type, void *data)
 		es[5] = ndo_escape_buffer(temp_host->check_command);
 		es[6] = ndo_escape_buffer(temp_host->check_period);
 
-		retry_interval = temp_host->retry_interval;
+		{
+			struct ndo_broker_data host_status_data[] = {
+				NDODATA_INTEGER(NDO_DATA_TYPE, hsdata->type),
+				NDODATA_INTEGER(NDO_DATA_FLAGS, hsdata->flags),
+				NDODATA_INTEGER(NDO_DATA_ATTRIBUTES, hsdata->attr),
+				NDODATA_TIMESTAMP(NDO_DATA_TIMESTAMP, hsdata->timestamp),
+				NDODATA_STRING(NDO_DATA_HOST, es[0]),
+				NDODATA_STRING(NDO_DATA_OUTPUT, es[1]),
+				NDODATA_STRING(NDO_DATA_LONGOUTPUT, es[2]),
+				NDODATA_STRING(NDO_DATA_PERFDATA, es[3]),
+				NDODATA_INTEGER(NDO_DATA_CURRENTSTATE, temp_host->current_state),
+				NDODATA_INTEGER(NDO_DATA_HASBEENCHECKED, temp_host->has_been_checked),
+				NDODATA_INTEGER(NDO_DATA_SHOULDBESCHEDULED, temp_host->should_be_scheduled),
+				NDODATA_INTEGER(NDO_DATA_CURRENTCHECKATTEMPT, temp_host->current_attempt),
+				NDODATA_INTEGER(NDO_DATA_MAXCHECKATTEMPTS, temp_host->max_attempts),
+				NDODATA_UNSIGNED_LONG(NDO_DATA_LASTHOSTCHECK, (unsigned long)temp_host->last_check),
+				NDODATA_UNSIGNED_LONG(NDO_DATA_NEXTHOSTCHECK, (unsigned long)temp_host->next_check),
+				NDODATA_INTEGER(NDO_DATA_CHECKTYPE, temp_host->check_type),
+				NDODATA_UNSIGNED_LONG(NDO_DATA_LASTSTATECHANGE, (unsigned long)temp_host->last_state_change),
+				NDODATA_UNSIGNED_LONG(NDO_DATA_LASTHARDSTATECHANGE, (unsigned long)temp_host->last_hard_state_change),
+				NDODATA_INTEGER(NDO_DATA_LASTHARDSTATE, temp_host->last_hard_state),
+				NDODATA_UNSIGNED_LONG(NDO_DATA_LASTTIMEUP, (unsigned long)temp_host->last_time_up),
+				NDODATA_UNSIGNED_LONG(NDO_DATA_LASTTIMEDOWN, (unsigned long)temp_host->last_time_down),
+				NDODATA_UNSIGNED_LONG(NDO_DATA_LASTTIMEUNREACHABLE, (unsigned long)temp_host->last_time_unreachable),
+				NDODATA_INTEGER(NDO_DATA_STATETYPE, temp_host->state_type),
+				NDODATA_UNSIGNED_LONG(NDO_DATA_LASTHOSTNOTIFICATION, (unsigned long)temp_host->last_notification),
+				NDODATA_UNSIGNED_LONG(NDO_DATA_NEXTHOSTNOTIFICATION, (unsigned long)temp_host->next_notification),
+				NDODATA_INTEGER(NDO_DATA_NOMORENOTIFICATIONS, temp_host->no_more_notifications),
+				NDODATA_INTEGER(NDO_DATA_NOTIFICATIONSENABLED, temp_host->notifications_enabled),
+				NDODATA_INTEGER(NDO_DATA_PROBLEMHASBEENACKNOWLEDGED, temp_host->problem_has_been_acknowledged),
+				NDODATA_INTEGER(NDO_DATA_ACKNOWLEDGEMENTTYPE, temp_host->acknowledgement_type),
+				NDODATA_INTEGER(NDO_DATA_CURRENTNOTIFICATIONNUMBER, temp_host->current_notification_number),
+				NDODATA_INTEGER(NDO_DATA_PASSIVEHOSTCHECKSENABLED, temp_host->accept_passive_checks),
+				NDODATA_INTEGER(NDO_DATA_EVENTHANDLERENABLED, temp_host->event_handler_enabled),
+				NDODATA_INTEGER(NDO_DATA_ACTIVEHOSTCHECKSENABLED, temp_host->checks_enabled),
+				NDODATA_INTEGER(NDO_DATA_FLAPDETECTIONENABLED, temp_host->flap_detection_enabled),
+				NDODATA_INTEGER(NDO_DATA_ISFLAPPING, temp_host->is_flapping),
+				NDODATA_FLOATING_POINT(NDO_DATA_PERCENTSTATECHANGE, temp_host->percent_state_change),
+				NDODATA_FLOATING_POINT(NDO_DATA_LATENCY, temp_host->latency),
+				NDODATA_FLOATING_POINT(NDO_DATA_EXECUTIONTIME, temp_host->execution_time),
+				NDODATA_INTEGER(NDO_DATA_SCHEDULEDDOWNTIMEDEPTH, temp_host->scheduled_downtime_depth),
+				NDODATA_INTEGER(NDO_DATA_FAILUREPREDICTIONENABLED, 0),
+				NDODATA_INTEGER(NDO_DATA_PROCESSPERFORMANCEDATA, temp_host->process_performance_data),
+				NDODATA_INTEGER(NDO_DATA_OBSESSOVERHOST, temp_host->obsess),
+				NDODATA_UNSIGNED_LONG(NDO_DATA_MODIFIEDHOSTATTRIBUTES, temp_host->modified_attributes),
+				NDODATA_STRING(NDO_DATA_EVENTHANDLER, es[4]),
+				NDODATA_STRING(NDO_DATA_CHECKCOMMAND, es[5]),
+				NDODATA_FLOATING_POINT(NDO_DATA_NORMALCHECKINTERVAL, (double)temp_host->check_interval),
+				NDODATA_FLOATING_POINT(NDO_DATA_RETRYCHECKINTERVAL, (double)temp_host->retry_interval),
+				NDODATA_STRING(NDO_DATA_HOSTCHECKPERIOD, es[6] )
+			};
 
-		struct ndo_broker_data host_status_data[] = {
-			NDODATA_INTEGER(NDO_DATA_TYPE, hsdata->type),
-			NDODATA_INTEGER(NDO_DATA_FLAGS, hsdata->flags),
-			NDODATA_INTEGER(NDO_DATA_ATTRIBUTES, hsdata->attr),
-			NDODATA_TIMESTAMP(NDO_DATA_TIMESTAMP, hsdata->timestamp),
-			NDODATA_STRING(NDO_DATA_HOST, es[0]),
-			NDODATA_STRING(NDO_DATA_OUTPUT, es[1]),
-			NDODATA_STRING(NDO_DATA_LONGOUTPUT, es[2]),
-			NDODATA_STRING(NDO_DATA_PERFDATA, es[3]),
-			NDODATA_INTEGER(NDO_DATA_CURRENTSTATE, temp_host->current_state),
-			NDODATA_INTEGER(NDO_DATA_HASBEENCHECKED, temp_host->has_been_checked),
-			NDODATA_INTEGER(NDO_DATA_SHOULDBESCHEDULED, temp_host->should_be_scheduled),
-			NDODATA_INTEGER(NDO_DATA_CURRENTCHECKATTEMPT, temp_host->current_attempt),
-			NDODATA_INTEGER(NDO_DATA_MAXCHECKATTEMPTS, temp_host->max_attempts),
-			NDODATA_UNSIGNED_LONG(NDO_DATA_LASTHOSTCHECK, (unsigned long)temp_host->last_check),
-			NDODATA_UNSIGNED_LONG(NDO_DATA_NEXTHOSTCHECK, (unsigned long)temp_host->next_check),
-			NDODATA_INTEGER(NDO_DATA_CHECKTYPE, temp_host->check_type),
-			NDODATA_UNSIGNED_LONG(NDO_DATA_LASTSTATECHANGE, (unsigned long)temp_host->last_state_change),
-			NDODATA_UNSIGNED_LONG(NDO_DATA_LASTHARDSTATECHANGE, (unsigned long)temp_host->last_hard_state_change),
-			NDODATA_INTEGER(NDO_DATA_LASTHARDSTATE, temp_host->last_hard_state),
-			NDODATA_UNSIGNED_LONG(NDO_DATA_LASTTIMEUP, (unsigned long)temp_host->last_time_up),
-			NDODATA_UNSIGNED_LONG(NDO_DATA_LASTTIMEDOWN, (unsigned long)temp_host->last_time_down),
-			NDODATA_UNSIGNED_LONG(NDO_DATA_LASTTIMEUNREACHABLE, (unsigned long)temp_host->last_time_unreachable),
-			NDODATA_INTEGER(NDO_DATA_STATETYPE, temp_host->state_type),
-			NDODATA_UNSIGNED_LONG(NDO_DATA_LASTHOSTNOTIFICATION, (unsigned long)temp_host->last_notification),
-			NDODATA_UNSIGNED_LONG(NDO_DATA_NEXTHOSTNOTIFICATION, (unsigned long)temp_host->next_notification),
-			NDODATA_INTEGER(NDO_DATA_NOMORENOTIFICATIONS, temp_host->no_more_notifications),
-			NDODATA_INTEGER(NDO_DATA_NOTIFICATIONSENABLED, temp_host->notifications_enabled),
-			NDODATA_INTEGER(NDO_DATA_PROBLEMHASBEENACKNOWLEDGED, temp_host->problem_has_been_acknowledged),
-			NDODATA_INTEGER(NDO_DATA_ACKNOWLEDGEMENTTYPE, temp_host->acknowledgement_type),
-			NDODATA_INTEGER(NDO_DATA_CURRENTNOTIFICATIONNUMBER, temp_host->current_notification_number),
-			NDODATA_INTEGER(NDO_DATA_PASSIVEHOSTCHECKSENABLED, temp_host->accept_passive_checks),
-			NDODATA_INTEGER(NDO_DATA_EVENTHANDLERENABLED, temp_host->event_handler_enabled),
-			NDODATA_INTEGER(NDO_DATA_ACTIVEHOSTCHECKSENABLED, temp_host->checks_enabled),
-			NDODATA_INTEGER(NDO_DATA_FLAPDETECTIONENABLED, temp_host->flap_detection_enabled),
-			NDODATA_INTEGER(NDO_DATA_ISFLAPPING, temp_host->is_flapping),
-			NDODATA_FLOATING_POINT(NDO_DATA_PERCENTSTATECHANGE, temp_host->percent_state_change),
-			NDODATA_FLOATING_POINT(NDO_DATA_LATENCY, temp_host->latency),
-			NDODATA_FLOATING_POINT(NDO_DATA_EXECUTIONTIME, temp_host->execution_time),
-			NDODATA_INTEGER(NDO_DATA_SCHEDULEDDOWNTIMEDEPTH, temp_host->scheduled_downtime_depth),
-			NDODATA_INTEGER(NDO_DATA_FAILUREPREDICTIONENABLED, 0),
-			NDODATA_INTEGER(NDO_DATA_PROCESSPERFORMANCEDATA, temp_host->process_performance_data),
-			NDODATA_INTEGER(NDO_DATA_OBSESSOVERHOST, temp_host->obsess),
-			NDODATA_UNSIGNED_LONG(NDO_DATA_MODIFIEDHOSTATTRIBUTES, temp_host->modified_attributes),
-			NDODATA_STRING(NDO_DATA_EVENTHANDLER, es[4]),
-			NDODATA_STRING(NDO_DATA_CHECKCOMMAND, es[5]),
-			NDODATA_FLOATING_POINT(NDO_DATA_NORMALCHECKINTERVAL, (double)temp_host->check_interval),
-			NDODATA_FLOATING_POINT(NDO_DATA_RETRYCHECKINTERVAL, (double)retry_interval),
-			NDODATA_STRING(NDO_DATA_HOSTCHECKPERIOD, es[6] )
-		};
-
-		ndomod_broker_data_serialize(&dbuf, 
-			NDO_API_HOSTSTATUSDATA,
-			host_status_data,
-			ARRAY_SIZE(host_status_data),
-			FALSE);
+			ndomod_broker_data_serialize(&dbuf, 
+				NDO_API_HOSTSTATUSDATA,
+				host_status_data,
+				ARRAY_SIZE(host_status_data),
+				FALSE);
+		}
 
 		ndomod_customvars_serialize(temp_host->custom_variables, &dbuf);
 
@@ -2400,64 +2429,66 @@ int ndomod_broker_data(int event_type, void *data)
 		es[6] = ndo_escape_buffer(temp_service->check_command);
 		es[7] = ndo_escape_buffer(temp_service->check_period);
 
-		struct ndo_broker_data service_status_data[] = {
-			NDODATA_INTEGER(NDO_DATA_TYPE, ssdata->type),
-			NDODATA_INTEGER(NDO_DATA_FLAGS, ssdata->flags),
-			NDODATA_INTEGER(NDO_DATA_ATTRIBUTES, ssdata->attr),
-			NDODATA_TIMESTAMP(NDO_DATA_TIMESTAMP, ssdata->timestamp),
-			NDODATA_STRING(NDO_DATA_HOST, es[0]),
-			NDODATA_STRING(NDO_DATA_SERVICE, es[1]),
-			NDODATA_STRING(NDO_DATA_OUTPUT, es[2]),
-			NDODATA_STRING(NDO_DATA_LONGOUTPUT, es[3]),
-			NDODATA_STRING(NDO_DATA_PERFDATA, es[4]),
-			NDODATA_INTEGER(NDO_DATA_CURRENTSTATE, temp_service->current_state),
-			NDODATA_INTEGER(NDO_DATA_HASBEENCHECKED, temp_service->has_been_checked),
-			NDODATA_INTEGER(NDO_DATA_SHOULDBESCHEDULED, temp_service->should_be_scheduled),
-			NDODATA_INTEGER(NDO_DATA_CURRENTCHECKATTEMPT, temp_service->current_attempt),
-			NDODATA_INTEGER(NDO_DATA_MAXCHECKATTEMPTS, temp_service->max_attempts),
-			NDODATA_UNSIGNED_LONG(NDO_DATA_LASTSERVICECHECK, (unsigned long)temp_service->last_check),
-			NDODATA_UNSIGNED_LONG(NDO_DATA_NEXTSERVICECHECK, (unsigned long)temp_service->next_check),
-			NDODATA_INTEGER(NDO_DATA_CHECKTYPE, temp_service->check_type),
-			NDODATA_UNSIGNED_LONG(NDO_DATA_LASTSTATECHANGE, (unsigned long)temp_service->last_state_change),
-			NDODATA_UNSIGNED_LONG(NDO_DATA_LASTHARDSTATECHANGE, (unsigned long)temp_service->last_hard_state_change),
-			NDODATA_INTEGER(NDO_DATA_LASTHARDSTATE, temp_service->last_hard_state),
-			NDODATA_UNSIGNED_LONG(NDO_DATA_LASTTIMEOK, (unsigned long)temp_service->last_time_ok),
-			NDODATA_UNSIGNED_LONG(NDO_DATA_LASTTIMEWARNING, (unsigned long)temp_service->last_time_warning),
-			NDODATA_UNSIGNED_LONG(NDO_DATA_LASTTIMEUNKNOWN, (unsigned long)temp_service->last_time_unknown),
-			NDODATA_UNSIGNED_LONG(NDO_DATA_LASTTIMECRITICAL, (unsigned long)temp_service->last_time_critical),
-			NDODATA_INTEGER(NDO_DATA_STATETYPE, temp_service->state_type),
-			NDODATA_UNSIGNED_LONG(NDO_DATA_LASTSERVICENOTIFICATION, (unsigned long)temp_service->last_notification),
-			NDODATA_UNSIGNED_LONG(NDO_DATA_NEXTSERVICENOTIFICATION, (unsigned long)temp_service->next_notification),
-			NDODATA_INTEGER(NDO_DATA_NOMORENOTIFICATIONS, temp_service->no_more_notifications),
-			NDODATA_INTEGER(NDO_DATA_NOTIFICATIONSENABLED, temp_service->notifications_enabled),
-			NDODATA_INTEGER(NDO_DATA_PROBLEMHASBEENACKNOWLEDGED, temp_service->problem_has_been_acknowledged),
-			NDODATA_INTEGER(NDO_DATA_ACKNOWLEDGEMENTTYPE, temp_service->acknowledgement_type),
-			NDODATA_INTEGER(NDO_DATA_CURRENTNOTIFICATIONNUMBER, temp_service->current_notification_number),
-			NDODATA_INTEGER(NDO_DATA_PASSIVESERVICECHECKSENABLED, temp_service->accept_passive_checks),
-			NDODATA_INTEGER(NDO_DATA_EVENTHANDLERENABLED, temp_service->event_handler_enabled),
-			NDODATA_INTEGER(NDO_DATA_ACTIVESERVICECHECKSENABLED, temp_service->checks_enabled),
-			NDODATA_INTEGER(NDO_DATA_FLAPDETECTIONENABLED, temp_service->flap_detection_enabled),
-			NDODATA_INTEGER(NDO_DATA_ISFLAPPING, temp_service->is_flapping),
-			NDODATA_FLOATING_POINT(NDO_DATA_PERCENTSTATECHANGE, temp_service->percent_state_change),
-			NDODATA_FLOATING_POINT(NDO_DATA_LATENCY, temp_service->latency),
-			NDODATA_FLOATING_POINT(NDO_DATA_EXECUTIONTIME, temp_service->execution_time),
-			NDODATA_INTEGER(NDO_DATA_SCHEDULEDDOWNTIMEDEPTH, temp_service->scheduled_downtime_depth),
-			NDODATA_INTEGER(NDO_DATA_FAILUREPREDICTIONENABLED, 0),
-			NDODATA_INTEGER(NDO_DATA_PROCESSPERFORMANCEDATA, temp_service->process_performance_data),
-			NDODATA_INTEGER(NDO_DATA_OBSESSOVERSERVICE, temp_service->obsess),
-			NDODATA_UNSIGNED_LONG(NDO_DATA_MODIFIEDSERVICEATTRIBUTES, temp_service->modified_attributes),
-			NDODATA_STRING(NDO_DATA_EVENTHANDLER, es[5]),
-			NDODATA_STRING(NDO_DATA_CHECKCOMMAND, es[6]),
-			NDODATA_FLOATING_POINT(NDO_DATA_NORMALCHECKINTERVAL, (double)temp_service->check_interval),
-			NDODATA_FLOATING_POINT(NDO_DATA_RETRYCHECKINTERVAL, (double)temp_service->retry_interval),
-			NDODATA_STRING(NDO_DATA_SERVICECHECKPERIOD, es[7] )
-		};
+		{
+			struct ndo_broker_data service_status_data[] = {
+				NDODATA_INTEGER(NDO_DATA_TYPE, ssdata->type),
+				NDODATA_INTEGER(NDO_DATA_FLAGS, ssdata->flags),
+				NDODATA_INTEGER(NDO_DATA_ATTRIBUTES, ssdata->attr),
+				NDODATA_TIMESTAMP(NDO_DATA_TIMESTAMP, ssdata->timestamp),
+				NDODATA_STRING(NDO_DATA_HOST, es[0]),
+				NDODATA_STRING(NDO_DATA_SERVICE, es[1]),
+				NDODATA_STRING(NDO_DATA_OUTPUT, es[2]),
+				NDODATA_STRING(NDO_DATA_LONGOUTPUT, es[3]),
+				NDODATA_STRING(NDO_DATA_PERFDATA, es[4]),
+				NDODATA_INTEGER(NDO_DATA_CURRENTSTATE, temp_service->current_state),
+				NDODATA_INTEGER(NDO_DATA_HASBEENCHECKED, temp_service->has_been_checked),
+				NDODATA_INTEGER(NDO_DATA_SHOULDBESCHEDULED, temp_service->should_be_scheduled),
+				NDODATA_INTEGER(NDO_DATA_CURRENTCHECKATTEMPT, temp_service->current_attempt),
+				NDODATA_INTEGER(NDO_DATA_MAXCHECKATTEMPTS, temp_service->max_attempts),
+				NDODATA_UNSIGNED_LONG(NDO_DATA_LASTSERVICECHECK, (unsigned long)temp_service->last_check),
+				NDODATA_UNSIGNED_LONG(NDO_DATA_NEXTSERVICECHECK, (unsigned long)temp_service->next_check),
+				NDODATA_INTEGER(NDO_DATA_CHECKTYPE, temp_service->check_type),
+				NDODATA_UNSIGNED_LONG(NDO_DATA_LASTSTATECHANGE, (unsigned long)temp_service->last_state_change),
+				NDODATA_UNSIGNED_LONG(NDO_DATA_LASTHARDSTATECHANGE, (unsigned long)temp_service->last_hard_state_change),
+				NDODATA_INTEGER(NDO_DATA_LASTHARDSTATE, temp_service->last_hard_state),
+				NDODATA_UNSIGNED_LONG(NDO_DATA_LASTTIMEOK, (unsigned long)temp_service->last_time_ok),
+				NDODATA_UNSIGNED_LONG(NDO_DATA_LASTTIMEWARNING, (unsigned long)temp_service->last_time_warning),
+				NDODATA_UNSIGNED_LONG(NDO_DATA_LASTTIMEUNKNOWN, (unsigned long)temp_service->last_time_unknown),
+				NDODATA_UNSIGNED_LONG(NDO_DATA_LASTTIMECRITICAL, (unsigned long)temp_service->last_time_critical),
+				NDODATA_INTEGER(NDO_DATA_STATETYPE, temp_service->state_type),
+				NDODATA_UNSIGNED_LONG(NDO_DATA_LASTSERVICENOTIFICATION, (unsigned long)temp_service->last_notification),
+				NDODATA_UNSIGNED_LONG(NDO_DATA_NEXTSERVICENOTIFICATION, (unsigned long)temp_service->next_notification),
+				NDODATA_INTEGER(NDO_DATA_NOMORENOTIFICATIONS, temp_service->no_more_notifications),
+				NDODATA_INTEGER(NDO_DATA_NOTIFICATIONSENABLED, temp_service->notifications_enabled),
+				NDODATA_INTEGER(NDO_DATA_PROBLEMHASBEENACKNOWLEDGED, temp_service->problem_has_been_acknowledged),
+				NDODATA_INTEGER(NDO_DATA_ACKNOWLEDGEMENTTYPE, temp_service->acknowledgement_type),
+				NDODATA_INTEGER(NDO_DATA_CURRENTNOTIFICATIONNUMBER, temp_service->current_notification_number),
+				NDODATA_INTEGER(NDO_DATA_PASSIVESERVICECHECKSENABLED, temp_service->accept_passive_checks),
+				NDODATA_INTEGER(NDO_DATA_EVENTHANDLERENABLED, temp_service->event_handler_enabled),
+				NDODATA_INTEGER(NDO_DATA_ACTIVESERVICECHECKSENABLED, temp_service->checks_enabled),
+				NDODATA_INTEGER(NDO_DATA_FLAPDETECTIONENABLED, temp_service->flap_detection_enabled),
+				NDODATA_INTEGER(NDO_DATA_ISFLAPPING, temp_service->is_flapping),
+				NDODATA_FLOATING_POINT(NDO_DATA_PERCENTSTATECHANGE, temp_service->percent_state_change),
+				NDODATA_FLOATING_POINT(NDO_DATA_LATENCY, temp_service->latency),
+				NDODATA_FLOATING_POINT(NDO_DATA_EXECUTIONTIME, temp_service->execution_time),
+				NDODATA_INTEGER(NDO_DATA_SCHEDULEDDOWNTIMEDEPTH, temp_service->scheduled_downtime_depth),
+				NDODATA_INTEGER(NDO_DATA_FAILUREPREDICTIONENABLED, 0),
+				NDODATA_INTEGER(NDO_DATA_PROCESSPERFORMANCEDATA, temp_service->process_performance_data),
+				NDODATA_INTEGER(NDO_DATA_OBSESSOVERSERVICE, temp_service->obsess),
+				NDODATA_UNSIGNED_LONG(NDO_DATA_MODIFIEDSERVICEATTRIBUTES, temp_service->modified_attributes),
+				NDODATA_STRING(NDO_DATA_EVENTHANDLER, es[5]),
+				NDODATA_STRING(NDO_DATA_CHECKCOMMAND, es[6]),
+				NDODATA_FLOATING_POINT(NDO_DATA_NORMALCHECKINTERVAL, (double)temp_service->check_interval),
+				NDODATA_FLOATING_POINT(NDO_DATA_RETRYCHECKINTERVAL, (double)temp_service->retry_interval),
+				NDODATA_STRING(NDO_DATA_SERVICECHECKPERIOD, es[7] )
+			};
 
-		ndomod_broker_data_serialize(&dbuf, 
-			NDO_API_SERVICESTATUSDATA,
-			service_status_data, 
-			ARRAY_SIZE(service_status_data), 
-			FALSE);
+			ndomod_broker_data_serialize(&dbuf, 
+				NDO_API_SERVICESTATUSDATA,
+				service_status_data, 
+				ARRAY_SIZE(service_status_data), 
+				FALSE);
+		}
 
 		ndomod_customvars_serialize(temp_service->custom_variables, &dbuf);
 
@@ -2479,26 +2510,28 @@ int ndomod_broker_data(int event_type, void *data)
 
 		es[0] = ndo_escape_buffer(temp_contact->name);
 
-		struct ndo_broker_data contact_status_data[] = {
-			NDODATA_INTEGER(NDO_DATA_TYPE, csdata->type),
-			NDODATA_INTEGER(NDO_DATA_FLAGS, csdata->flags),
-			NDODATA_INTEGER(NDO_DATA_ATTRIBUTES, csdata->attr),
-			NDODATA_TIMESTAMP(NDO_DATA_TIMESTAMP, csdata->timestamp),
-			NDODATA_STRING(NDO_DATA_CONTACTNAME, es[0]),
-			NDODATA_INTEGER(NDO_DATA_HOSTNOTIFICATIONSENABLED, temp_contact->host_notifications_enabled),
-			NDODATA_INTEGER(NDO_DATA_SERVICENOTIFICATIONSENABLED, temp_contact->service_notifications_enabled),
-			NDODATA_UNSIGNED_LONG(NDO_DATA_LASTHOSTNOTIFICATION, (unsigned long)temp_contact->last_host_notification),
-			NDODATA_UNSIGNED_LONG(NDO_DATA_LASTSERVICENOTIFICATION, (unsigned long)temp_contact->last_service_notification),
-			NDODATA_UNSIGNED_LONG(NDO_DATA_MODIFIEDCONTACTATTRIBUTES, temp_contact->modified_attributes),
-			NDODATA_UNSIGNED_LONG(NDO_DATA_MODIFIEDHOSTATTRIBUTES, temp_contact->modified_host_attributes),
-			NDODATA_UNSIGNED_LONG(NDO_DATA_MODIFIEDSERVICEATTRIBUTES, temp_contact->modified_service_attributes),
-		};
+		{
+			struct ndo_broker_data contact_status_data[] = {
+				NDODATA_INTEGER(NDO_DATA_TYPE, csdata->type),
+				NDODATA_INTEGER(NDO_DATA_FLAGS, csdata->flags),
+				NDODATA_INTEGER(NDO_DATA_ATTRIBUTES, csdata->attr),
+				NDODATA_TIMESTAMP(NDO_DATA_TIMESTAMP, csdata->timestamp),
+				NDODATA_STRING(NDO_DATA_CONTACTNAME, es[0]),
+				NDODATA_INTEGER(NDO_DATA_HOSTNOTIFICATIONSENABLED, temp_contact->host_notifications_enabled),
+				NDODATA_INTEGER(NDO_DATA_SERVICENOTIFICATIONSENABLED, temp_contact->service_notifications_enabled),
+				NDODATA_UNSIGNED_LONG(NDO_DATA_LASTHOSTNOTIFICATION, (unsigned long)temp_contact->last_host_notification),
+				NDODATA_UNSIGNED_LONG(NDO_DATA_LASTSERVICENOTIFICATION, (unsigned long)temp_contact->last_service_notification),
+				NDODATA_UNSIGNED_LONG(NDO_DATA_MODIFIEDCONTACTATTRIBUTES, temp_contact->modified_attributes),
+				NDODATA_UNSIGNED_LONG(NDO_DATA_MODIFIEDHOSTATTRIBUTES, temp_contact->modified_host_attributes),
+				NDODATA_UNSIGNED_LONG(NDO_DATA_MODIFIEDSERVICEATTRIBUTES, temp_contact->modified_service_attributes),
+			};
 
-		ndomod_broker_data_serialize(&dbuf, 
-			NDO_API_CONTACTSTATUSDATA,
-			contact_status_data, 
-			ARRAY_SIZE(contact_status_data), 
-			FALSE);
+			ndomod_broker_data_serialize(&dbuf, 
+				NDO_API_CONTACTSTATUSDATA,
+				contact_status_data, 
+				ARRAY_SIZE(contact_status_data), 
+				FALSE);
+		}
 
 		ndomod_customvars_serialize(temp_contact->custom_variables, &dbuf);
 
@@ -2515,25 +2548,27 @@ int ndomod_broker_data(int event_type, void *data)
 		es[0] = ndo_escape_buffer(global_host_event_handler);
 		es[1] = ndo_escape_buffer(global_service_event_handler);
 
-		struct ndo_broker_data adaptive_program_data[] = {
-			NDODATA_INTEGER(NDO_DATA_TYPE, apdata->type),
-			NDODATA_INTEGER(NDO_DATA_FLAGS, apdata->flags),
-			NDODATA_INTEGER(NDO_DATA_ATTRIBUTES, apdata->attr),
-			NDODATA_TIMESTAMP(NDO_DATA_TIMESTAMP, apdata->timestamp),
-			NDODATA_INTEGER(NDO_DATA_COMMANDTYPE, apdata->command_type),
-			NDODATA_UNSIGNED_LONG(NDO_DATA_MODIFIEDHOSTATTRIBUTE, apdata->modified_host_attribute),
-			NDODATA_UNSIGNED_LONG(NDO_DATA_MODIFIEDHOSTATTRIBUTES, apdata->modified_host_attributes),
-			NDODATA_UNSIGNED_LONG(NDO_DATA_MODIFIEDSERVICEATTRIBUTE, apdata->modified_service_attribute),
-			NDODATA_UNSIGNED_LONG(NDO_DATA_MODIFIEDSERVICEATTRIBUTES, apdata->modified_service_attributes),
-			NDODATA_STRING(NDO_DATA_GLOBALHOSTEVENTHANDLER, es[0]),
-			NDODATA_STRING(NDO_DATA_GLOBALSERVICEEVENTHANDLER, es[1]),
-		};
+		{
+			struct ndo_broker_data adaptive_program_data[] = {
+				NDODATA_INTEGER(NDO_DATA_TYPE, apdata->type),
+				NDODATA_INTEGER(NDO_DATA_FLAGS, apdata->flags),
+				NDODATA_INTEGER(NDO_DATA_ATTRIBUTES, apdata->attr),
+				NDODATA_TIMESTAMP(NDO_DATA_TIMESTAMP, apdata->timestamp),
+				NDODATA_INTEGER(NDO_DATA_COMMANDTYPE, apdata->command_type),
+				NDODATA_UNSIGNED_LONG(NDO_DATA_MODIFIEDHOSTATTRIBUTE, apdata->modified_host_attribute),
+				NDODATA_UNSIGNED_LONG(NDO_DATA_MODIFIEDHOSTATTRIBUTES, apdata->modified_host_attributes),
+				NDODATA_UNSIGNED_LONG(NDO_DATA_MODIFIEDSERVICEATTRIBUTE, apdata->modified_service_attribute),
+				NDODATA_UNSIGNED_LONG(NDO_DATA_MODIFIEDSERVICEATTRIBUTES, apdata->modified_service_attributes),
+				NDODATA_STRING(NDO_DATA_GLOBALHOSTEVENTHANDLER, es[0]),
+				NDODATA_STRING(NDO_DATA_GLOBALSERVICEEVENTHANDLER, es[1]),
+			};
 
-		ndomod_broker_data_serialize(&dbuf, 
-			NDO_API_ADAPTIVEPROGRAMDATA,
-			adaptive_program_data, 
-			ARRAY_SIZE(adaptive_program_data), 
-			TRUE);
+			ndomod_broker_data_serialize(&dbuf, 
+				NDO_API_ADAPTIVEPROGRAMDATA,
+				adaptive_program_data, 
+				ARRAY_SIZE(adaptive_program_data), 
+				TRUE);
+		}
 
 		ndomod_free_esc_buffers(es, 2);
 
@@ -2549,33 +2584,33 @@ int ndomod_broker_data(int event_type, void *data)
 			return 0;
 		}
 
-		retry_interval = temp_host->retry_interval;
-
 		es[0] = ndo_escape_buffer(temp_host->name);
 		es[1] = ndo_escape_buffer(temp_host->event_handler);
 		es[2] = ndo_escape_buffer(temp_host->check_command);
 
-		struct ndo_broker_data adaptive_host_data[] = {
-			NDODATA_INTEGER(NDO_DATA_TYPE, ahdata->type),
-			NDODATA_INTEGER(NDO_DATA_FLAGS, ahdata->flags),
-			NDODATA_INTEGER(NDO_DATA_ATTRIBUTES, ahdata->attr),
-			NDODATA_TIMESTAMP(NDO_DATA_TIMESTAMP, ahdata->timestamp),
-			NDODATA_INTEGER(NDO_DATA_COMMANDTYPE, ahdata->command_type),
-			NDODATA_UNSIGNED_LONG(NDO_DATA_MODIFIEDHOSTATTRIBUTE, ahdata->modified_attribute),
-			NDODATA_UNSIGNED_LONG(NDO_DATA_MODIFIEDHOSTATTRIBUTES, ahdata->modified_attributes),
-			NDODATA_STRING(NDO_DATA_HOST, es[0]),
-			NDODATA_STRING(NDO_DATA_EVENTHANDLER, es[1]),
-			NDODATA_STRING(NDO_DATA_CHECKCOMMAND, es[2]),
-			NDODATA_FLOATING_POINT(NDO_DATA_NORMALCHECKINTERVAL, temp_host->check_interval),
-			NDODATA_FLOATING_POINT(NDO_DATA_RETRYCHECKINTERVAL, retry_interval),
-			NDODATA_INTEGER(NDO_DATA_MAXCHECKATTEMPTS, temp_host->max_attempts),
-		};
+		{
+			struct ndo_broker_data adaptive_host_data[] = {
+				NDODATA_INTEGER(NDO_DATA_TYPE, ahdata->type),
+				NDODATA_INTEGER(NDO_DATA_FLAGS, ahdata->flags),
+				NDODATA_INTEGER(NDO_DATA_ATTRIBUTES, ahdata->attr),
+				NDODATA_TIMESTAMP(NDO_DATA_TIMESTAMP, ahdata->timestamp),
+				NDODATA_INTEGER(NDO_DATA_COMMANDTYPE, ahdata->command_type),
+				NDODATA_UNSIGNED_LONG(NDO_DATA_MODIFIEDHOSTATTRIBUTE, ahdata->modified_attribute),
+				NDODATA_UNSIGNED_LONG(NDO_DATA_MODIFIEDHOSTATTRIBUTES, ahdata->modified_attributes),
+				NDODATA_STRING(NDO_DATA_HOST, es[0]),
+				NDODATA_STRING(NDO_DATA_EVENTHANDLER, es[1]),
+				NDODATA_STRING(NDO_DATA_CHECKCOMMAND, es[2]),
+				NDODATA_FLOATING_POINT(NDO_DATA_NORMALCHECKINTERVAL, temp_host->check_interval),
+				NDODATA_FLOATING_POINT(NDO_DATA_RETRYCHECKINTERVAL, (double)temp_host->retry_interval),
+				NDODATA_INTEGER(NDO_DATA_MAXCHECKATTEMPTS, temp_host->max_attempts),
+			};
 
-		ndomod_broker_data_serialize(&dbuf, 
-			NDO_API_ADAPTIVEHOSTDATA,
-			adaptive_host_data,
-			ARRAY_SIZE(adaptive_host_data),
-			TRUE);
+			ndomod_broker_data_serialize(&dbuf, 
+				NDO_API_ADAPTIVEHOSTDATA,
+				adaptive_host_data,
+				ARRAY_SIZE(adaptive_host_data),
+				TRUE);
+		}
 
 		ndomod_free_esc_buffers(es, 3);
 
@@ -2596,28 +2631,30 @@ int ndomod_broker_data(int event_type, void *data)
 		es[2] = ndo_escape_buffer(temp_service->event_handler);
 		es[3] = ndo_escape_buffer(temp_service->check_command);
 
-		struct ndo_broker_data adaptive_service_data[] = {
-			NDODATA_INTEGER(NDO_DATA_TYPE, asdata->type),
-			NDODATA_INTEGER(NDO_DATA_FLAGS, asdata->flags),
-			NDODATA_INTEGER(NDO_DATA_ATTRIBUTES, asdata->attr),
-			NDODATA_TIMESTAMP(NDO_DATA_TIMESTAMP, asdata->timestamp),
-			NDODATA_INTEGER(NDO_DATA_COMMANDTYPE, asdata->command_type),
-			NDODATA_UNSIGNED_LONG(NDO_DATA_MODIFIEDSERVICEATTRIBUTE, asdata->modified_attribute),
-			NDODATA_UNSIGNED_LONG(NDO_DATA_MODIFIEDSERVICEATTRIBUTES, asdata->modified_attributes),
-			NDODATA_STRING(NDO_DATA_HOST, es[0]),
-			NDODATA_STRING(NDO_DATA_SERVICE, es[1]),
-			NDODATA_STRING(NDO_DATA_EVENTHANDLER, es[2]),
-			NDODATA_STRING(NDO_DATA_CHECKCOMMAND, es[3]),
-			NDODATA_FLOATING_POINT(NDO_DATA_NORMALCHECKINTERVAL, (double)temp_service->check_interval),
-			NDODATA_FLOATING_POINT(NDO_DATA_RETRYCHECKINTERVAL, (double)temp_service->retry_interval),
-			NDODATA_INTEGER(NDO_DATA_MAXCHECKATTEMPTS, temp_service->max_attempts),
-		};
+		{
+			struct ndo_broker_data adaptive_service_data[] = {
+				NDODATA_INTEGER(NDO_DATA_TYPE, asdata->type),
+				NDODATA_INTEGER(NDO_DATA_FLAGS, asdata->flags),
+				NDODATA_INTEGER(NDO_DATA_ATTRIBUTES, asdata->attr),
+				NDODATA_TIMESTAMP(NDO_DATA_TIMESTAMP, asdata->timestamp),
+				NDODATA_INTEGER(NDO_DATA_COMMANDTYPE, asdata->command_type),
+				NDODATA_UNSIGNED_LONG(NDO_DATA_MODIFIEDSERVICEATTRIBUTE, asdata->modified_attribute),
+				NDODATA_UNSIGNED_LONG(NDO_DATA_MODIFIEDSERVICEATTRIBUTES, asdata->modified_attributes),
+				NDODATA_STRING(NDO_DATA_HOST, es[0]),
+				NDODATA_STRING(NDO_DATA_SERVICE, es[1]),
+				NDODATA_STRING(NDO_DATA_EVENTHANDLER, es[2]),
+				NDODATA_STRING(NDO_DATA_CHECKCOMMAND, es[3]),
+				NDODATA_FLOATING_POINT(NDO_DATA_NORMALCHECKINTERVAL, (double)temp_service->check_interval),
+				NDODATA_FLOATING_POINT(NDO_DATA_RETRYCHECKINTERVAL, (double)temp_service->retry_interval),
+				NDODATA_INTEGER(NDO_DATA_MAXCHECKATTEMPTS, temp_service->max_attempts),
+			};
 
-		ndomod_broker_data_serialize(&dbuf, 
-			NDO_API_ADAPTIVESERVICEDATA,
-			adaptive_service_data, 
-			ARRAY_SIZE(adaptive_service_data), 
-			TRUE);
+			ndomod_broker_data_serialize(&dbuf, 
+				NDO_API_ADAPTIVESERVICEDATA,
+				adaptive_service_data, 
+				ARRAY_SIZE(adaptive_service_data), 
+				TRUE);
+		}
 
 		ndomod_free_esc_buffers(es, 4);
 
@@ -2635,28 +2672,30 @@ int ndomod_broker_data(int event_type, void *data)
 
 		es[0] = ndo_escape_buffer(temp_contact->name);
 
-		struct ndo_broker_data adaptive_contact_data[] = {
-			NDODATA_INTEGER(NDO_DATA_TYPE, acdata->type),
-			NDODATA_INTEGER(NDO_DATA_FLAGS, acdata->flags),
-			NDODATA_INTEGER(NDO_DATA_ATTRIBUTES, acdata->attr),
-			NDODATA_TIMESTAMP(NDO_DATA_TIMESTAMP, acdata->timestamp),
-			NDODATA_INTEGER(NDO_DATA_COMMANDTYPE, acdata->command_type),
-			NDODATA_UNSIGNED_LONG(NDO_DATA_MODIFIEDCONTACTATTRIBUTE, acdata->modified_attribute),
-			NDODATA_UNSIGNED_LONG(NDO_DATA_MODIFIEDCONTACTATTRIBUTES, acdata->modified_attributes),
-			NDODATA_UNSIGNED_LONG(NDO_DATA_MODIFIEDHOSTATTRIBUTE, acdata->modified_host_attribute),
-			NDODATA_UNSIGNED_LONG(NDO_DATA_MODIFIEDHOSTATTRIBUTES, acdata->modified_host_attributes),
-			NDODATA_UNSIGNED_LONG(NDO_DATA_MODIFIEDSERVICEATTRIBUTE, acdata->modified_service_attribute),
-			NDODATA_UNSIGNED_LONG(NDO_DATA_MODIFIEDSERVICEATTRIBUTES, acdata->modified_service_attributes),
-			NDODATA_STRING(NDO_DATA_CONTACTNAME, es[0]),
-			NDODATA_INTEGER(NDO_DATA_HOSTNOTIFICATIONSENABLED, temp_contact->host_notifications_enabled),
-			NDODATA_INTEGER(NDO_DATA_SERVICENOTIFICATIONSENABLED, temp_contact->service_notifications_enabled),
-		};
+		{
+			struct ndo_broker_data adaptive_contact_data[] = {
+				NDODATA_INTEGER(NDO_DATA_TYPE, acdata->type),
+				NDODATA_INTEGER(NDO_DATA_FLAGS, acdata->flags),
+				NDODATA_INTEGER(NDO_DATA_ATTRIBUTES, acdata->attr),
+				NDODATA_TIMESTAMP(NDO_DATA_TIMESTAMP, acdata->timestamp),
+				NDODATA_INTEGER(NDO_DATA_COMMANDTYPE, acdata->command_type),
+				NDODATA_UNSIGNED_LONG(NDO_DATA_MODIFIEDCONTACTATTRIBUTE, acdata->modified_attribute),
+				NDODATA_UNSIGNED_LONG(NDO_DATA_MODIFIEDCONTACTATTRIBUTES, acdata->modified_attributes),
+				NDODATA_UNSIGNED_LONG(NDO_DATA_MODIFIEDHOSTATTRIBUTE, acdata->modified_host_attribute),
+				NDODATA_UNSIGNED_LONG(NDO_DATA_MODIFIEDHOSTATTRIBUTES, acdata->modified_host_attributes),
+				NDODATA_UNSIGNED_LONG(NDO_DATA_MODIFIEDSERVICEATTRIBUTE, acdata->modified_service_attribute),
+				NDODATA_UNSIGNED_LONG(NDO_DATA_MODIFIEDSERVICEATTRIBUTES, acdata->modified_service_attributes),
+				NDODATA_STRING(NDO_DATA_CONTACTNAME, es[0]),
+				NDODATA_INTEGER(NDO_DATA_HOSTNOTIFICATIONSENABLED, temp_contact->host_notifications_enabled),
+				NDODATA_INTEGER(NDO_DATA_SERVICENOTIFICATIONSENABLED, temp_contact->service_notifications_enabled),
+			};
 
-		ndomod_broker_data_serialize(&dbuf, 
-			NDO_API_ADAPTIVECONTACTDATA,
-			adaptive_contact_data, 
-			ARRAY_SIZE(adaptive_contact_data), 
-			TRUE);
+			ndomod_broker_data_serialize(&dbuf, 
+				NDO_API_ADAPTIVECONTACTDATA,
+				adaptive_contact_data, 
+				ARRAY_SIZE(adaptive_contact_data), 
+				TRUE);
+		}
 
 		ndomod_free_esc_buffers(es, 1);
 
@@ -2669,22 +2708,24 @@ int ndomod_broker_data(int event_type, void *data)
 		es[0] = ndo_escape_buffer(ecdata->command_string);
 		es[1] = ndo_escape_buffer(ecdata->command_args);
 
-		struct ndo_broker_data external_command_data[] = {
-			NDODATA_INTEGER(NDO_DATA_TYPE, ecdata->type),
-			NDODATA_INTEGER(NDO_DATA_FLAGS, ecdata->flags),
-			NDODATA_INTEGER(NDO_DATA_ATTRIBUTES, ecdata->attr),
-			NDODATA_TIMESTAMP(NDO_DATA_TIMESTAMP, ecdata->timestamp),
-			NDODATA_INTEGER(NDO_DATA_COMMANDTYPE, ecdata->command_type),
-			NDODATA_UNSIGNED_LONG(NDO_DATA_ENTRYTIME, (unsigned long)ecdata->entry_time),
-			NDODATA_STRING(NDO_DATA_COMMANDSTRING, es[0]),
-			NDODATA_STRING(NDO_DATA_COMMANDARGS, es[1]),
-			};
+		{
+			struct ndo_broker_data external_command_data[] = {
+				NDODATA_INTEGER(NDO_DATA_TYPE, ecdata->type),
+				NDODATA_INTEGER(NDO_DATA_FLAGS, ecdata->flags),
+				NDODATA_INTEGER(NDO_DATA_ATTRIBUTES, ecdata->attr),
+				NDODATA_TIMESTAMP(NDO_DATA_TIMESTAMP, ecdata->timestamp),
+				NDODATA_INTEGER(NDO_DATA_COMMANDTYPE, ecdata->command_type),
+				NDODATA_UNSIGNED_LONG(NDO_DATA_ENTRYTIME, (unsigned long)ecdata->entry_time),
+				NDODATA_STRING(NDO_DATA_COMMANDSTRING, es[0]),
+				NDODATA_STRING(NDO_DATA_COMMANDARGS, es[1]),
+				};
 
-		ndomod_broker_data_serialize(&dbuf, 
-			NDO_API_EXTERNALCOMMANDDATA,
-			external_command_data, 
-			ARRAY_SIZE(external_command_data), 
-			TRUE);
+			ndomod_broker_data_serialize(&dbuf, 
+				NDO_API_EXTERNALCOMMANDDATA,
+				external_command_data, 
+				ARRAY_SIZE(external_command_data), 
+				TRUE);
+		}
 
 		ndomod_free_esc_buffers(es, 2);
 
@@ -2694,18 +2735,20 @@ int ndomod_broker_data(int event_type, void *data)
 
 		agsdata = (nebstruct_aggregated_status_data *)data;
 
-		struct ndo_broker_data aggregated_status_data[] = {
-			NDODATA_INTEGER(NDO_DATA_TYPE, agsdata->type),
-			NDODATA_INTEGER(NDO_DATA_FLAGS, agsdata->flags),
-			NDODATA_INTEGER(NDO_DATA_ATTRIBUTES, agsdata->attr),
-			NDODATA_TIMESTAMP(NDO_DATA_TIMESTAMP, agsdata->timestamp),
-		};
+		{
+			struct ndo_broker_data aggregated_status_data[] = {
+				NDODATA_INTEGER(NDO_DATA_TYPE, agsdata->type),
+				NDODATA_INTEGER(NDO_DATA_FLAGS, agsdata->flags),
+				NDODATA_INTEGER(NDO_DATA_ATTRIBUTES, agsdata->attr),
+				NDODATA_TIMESTAMP(NDO_DATA_TIMESTAMP, agsdata->timestamp),
+			};
 
-		ndomod_broker_data_serialize(&dbuf, 
-			NDO_API_AGGREGATEDSTATUSDATA,
-			aggregated_status_data, 
-			ARRAY_SIZE(aggregated_status_data), 
-			TRUE);
+			ndomod_broker_data_serialize(&dbuf, 
+				NDO_API_AGGREGATEDSTATUSDATA,
+				aggregated_status_data, 
+				ARRAY_SIZE(aggregated_status_data), 
+				TRUE);
+		}
 
 		break;
 
@@ -2713,18 +2756,20 @@ int ndomod_broker_data(int event_type, void *data)
 
 		rdata = (nebstruct_retention_data *)data;
 
-		struct ndo_broker_data retention_data[] = {
-			NDODATA_INTEGER(NDO_DATA_TYPE, rdata->type),
-			NDODATA_INTEGER(NDO_DATA_FLAGS, rdata->flags),
-			NDODATA_INTEGER(NDO_DATA_ATTRIBUTES, rdata->attr),
-			NDODATA_TIMESTAMP(NDO_DATA_TIMESTAMP, rdata->timestamp),
-		};
+		{
+			struct ndo_broker_data retention_data[] = {
+				NDODATA_INTEGER(NDO_DATA_TYPE, rdata->type),
+				NDODATA_INTEGER(NDO_DATA_FLAGS, rdata->flags),
+				NDODATA_INTEGER(NDO_DATA_ATTRIBUTES, rdata->attr),
+				NDODATA_TIMESTAMP(NDO_DATA_TIMESTAMP, rdata->timestamp),
+			};
 
-		ndomod_broker_data_serialize(&dbuf, 
-			NDO_API_RETENTIONDATA,
-			retention_data,
-			ARRAY_SIZE(retention_data), 
-			TRUE);
+			ndomod_broker_data_serialize(&dbuf, 
+				NDO_API_RETENTIONDATA,
+				retention_data,
+				ARRAY_SIZE(retention_data), 
+				TRUE);
+		}
 
 		break;
 
@@ -2743,31 +2788,33 @@ int ndomod_broker_data(int event_type, void *data)
 		es[6] = ndo_escape_buffer(cnotdata->ack_data);
 		es[7] = ndo_escape_buffer(cnotdata->contact_name);
 
-		struct ndo_broker_data contact_notification_data[] = {
-			NDODATA_INTEGER(NDO_DATA_TYPE, cnotdata->type),
-			NDODATA_INTEGER(NDO_DATA_FLAGS, cnotdata->flags),
-			NDODATA_INTEGER(NDO_DATA_ATTRIBUTES, cnotdata->attr),
-			NDODATA_TIMESTAMP(NDO_DATA_TIMESTAMP, cnotdata->timestamp),
-			NDODATA_INTEGER(NDO_DATA_NOTIFICATIONTYPE, cnotdata->notification_type),
-			NDODATA_TIMESTAMP(NDO_DATA_STARTTIME, cnotdata->start_time),
-			NDODATA_TIMESTAMP(NDO_DATA_ENDTIME, cnotdata->end_time),
-			NDODATA_STRING(NDO_DATA_HOST, es[0]),
-			NDODATA_STRING(NDO_DATA_SERVICE, es[1]),
-			NDODATA_STRING(NDO_DATA_CONTACTNAME, es[7]),
-			NDODATA_INTEGER(NDO_DATA_NOTIFICATIONREASON, cnotdata->reason_type),
-			NDODATA_INTEGER(NDO_DATA_STATE, cnotdata->state),
-			NDODATA_STRING(NDO_DATA_OUTPUT, es[2]),
-			NDODATA_STRING(NDO_DATA_LONGOUTPUT, es[3]),
-			NDODATA_STRING(NDO_DATA_OUTPUT, es[4]),
-			NDODATA_STRING(NDO_DATA_ACKAUTHOR, es[5]),
-			NDODATA_STRING(NDO_DATA_ACKDATA, es[6]),
-		};
+		{
+			struct ndo_broker_data contact_notification_data[] = {
+				NDODATA_INTEGER(NDO_DATA_TYPE, cnotdata->type),
+				NDODATA_INTEGER(NDO_DATA_FLAGS, cnotdata->flags),
+				NDODATA_INTEGER(NDO_DATA_ATTRIBUTES, cnotdata->attr),
+				NDODATA_TIMESTAMP(NDO_DATA_TIMESTAMP, cnotdata->timestamp),
+				NDODATA_INTEGER(NDO_DATA_NOTIFICATIONTYPE, cnotdata->notification_type),
+				NDODATA_TIMESTAMP(NDO_DATA_STARTTIME, cnotdata->start_time),
+				NDODATA_TIMESTAMP(NDO_DATA_ENDTIME, cnotdata->end_time),
+				NDODATA_STRING(NDO_DATA_HOST, es[0]),
+				NDODATA_STRING(NDO_DATA_SERVICE, es[1]),
+				NDODATA_STRING(NDO_DATA_CONTACTNAME, es[7]),
+				NDODATA_INTEGER(NDO_DATA_NOTIFICATIONREASON, cnotdata->reason_type),
+				NDODATA_INTEGER(NDO_DATA_STATE, cnotdata->state),
+				NDODATA_STRING(NDO_DATA_OUTPUT, es[2]),
+				NDODATA_STRING(NDO_DATA_LONGOUTPUT, es[3]),
+				NDODATA_STRING(NDO_DATA_OUTPUT, es[4]),
+				NDODATA_STRING(NDO_DATA_ACKAUTHOR, es[5]),
+				NDODATA_STRING(NDO_DATA_ACKDATA, es[6]),
+			};
 
-		ndomod_broker_data_serialize(&dbuf,
-			NDO_API_CONTACTNOTIFICATIONDATA, 
-			contact_notification_data,
-			ARRAY_SIZE(contact_notification_data), 
-			TRUE);
+			ndomod_broker_data_serialize(&dbuf,
+				NDO_API_CONTACTNOTIFICATIONDATA, 
+				contact_notification_data,
+				ARRAY_SIZE(contact_notification_data), 
+				TRUE);
+		}
 
 		ndomod_free_esc_buffers(es, 8);
 
@@ -2786,31 +2833,33 @@ int ndomod_broker_data(int event_type, void *data)
 		es[6] = ndo_escape_buffer(cnotmdata->command_name);
 		es[7] = ndo_escape_buffer(cnotmdata->command_args);
 
-		struct ndo_broker_data contact_notification_method_data[] = {
-			NDODATA_INTEGER(NDO_DATA_TYPE, cnotmdata->type),
-			NDODATA_INTEGER(NDO_DATA_FLAGS, cnotmdata->flags),
-			NDODATA_INTEGER(NDO_DATA_ATTRIBUTES, cnotmdata->attr),
-			NDODATA_TIMESTAMP(NDO_DATA_TIMESTAMP, cnotmdata->timestamp),
-			NDODATA_INTEGER(NDO_DATA_NOTIFICATIONTYPE, cnotmdata->notification_type),
-			NDODATA_TIMESTAMP(NDO_DATA_STARTTIME, cnotmdata->start_time),
-			NDODATA_TIMESTAMP(NDO_DATA_ENDTIME, cnotmdata->end_time),
-			NDODATA_STRING(NDO_DATA_HOST, es[0]),
-			NDODATA_STRING(NDO_DATA_SERVICE, es[1]),
-			NDODATA_STRING(NDO_DATA_CONTACTNAME, es[5]),
-			NDODATA_STRING(NDO_DATA_COMMANDNAME, es[6]),
-			NDODATA_STRING(NDO_DATA_COMMANDARGS, es[7]),
-			NDODATA_INTEGER(NDO_DATA_NOTIFICATIONREASON, cnotmdata->reason_type),
-			NDODATA_INTEGER(NDO_DATA_STATE, cnotmdata->state),
-			NDODATA_STRING(NDO_DATA_OUTPUT, es[2]),
-			NDODATA_STRING(NDO_DATA_ACKAUTHOR, es[3]),
-			NDODATA_STRING(NDO_DATA_ACKDATA, es[4]),
-		};
+		{
+			struct ndo_broker_data contact_notification_method_data[] = {
+				NDODATA_INTEGER(NDO_DATA_TYPE, cnotmdata->type),
+				NDODATA_INTEGER(NDO_DATA_FLAGS, cnotmdata->flags),
+				NDODATA_INTEGER(NDO_DATA_ATTRIBUTES, cnotmdata->attr),
+				NDODATA_TIMESTAMP(NDO_DATA_TIMESTAMP, cnotmdata->timestamp),
+				NDODATA_INTEGER(NDO_DATA_NOTIFICATIONTYPE, cnotmdata->notification_type),
+				NDODATA_TIMESTAMP(NDO_DATA_STARTTIME, cnotmdata->start_time),
+				NDODATA_TIMESTAMP(NDO_DATA_ENDTIME, cnotmdata->end_time),
+				NDODATA_STRING(NDO_DATA_HOST, es[0]),
+				NDODATA_STRING(NDO_DATA_SERVICE, es[1]),
+				NDODATA_STRING(NDO_DATA_CONTACTNAME, es[5]),
+				NDODATA_STRING(NDO_DATA_COMMANDNAME, es[6]),
+				NDODATA_STRING(NDO_DATA_COMMANDARGS, es[7]),
+				NDODATA_INTEGER(NDO_DATA_NOTIFICATIONREASON, cnotmdata->reason_type),
+				NDODATA_INTEGER(NDO_DATA_STATE, cnotmdata->state),
+				NDODATA_STRING(NDO_DATA_OUTPUT, es[2]),
+				NDODATA_STRING(NDO_DATA_ACKAUTHOR, es[3]),
+				NDODATA_STRING(NDO_DATA_ACKDATA, es[4]),
+			};
 
-		ndomod_broker_data_serialize(&dbuf,
-			NDO_API_CONTACTNOTIFICATIONMETHODDATA,
-			contact_notification_method_data,
-			ARRAY_SIZE(contact_notification_method_data), 
-			TRUE);
+			ndomod_broker_data_serialize(&dbuf,
+				NDO_API_CONTACTNOTIFICATIONMETHODDATA,
+				contact_notification_method_data,
+				ARRAY_SIZE(contact_notification_method_data), 
+				TRUE);
+		}
 
 		ndomod_free_esc_buffers(es, 8);
 
@@ -2825,27 +2874,29 @@ int ndomod_broker_data(int event_type, void *data)
 		es[2] = ndo_escape_buffer(ackdata->author_name);
 		es[3] = ndo_escape_buffer(ackdata->comment_data);
 
-		struct ndo_broker_data acknowledgement_data[] = {
-			NDODATA_INTEGER(NDO_DATA_TYPE, ackdata->type),
-			NDODATA_INTEGER(NDO_DATA_FLAGS, ackdata->flags),
-			NDODATA_INTEGER(NDO_DATA_ATTRIBUTES, ackdata->attr),
-			NDODATA_TIMESTAMP(NDO_DATA_TIMESTAMP, ackdata->timestamp),
-			NDODATA_INTEGER(NDO_DATA_ACKNOWLEDGEMENTTYPE, ackdata->acknowledgement_type),
-			NDODATA_STRING(NDO_DATA_HOST, es[0]),
-			NDODATA_STRING(NDO_DATA_SERVICE, es[1]),
-			NDODATA_STRING(NDO_DATA_AUTHORNAME, es[2]),
-			NDODATA_STRING(NDO_DATA_COMMENT, es[3]),
-			NDODATA_INTEGER(NDO_DATA_STATE, ackdata->state),
-			NDODATA_INTEGER(NDO_DATA_STICKY, ackdata->is_sticky),
-			NDODATA_INTEGER(NDO_DATA_PERSISTENT, ackdata->persistent_comment),
-			NDODATA_INTEGER(NDO_DATA_NOTIFYCONTACTS, ackdata->notify_contacts),
-		};
+		{
+			struct ndo_broker_data acknowledgement_data[] = {
+				NDODATA_INTEGER(NDO_DATA_TYPE, ackdata->type),
+				NDODATA_INTEGER(NDO_DATA_FLAGS, ackdata->flags),
+				NDODATA_INTEGER(NDO_DATA_ATTRIBUTES, ackdata->attr),
+				NDODATA_TIMESTAMP(NDO_DATA_TIMESTAMP, ackdata->timestamp),
+				NDODATA_INTEGER(NDO_DATA_ACKNOWLEDGEMENTTYPE, ackdata->acknowledgement_type),
+				NDODATA_STRING(NDO_DATA_HOST, es[0]),
+				NDODATA_STRING(NDO_DATA_SERVICE, es[1]),
+				NDODATA_STRING(NDO_DATA_AUTHORNAME, es[2]),
+				NDODATA_STRING(NDO_DATA_COMMENT, es[3]),
+				NDODATA_INTEGER(NDO_DATA_STATE, ackdata->state),
+				NDODATA_INTEGER(NDO_DATA_STICKY, ackdata->is_sticky),
+				NDODATA_INTEGER(NDO_DATA_PERSISTENT, ackdata->persistent_comment),
+				NDODATA_INTEGER(NDO_DATA_NOTIFYCONTACTS, ackdata->notify_contacts),
+			};
 
-		ndomod_broker_data_serialize(&dbuf, 
-			NDO_API_ACKNOWLEDGEMENTDATA,
-			acknowledgement_data,
-			ARRAY_SIZE(acknowledgement_data), 
-			TRUE);
+			ndomod_broker_data_serialize(&dbuf, 
+				NDO_API_ACKNOWLEDGEMENTDATA,
+				acknowledgement_data,
+				ARRAY_SIZE(acknowledgement_data), 
+				TRUE);
+		}
 
 		ndomod_free_esc_buffers(es, 4);
 
@@ -2888,30 +2939,32 @@ int ndomod_broker_data(int event_type, void *data)
 			es[3] = ndo_escape_buffer(schangedata->output);
 		}
 
-		struct ndo_broker_data state_change_data[] = {
-			NDODATA_INTEGER(NDO_DATA_TYPE, schangedata->type),
-			NDODATA_INTEGER(NDO_DATA_FLAGS, schangedata->flags),
-			NDODATA_INTEGER(NDO_DATA_ATTRIBUTES, schangedata->attr),
-			NDODATA_TIMESTAMP(NDO_DATA_TIMESTAMP, schangedata->timestamp),
-			NDODATA_INTEGER(NDO_DATA_STATECHANGETYPE, schangedata->statechange_type),
-			NDODATA_STRING(NDO_DATA_HOST, es[0]),
-			NDODATA_STRING(NDO_DATA_SERVICE, es[1]),
-			NDODATA_INTEGER(NDO_DATA_STATECHANGE, TRUE),
-			NDODATA_INTEGER(NDO_DATA_STATE, schangedata->state),
-			NDODATA_INTEGER(NDO_DATA_STATETYPE, schangedata->state_type),
-			NDODATA_INTEGER(NDO_DATA_CURRENTCHECKATTEMPT, schangedata->current_attempt),
-			NDODATA_INTEGER(NDO_DATA_MAXCHECKATTEMPTS, schangedata->max_attempts),
-			NDODATA_INTEGER(NDO_DATA_LASTSTATE, last_state),
-			NDODATA_INTEGER(NDO_DATA_LASTHARDSTATE, last_hard_state),
-			NDODATA_STRING(NDO_DATA_OUTPUT, es[2]),
-			NDODATA_STRING(NDO_DATA_LONGOUTPUT, es[3]),
-		};
+		{
+			struct ndo_broker_data state_change_data[] = {
+				NDODATA_INTEGER(NDO_DATA_TYPE, schangedata->type),
+				NDODATA_INTEGER(NDO_DATA_FLAGS, schangedata->flags),
+				NDODATA_INTEGER(NDO_DATA_ATTRIBUTES, schangedata->attr),
+				NDODATA_TIMESTAMP(NDO_DATA_TIMESTAMP, schangedata->timestamp),
+				NDODATA_INTEGER(NDO_DATA_STATECHANGETYPE, schangedata->statechange_type),
+				NDODATA_STRING(NDO_DATA_HOST, es[0]),
+				NDODATA_STRING(NDO_DATA_SERVICE, es[1]),
+				NDODATA_INTEGER(NDO_DATA_STATECHANGE, TRUE),
+				NDODATA_INTEGER(NDO_DATA_STATE, schangedata->state),
+				NDODATA_INTEGER(NDO_DATA_STATETYPE, schangedata->state_type),
+				NDODATA_INTEGER(NDO_DATA_CURRENTCHECKATTEMPT, schangedata->current_attempt),
+				NDODATA_INTEGER(NDO_DATA_MAXCHECKATTEMPTS, schangedata->max_attempts),
+				NDODATA_INTEGER(NDO_DATA_LASTSTATE, last_state),
+				NDODATA_INTEGER(NDO_DATA_LASTHARDSTATE, last_hard_state),
+				NDODATA_STRING(NDO_DATA_OUTPUT, es[2]),
+				NDODATA_STRING(NDO_DATA_LONGOUTPUT, es[3]),
+			};
 
-		ndomod_broker_data_serialize(&dbuf, 
-			NDO_API_STATECHANGEDATA,
-			state_change_data,
-			ARRAY_SIZE(state_change_data),
-			TRUE);
+			ndomod_broker_data_serialize(&dbuf, 
+				NDO_API_STATECHANGEDATA,
+				state_change_data,
+				ARRAY_SIZE(state_change_data),
+				TRUE);
+		}
 
 		ndomod_free_esc_buffers(es, 4);
 
@@ -3802,7 +3855,7 @@ int ndomod_write_object_config(int config_type)
 			NDODATA_INTEGER(NDO_DATA_FLAPDETECTIONONDOWN, flag_isset(temp_host->flap_detection_options, OPT_DOWN)),
 			NDODATA_INTEGER(NDO_DATA_FLAPDETECTIONONUNREACHABLE, flag_isset(temp_host->flap_detection_options, OPT_UNREACHABLE)),
 			NDODATA_FLOATING_POINT(NDO_DATA_LOWHOSTFLAPTHRESHOLD, temp_host->low_flap_threshold),
-			NDODATA_FLOATING_POINT(floating_point, temp_host->high_flap_threshold),
+			NDODATA_FLOATING_POINT(NDO_DATA_HIGHHOSTFLAPTHRESHOLD, temp_host->high_flap_threshold),
 			NDODATA_INTEGER(NDO_DATA_STALKHOSTONUP, flag_isset(temp_host->stalking_options, OPT_UP)),
 			NDODATA_INTEGER(NDO_DATA_STALKHOSTONDOWN, flag_isset(temp_host->stalking_options, OPT_DOWN)),
 			NDODATA_INTEGER(NDO_DATA_STALKHOSTONUNREACHABLE, flag_isset(temp_host->stalking_options, OPT_UNREACHABLE)),

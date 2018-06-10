@@ -22,8 +22,10 @@
 
 /* include our project's header files */
 #include "../include/config.h"
+#include <stdio.h>
+
 /*
-this undef here patches the conflict between pqueue_t from include/nagios-4x/squeue.h
+this undef here patches the conflict between pqueue_t from include/nagios/squeue.h
 and pqueue from libssl <openssl/ssl.h>
 */
 #undef HAVE_SSL
@@ -35,13 +37,13 @@ and pqueue from libssl <openssl/ssl.h>
 #include "../include/db.h"
 #include "../include/dbhandlers.h"
 
-#include <pthread.h>
+#include <string.h>
 
 /* Nagios header files */
 
-#include "../include/nagios-4x/nagios.h"
-#include "../include/nagios-4x/broker.h"
-#include "../include/nagios-4x/comments.h"
+#include "../include/nagios/nagios.h"
+#include "../include/nagios/broker.h"
+#include "../include/nagios/comments.h"
 
 
 extern int errno;

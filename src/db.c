@@ -30,6 +30,9 @@
 #include "../include/dbhandlers.h"
 #include "../include/db.h"
 
+#include <stdio.h>
+#include <string.h>
+
 extern int errno;
 
 extern ndo2db_dbconfig ndo2db_db_settings;

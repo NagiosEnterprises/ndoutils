@@ -48,7 +48,7 @@
 #include "../include/dh.h"
 #endif
 
-#include <pthread.h>
+#include <string.h>
 
 #define NDO2DB_VERSION "2.1.3"
 #define NDO2DB_NAME "NDO2DB"

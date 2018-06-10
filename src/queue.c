@@ -19,6 +19,9 @@
  * along with NDOUtils. If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "../include/config.h"
+#include "../include/queue.h"
+
 #include <sys/types.h>
 #include <sys/ipc.h>
 #include <sys/msg.h>
@@ -26,8 +29,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <syslog.h>
-#include "../include/config.h"
-#include "../include/queue.h"
 #include <errno.h>
 #include <time.h>
 
@@ -97,15 +98,19 @@ long get_msgmni( void) {
 	char	buf[ 1024];
 	char *	endptr;
 	long	msgmni;
+	char *  result = NULL;
 
 	if( !( fp = fopen( "/proc/sys/kernel/msgmni", "r"))) {
 		return -1;
-		}
+	}
 	else {
-		fgets( buf, sizeof( buf), fp);
+		result = fgets(buf, sizeof( buf), fp);
+		if (result == NULL) {
+			syslog(LOG_ERR, "%s", "Unable to fgets(buf)");
+		}
 		msgmni = strtol((const char *)buf, &endptr, 10);
 		return msgmni;
-		}
+	}
 }
 
 void log_retry( void) {
@@ -129,7 +134,7 @@ void log_retry( void) {
 		if(msgctl(queue_id, IPC_STAT, &queue_stats)) {
 			sprintf(curstats, "Unable to determine current message queue usage: error reading IPC_STAT: %d", errno);
 			sprintf(logmsg, logfmt, curstats);
-			syslog(LOG_ERR, logmsg);
+			syslog(LOG_ERR, "%s", logmsg);
 			}
 		else {
 #if defined( __linux__)
@@ -138,24 +143,24 @@ void log_retry( void) {
 			if( msgmni < 0) {
 				sprintf(curstats, "Unable to determine current message queue usage: error reading IPC_INFO: %d", errno);
 				sprintf(logmsg, logfmt, curstats);
-				syslog(LOG_ERR, logmsg);
+				syslog(LOG_ERR, "%s", logmsg);
 				}
 			else {
 				sprintf(curstats, statsfmt, queue_stats.msg_qnum,
 						(unsigned long)msgmni, queue_stats.__msg_cbytes,
 						queue_stats.msg_qbytes);
 				sprintf(logmsg, logfmt, curstats);
-				syslog(LOG_ERR, logmsg);
+				syslog(LOG_ERR, "%s", logmsg);
 				}
 #else
 			sprintf(logmsg, logfmt, "");
-			syslog(LOG_ERR, logmsg);
+			syslog(LOG_ERR, "%s", logmsg);
 #endif
 			}
 		last_retry_log_time = now;
 		}
 	else {
-		syslog(LOG_ERR,"Warning: queue send error, retrying...\n");
+		syslog(LOG_ERR, "%s", "Warning: queue send error, retrying...\n");
 		}
 }
 

@@ -715,6 +715,7 @@ infodir
 docdir
 oldincludedir
 includedir
+runstatedir
 localstatedir
 sharedstatedir
 sysconfdir
@@ -813,6 +814,7 @@ datadir='${datarootdir}'
 sysconfdir='${prefix}/etc'
 sharedstatedir='${prefix}/com'
 localstatedir='${prefix}/var'
+runstatedir='${localstatedir}/run'
 includedir='${prefix}/include'
 oldincludedir='/usr/include'
 docdir='${datarootdir}/doc/${PACKAGE}'
@@ -1065,6 +1067,15 @@ do
   | -silent | --silent | --silen | --sile | --sil)
     silent=yes ;;
 
+  -runstatedir | --runstatedir | --runstatedi | --runstated \
+  | --runstate | --runstat | --runsta | --runst | --runs \
+  | --run | --ru | --r)
+    ac_prev=runstatedir ;;
+  -runstatedir=* | --runstatedir=* | --runstatedi=* | --runstated=* \
+  | --runstate=* | --runstat=* | --runsta=* | --runst=* | --runs=* \
+  | --run=* | --ru=* | --r=*)
+    runstatedir=$ac_optarg ;;
+
   -sbindir | --sbindir | --sbindi | --sbind | --sbin | --sbi | --sb)
     ac_prev=sbindir ;;
   -sbindir=* | --sbindir=* | --sbindi=* | --sbind=* | --sbin=* \
@@ -1202,7 +1213,7 @@ fi
 for ac_var in	exec_prefix prefix bindir sbindir libexecdir datarootdir \
 		datadir sysconfdir sharedstatedir localstatedir includedir \
 		oldincludedir docdir infodir htmldir dvidir pdfdir psdir \
-		libdir localedir mandir
+		libdir localedir mandir runstatedir
 do
   eval ac_val=\$$ac_var
   # Remove trailing slashes.
@@ -1355,6 +1366,7 @@ Fine tuning of the installation directories:
   --sysconfdir=DIR        read-only single-machine data [PREFIX/etc]
   --sharedstatedir=DIR    modifiable architecture-independent data [PREFIX/com]
   --localstatedir=DIR     modifiable single-machine data [PREFIX/var]
+  --runstatedir=DIR       modifiable per-process data [LOCALSTATEDIR/run]
   --libdir=DIR            object code libraries [EPREFIX/lib]
   --includedir=DIR        C header files [PREFIX/include]
   --oldincludedir=DIR     C header files for non-gcc [/usr/include]
@@ -3849,10 +3861,10 @@ fi
 				elif test -f "/sbin/rc"; then
 					if test -f /sbin/runscript; then
 						init_type_wanted=no
-						if `/sbin/start-stop-daemon -V | grep "OpenRC.*Gentoo" > /dev/null`; then
-							init_type="gentoo"
-						else
+						if `/sbin/start-stop-daemon -V | grep "OpenRC" > /dev/null`; then
 							init_type="openrc"
+						else
+							init_type="gentoo"
 						fi
 					fi
 				fi
@@ -4739,10 +4751,10 @@ case $init_type in #(
 			bsd_enable=""
 			src_init=newbsd-init
 		fi ;; #(
+  #	[gentoo],
+
 	openrc) :
     src_init=openrc-init ;; #(
-  gentoo) :
-    src_init=gentoo-init ;; #(
   smf*) :
     src_init="solaris-init.xml"
 		src_inetd="solaris-inetd.xml" ;; #(
@@ -6853,7 +6865,7 @@ _ACEOF
 	fi
 fi
 
-ac_config_files="$ac_config_files Makefile src/Makefile config/ndo2db.cfg-sample config/ndomod.cfg-sample config/nagios.cfg config/misccommands.cfg docs/docbook/en-en/Makefile include/io.h include/common.h startup/bsd-init startup/debian-init startup/default-init startup/default-inetd startup/default-service startup/default-socket startup/default-socket-svc startup/default-xinetd startup/mac-init.plist startup/mac-inetd.plist startup/newbsd-init startup/openbsd-init startup/openrc-conf startup/gentoo-init startup/openrc-init startup/solaris-init.xml startup/solaris-inetd.xml startup/tmpfile.conf startup/upstart-init startup/rh-upstart-init"
+ac_config_files="$ac_config_files Makefile src/Makefile config/ndo2db.cfg-sample config/ndomod.cfg-sample config/nagios.cfg config/misccommands.cfg docs/docbook/en-en/Makefile include/io.h include/common.h startup/bsd-init startup/debian-init startup/default-init startup/default-inetd startup/default-service startup/default-socket startup/default-socket-svc startup/default-xinetd startup/mac-init.plist startup/mac-inetd.plist startup/newbsd-init startup/openbsd-init startup/openrc-conf startup/openrc-init startup/solaris-init.xml startup/solaris-inetd.xml startup/tmpfile.conf startup/upstart-init startup/rh-upstart-init"
 
 
 

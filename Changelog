@@ -1,10 +1,12 @@
-===================
-NDO Utils Changelog
-===================
+# NDO Utils Changelog
 
-2.x.x - 2017-xx-xx
-------------------
-FIXES
+## 2.2.0 - 2018-06-xx
+
+### Upgrade Errata: NDO Utils no longer maintains backward compatibility. NDO 2.2.0 is compatibile with Nagios Core 4.4.0
+
+### ENHANCEMENTS
+
+### FIXES
 * Solaris 11: cannot get ndo2db service to start when the -f argument is present (John Frickson)
 
 

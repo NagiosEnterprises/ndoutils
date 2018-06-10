@@ -52,22 +52,22 @@ SRC_INETD=@src_inetd@
 SRC_INIT=@src_init@
 
 default:
-	@echo;\
-	echo Please enter 'make [option]' where [option] is one of:;\
-	echo;\
-	echo "     all                  builds the NDO Utilities";\
-	echo "     ndo2db               builds the ndo2db daemon";\
-	echo "     ndomod               builds the ndomod nagios module";\
-	echo "     file2sock            builds the file2sock utility";\
-	echo "     log2ndo              builds the log2ndo utility";\
-	echo "     sockdebug            builds the sockdebug utility";\
-	echo "     install-groups-users add the user and group if they do not exist";\
-	echo "     install              installs the module and programs";\
-	echo "     install-config       installs the sample configuration files";\
-	echo "     install-inetd        install the startup files for inetd, launchd, etc.";\
-	echo "     install-init         install the startup files for init, systemd, etc.";\
-	echo "     fullinstall          runs install-groups-users, install,";\
-	echo "                          install-config and install-init";\
+	@echo; \
+	echo Please enter 'make [option]' where [option] is one of:; \
+	echo; \
+	echo "     all                  builds the NDO Utilities"; \
+	echo "     ndo2db               builds the ndo2db daemon"; \
+	echo "     ndomod               builds the ndomod nagios module"; \
+	echo "     file2sock            builds the file2sock utility"; \
+	echo "     log2ndo              builds the log2ndo utility"; \
+	echo "     sockdebug            builds the sockdebug utility"; \
+	echo "     install-groups-users add the user and group if they do not exist"; \
+	echo "     install              installs the module and programs"; \
+	echo "     install-config       installs the sample configuration files"; \
+	echo "     install-inetd        install the startup files for inetd, launchd, etc."; \
+	echo "     install-init         install the startup files for init, systemd, etc."; \
+	echo "     fullinstall          runs install-groups-users, install,"; \
+	echo "                          install-config and install-init"; \
 	echo
 
 all:
@@ -118,47 +118,47 @@ install-init:
 		echo No init file to install; \
 		exit 1; \
 	fi
-	@if test $(INIT_TYPE) = upstart; then\
+	@if test $(INIT_TYPE) = upstart; then \
 		echo $(INSTALL) -m 644 startup/$(SRC_INIT) $(INIT_DIR)/$(INIT_FILE); \
 		$(INSTALL) -m 644 startup/$(SRC_INIT) $(INIT_DIR)/$(INIT_FILE); \
 		echo initctl reload-configuration; \
 		initctl reload-configuration; \
-	elif test $(INIT_TYPE) = systemd; then\
+	elif test $(INIT_TYPE) = systemd; then \
 		echo $(INSTALL) -m 644 startup/$(SRC_INIT) $(INIT_DIR)/$(INIT_FILE); \
 		$(INSTALL) -m 644 startup/$(SRC_INIT) $(INIT_DIR)/$(INIT_FILE); \
 	elif test $(INIT_TYPE) = smf10 -o $(INIT_TYPE) = smf11; then \
-		echo $(INSTALL) -m 775 -g sys -d $(INIT_DIR);\
-		$(INSTALL) -m 775 -g sys -d $(INIT_DIR);\
+		echo $(INSTALL) -m 775 -g sys -d $(INIT_DIR); \
+		$(INSTALL) -m 775 -g sys -d $(INIT_DIR); \
 		echo $(INSTALL) -m 644 startup/$(SRC_INIT) $(INIT_DIR)/$(INIT_FILE); \
 		$(INSTALL) -m 644 startup/$(SRC_INIT) $(INIT_DIR)/$(INIT_FILE); \
 		echo svccfg import $(INIT_DIR)/$(INIT_FILE); \
 		svccfg import $(INIT_DIR)/$(INIT_FILE); \
 		echo "*** Run 'svcadm enable ndo2db' to start it"; \
-	elif test $(INIT_TYPE) = gentoo; then\
+	elif test $(INIT_TYPE) = gentoo; then \
 		$(INSTALL) -m 755 startup/$(SRC_INIT) $(INIT_DIR)/$(INIT_FILE); \
 		echo rc-update add ndo2db default; \
 		rc-update add ndo2db default; \
-	else\
+	else \
 		echo $(INSTALL) -m 755 startup/$(SRC_INIT) $(INIT_DIR)/$(INIT_FILE); \
 		$(INSTALL) -m 755 startup/$(SRC_INIT) $(INIT_DIR)/$(INIT_FILE); \
-		if test $(INIT_TYPE) = newbsd; then\
-			if test $(DIST) = openbsd; then\
-				echo "# ndo2db@bsd_enable@=NO" >> /etc/rc.conf;\
-				echo "ndo2db@bsd_enable@=\"-d -c $(CFGDIR)/ndo2db.cfg\"" >> /etc/rc.conf;\
-				echo "Make sure to enable the ndo2db daemon";\
-			else\
-				echo "ndo2db@bsd_enable@=YES" >> /etc/rc.conf;\
-				echo "ndo2db_configfile=$(CFGDIR)/ndo2db.cfg" >> /etc/rc.conf;\
-			fi;\
-		elif test $(INIT_TYPE) = launchd; then\
+		if test $(INIT_TYPE) = newbsd; then \
+			if test $(DIST) = openbsd; then \
+				echo "# ndo2db@bsd_enable@=NO" >> /etc/rc.conf; \
+				echo "ndo2db@bsd_enable@=\"-d -c $(CFGDIR)/ndo2db.cfg\"" >> /etc/rc.conf; \
+				echo "Make sure to enable the ndo2db daemon"; \
+			else \
+				echo "ndo2db@bsd_enable@=YES" >> /etc/rc.conf; \
+				echo "ndo2db_configfile=$(CFGDIR)/ndo2db.cfg" >> /etc/rc.conf; \
+			fi; \
+		elif test $(INIT_TYPE) = launchd; then \
 			launchctl load $(INIT_DIR)/$(INIT_FILE); \
-		else\
+		else \
 			if test -f /sbin/chkconfig ; then \
-			    /sbin/chkconfig ndo2db on;\
-			else\
-				echo "Make sure to enable the ndo2db daemon";\
-			fi;\
-		fi;\
+			    /sbin/chkconfig ndo2db on; \
+			else \
+				echo "Make sure to enable the ndo2db daemon"; \
+			fi; \
+		fi; \
 	fi
 
 install-inetd:
@@ -174,18 +174,18 @@ install-inetd:
 		echo $(INSTALL) -m 644 startup/$$SRC_INETD_FILE $(INETD_DIR)/$(INIT_FILE); \
 		$(INSTALL) -m 644 startup/$$SRC_INETD_FILE $(INETD_DIR)/$(INIT_FILE); \
 	elif test $(INETD_TYPE) = smf10 -o $(INETD_TYPE) = smf11; then \
-		echo $(INSTALL) -m 775 -g sys -d $(INETD_DIR);\
-		$(INSTALL) -m 775 -g sys -d $(INETD_DIR);\
+		echo $(INSTALL) -m 775 -g sys -d $(INETD_DIR); \
+		$(INSTALL) -m 775 -g sys -d $(INETD_DIR); \
 		echo $(INSTALL) -m 644 startup/$(SRC_INETD) $(INETD_DIR)/$(INETD_FILE); \
 		$(INSTALL) -m 644 startup/$(SRC_INETD) $(INETD_DIR)/$(INETD_FILE); \
-		$(INSTALL) -m 775 -d $(INETD_DIR);\
+		$(INSTALL) -m 775 -d $(INETD_DIR); \
 		echo svccfg import $(INETD_DIR)/$(INETD_FILE); \
 		svccfg import $(INETD_DIR)/$(INETD_FILE); \
 		echo "*** Run 'svcadm enable nrpe' to start it"; \
-	elif test $(INIT_TYPE) = launchd; then\
+	elif test $(INIT_TYPE) = launchd; then \
 		$(INSTALL) -m 644 startup/$(SRC_INETD) $(INETD_DIR)/$(INETD_FILE); \
 		launchctl load $(INETD_DIR)/$(INETD_FILE); \
-	else\
+	else \
 		echo $(INSTALL) -m 644 startup/$(SRC_INETD) $(INETD_DIR)/$(INETD_FILE); \
 		$(INSTALL) -m 644 startup/$(SRC_INETD) $(INETD_DIR)/$(INETD_FILE); \
 	fi
