@@ -89,7 +89,7 @@
 		<exec_method
 			type='method'
 			name='start'
-			exec='@sbindir@/ndo2db -c @pkgsysconfdir@/ndo2db.cfg -f'
+			exec='@sbindir@/ndo2db -c @pkgsysconfdir@/ndo2db.cfg'
 			timeout_seconds='5'>
 			<method_context>
 				<method_credential user='@ndo2db_user@' group='@ndo2db_group@'/>

@@ -1,4 +1,4 @@
-#!/sbin/runscript
+#!/sbin/openrc-run
 #
 # Copyright (c) 2016 Nagios(R) Core(TM) Development Team
 #
@@ -8,9 +8,11 @@
 
 NDO2DB_BIN="@sbindir@/ndo2db"
 NDO2DB_PID="@piddir@/ndo2db.pid"
+NDO2DB_CFG=@pkgsysconfdir@/ndo2db.cfg
 
-depend() {
-	use logger dns net localmount netmount nfsmount
+depends() {
+	before nagios
+	need mysql
 }
 
 checkconfig() {
@@ -27,13 +29,13 @@ start() {
 	ebegin "Starting ndo2db"
 	# Make sure we have a sane current directory
 	cd /
-	start-stop-daemon --start --exec $NDO2DB_BIN --pidfile $PID_FILE \
-		-- -c $NDO2DB_CFG -f
+	start-stop-daemon --start --exec $NDO2DB_BIN --pidfile $NDO2DB_PID \
+		--background -- -c $NDO2DB_CFG -f
 	eend $?
 }
 
 stop() {
 	ebegin "Stopping ndo2db"
-	start-stop-daemon --stop --exec $NDO2DB_BIN --pidfile $PID_FILE
+	start-stop-daemon --stop --exec $NDO2DB_BIN --pidfile $NDO2DB_PID
 	eend $?
 }

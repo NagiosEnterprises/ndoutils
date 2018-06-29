@@ -32,77 +32,85 @@
 /****************************************************************************/
 
 /* initializes a dynamic buffer */
-int ndo_dbuf_init(ndo_dbuf *db, int chunk_size){
-
-	if(db==NULL)
+int ndo_dbuf_init(ndo_dbuf *db, int chunk_size)
+{
+	if (db == NULL) {
 		return NDO_ERROR;
+	}
 
-	db->buf=NULL;
-	db->used_size=0L;
-	db->allocated_size=0L;
-	db->chunk_size=chunk_size;
+	db->buf            = NULL;
+	db->used_size      = 0L;
+	db->allocated_size = 0L;
+	db->chunk_size     = chunk_size;
 
 	return NDO_OK;
-        }
+}
 
 
 /* frees a dynamic buffer */
-int ndo_dbuf_free(ndo_dbuf *db){
-
-	if(db==NULL)
+int ndo_dbuf_free(ndo_dbuf *db)
+{
+	if (db == NULL) {
 		return NDO_ERROR;
+	}
 
-	if(db->buf!=NULL)
+	if (db->buf != NULL) {
 		free(db->buf);
-	db->buf=NULL;
-	db->used_size=0L;
-	db->allocated_size=0L;
+	}
+
+	db->buf            = NULL;
+	db->used_size      = 0L;
+	db->allocated_size = 0L;
 
 	return NDO_OK;
-        }
+}
 
 
 /* dynamically expands a string */
-int ndo_dbuf_strcat(ndo_dbuf *db, char *buf){
-	char *newbuf=NULL;
-	unsigned long buflen=0L;
-	unsigned long new_size=0L;
-	unsigned long memory_needed=0L;
+int ndo_dbuf_strcat(ndo_dbuf *db, char *buf)
+{
+	char *newbuf                = NULL;
+	unsigned long buflen        = 0L;
+	unsigned long new_size      = 0L;
+	unsigned long memory_needed = 0L;
 
-	if(db==NULL || buf==NULL)
+	if (db == NULL || buf == NULL) {
 		return NDO_ERROR;
+	}
 
 	/* how much memory should we allocate (if any)? */
-	buflen=strlen(buf);
-	new_size=db->used_size+buflen+1;
+	buflen = strlen(buf);
+	new_size = db->used_size + buflen + 1;
 
 	/* we need more memory */
-	if(db->allocated_size<new_size){
+	if (db->allocated_size < new_size) {
 
-		memory_needed=((ceil(new_size/db->chunk_size)+1)*db->chunk_size);
+		memory_needed = ((ceil(new_size / db->chunk_size) + 1) * db->chunk_size);
 
 		/* allocate memory to store old and new string */
-		if((newbuf=(char *)realloc((void *)db->buf,(size_t)memory_needed))==NULL)
+		newbuf = (char *)realloc((void *)db->buf,(size_t)memory_needed);
+		if (newbuf == NULL) {
 			return NDO_ERROR;
+		}
 
 		/* update buffer pointer */
-		db->buf=newbuf;
+		db->buf = newbuf;
 
 		/* update allocated size */
-		db->allocated_size=memory_needed;
+		db->allocated_size = memory_needed;
 
 		/* terminate buffer */
 		db->buf[db->used_size]='\x0';
-	        }
+	}
 
 	/* append the new string */
 	strcat(db->buf,buf);
 
 	/* update size allocated */
-	db->used_size+=buflen;
+	db->used_size += buflen;
 
 	return NDO_OK;
-        }
+}
 
 
 
@@ -111,35 +119,43 @@ int ndo_dbuf_strcat(ndo_dbuf *db, char *buf){
 /******************************************************************/
 
 /* renames a file - works across filesystems (Mike Wiacek) */
-int my_rename(char *source, char *dest){
-	char buffer[1024]={0};
-	int rename_result=0;
-	int source_fd=-1;
-	int dest_fd=-1;
-	int bytes_read=0;
-
+int my_rename(char *source, char *dest)
+{
+	char buffer[1024] = { 0 };
+	int rename_result = 0;
+	int source_fd     = -1;
+	int dest_fd       = -1;
+	int bytes_read    = 0;
+	int result        = 0;
 
 	/* make sure we have something */
-	if(source==NULL || dest==NULL)
+	if (source == NULL || dest == NULL) {
 		return -1;
+	}
 
 	/* first see if we can rename file with standard function */
-	rename_result=rename(source,dest);
+	rename_result = rename(source, dest);
 
 	/* handle any errors... */
-	if(rename_result==-1){
+	if (rename_result == -1) {
 
 		/* an error occurred because the source and dest files are on different filesystems */
-		if(errno==EXDEV){
+		if (errno == EXDEV) {
 
 			/* open destination file for writing */
-			if((dest_fd=open(dest,O_WRONLY|O_TRUNC|O_CREAT|O_APPEND,0644))>0){
+			dest_fd = open(dest, O_WRONLY | O_TRUNC | O_CREAT | O_APPEND, 0644);
+			if (dest_fd > 0) {
 
 				/* open source file for reading */
-				if((source_fd=open(source,O_RDONLY,0644))>0){
+				source_fd = open(source, O_RDONLY, 0644);
+				if (source_fd > 0) {
 
-					while((bytes_read=read(source_fd,buffer,sizeof(buffer)))>0)
-						write(dest_fd,buffer,bytes_read);
+					while ((bytes_read = read(source_fd, buffer, sizeof(buffer))) > 0) {
+						result = write(dest_fd, buffer, bytes_read);
+						if (result == -1) {
+							return NDO_ERROR;
+						}
+					}
 
 					close(source_fd);
 					close(dest_fd);
@@ -148,23 +164,23 @@ int my_rename(char *source, char *dest){
 					unlink(source);
 
 					/* reset result since we successfully copied file */
-					rename_result=0;
-					}
+					rename_result = 0;
+				}
 
-				else{
+				else {
 					close(dest_fd);
 					return rename_result;
-					}
 				}
 			}
+		}
 
-		else{
+		else {
 			return rename_result;
-			}
-	        }
+		}
+	}
 
 	return rename_result;
-        }
+}
 
 
 
@@ -174,41 +190,52 @@ int my_rename(char *source, char *dest){
 /******************************************************************/
 
 /* strip newline, carriage return, and tab characters from beginning and end of a string */
-void ndomod_strip(char *buffer){
-	register int x=0;
-	register int y=0;
-	register int z=0;
+void ndomod_strip(char *buffer)
+{
+	register int x = 0;
+	register int y = 0;
+	register int z = 0;
 
-	if(buffer==NULL || buffer[0]=='\x0')
+	if (buffer == NULL || buffer[0]=='\x0') {
 		return;
+	}
 
 	/* strip end of string */
-	y=(int)strlen(buffer);
-	for(x=y-1;x>=0;x--){
-		if(buffer[x]==' ' || buffer[x]=='\n' || buffer[x]=='\r' || buffer[x]=='\t' || buffer[x]==13)
+	y = (int)strlen(buffer);
+	for (x = y - 1; x >= 0; x--) {
+		if (buffer[x]==' ' || buffer[x]=='\n' || buffer[x]=='\r' || buffer[x]=='\t' || buffer[x]==13) {
 			buffer[x]='\x0';
-		else
+		}
+		else {
 			break;
-	        }
+		}
+	}
+
 	/* save last position for later... */
-	z=x;
+	z = x;
 
 	/* strip beginning of string (by shifting) */
-	for(x=0;;x++){
-		if(buffer[x]==' ' || buffer[x]=='\n' || buffer[x]=='\r' || buffer[x]=='\t' || buffer[x]==13)
+	for(x = 0; ; x++) {
+		if (buffer[x]==' ' || buffer[x]=='\n' || buffer[x]=='\r' || buffer[x]=='\t' || buffer[x]==13) {
 			continue;
-		else
+		}
+		else {
 			break;
-	        }
-	if(x>0){
+		}
+	}
+
+	if (x > 0) {
+
 		/* new length of the string after we stripped the end */
-		y=z+1;
+		y = z + 1;
 		
 		/* shift chars towards beginning of string to remove leading whitespace */
-		for(z=x;z<y;z++)
-			buffer[z-x]=buffer[z];
-		buffer[y-x]='\x0';
-	        }
+		for(z = x; z < y; z++) {
+			buffer[z - x] = buffer[z];
+		}
+
+		buffer[y - x]='\x0';
+	}
 
 	return;
-	}
+}
