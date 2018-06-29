@@ -52,7 +52,7 @@ void del_queue() {
 	struct msqid_ds buf;
 
 	if (msgctl(queue_id,IPC_RMID,&buf) < 0) {
-		syslog(LOG_ERR,"Error: queue remove error.\n");
+		syslog(LOG_ERR, "%s", "Error: queue remove error.\n");
 	}
 
     if (queue_idfile_path != NULL)
@@ -65,7 +65,7 @@ void del_queue() {
 }
 
 int get_queue_id(int id) {
-
+ 
     int idfile;
 
     if (queue_idfile_path == NULL)
@@ -87,7 +87,7 @@ int get_queue_id(int id) {
 	key_t key = ftok(queue_idfile_path, NDO_QUEUE_ID+id);
 
 	if (key == -1 || (queue_id = msgget(key, IPC_CREAT | 0600)) < 0) {
-		syslog(LOG_ERR,"Error: queue init error.\n");
+		syslog(LOG_ERR, "%s", "Error: queue init error.\n");
 	}
 
 	return queue_id;
@@ -190,14 +190,14 @@ void push_into_queue (char* buf) {
 					#endif
 				}
 				if (retrynum < MAX_RETRIES) {
-					syslog(LOG_ERR,"Message sent to queue.\n");
+					syslog(LOG_ERR, "%s", "Message sent to queue.\n");
 					}
 				else {
-					syslog(LOG_ERR,"Error: max retries exceeded sending message to queue. Kernel queue parameters may need to be tuned. See README.\n");
+					syslog(LOG_ERR, "%s", "Error: max retries exceeded sending message to queue. Kernel queue parameters may need to be tuned. See README.\n");
 				}
 			}
 		else {
-			syslog(LOG_ERR,"Error: queue send error.\n");
+			syslog(LOG_ERR, "%s", "Error: queue send error.\n");
 			}
 		}
 
@@ -211,6 +211,7 @@ char* pop_from_queue() {
 	zero_string(msg.text, NDO_MAX_MSG_SIZE);
 
 	if (msgrcv(queue_id, &msg, queue_buff_size, NDO_MSG_TYPE, MSG_NOERROR) < 0) {
+
 		err = errno;
 
 		syslog(LOG_ERR, "Error: queue recv error - %d.\n", err);
