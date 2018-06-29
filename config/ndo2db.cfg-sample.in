@@ -10,7 +10,7 @@
 # This is the lockfile that NDO2DB will use to store its PID number
 # in when it is running in daemon mode.
 
-lock_file=@localstatedir@/ndo2db.pid
+lock_file=@piddir@/ndo2db.pid
 
 
 
