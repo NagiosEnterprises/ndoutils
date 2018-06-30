@@ -39,10 +39,10 @@
 
 typedef struct ndo_dbuf_struct {
 
-	char *         buf;
-	unsigned long  used_size;
-	unsigned long  allocated_size;
-	unsigned long  chunk_size;
+    char *         buf;
+    unsigned long  used_size;
+    unsigned long  allocated_size;
+    unsigned long  chunk_size;
 
 } ndo_dbuf;
 
