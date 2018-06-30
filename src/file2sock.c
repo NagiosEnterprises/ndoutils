@@ -48,189 +48,189 @@ int show_license=NDO_FALSE;
 int show_help=NDO_FALSE;
 
 int main(int argc, char **argv){
-	int sd=0;
-	int fd=0;
-	char ch[511];	/* Matches ndo2db read buffer size */
-	int result=0;
-	int nbytesread,n,i;
-	char *p;
+    int sd=0;
+    int fd=0;
+    char ch[511];   /* Matches ndo2db read buffer size */
+    int result=0;
+    int nbytesread,n,i;
+    char *p;
 
 
-	result=process_arguments(argc,argv);
+    result=process_arguments(argc,argv);
 
         if(result!=NDO_OK || show_help==NDO_TRUE || show_license==NDO_TRUE || show_version==NDO_TRUE){
 
-		if(result!=NDO_OK)
-			printf("Incorrect command line arguments supplied\n");
+        if(result!=NDO_OK)
+            printf("Incorrect command line arguments supplied\n");
 
-		printf("\n");
-		printf("%s %s\n",FILE2SOCK_NAME,FILE2SOCK_VERSION);
-		printf("Copyright (c) 2009 Nagios Core Development Team and Community Contributors\n");
-		printf("Copyright (c) 2005-2007 Ethan Galstad\n");
-		printf("Last Modified: %s\n",FILE2SOCK_DATE);
-		printf("License: GPL v2\n");
-		printf("\n");
-		printf("Sends the contents of a file to a TCP or UNIX domain socket.  The contents of\n");
-		printf("the file are sent in their original format - no conversion, encapsulation, or\n");
-		printf("other processing is done before sending the contents to the destination socket.\n");
-		printf("\n");
-		printf("Usage: %s -s <source> -d <dest> [-t <type>] [-p <port>]\n",argv[0]);
-		printf("\n");
-		printf("<source>   = Name of the file to read from.  Use '-' to read from stdin.\n");
-		printf("<dest>     = If destination is a TCP socket, the address/hostname to connect to.\n");
-		printf("             If destination is a Unix domain socket, the path to the socket.\n");
-		printf("<type>     = Specifies the type of destination socket.  Valid values include:\n");
-		printf("                 tcp\n");
-		printf("                 unix (default)\n");
-		printf("<port>     = Port number to connect to if destination is TCP socket.\n");
-		printf("\n");
+        printf("\n");
+        printf("%s %s\n",FILE2SOCK_NAME,FILE2SOCK_VERSION);
+        printf("Copyright (c) 2009 Nagios Core Development Team and Community Contributors\n");
+        printf("Copyright (c) 2005-2007 Ethan Galstad\n");
+        printf("Last Modified: %s\n",FILE2SOCK_DATE);
+        printf("License: GPL v2\n");
+        printf("\n");
+        printf("Sends the contents of a file to a TCP or UNIX domain socket.  The contents of\n");
+        printf("the file are sent in their original format - no conversion, encapsulation, or\n");
+        printf("other processing is done before sending the contents to the destination socket.\n");
+        printf("\n");
+        printf("Usage: %s -s <source> -d <dest> [-t <type>] [-p <port>]\n",argv[0]);
+        printf("\n");
+        printf("<source>   = Name of the file to read from.  Use '-' to read from stdin.\n");
+        printf("<dest>     = If destination is a TCP socket, the address/hostname to connect to.\n");
+        printf("             If destination is a Unix domain socket, the path to the socket.\n");
+        printf("<type>     = Specifies the type of destination socket.  Valid values include:\n");
+        printf("                 tcp\n");
+        printf("                 unix (default)\n");
+        printf("<port>     = Port number to connect to if destination is TCP socket.\n");
+        printf("\n");
 
-		exit(1);
-	        }
+        exit(1);
+            }
 
-	/* open the source file for reading */
-	if(!strcmp(source_name,"-"))
-		fd=STDIN_FILENO;
-	else if((fd=open(source_name,O_RDONLY))==-1){
-		perror("Unable to open source file for reading");
-		exit(1);
-	        }
+    /* open the source file for reading */
+    if(!strcmp(source_name,"-"))
+        fd=STDIN_FILENO;
+    else if((fd=open(source_name,O_RDONLY))==-1){
+        perror("Unable to open source file for reading");
+        exit(1);
+            }
 
-	/* open data sink */
-	if(ndo_sink_open(dest_name,sd,socket_type,tcp_port,0,&sd)==NDO_ERROR){
-		perror("Cannot open destination socket");
-		close(fd);
-		exit(1);
-	        }
+    /* open data sink */
+    if(ndo_sink_open(dest_name,sd,socket_type,tcp_port,0,&sd)==NDO_ERROR){
+        perror("Cannot open destination socket");
+        close(fd);
+        exit(1);
+            }
 
-	/* we're reading from stdin... */
+    /* we're reading from stdin... */
 #ifdef USE_SENDFILE
-	if(fd==STDIN_FILENO){
+    if(fd==STDIN_FILENO){
 #endif
-		while((nbytesread = read(fd,&ch,sizeof(ch))) > 0){
-			p = &ch[0];
-			n = nbytesread;
-			while (n > 0) {
-				i = write(sd, p, n);
-				if(i < 0){
-					perror("Error while writing to destination socket");
-					result=1;
-					goto breakout;
-					}
-				p += i;
-				n -= i;
-				}
-		        }
-		breakout:
+        while((nbytesread = read(fd,&ch,sizeof(ch))) > 0){
+            p = &ch[0];
+            n = nbytesread;
+            while (n > 0) {
+                i = write(sd, p, n);
+                if(i < 0){
+                    perror("Error while writing to destination socket");
+                    result=1;
+                    goto breakout;
+                    }
+                p += i;
+                n -= i;
+                }
+                }
+        breakout:
 #ifdef USE_SENDFILE
-	        }
+            }
 
-	/* we're reading from a standard file... */
-	else{
+    /* we're reading from a standard file... */
+    else{
 
-		/* get file size info */
-		if(fstat(fd,&stat_buf)==-1){
-			perror("fstat() error");
-			result=1;
-		        }
+        /* get file size info */
+        if(fstat(fd,&stat_buf)==-1){
+            perror("fstat() error");
+            result=1;
+                }
 
-		/* send the file contents to the socket */
-		else if(sendfile(sd,fd,&offset,stat_buf.st_size)==-1){
-			perror("sendfile() error");
-			result=1;
-		        }
-	        }
+        /* send the file contents to the socket */
+        else if(sendfile(sd,fd,&offset,stat_buf.st_size)==-1){
+            perror("sendfile() error");
+            result=1;
+                }
+            }
 #endif
 
-	/* close the data sink */
-	ndo_sink_flush(sd);
-	ndo_sink_close(sd);
+    /* close the data sink */
+    ndo_sink_flush(sd);
+    ndo_sink_close(sd);
 
-	/* close the source file */
-	close(fd);
+    /* close the source file */
+    close(fd);
 
-	return result;
+    return result;
         }
 
 
 /* process command line arguments */
 int process_arguments(int argc, char **argv){
-	char optchars[32];
-	int c=1;
+    char optchars[32];
+    int c=1;
 
 #ifdef HAVE_GETOPT_H
-	int option_index=0;
-	static struct option long_options[]={
-		{"source", required_argument, 0, 's'},
-		{"dest", required_argument, 0, 'd'},
-		{"type", required_argument, 0, 't'},
-		{"port", required_argument, 0, 'p'},
-		{"help", no_argument, 0, 'h'},
-		{"license", no_argument, 0, 'l'},
-		{"version", no_argument, 0, 'V'},
-		{0, 0, 0, 0}
+    int option_index=0;
+    static struct option long_options[]={
+        {"source", required_argument, 0, 's'},
+        {"dest", required_argument, 0, 'd'},
+        {"type", required_argument, 0, 't'},
+        {"port", required_argument, 0, 'p'},
+        {"help", no_argument, 0, 'h'},
+        {"license", no_argument, 0, 'l'},
+        {"version", no_argument, 0, 'V'},
+        {0, 0, 0, 0}
                 };
 #endif
 
-	/* no options were supplied */
-	if(argc<2){
-		show_help=NDO_TRUE;
-		return NDO_OK;
-	        }
+    /* no options were supplied */
+    if(argc<2){
+        show_help=NDO_TRUE;
+        return NDO_OK;
+            }
 
-	snprintf(optchars,sizeof(optchars),"s:d:t:p:hlV");
+    snprintf(optchars,sizeof(optchars),"s:d:t:p:hlV");
 
-	while(1){
+    while(1){
 #ifdef HAVE_GETOPT_H
-		c=getopt_long(argc,argv,optchars,long_options,&option_index);
+        c=getopt_long(argc,argv,optchars,long_options,&option_index);
 #else
-		c=getopt(argc,argv,optchars);
+        c=getopt(argc,argv,optchars);
 #endif
-		if(c==-1 || c==EOF)
-			break;
+        if(c==-1 || c==EOF)
+            break;
 
-		/* process all arguments */
-		switch(c){
+        /* process all arguments */
+        switch(c){
 
-		case '?':
-		case 'h':
-			show_help=NDO_TRUE;
-			break;
-		case 'V':
-			show_version=NDO_TRUE;
-			break;
-		case 'l':
-			show_license=NDO_TRUE;
-			break;
-		case 't':
-			if(!strcmp(optarg,"tcp"))
-				socket_type=NDO_SINK_TCPSOCKET;
-			else if(!strcmp(optarg,"unix"))
-				socket_type=NDO_SINK_UNIXSOCKET;
-			else
-				return NDO_ERROR;
-			break;
-		case 'p':
-			tcp_port=atoi(optarg);
-			if(tcp_port<=0)
-				return NDO_ERROR;
-			break;
-		case 's':
-			source_name=strdup(optarg);
-			break;
-		case 'd':
-			dest_name=strdup(optarg);
-			break;
-		default:
-			return NDO_ERROR;
-			break;
-		        }
-	        }
+        case '?':
+        case 'h':
+            show_help=NDO_TRUE;
+            break;
+        case 'V':
+            show_version=NDO_TRUE;
+            break;
+        case 'l':
+            show_license=NDO_TRUE;
+            break;
+        case 't':
+            if(!strcmp(optarg,"tcp"))
+                socket_type=NDO_SINK_TCPSOCKET;
+            else if(!strcmp(optarg,"unix"))
+                socket_type=NDO_SINK_UNIXSOCKET;
+            else
+                return NDO_ERROR;
+            break;
+        case 'p':
+            tcp_port=atoi(optarg);
+            if(tcp_port<=0)
+                return NDO_ERROR;
+            break;
+        case 's':
+            source_name=strdup(optarg);
+            break;
+        case 'd':
+            dest_name=strdup(optarg);
+            break;
+        default:
+            return NDO_ERROR;
+            break;
+                }
+            }
 
-	/* make sure required args were supplied */
-	if((source_name==NULL || dest_name==NULL) && show_help==NDO_FALSE && show_version==NDO_FALSE  && show_license==NDO_FALSE)
-		return NDO_ERROR;
+    /* make sure required args were supplied */
+    if((source_name==NULL || dest_name==NULL) && show_help==NDO_FALSE && show_version==NDO_FALSE  && show_license==NDO_FALSE)
+        return NDO_ERROR;
 
-	return NDO_OK;
+    return NDO_OK;
         }
 
