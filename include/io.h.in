@@ -31,18 +31,18 @@
 #define NDO_SINK_UNIXSOCKET   2
 #define NDO_SINK_TCPSOCKET    3
 
-#define NDO_DEFAULT_TCP_PORT  @ndo2db_port@	/* default port to use */
+#define NDO_DEFAULT_TCP_PORT  @ndo2db_port@ /* default port to use */
 
 
 /* MMAPFILE structure - used for reading files via mmap() */
 typedef struct ndo_mmapfile_struct{
-	char *path;
-	int mode;
-	int fd;
-	unsigned long file_size;
-	unsigned long current_position;
-	unsigned long current_line;
-	void *mmap_buf;
+    char *path;
+    int mode;
+    int fd;
+    unsigned long file_size;
+    unsigned long current_position;
+    unsigned long current_line;
+    void *mmap_buf;
         }ndo_mmapfile;
 
 
