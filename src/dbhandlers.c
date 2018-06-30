@@ -20,7 +20,11 @@
  * along with NDOUtils. If not, see <http://www.gnu.org/licenses/>.
  */
 
+/* fix asprintf compiler warnings */
+#define _GNU_SOURCE 1
+
 /* include our project's header files */
+
 #include "../include/config.h"
 #include <stdio.h>
 
@@ -44,7 +48,6 @@ and pqueue from libssl <openssl/ssl.h>
 #include "../include/nagios/nagios.h"
 #include "../include/nagios/broker.h"
 #include "../include/nagios/comments.h"
-
 
 extern int errno;
 
@@ -601,136 +604,175 @@ int ndo2db_handle_logentry(ndo2db_idi *idi){
 /* REALTIME DATA HANDLERS                                                   */
 /****************************************************************************/
 
-int ndo2db_handle_processdata(ndo2db_idi *idi){
-    int type,flags,attr;
+int ndo2db_handle_processdata(ndo2db_idi *idi)
+{
+    int type                 = 0;
+    int flags                = 0;
+    int attr                 = 0;
+    unsigned long process_id = 0L;
+    int result               = NDO_OK;
+    char *ts[1]              = { NULL };
+    char *es[3]              = { NULL };
+    int i                    = 0;
+    char *buf                = NULL;
     struct timeval tstamp;
-    unsigned long process_id;
-    int result=NDO_OK;
-    char *ts[1];
-    char *es[3];
-    int x=0;
-    char *buf=NULL;
 
-    if(idi==NULL)
+    if (idi == NULL) {
         return NDO_ERROR;
+    }
 
     /* convert timestamp, etc */
-    result=ndo2db_convert_standard_data_elements(idi,&type,&flags,&attr,&tstamp);
+    result = ndo2db_convert_standard_data_elements(idi, &type, &flags, &attr, &tstamp);
+    if (result == NDO_ERROR) {
+        return NDO_ERROR;
+    }
 
     /* convert vars */
-    result=ndo2db_convert_string_to_unsignedlong(idi->buffered_input[NDO_DATA_PROCESSID],&process_id);
+    result = ndo2db_convert_string_to_unsignedlong(idi->buffered_input[NDO_DATA_PROCESSID], &process_id);
+    if (result == NDO_ERROR) {
+        return NDO_ERROR;
+    }
 
-    ts[0]=ndo2db_db_timet_to_sql(idi,tstamp.tv_sec);
+    ts[0] = ndo2db_db_timet_to_sql(idi, tstamp.tv_sec);
 
-    es[0]=ndo2db_db_escape_string(idi,idi->buffered_input[NDO_DATA_PROGRAMNAME]);
-    es[1]=ndo2db_db_escape_string(idi,idi->buffered_input[NDO_DATA_PROGRAMVERSION]);
-    es[2]=ndo2db_db_escape_string(idi,idi->buffered_input[NDO_DATA_PROGRAMDATE]);
+    es[0] = ndo2db_db_escape_string(idi, idi->buffered_input[NDO_DATA_PROGRAMNAME]);
+    es[1] = ndo2db_db_escape_string(idi, idi->buffered_input[NDO_DATA_PROGRAMVERSION]);
+    es[2] = ndo2db_db_escape_string(idi, idi->buffered_input[NDO_DATA_PROGRAMDATE]);
 
     /* save entry to db */
-    if(asprintf(&buf,"INSERT INTO %s SET instance_id='%lu', event_type='%d', event_time=%s, event_time_usec='%lu', process_id='%lu', program_name='%s', program_version='%s', program_date='%s'"
-            ,ndo2db_db_tablenames[NDO2DB_DBTABLE_PROCESSEVENTS]
-            ,idi->dbinfo.instance_id
-            ,type
-            ,ts[0]
-            ,tstamp.tv_usec
-            ,process_id
-            ,es[0]
-            ,es[1]
-            ,es[2]
-           )==-1)
-        buf=NULL;
-    result=ndo2db_db_query(idi,buf);
+    result = asprintf(&buf, 
+        "INSERT INTO %s SET "
+            "instance_id = '%lu', "
+            "event_type = '%d', "
+            "event_time = %s, "
+            "event_time_usec = '%lu', "
+            "process_id = '%lu', "
+            "program_name = '%s', "
+            "program_version = '%s', "
+            "program_date = '%s'",
+            ndo2db_db_tablenames[NDO2DB_DBTABLE_PROCESSEVENTS],
+            idi->dbinfo.instance_id,
+            type,
+            ts[0],
+            tstamp.tv_usec,
+            process_id,
+            es[0],
+            es[1],
+            es[2]);
+
+    if (result == -1) {
+        buf = NULL;
+        free(ts[1]);
+        free(es[0]);
+        free(es[1]);
+        free(es[2]);
+        return NDO_ERROR;
+    }
+
+    result = ndo2db_db_query(idi, buf);
     free(buf);
 
-    /* MORE PROCESSING.... */
+    if (result == NDO_ERROR) {
+        free(ts[1]);
+        free(es[0]);
+        free(es[1]);
+        free(es[2]);
+        return NDO_ERROR;
+    }
 
     /* if process is starting up, clearstatus data, event queue, etc. */
-    if(type==NEBTYPE_PROCESS_PRELAUNCH && tstamp.tv_sec>=idi->dbinfo.latest_realtime_data_time){
+    if(type == NEBTYPE_PROCESS_PRELAUNCH && tstamp.tv_sec >= idi->dbinfo.latest_realtime_data_time) {
 
         /* clear realtime data */
-        ndo2db_db_clear_table(idi,ndo2db_db_tablenames[NDO2DB_DBTABLE_PROGRAMSTATUS]);
-        ndo2db_db_clear_table(idi,ndo2db_db_tablenames[NDO2DB_DBTABLE_HOSTSTATUS]);
-        ndo2db_db_clear_table(idi,ndo2db_db_tablenames[NDO2DB_DBTABLE_SERVICESTATUS]);
-        ndo2db_db_clear_table(idi,ndo2db_db_tablenames[NDO2DB_DBTABLE_CONTACTSTATUS]);
-        ndo2db_db_clear_table(idi,ndo2db_db_tablenames[NDO2DB_DBTABLE_TIMEDEVENTQUEUE]);
-        ndo2db_db_clear_table(idi,ndo2db_db_tablenames[NDO2DB_DBTABLE_COMMENTS]);
-        ndo2db_db_clear_table(idi,ndo2db_db_tablenames[NDO2DB_DBTABLE_SCHEDULEDDOWNTIME]);
-        ndo2db_db_clear_table(idi,ndo2db_db_tablenames[NDO2DB_DBTABLE_RUNTIMEVARIABLES]);
-        ndo2db_db_clear_table(idi,ndo2db_db_tablenames[NDO2DB_DBTABLE_CUSTOMVARIABLESTATUS]);
+        ndo2db_db_clear_table(idi, ndo2db_db_tablenames[NDO2DB_DBTABLE_PROGRAMSTATUS]);
+        ndo2db_db_clear_table(idi, ndo2db_db_tablenames[NDO2DB_DBTABLE_HOSTSTATUS]);
+        ndo2db_db_clear_table(idi, ndo2db_db_tablenames[NDO2DB_DBTABLE_SERVICESTATUS]);
+        ndo2db_db_clear_table(idi, ndo2db_db_tablenames[NDO2DB_DBTABLE_CONTACTSTATUS]);
+        ndo2db_db_clear_table(idi, ndo2db_db_tablenames[NDO2DB_DBTABLE_TIMEDEVENTQUEUE]);
+        ndo2db_db_clear_table(idi, ndo2db_db_tablenames[NDO2DB_DBTABLE_COMMENTS]);
+        ndo2db_db_clear_table(idi, ndo2db_db_tablenames[NDO2DB_DBTABLE_SCHEDULEDDOWNTIME]);
+        ndo2db_db_clear_table(idi, ndo2db_db_tablenames[NDO2DB_DBTABLE_RUNTIMEVARIABLES]);
+        ndo2db_db_clear_table(idi, ndo2db_db_tablenames[NDO2DB_DBTABLE_CUSTOMVARIABLESTATUS]);
 
         /* clear config data */
-        ndo2db_db_clear_table(idi,ndo2db_db_tablenames[NDO2DB_DBTABLE_CONFIGFILES]);
-        ndo2db_db_clear_table(idi,ndo2db_db_tablenames[NDO2DB_DBTABLE_CONFIGFILEVARIABLES]);
-        ndo2db_db_clear_table(idi,ndo2db_db_tablenames[NDO2DB_DBTABLE_CUSTOMVARIABLES]);
-        ndo2db_db_clear_table(idi,ndo2db_db_tablenames[NDO2DB_DBTABLE_COMMANDS]);
-        ndo2db_db_clear_table(idi,ndo2db_db_tablenames[NDO2DB_DBTABLE_TIMEPERIODS]);
-        ndo2db_db_clear_table(idi,ndo2db_db_tablenames[NDO2DB_DBTABLE_TIMEPERIODTIMERANGES]);
-        ndo2db_db_clear_table(idi,ndo2db_db_tablenames[NDO2DB_DBTABLE_CONTACTGROUPS]);
-        ndo2db_db_clear_table(idi,ndo2db_db_tablenames[NDO2DB_DBTABLE_CONTACTGROUPMEMBERS]);
-        ndo2db_db_clear_table(idi,ndo2db_db_tablenames[NDO2DB_DBTABLE_HOSTGROUPS]);
-        ndo2db_db_clear_table(idi,ndo2db_db_tablenames[NDO2DB_DBTABLE_HOSTGROUPMEMBERS]);
-        ndo2db_db_clear_table(idi,ndo2db_db_tablenames[NDO2DB_DBTABLE_SERVICEGROUPS]);
-        ndo2db_db_clear_table(idi,ndo2db_db_tablenames[NDO2DB_DBTABLE_SERVICEGROUPMEMBERS]);
-        ndo2db_db_clear_table(idi,ndo2db_db_tablenames[NDO2DB_DBTABLE_HOSTESCALATIONS]);
-        ndo2db_db_clear_table(idi,ndo2db_db_tablenames[NDO2DB_DBTABLE_HOSTESCALATIONCONTACTS]);
-        ndo2db_db_clear_table(idi,ndo2db_db_tablenames[NDO2DB_DBTABLE_SERVICEESCALATIONS]);
-        ndo2db_db_clear_table(idi,ndo2db_db_tablenames[NDO2DB_DBTABLE_SERVICEESCALATIONCONTACTS]);
-        ndo2db_db_clear_table(idi,ndo2db_db_tablenames[NDO2DB_DBTABLE_HOSTDEPENDENCIES]);
-        ndo2db_db_clear_table(idi,ndo2db_db_tablenames[NDO2DB_DBTABLE_SERVICEDEPENDENCIES]);
-        ndo2db_db_clear_table(idi,ndo2db_db_tablenames[NDO2DB_DBTABLE_CONTACTS]);
-        ndo2db_db_clear_table(idi,ndo2db_db_tablenames[NDO2DB_DBTABLE_CONTACTADDRESSES]);
-        ndo2db_db_clear_table(idi,ndo2db_db_tablenames[NDO2DB_DBTABLE_CONTACTNOTIFICATIONCOMMANDS]);
-        ndo2db_db_clear_table(idi,ndo2db_db_tablenames[NDO2DB_DBTABLE_HOSTS]);
-        ndo2db_db_clear_table(idi,ndo2db_db_tablenames[NDO2DB_DBTABLE_HOSTPARENTHOSTS]);
-        ndo2db_db_clear_table(idi,ndo2db_db_tablenames[NDO2DB_DBTABLE_HOSTCONTACTS]);
-        ndo2db_db_clear_table(idi,ndo2db_db_tablenames[NDO2DB_DBTABLE_SERVICES]);
-        ndo2db_db_clear_table(idi,ndo2db_db_tablenames[NDO2DB_DBTABLE_SERVICEPARENTSERVICES]);
-        ndo2db_db_clear_table(idi,ndo2db_db_tablenames[NDO2DB_DBTABLE_SERVICECONTACTS]);
-        ndo2db_db_clear_table(idi,ndo2db_db_tablenames[NDO2DB_DBTABLE_SERVICECONTACTGROUPS]);
-        ndo2db_db_clear_table(idi,ndo2db_db_tablenames[NDO2DB_DBTABLE_HOSTCONTACTGROUPS]);
-        ndo2db_db_clear_table(idi,ndo2db_db_tablenames[NDO2DB_DBTABLE_HOSTESCALATIONCONTACTGROUPS]);
-        ndo2db_db_clear_table(idi,ndo2db_db_tablenames[NDO2DB_DBTABLE_SERVICEESCALATIONCONTACTGROUPS]);
+        ndo2db_db_clear_table(idi, ndo2db_db_tablenames[NDO2DB_DBTABLE_CONFIGFILES]);
+        ndo2db_db_clear_table(idi, ndo2db_db_tablenames[NDO2DB_DBTABLE_CONFIGFILEVARIABLES]);
+        ndo2db_db_clear_table(idi, ndo2db_db_tablenames[NDO2DB_DBTABLE_CUSTOMVARIABLES]);
+        ndo2db_db_clear_table(idi, ndo2db_db_tablenames[NDO2DB_DBTABLE_COMMANDS]);
+        ndo2db_db_clear_table(idi, ndo2db_db_tablenames[NDO2DB_DBTABLE_TIMEPERIODS]);
+        ndo2db_db_clear_table(idi, ndo2db_db_tablenames[NDO2DB_DBTABLE_TIMEPERIODTIMERANGES]);
+        ndo2db_db_clear_table(idi, ndo2db_db_tablenames[NDO2DB_DBTABLE_CONTACTGROUPS]);
+        ndo2db_db_clear_table(idi, ndo2db_db_tablenames[NDO2DB_DBTABLE_CONTACTGROUPMEMBERS]);
+        ndo2db_db_clear_table(idi, ndo2db_db_tablenames[NDO2DB_DBTABLE_HOSTGROUPS]);
+        ndo2db_db_clear_table(idi, ndo2db_db_tablenames[NDO2DB_DBTABLE_HOSTGROUPMEMBERS]);
+        ndo2db_db_clear_table(idi, ndo2db_db_tablenames[NDO2DB_DBTABLE_SERVICEGROUPS]);
+        ndo2db_db_clear_table(idi, ndo2db_db_tablenames[NDO2DB_DBTABLE_SERVICEGROUPMEMBERS]);
+        ndo2db_db_clear_table(idi, ndo2db_db_tablenames[NDO2DB_DBTABLE_HOSTESCALATIONS]);
+        ndo2db_db_clear_table(idi, ndo2db_db_tablenames[NDO2DB_DBTABLE_HOSTESCALATIONCONTACTS]);
+        ndo2db_db_clear_table(idi, ndo2db_db_tablenames[NDO2DB_DBTABLE_SERVICEESCALATIONS]);
+        ndo2db_db_clear_table(idi, ndo2db_db_tablenames[NDO2DB_DBTABLE_SERVICEESCALATIONCONTACTS]);
+        ndo2db_db_clear_table(idi, ndo2db_db_tablenames[NDO2DB_DBTABLE_HOSTDEPENDENCIES]);
+        ndo2db_db_clear_table(idi, ndo2db_db_tablenames[NDO2DB_DBTABLE_SERVICEDEPENDENCIES]);
+        ndo2db_db_clear_table(idi, ndo2db_db_tablenames[NDO2DB_DBTABLE_CONTACTS]);
+        ndo2db_db_clear_table(idi, ndo2db_db_tablenames[NDO2DB_DBTABLE_CONTACTADDRESSES]);
+        ndo2db_db_clear_table(idi, ndo2db_db_tablenames[NDO2DB_DBTABLE_CONTACTNOTIFICATIONCOMMANDS]);
+        ndo2db_db_clear_table(idi, ndo2db_db_tablenames[NDO2DB_DBTABLE_HOSTS]);
+        ndo2db_db_clear_table(idi, ndo2db_db_tablenames[NDO2DB_DBTABLE_HOSTPARENTHOSTS]);
+        ndo2db_db_clear_table(idi, ndo2db_db_tablenames[NDO2DB_DBTABLE_HOSTCONTACTS]);
+        ndo2db_db_clear_table(idi, ndo2db_db_tablenames[NDO2DB_DBTABLE_SERVICES]);
+        ndo2db_db_clear_table(idi, ndo2db_db_tablenames[NDO2DB_DBTABLE_SERVICEPARENTSERVICES]);
+        ndo2db_db_clear_table(idi, ndo2db_db_tablenames[NDO2DB_DBTABLE_SERVICECONTACTS]);
+        ndo2db_db_clear_table(idi, ndo2db_db_tablenames[NDO2DB_DBTABLE_SERVICECONTACTGROUPS]);
+        ndo2db_db_clear_table(idi, ndo2db_db_tablenames[NDO2DB_DBTABLE_HOSTCONTACTGROUPS]);
+        ndo2db_db_clear_table(idi, ndo2db_db_tablenames[NDO2DB_DBTABLE_HOSTESCALATIONCONTACTGROUPS]);
+        ndo2db_db_clear_table(idi, ndo2db_db_tablenames[NDO2DB_DBTABLE_SERVICEESCALATIONCONTACTGROUPS]);
 
         /* flag all objects as being inactive */
         ndo2db_set_all_objects_as_inactive(idi);
-
-#ifdef BAD_IDEA
-        /* record a fake log entry to indicate that Nagios is starting - this normally occurs during the module's "blackout period" */
-        if(asprintf(&buf,"INSERT INTO %s SET instance_id='%lu', logentry_time=%s, logentry_type='%lu', logentry_data='Nagios %s starting... (PID=%lu)'"
-                ,ndo2db_db_tablenames[NDO2DB_DBTABLE_LOGENTRIES]
-                ,idi->dbinfo.instance_id
-                ,ts[0]
-                ,NSLOG_PROCESS_INFO
-                ,es[1]
-                ,process_id
-               )==-1)
-            buf=NULL;
-        result=ndo2db_db_query(idi,buf);
-        free(buf);
-#endif
-            }
+    }
 
     /* if process is shutting down or restarting, update process status data */
-    if((type==NEBTYPE_PROCESS_SHUTDOWN || type==NEBTYPE_PROCESS_RESTART) && tstamp.tv_sec>=idi->dbinfo.latest_realtime_data_time){
+    if ((type == NEBTYPE_PROCESS_SHUTDOWN || type == NEBTYPE_PROCESS_RESTART)
+        && tstamp.tv_sec >= idi->dbinfo.latest_realtime_data_time) {
 
-        if(asprintf(&buf,"UPDATE %s SET program_end_time=%s, is_currently_running='0' WHERE instance_id='%lu'"
-                ,ndo2db_db_tablenames[NDO2DB_DBTABLE_PROGRAMSTATUS]
-                ,ts[0]
-                ,idi->dbinfo.instance_id
-               )==-1)
-            buf=NULL;
-        result=ndo2db_db_query(idi,buf);
+        result = asprintf(&buf,
+            "UPDATE %s SET "
+                "program_end_time = %s, "
+                "is_currently_running = '0' "
+                "WHERE instance_id = '%lu'",
+                ndo2db_db_tablenames[NDO2DB_DBTABLE_PROGRAMSTATUS]
+                ts[0]
+                idi->dbinfo.instance_id);
+
+        if (result == -1) {
+            buf = NULL;
+            free(ts[1]);
+            free(es[0]);
+            free(es[1]);
+            free(es[2]);
+            return NDO_ERROR;
+        }
+
+        result = ndo2db_db_query(idi, buf);
         free(buf);
-            }
 
-        /* free memory */
-    for (x = 0; x < NAGIOS_SIZEOF_ARRAY(ts); x++)
-        free(ts[x]);
-    for (x = 0; x < NAGIOS_SIZEOF_ARRAY(es); x++)
-        free(es[x]);
+        if (result == NDO_ERROR) {
+            free(ts[1]);
+            free(es[0]);
+            free(es[1]);
+            free(es[2]);
+            return NDO_ERROR;
+        }
+    }
+
+    /* free memory */
+    free(ts[1]);
+    free(es[0]);
+    free(es[1]);
+    free(es[2]);
 
     return NDO_OK;
-        }
+}
 
 
 int ndo2db_handle_timedeventdata(ndo2db_idi *idi){
