@@ -28,13 +28,13 @@
 #define NSCORE 1
 
 typedef struct ndomod_sink_buffer_struct{
-	char **buffer;
-	unsigned long size;
-	unsigned long head;
-	unsigned long tail;
-	unsigned long items;
-	unsigned long maxitems;
-	unsigned long overflow;
+    char **buffer;
+    unsigned long size;
+    unsigned long head;
+    unsigned long tail;
+    unsigned long items;
+    unsigned long maxitems;
+    unsigned long overflow;
         }ndomod_sink_buffer;
 
 
