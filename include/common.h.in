@@ -33,5 +33,8 @@
 #define NDO_ERROR     -1
 #define NDO_OK        0
 
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE 1
+#endif
 
 #endif
