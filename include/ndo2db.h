@@ -50,81 +50,81 @@
 /***************** structures *****************/
 
 typedef struct ndo2db_mbuf_struct{
-	int used_lines;
-	int allocated_lines;
-	char **buffer;
+    int used_lines;
+    int allocated_lines;
+    char **buffer;
         }ndo2db_mbuf;
 
 
 typedef struct ndo2db_dbobject_struct{
-	char *name1;
-	char *name2;
-	int object_type;
-	unsigned long object_id;
-	struct ndo2db_dbobject_struct *nexthash;
+    char *name1;
+    char *name2;
+    int object_type;
+    unsigned long object_id;
+    struct ndo2db_dbobject_struct *nexthash;
         }ndo2db_dbobject;
 
 
 typedef struct ndo2db_dbconninfo_struct{
-	int server_type;
-	int connected;
-	int error;
+    int server_type;
+    int connected;
+    int error;
 #ifdef USE_MYSQL
-	MYSQL mysql_conn;
-	MYSQL_RES *mysql_result;
-	MYSQL_ROW mysql_row;
+    MYSQL mysql_conn;
+    MYSQL_RES *mysql_result;
+    MYSQL_ROW mysql_row;
 #endif
-	unsigned long instance_id;
-	unsigned long conninfo_id;
-	time_t latest_program_status_time;
-	time_t latest_host_status_time;
-	time_t latest_service_status_time;
-	time_t latest_contact_status_time;
-	time_t latest_queued_event_time;
-	time_t latest_realtime_data_time;
-	time_t latest_comment_time;
-	int clean_event_queue;
-	unsigned long last_notification_id;
-	unsigned long last_contact_notification_id;
-	unsigned long max_timedevents_age;
-	unsigned long max_systemcommands_age;
-	unsigned long max_servicechecks_age;
-	unsigned long max_hostchecks_age;
-	unsigned long max_eventhandlers_age;
-	unsigned long max_externalcommands_age;
-	unsigned long max_notifications_age;
-	unsigned long max_contactnotifications_age;
-	unsigned long max_contactnotificationmethods_age;
-	unsigned long max_logentries_age;
-	unsigned long max_acknowledgements_age;
-	time_t last_table_trim_time;
-	time_t last_logentry_time;
-	char *last_logentry_data;
-	ndo2db_dbobject **object_hashlist;
+    unsigned long instance_id;
+    unsigned long conninfo_id;
+    time_t latest_program_status_time;
+    time_t latest_host_status_time;
+    time_t latest_service_status_time;
+    time_t latest_contact_status_time;
+    time_t latest_queued_event_time;
+    time_t latest_realtime_data_time;
+    time_t latest_comment_time;
+    int clean_event_queue;
+    unsigned long last_notification_id;
+    unsigned long last_contact_notification_id;
+    unsigned long max_timedevents_age;
+    unsigned long max_systemcommands_age;
+    unsigned long max_servicechecks_age;
+    unsigned long max_hostchecks_age;
+    unsigned long max_eventhandlers_age;
+    unsigned long max_externalcommands_age;
+    unsigned long max_notifications_age;
+    unsigned long max_contactnotifications_age;
+    unsigned long max_contactnotificationmethods_age;
+    unsigned long max_logentries_age;
+    unsigned long max_acknowledgements_age;
+    time_t last_table_trim_time;
+    time_t last_logentry_time;
+    char *last_logentry_data;
+    ndo2db_dbobject **object_hashlist;
         }ndo2db_dbconninfo;
 
 
 typedef struct ndo2db_input_data_info_struct{
-	int protocol_version;
-	int disconnect_client;
-	int ignore_client_data;
-	char *instance_name;
-	char *agent_name;
-	char *agent_version;
-	char *disposition;
-	char *connect_source;
-	char *connect_type;
-	int current_input_section;
-	int current_input_data;
-	unsigned long bytes_processed;
-	unsigned long lines_processed;
-	unsigned long entries_processed;
-	unsigned long data_start_time;
-	unsigned long data_end_time;
-	int current_object_config_type;
-	char **buffered_input;
-	ndo2db_mbuf mbuf[NDO2DB_MAX_MBUF_ITEMS];
-	ndo2db_dbconninfo dbinfo;
+    int protocol_version;
+    int disconnect_client;
+    int ignore_client_data;
+    char *instance_name;
+    char *agent_name;
+    char *agent_version;
+    char *disposition;
+    char *connect_source;
+    char *connect_type;
+    int current_input_section;
+    int current_input_data;
+    unsigned long bytes_processed;
+    unsigned long lines_processed;
+    unsigned long entries_processed;
+    unsigned long data_start_time;
+    unsigned long data_end_time;
+    int current_object_config_type;
+    char **buffered_input;
+    ndo2db_mbuf mbuf[NDO2DB_MAX_MBUF_ITEMS];
+    ndo2db_dbconninfo dbinfo;
         }ndo2db_idi;
 
 
@@ -217,7 +217,7 @@ typedef struct ndo2db_input_data_info_struct{
 #define NDO2DB_DEBUGL_SQL                      2
 
 #define NDO2DB_DEBUGV_BASIC                    0
-#define NDO2DB_DEBUGV_MORE		       1
+#define NDO2DB_DEBUGV_MORE             1
 #define NDO2DB_DEBUGV_MOST                     2
 
 
