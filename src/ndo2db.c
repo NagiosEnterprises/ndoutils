@@ -708,170 +708,209 @@ int ndo2db_drop_privileges(char *user, char *group){
         }
 
 
-int ndo2db_daemonize(void){
-    pid_t pid=-1;
-    int lockfile=0;
+int ndo2db_daemonize(void)
+{
+    pid_t pid     = -1;
+    int lockfile  = 0;
+    int val       = 0;
+    char buf[256] = { 0 };
+    char *msg     = NULL;
     struct flock lock;
-    int val=0;
-    char buf[256];
-    char *msg=NULL;
 
-    umask(S_IWGRP|S_IWOTH);
+    umask(S_IWGRP | S_IWOTH);
 
     /* get a lock on the lockfile */
-    if(lock_file){
-        lockfile=open(lock_file,O_RDWR | O_CREAT, S_IWUSR | S_IRUSR | S_IRGRP | S_IROTH);
-        if(lockfile<0){
-            asprintf(&msg,"Failed to obtain lock on file %s: %s\n", lock_file, strerror(errno));
+    if (lock_file) {
+
+        lockfile = open(lock_file, O_RDWR | O_CREAT, S_IWUSR | S_IRUSR | S_IRGRP | S_IROTH);
+        if (lockfile < 0) {
+
+            asprintf(&msg, "Failed to obtain lock on file %s: %s\n", lock_file, strerror(errno));
             perror(msg);
             ndo2db_cleanup_socket();
             return NDO_ERROR;
-            }
-
-        /* see if we can read the contents of the lockfile */
-        if((val=read(lockfile,buf,(size_t)10))<0){
-            asprintf(&msg,"Lockfile exists but cannot be read");
-            perror(msg);
-            ndo2db_cleanup_socket();
-            return NDO_ERROR;
-            }
-
-        /* place a file lock on the lock file */
-        lock.l_type=F_WRLCK;
-        lock.l_start=0;
-        lock.l_whence=SEEK_SET;
-        lock.l_len=0;
-        if(fcntl(lockfile,F_SETLK,&lock)<0){
-            if(errno==EACCES || errno==EAGAIN){
-                fcntl(lockfile,F_GETLK,&lock);
-                asprintf(&msg,"Lockfile '%s' looks like its already held by another instance (%d).  Bailing out...",lock_file,(int)lock.l_pid);
-                }
-            else
-                asprintf(&msg,"Cannot lock lockfile '%s': %s. Bailing out...",lock_file,strerror(errno));
-
-            perror(msg);
-            ndo2db_cleanup_socket();
-            return NDO_ERROR;
-            }
         }
 
-    /* fork (maybe) */
-    if(ndo2db_no_fork != NDO_TRUE) {
+        /* see if we can read the contents of the lockfile */
+        val = read(lockfile, buf, (size_t) 10);
+        if (val < 0) {
 
-        if((pid=fork())<0){
+            asprintf(&msg, "%s", "Lockfile exists but cannot be read");
+            perror(msg);
+            ndo2db_cleanup_socket();
+            return NDO_ERROR;
+        }
+
+        /* place a file lock on the lock file */
+        lock.l_type   = F_WRLCK;
+        lock.l_start  = 0;
+        lock.l_whence = SEEK_SET;
+        lock.l_len    = 0;
+
+        if (fcntl(lockfile, F_SETLK, &lock) < 0) {
+
+            if (errno == EACCES || errno == EAGAIN) {
+                fcntl(lockfile, F_GETLK, &lock);
+                asprintf(&msg, 
+                    "Lockfile '%s' looks like its already held by another instance (%d). Bailing out...",
+                    lock_file,
+                    (int) lock.l_pid);
+            }
+            else {
+                asprintf(&msg, 
+                    "Cannot lock lockfile '%s': %s. Bailing out...",
+                    lock_file,
+                    strerror(errno));
+            }
+
+            perror(msg);
+            ndo2db_cleanup_socket();
+            return NDO_ERROR;
+        }
+    }
+
+    /* fork (maybe) */
+    if (ndo2db_no_fork != NDO_TRUE) {
+
+        pid = fork();
+        if (pid < 0) {
+
             perror("Fork error");
             ndo2db_cleanup_socket();
             return NDO_ERROR;
-                }
+        }
 
         /* parent process goes away... */
-        else if((int)pid!=0){
+        else if (pid != 0) {
+
             ndo2db_free_program_memory();
             waitpid(pid, NULL, 0);      /* Wait for the updated lock file. */
             exit(0);
-            }
+        }
 
         /* child forks again... */
-        else{
+        else {
 
-            if((pid=fork())<0){
+            pid = fork();
+            if (pid < 0) {
+
                 perror("Fork error");
                 ndo2db_cleanup_socket();
                 return NDO_ERROR;
-                        }
+            }
 
             /* first child process goes away.. */
-            else if((int)pid!=0){
+            else if (pid != 0) {
+
                 ndo2db_free_program_memory();
                 exit(0);
             }
         }
-
-
-
-
     }
 
     /* Write the PID to the lock file... */
 
     if (lock_file) {
-        int n;
+
+        int n = 0;
         lseek(lockfile, 0, SEEK_SET);
+
         if (ftruncate(lockfile, 0)) {
-            syslog(LOG_ERR, "Warning: Unable to truncate lockfile (errno %d): %s",
-                    errno, strerror(errno));
+
+            syslog(LOG_ERR,
+                "Warning: Unable to truncate lockfile (errno %d): %s",
+                errno,
+                strerror(errno));
         }
-        sprintf(buf, "%d\n", (int)getpid());
-        n = (int)strlen(buf);
+
+        sprintf(buf, "%d\n", (int) getpid());
+        n = (int) strlen(buf);
+
         if (write(lockfile, buf, n) < n) {
-            syslog(LOG_ERR, "Warning: Unable to write pid to lockfile (errno %d): %s",
-                    errno, strerror(errno));
+
+            syslog(LOG_ERR,
+                "Warning: Unable to write pid to lockfile (errno %d): %s",
+                errno,
+                strerror(errno));
         }
     }
 
     /* become session leader... */
     setsid();
 
-    if(lock_file) {
+    if (lock_file) {
+
         /* make sure lock file stays open while program is executing... */
-        val=fcntl(lockfile,F_GETFD,0);
-        val|=FD_CLOEXEC;
-        fcntl(lockfile,F_SETFD,val);
+        val = fcntl(lockfile, F_GETFD, 0);
+        val |= FD_CLOEXEC;
+        fcntl(lockfile, F_SETFD, val);
     }
 
-        /* close existing stdin, stdout, stderr */
+    /* close existing stdin, stdout, stderr */
     close(0);
+
 #ifndef DEBUG_NDO2DB
     close(1);
 #endif
+
     close(2);
 
     /* re-open stdin, stdout, stderr with known values */
     open("/dev/null",O_RDONLY);
+
 #ifndef DEBUG_NDO2DB
     open("/dev/null",O_WRONLY);
 #endif
+
     open("/dev/null",O_WRONLY);
 
     return NDO_OK;
-        }
+}
 
 
-int ndo2db_cleanup_socket(void){
-
-    /* we're running under INETD */
-    if(ndo2db_use_inetd==NDO_TRUE)
+int ndo2db_cleanup_socket(void)
+{
+    /* we're running under INETD so no need to participate*/
+    if (ndo2db_use_inetd == NDO_TRUE) {
         return NDO_OK;
+    }
 
     /* close the socket */
-    shutdown(ndo2db_sd,2);
+    shutdown(ndo2db_sd, 2);
     close(ndo2db_sd);
 
-    /* unlink the file */
-    if(ndo2db_socket_type==NDO_SINK_UNIXSOCKET)
+    /* delete the socket */
+    if (ndo2db_socket_type == NDO_SINK_UNIXSOCKET) {
         unlink(ndo2db_socket_name);
+    }
 
-    if(lock_file)
+    /* delete the lock (pid) file */
+    if (lock_file) {
         unlink(lock_file);
+    }
 
     return NDO_OK;
-        }
+}
 
 
-void ndo2db_parent_sighandler(int sig){
+void ndo2db_parent_sighandler(int sig)
+{
+    switch (sig) {
 
-    switch (sig){
     case SIGTERM:
     case SIGINT:
         /* forward signal to all members of this group of processes */
         kill(0, sig);
         break;
+
     case SIGCHLD:
         /* cleanup children that exit, so we don't have zombies */
         while(waitpid(-1,NULL,WNOHANG)>0);
         return;
+
     default:
         printf("Caught the Signal '%d' but don't care about this.\n", sig);
+        break;
     }
 
     /* cleanup the socket */
@@ -881,17 +920,13 @@ void ndo2db_parent_sighandler(int sig){
     ndo2db_free_program_memory();
 
     exit(0);
-
-    return;
-        }
+}
 
 
-void ndo2db_child_sighandler(int sig){
-
+void ndo2db_child_sighandler(int sig)
+{
     _exit(0);
-
-    return;
-        }
+}
 
 
 /****************************************************************************/
