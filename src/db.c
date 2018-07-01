@@ -2,7 +2,7 @@
  * @file db.c Database routines for ndo2db daemon
  */
 /*
- * Copyright 2009-2014 Nagios Core Development Team and Community Contributors
+ * Copyright 2009-2018 Nagios Core Development Team and Community Contributors
  * Copyright 2005-2009 Ethan Galstad
  *
  * This file is part of NDOUtils.
@@ -19,6 +19,9 @@
  * You should have received a copy of the GNU General Public License
  * along with NDOUtils. If not, see <http://www.gnu.org/licenses/>.
  */
+
+/* fix asprintf compiler warnings */
+#define _GNU_SOURCE 1
 
 /* include our project's header files */
 #include "../include/config.h"

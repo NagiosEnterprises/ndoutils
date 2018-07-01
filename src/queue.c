@@ -19,6 +19,9 @@
  * along with NDOUtils. If not, see <http://www.gnu.org/licenses/>.
  */
 
+/* fix asprintf compiler warnings */
+#define _GNU_SOURCE 1
+
 #include "../include/config.h"
 #include "../include/queue.h"
 

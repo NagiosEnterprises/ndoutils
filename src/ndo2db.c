@@ -23,6 +23,9 @@
  * along with NDOUtils. If not, see <http://www.gnu.org/licenses/>.
  */
 
+/* fix asprintf compiler warnings */
+#define _GNU_SOURCE 1
+
 /*#define DEBUG_MEMORY 1*/
 
 #ifdef DEBUG_MEMORY

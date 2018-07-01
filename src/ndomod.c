@@ -25,11 +25,9 @@
  * You should have received a copy of the GNU General Public License
  * along with NDOUtils. If not, see <http://www.gnu.org/licenses/>.
  */
-/**
- * @todo Add service parents
- * @todo hourly value (hosts / services)
- * @todo minimum value (contacts)
- */
+
+/* fix asprintf compiler warnings */
+#define _GNU_SOURCE 1
 
 /* include our project's header files */
 #include "../include/common.h"
