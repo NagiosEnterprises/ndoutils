@@ -899,115 +899,156 @@ void ndo2db_child_sighandler(int sig){
 /****************************************************************************/
 
 
-int ndo2db_wait_for_connections(void){
-    int sd_flag=1;
-    int new_sd=0;
-    pid_t new_pid=-1;
+int ndo2db_wait_for_connections(void)
+{
+    int sd_flag               = 1;
+    int new_sd                = 0;
+    pid_t new_pid             = -1;
+    int result                = 0;
+
+    socklen_t client_address_length = 0;
+    static int listen_backlog       = INT_MAX;
+
+    struct sockaddr server_sockaddr;
     struct sockaddr_un server_address_u;
     struct sockaddr_in server_address_i;
     struct sockaddr_un client_address_u;
     struct sockaddr_in client_address_i;
-    socklen_t client_address_length;
-    static int listen_backlog = INT_MAX;
 
 
 #ifdef HAVE_SYSTEMD
+
     /* Socket inherited from systemd */
     if (sd_listen_fds(0) == 1) {
+
         ndo2db_sd = SD_LISTEN_FDS_START + 0;
-        if (sd_is_socket_inet(ndo2db_sd, 0, 0, -1, 0))
-            client_address_length = (socklen_t)sizeof(client_address_i);
-        else
+        if (sd_is_socket_inet(ndo2db_sd, 0, 0, -1, 0)) {
+
+            server_sockaddr = (struct sockaddr *) &client_address_i;
+            client_address_length = (socklen_t) sizeof(client_address_i);
+        }
+        else {
+
+            server_sockaddr = (struct sockaddr *) &client_address_u;
             client_address_length = (socklen_t)sizeof(client_address_u);
+        }
     }
+
+    /* this is an important else. pay attention to it! */
     else
+
 #endif
 
     /* TCP socket */
-    if(ndo2db_socket_type==NDO_SINK_TCPSOCKET){
+    if (ndo2db_socket_type == NDO_SINK_TCPSOCKET) {
 
         /* create a socket */
-        if(!(ndo2db_sd=socket(PF_INET,SOCK_STREAM,0))){
+        ndo2db_sd = socket(PF_INET, SOCK_STREAM, 0);
+        if (ndo2db_sd <= 0) {
+
             perror("Cannot create socket");
             return NDO_ERROR;
-                }
+        }
 
         /* set the reuse address flag so we don't get errors when restarting */
-        sd_flag=1;
-        if(setsockopt(ndo2db_sd,SOL_SOCKET,SO_REUSEADDR,(char *)&sd_flag,sizeof(sd_flag))<0){
+        sd_flag = 1;
+        result = setsockopt(ndo2db_sd, SOL_SOCKET, SO_REUSEADDR, (char *) &sd_flag, sizeof(sd_flag));
+        if (result < 0) {
+
             printf("Could not set reuse address option on socket!\n");
             return NDO_ERROR;
-                    }
+        }
 
         /* clear the address */
-        bzero((char *)&server_address_i,sizeof(server_address_i));
-        server_address_i.sin_family=AF_INET;
-        server_address_i.sin_addr.s_addr=INADDR_ANY;
-        server_address_i.sin_port=htons(ndo2db_tcp_port);
+        bzero((char *) &server_address_i, sizeof(server_address_i));
+
+        server_address_i.sin_family      = AF_INET;
+        server_address_i.sin_addr.s_addr = INADDR_ANY;
+        server_address_i.sin_port        = htons(ndo2db_tcp_port);
+
 
         /* bind the socket */
-        if((bind(ndo2db_sd,(struct sockaddr *)&server_address_i,sizeof(server_address_i)))){
+        result = bind(ndo2db_sd, (struct sockaddr *) &server_address_i, sizeof(server_address_i));
+        if (result < 0) {
+
             close(ndo2db_sd);
             perror("Could not bind socket");
             return NDO_ERROR;
-                    }
+        }
 
-        client_address_length=(socklen_t)sizeof(client_address_i);
-            }
+        server_sockaddr = (struct sockaddr *) &client_address_i;
+        client_address_length = (socklen_t) sizeof(client_address_i);
+    }
 
     /* UNIX domain socket */
-    else{
+    else {
 
         /* create a socket */
-        if(!(ndo2db_sd=socket(AF_UNIX,SOCK_STREAM,0))){
+        ndo2db_sd = socket(AF_UNIX, SOCK_STREAM, 0);
+        if (ndo2db_sd <= 0) {
+
             perror("Cannot create socket");
             return NDO_ERROR;
-                    }
+        }
 
         /* copy the socket path */
-        strncpy(server_address_u.sun_path,ndo2db_socket_name,sizeof(server_address_u.sun_path));
-        server_address_u.sun_family=AF_UNIX;
+        strncpy(server_address_u.sun_path, ndo2db_socket_name, sizeof(server_address_u.sun_path));
+        server_address_u.sun_family = AF_UNIX;
 
         /* bind the socket */
-        if((bind(ndo2db_sd,(struct sockaddr *)&server_address_u,SUN_LEN(&server_address_u)))){
+        result = bind(ndo2db_sd, (struct sockaddr *) &server_address_u, SUN_LEN(&server_address_u));
+        if (result < 0) {
+
             close(ndo2db_sd);
             perror("Could not bind socket");
             return NDO_ERROR;
-                    }
+        }
 
-        client_address_length=(socklen_t)sizeof(client_address_u);
-            }
+        server_sockaddr = (struct sockaddr *) &client_address_u;
+        client_address_length = (socklen_t) sizeof(client_address_u);
+    }
 
     /* Default the backlog number on listen() to INT_MAX. If INT_MAX fails,
      * try using SOMAXCONN (usually 127) and if that fails, return an error */
-    for (;;) {
+    while (1) {
+
         if (listen(ndo2db_sd, listen_backlog)) {
             if (listen_backlog == SOMAXCONN) {
+
                 perror("Cannot listen on socket");
                 ndo2db_cleanup_socket();
                 return NDO_ERROR;
-            } else
+            }
+            else {
+
                 listen_backlog = SOMAXCONN;
+            }
         }
+
         break;
     }
 
 
-    /* daemonize */
 #ifndef DEBUG_NDO2DB
-    if(ndo2db_daemonize()!=NDO_OK)
+
+    /* daemonize */
+    result = ndo2db_daemonize();
+    if (result != NDO_OK) {
         return NDO_ERROR;
+    }
+
 #endif
 
     /* accept connections... */
-    while(1){
+    while (1) {
 
         /*
-        Solaris 10 gets an EINTR error when file2sock invoked on the 2nd call
-        An alternative fix is not to fork below, but this has wider implications
+            Solaris 10 gets an EINTR error when file2sock invoked on the 2nd call
+            An alternative fix is not to fork below, but this has wider implications
         */
-        while(1) {
-            new_sd=accept(ndo2db_sd,(ndo2db_socket_type==NDO_SINK_TCPSOCKET)?(struct sockaddr *)&client_address_i:(struct sockaddr *)&client_address_u,(socklen_t *)&client_address_length);
+        while (1) {
+
+            new_sd = accept(ndo2db_sd, server_sockaddr, &client_address_length);
 
             /* ToDo:  Hendrik 08/12/2009
              * If both ends think differently about SSL encryption, data from a ndomod will
@@ -1017,59 +1058,89 @@ int ndo2db_wait_for_connections(void){
              * Logging the ip address together with the ndomod instance name might be
              * a great hint for further error hunting
              */
-            if(new_sd>=0)
+            if (new_sd >= 0) {
+
                 /* data available */
                 break;
-            if(errno == EINTR) {
-                /* continue */
-                }
+            }
+            if (errno == EINTR) {
+
+                /*
+                    "the system call was interrupted by a signal that
+                    was caught before a valid connection arrived"
+
+                    ...continue
+                */
+                continue;
+            }
             else {
+
                 perror("Accept error");
                 ndo2db_cleanup_socket();
                 return NDO_ERROR;
-                }
             }
+
+        } /* inner while(1) */
 
 
 #ifndef DEBUG_NDO2DB
-        /* fork... */
-        new_pid=fork();
 
-        switch(new_pid){
+        /* fork... */
+        new_pid = fork();
+
+        switch (new_pid) {
+
         case -1:
+
             /* parent simply prints an error message and keeps on going... */
             perror("Fork error");
             close(new_sd);
             break;
 
         case 0:
+
 #endif
+
+        /*
+            important to note that this is what happens if DEBUG_NDO2DB
+            is enabled (e.g.: THIS SECTION IS USUALLY NOT EXECUTED
+            OUTSIDE OF THE SWITCH BLOCK)
+        */
+
             /* child processes data... */
             ndo2db_handle_client_connection(new_sd);
 
             /* close socket when we're done */
             close(new_sd);
+
+
 #ifndef DEBUG_NDO2DB
+
             return NDO_OK;
             break;
 
         default:
+
             /* parent keeps on going... */
             close(new_sd);
             break;
-                }
+
+        } /* switch (new_pid) */
 #endif
+
 
 #ifdef DEBUG_NDO2DB_EXIT_AFTER_CONNECTION
         break;
 #endif
-            }
+
+    } /* outer while(1) */
+
 
     /* cleanup after ourselves */
     ndo2db_cleanup_socket();
 
     return NDO_OK;
-        }
+}
 
 
 int ndo2db_handle_client_connection(int sd){
