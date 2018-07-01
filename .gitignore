@@ -21,9 +21,7 @@ src/Makefile
 src/*.o
 src/file2sock
 src/log2ndo
-src/ndo2db-2x
-src/ndo2db-3x
-src/ndo2db-4x
+src/ndo2db
 src/sockdebug
 
 startup/bsd-init
