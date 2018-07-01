@@ -38,6 +38,16 @@ dnl Figure out how to invoke "install" and what install options to use.
 AC_PROG_INSTALL
 AC_SUBST(INSTALL)
 
+dnl Include all of our m4 files
+m4_include([macros/np_mysqlclient.m4])
+m4_include([macros/autoconf-macros/ax_nagios_get_os])
+m4_include([macros/autoconf-macros/ax_nagios_get_distrib])
+m4_include([macros/autoconf-macros/ax_nagios_get_init])
+m4_include([macros/autoconf-macros/ax_nagios_get_inetd])
+m4_include([macros/autoconf-macros/ax_nagios_get_paths])
+m4_include([macros/autoconf-macros/ax_nagios_get_files])
+m4_include([macros/autoconf-macros/ax_nagios_get_ssl])
+
 dnl Figure out how to invoke "perl"
 AC_PATH_PROG(PERL,perl)
 
