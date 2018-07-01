@@ -1,0 +1,33 @@
+# Thanks!
+
+The success of this software has been due to the fantastic community members
+that support it and provide bug reports, patches, and great ideas. Here are a
+few of the many individuals that have contributed in various ways.
+
+## Contributors
+
+Altinity
+andree
+Bernhard Reutner-Fischer
+Bruno Quintais
+Bryan Heden
+Christian Masopust
+Dominic Settele
+Duncan Ferguson
+Eric Stanley
+Hendrik Frenzel
+Herbert Straub
+Jean Gabes
+Josh Soref
+Lars Michelsen
+Matthieu Kermagoret
+Michael Friedrich
+Michael Orlitzky
+Mike Guthrie
+Sascha Runschke
+Sebastian Wolf
+Sébastien Aperghis-Tramoni
+Stéphane Urbanovski
+Tilo Renz
+Ton Voon
+Wolfgang Powisch
