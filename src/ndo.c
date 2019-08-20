@@ -64,7 +64,7 @@ extern int                  __nagios_object_structure_version;
 
 #define NDO_REPORT_ERROR(err) \
 do { \
-    snprintf(ndo_error_msg, 127, "%s: %s", __func__, err); \
+    snprintf(ndo_error_msg, 1023, "%s(%d): %s", __func__, __LINE__, err); \
     ndo_log(ndo_error_msg); \
 } while (0)
 
@@ -73,6 +73,8 @@ do { \
 do { \
     if (ndo_return != 0) { \
         NDO_REPORT_ERROR(err); \
+        snprintf(ndo_error_msg, 1023, "ndo_return = %d", ndo_return); \
+        ndo_log(ndo_error_msg); \
         return NDO_ERROR; \
     } \
 } while (0)
@@ -123,7 +125,7 @@ MYSQL_BIND ndo_bind[MAX_SQL_BINDINGS];
 MYSQL_BIND ndo_result[MAX_SQL_RESULT_BINDINGS];
 
 int ndo_return = 0;
-char ndo_error_msg[128] = { 0 };
+char ndo_error_msg[1024] = { 0 };
 char ndo_query[MAX_SQL_BUFFER] = { 0 };
 long ndo_tmp_str_len[MAX_SQL_BINDINGS] = { 0 };
 long ndo_result_tmp_str_len[MAX_SQL_BINDINGS] = { 0 };
@@ -331,7 +333,9 @@ int ndo_initialize_database()
         }
     }
 
+    ndo_log("Database initialized");
     ndo_database_connected = TRUE;
+
     return ndo_initialize_prepared_statements();
 }
 
@@ -551,61 +555,59 @@ int ndo_set_all_objects_inactive()
 
 int ndo_table_genocide()
 {
-    char * table[] = {
-        "programstatus",
-        "hoststatus",
-        "servicestatus",
-        "contactstatus",
-        "timedeventqueue",
-        "comments",
-        "scheduleddowntime",
-        "runtimevariables",
-        "customvariablestatus",
-        "configfiles",
-        "configfilevariables",
-        "customvariables",
-        "commands",
-        "timeperiods",
-        "timeperiodtimeranges",
-        "contactgroups",
-        "contactgroup_members",
-        "hostgroups",
-        "servicegroups",
-        "servicegroupmembers",
-        "hostescalations",
-        "hostescalationcontacts",
-        "serviceescalations",
-        "serviceescalationcontacts",
-        "hostdependencies",
-        "servicedependencies",
-        "contacts",
-        "contactaddresses",
-        "contactnotificationcommands",
-        "hosts",
-        "hostparenthosts",
-        "hostcontacts",
-        "services",
-        "serviceparentservices",
-        "servicecontacts",
-        "servicecontactgroups",
-        "hostcontactgroups",
-        "hostescalationcontactgroups",
-        "serviceescalationcontactgroups",
-    };
-
-    MYSQL_RESET_SQL();
-    MYSQL_SET_SQL("TRUNCATE TABLE nagios_");
-
     int i = 0;
 
-    for (i = 0; i < ARRAY_SIZE(table); i++) {
+    char * truncate_sql[] = {
+        "TRUNCATE TABLE nagios_programstatus",
+        "TRUNCATE TABLE nagios_hoststatus",
+        "TRUNCATE TABLE nagios_servicestatus",
+        "TRUNCATE TABLE nagios_contactstatus",
+        "TRUNCATE TABLE nagios_timedeventqueue",
+        "TRUNCATE TABLE nagios_comments",
+        "TRUNCATE TABLE nagios_scheduleddowntime",
+        "TRUNCATE TABLE nagios_runtimevariables",
+        "TRUNCATE TABLE nagios_customvariablestatus",
+        "TRUNCATE TABLE nagios_configfiles",
+        "TRUNCATE TABLE nagios_configfilevariables",
+        "TRUNCATE TABLE nagios_customvariables",
+        "TRUNCATE TABLE nagios_commands",
+        "TRUNCATE TABLE nagios_timeperiods",
+        "TRUNCATE TABLE nagios_timeperiod_timeranges",
+        "TRUNCATE TABLE nagios_contactgroups",
+        "TRUNCATE TABLE nagios_contactgroup_members",
+        "TRUNCATE TABLE nagios_hostgroups",
+        "TRUNCATE TABLE nagios_servicegroups",
+        "TRUNCATE TABLE nagios_servicegroup_members",
+        "TRUNCATE TABLE nagios_hostescalations",
+        "TRUNCATE TABLE nagios_hostescalation_contacts",
+        "TRUNCATE TABLE nagios_serviceescalations",
+        "TRUNCATE TABLE nagios_serviceescalation_contacts",
+        "TRUNCATE TABLE nagios_hostdependencies",
+        "TRUNCATE TABLE nagios_servicedependencies",
+        "TRUNCATE TABLE nagios_contacts",
+        "TRUNCATE TABLE nagios_contact_addresses",
+        "TRUNCATE TABLE nagios_contact_notificationcommands",
+        "TRUNCATE TABLE nagios_hosts",
+        "TRUNCATE TABLE nagios_host_parenthosts",
+        "TRUNCATE TABLE nagios_host_contacts",
+        "TRUNCATE TABLE nagios_services",
+        "TRUNCATE TABLE nagios_service_parentservices",
+        "TRUNCATE TABLE nagios_service_contacts",
+        "TRUNCATE TABLE nagios_service_contactgroups",
+        "TRUNCATE TABLE nagios_host_contactgroups",
+        "TRUNCATE TABLE nagios_hostescalation_contactgroups",
+        "TRUNCATE TABLE nagios_serviceescalation_contactgroups",
+    };
 
-        /* 22 is the character after the `nagios_` in the query */
-        strncpy(ndo_query + 22, table[i], (80 - 22 - 1));
-        ndo_query[22 + strlen(table[i])] = '\0';
+    for (i = 0; i < ARRAY_SIZE(truncate_sql); i++) {
 
-        MYSQL_PREPARE();
-        MYSQL_EXECUTE();
+        ndo_return = mysql_query(mysql_connection, truncate_sql[i]);
+        if (ndo_return != 0) {
+
+            char err[1024] = { 0 };
+            snprintf(err, 1023, "query(%s) failed with rc (%d), mysql (%d: %s)", truncate_sql[i], ndo_return, mysql_errno(mysql_connection), mysql_error(mysql_connection));
+            ndo_log(err);
+        }
     }
 
     return NDO_OK;
@@ -1405,24 +1407,15 @@ int ndo_handle_host_status(int type, void * d)
     int host_object_id        = 0;
     int timeperiod_object_id  = 0;
     host * hst                = NULL;
-    timeperiod * tm           = NULL; 
-    char * event_handler_name = "";
-    char * check_command_name = "";
+    timeperiod * tm           = NULL;
 
-    if (   data->object_ptr == NULL 
-        || ((host *) data->object_ptr)->event_handler_ptr == NULL
-        || ((host *) data->object_ptr)->check_command_ptr == NULL
-        || ((host *) data->object_ptr)->event_handler_ptr->name == NULL
-        || ((host *) data->object_ptr)->check_command_ptr->name == NULL) {
-
+    if (data->object_ptr == NULL) {
         NDO_REPORT_ERROR("Broker data pointer(s) is/are null");
         return NDO_OK;
     }
 
     hst = data->object_ptr;
     tm = hst->check_period_ptr;
-    event_handler_name = hst->event_handler_ptr->name;
-    check_command_name = hst->check_command_ptr->name;
 
     host_object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_HOST, hst->name);
     timeperiod_object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_TIMEPERIOD, tm->name);
@@ -1472,8 +1465,8 @@ int ndo_handle_host_status(int type, void * d)
     MYSQL_BIND_INT(hst->process_performance_data);
     MYSQL_BIND_INT(hst->obsess);
     MYSQL_BIND_INT(hst->modified_attributes);
-    MYSQL_BIND_STR(event_handler_name);
-    MYSQL_BIND_STR(check_command_name);
+    MYSQL_BIND_STR(hst->event_handler);
+    MYSQL_BIND_STR(hst->check_command);
     MYSQL_BIND_DOUBLE(hst->check_interval);
     MYSQL_BIND_DOUBLE(hst->retry_interval);
     MYSQL_BIND_INT(timeperiod_object_id);
@@ -1517,8 +1510,8 @@ int ndo_handle_host_status(int type, void * d)
     MYSQL_BIND_INT(hst->process_performance_data);
     MYSQL_BIND_INT(hst->obsess);
     MYSQL_BIND_INT(hst->modified_attributes);
-    MYSQL_BIND_STR(event_handler_name);
-    MYSQL_BIND_STR(check_command_name);
+    MYSQL_BIND_STR(event_handler);
+    MYSQL_BIND_STR(check_command);
     MYSQL_BIND_DOUBLE(hst->check_interval);
     MYSQL_BIND_DOUBLE(hst->retry_interval);
     MYSQL_BIND_INT(timeperiod_object_id);
@@ -1536,23 +1529,14 @@ int ndo_handle_service_status(int type, void * d)
     int timeperiod_object_id  = 0;
     service * svc             = NULL;
     timeperiod * tm           = NULL;
-    char * event_handler_name = "";
-    char * check_command_name = "";
 
-    if (   data->object_ptr == NULL 
-        || ((service *) data->object_ptr)->event_handler_ptr == NULL
-        || ((service *) data->object_ptr)->check_command_ptr == NULL
-        || ((service *) data->object_ptr)->event_handler_ptr->name == NULL
-        || ((service *) data->object_ptr)->check_command_ptr->name == NULL) {
-
+    if (data->object_ptr == NULL) {
         NDO_REPORT_ERROR("Broker data pointer(s) is/are null");
         return NDO_OK;
     }
 
     svc = data->object_ptr;
     tm = svc->check_period_ptr;
-    event_handler_name = svc->event_handler_ptr->name;
-    check_command_name = svc->check_command_ptr->name;
 
     service_object_id = ndo_get_object_id_name2(TRUE, NDO_OBJECTTYPE_SERVICE, svc->host_name, svc->description);
     timeperiod_object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_TIMEPERIOD, tm->name);
@@ -1603,8 +1587,8 @@ int ndo_handle_service_status(int type, void * d)
     MYSQL_BIND_INT(svc->process_performance_data);
     MYSQL_BIND_INT(svc->obsess);
     MYSQL_BIND_INT(svc->modified_attributes);
-    MYSQL_BIND_STR(event_handler_name); 
-    MYSQL_BIND_STR(check_command_name); 
+    MYSQL_BIND_STR(svc->event_handler);
+    MYSQL_BIND_STR(svc->check_command);
     MYSQL_BIND_DOUBLE(svc->check_interval);
     MYSQL_BIND_DOUBLE(svc->retry_interval);
     MYSQL_BIND_INT(timeperiod_object_id);
@@ -1649,8 +1633,8 @@ int ndo_handle_service_status(int type, void * d)
     MYSQL_BIND_INT(svc->process_performance_data);
     MYSQL_BIND_INT(svc->obsess);
     MYSQL_BIND_INT(svc->modified_attributes);
-    MYSQL_BIND_STR(event_handler_name); 
-    MYSQL_BIND_STR(check_command_name); 
+    MYSQL_BIND_STR(svc->event_handler);
+    MYSQL_BIND_STR(svc->check_command);
     MYSQL_BIND_DOUBLE(svc->check_interval);
     MYSQL_BIND_DOUBLE(svc->retry_interval);
     MYSQL_BIND_INT(timeperiod_object_id); 

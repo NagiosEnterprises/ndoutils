@@ -59,11 +59,20 @@ do { \
 
 #define MYSQL_BIND_STR(_buffer) \
 do { \
-    ndo_tmp_str_len[ndo_bind_i]        = strlen(_buffer); \
-    \
+\
     ndo_bind[ndo_bind_i].buffer_type   = MYSQL_TYPE_STRING; \
     ndo_bind[ndo_bind_i].buffer_length = MAX_BIND_BUFFER; \
-    ndo_bind[ndo_bind_i].buffer        = _buffer; \
+\
+    if (_buffer != NULL && strlen(_buffer) > 0) { \
+\
+        ndo_tmp_str_len[ndo_bind_i]        = strlen(_buffer); \
+        ndo_bind[ndo_bind_i].buffer        = _buffer; \
+    } \
+    else { \
+\
+        ndo_tmp_str_len[ndo_bind_i]        = 0; \
+        ndo_bind[ndo_bind_i].buffer        = ""; \
+    } \
     ndo_bind[ndo_bind_i].length        = &(ndo_tmp_str_len[ndo_bind_i]); \
     \
     ndo_bind_i++; \
