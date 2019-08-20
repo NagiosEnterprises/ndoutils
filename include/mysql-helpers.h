@@ -8,7 +8,7 @@ do { \
 
 #define MYSQL_BIND() \
 do { \
-    ndo_return = mysql_stmt_bind_params(ndo_stmt, ndo_bind); \
+    ndo_return = mysql_stmt_bind_param(ndo_stmt, ndo_bind); \
     NDO_HANDLE_ERROR("Unable to bind parameters"); \
 } while (0)
 

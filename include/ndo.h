@@ -33,6 +33,12 @@ int ndo_handle_contact_notification(int type, void * d);
 int ndo_handle_contact_notification_method(int type, void * d);
 
 
+int ndo_write_active_objects();
+int ndo_write_config_file();
+int ndo_write_object_config(int type);
+int ndo_write_runtime_variables();
+
+
 #define GET_NAME1    0
 #define GET_NAME2    1
 #define INSERT_NAME1 2
@@ -68,4 +74,20 @@ int ndo_insert_object_id_name2(int object_type, char * name1, char * name2);
 #define NDO_PROCESS_CONTACT_NOTIFICATION_METHOD     (1 << 27)
 
 
-#define NDO_HANDLE_LOG 3
+#define NDO_OBJECTTYPE_HOST                1
+#define NDO_OBJECTTYPE_SERVICE             2 
+#define NDO_OBJECTTYPE_HOSTGROUP           3
+#define NDO_OBJECTTYPE_SERVICEGROUP        4
+#define NDO_OBJECTTYPE_HOSTESCALATION      5
+#define NDO_OBJECTTYPE_SERVICEESCALATION   6
+#define NDO_OBJECTTYPE_HOSTDEPENDENCY      7
+#define NDO_OBJECTTYPE_SERVICEDEPENDENCY   8
+#define NDO_OBJECTTYPE_TIMEPERIOD          9
+#define NDO_OBJECTTYPE_CONTACT             10
+#define NDO_OBJECTTYPE_CONTACTGROUP        11
+#define NDO_OBJECTTYPE_COMMAND             12
+
+
+
+#define NDO_CONFIG_DUMP_ORIGINAL 1
+#define NDO_CONFIG_DUMP_RETAINED 2

@@ -64,7 +64,7 @@ extern int                  __nagios_object_structure_version;
 
 #define NDO_REPORT_ERROR(err) \
 do { \
-    snprintf(ndo_error_msg, 63, "%s: %s", __func__, err); \
+    snprintf(ndo_error_msg, 127, "%s: %s", __func__, err); \
     ndo_log(ndo_error_msg); \
 } while (0)
 
@@ -123,7 +123,7 @@ MYSQL_BIND ndo_bind[MAX_SQL_BINDINGS];
 MYSQL_BIND ndo_result[MAX_SQL_RESULT_BINDINGS];
 
 int ndo_return = 0;
-char ndo_error_msg[64] = { 0 };
+char ndo_error_msg[128] = { 0 };
 char ndo_query[MAX_SQL_BUFFER] = { 0 };
 long ndo_tmp_str_len[MAX_SQL_BINDINGS] = { 0 };
 long ndo_result_tmp_str_len[MAX_SQL_BINDINGS] = { 0 };
@@ -142,6 +142,9 @@ MYSQL_STMT * ndo_stmt_object_insert_name2 = NULL;
 
 void * ndo_handle = NULL;
 int ndo_process_options = 0;
+
+long ndo_last_notification_id = 0L;
+long ndo_last_contact_notification_id = 0L;
 
 void ndo_log(char * buffer)
 {
@@ -166,6 +169,16 @@ int neb_register_callback(int callback_type, void *mod_handle, int priority, int
 int neb_deregister_callback(int callback_type, int (*callback_func)(int, void *))
 {
     return NDO_OK;
+}
+
+char * get_program_version()
+{
+    return "1.0.0";
+}
+
+char * get_program_modification_date()
+{
+    return "2019-08-20";
 }
 #endif
 
@@ -493,75 +506,9 @@ int ndo_deregister_callbacks()
 #ifdef TESTING
 int main()
 {
-    char * str = "foo";
-    int id = 0;
-
     /* just grab some memory for the handle */
     void * handle = malloc(1);
     nebmodule_init(0, NULL, handle);
-
-    //RESET_QUERY();
-    memset(ndo_query, 0, sizeof(ndo_query));
-
-    //SET_SQL();
-    strncpy(ndo_query, "select id from table1 where name1 = ?", MAX_SQL_BUFFER - 1);
-
-    //RESET_BIND();
-    memset(ndo_bind, 0, sizeof(ndo_bind));
-    ndo_bind_i = 0;
-
-    //MYSQL_BIND_STR();
-    ndo_bind[ndo_bind_i].buffer_type = MYSQL_TYPE_STRING;
-    ndo_bind[ndo_bind_i].buffer_length = MAX_BIND_BUFFER;
-    ndo_bind[ndo_bind_i].buffer = str;
-    ndo_bind[ndo_bind_i].length = &(ndo_tmp_str_len[ndo_bind_i]);
-    ndo_tmp_str_len[ndo_bind_i] = strlen(str);
-    ndo_bind_i++;
-
-    //PREPARE_SQL();
-    ndo_return = mysql_stmt_prepare(ndo_stmt, ndo_query, strlen(ndo_query));
-
-    //BIND();
-    ndo_return = mysql_stmt_bind_param(ndo_stmt, ndo_bind);
-
-    //RESET_RESULT();
-    memset(ndo_result, 0, sizeof(ndo_result));
-    ndo_result_i = 0;
-
-    //SET_RESULT_INT(id);
-    ndo_result[ndo_result_i].buffer_type = MYSQL_TYPE_LONG;
-    ndo_result[ndo_result_i].buffer = &(id);
-    ndo_result_i++;
-
-    //RESULT_BIND();
-    ndo_return = mysql_stmt_bind_result(ndo_stmt, ndo_result);
-
-    //QUERY();
-    ndo_return = mysql_stmt_execute(ndo_stmt);
-
-    //STORE();
-    ndo_return = mysql_stmt_store_result(ndo_stmt);
-
-    while (!mysql_stmt_fetch(ndo_stmt)) {
-        char buffer[10] = { 'r', 'e', 's', 'u', 'l', 't', ':', ' ', ' ', 0 };
-        buffer[8] = id;
-        ndo_log(buffer);
-    }
-
-
-    int object_id = ndo_get_object_id_name1(TRUE, 7, "heden666");
-    printf("got object_id = %d\n", object_id);
-
-
-    nebstruct_log_data * log_data = calloc(1, sizeof(nebstruct_log_data));
-
-    log_data->entry_time = 1;
-    log_data->timestamp.tv_sec = 2;
-    log_data->timestamp.tv_usec = 3;
-    log_data->data_type = 4;
-    log_data->data = strdup("wtf");
-
-    ndo_handle_log(0, log_data);
 
     nebmodule_deinit(0, 0);
     free(handle);
@@ -639,6 +586,8 @@ int ndo_table_genocide()
         MYSQL_PREPARE();
         MYSQL_EXECUTE();
     }
+
+    return NDO_OK;
 }
 
 
@@ -663,7 +612,7 @@ int ndo_handle_process(int type, void * d)
 
         ndo_write_active_objects();
         ndo_write_config_file();
-        ndo_write_object_config(NDOMOD_CONFIG_DUMP_ORIGINAL);
+        ndo_write_object_config(NDO_CONFIG_DUMP_ORIGINAL);
 
         break;
 
@@ -704,7 +653,7 @@ int ndo_handle_process(int type, void * d)
     MYSQL_BIND_INT(data->timestamp.tv_usec);
     MYSQL_BIND_INT(program_pid);
     MYSQL_BIND_STR(program_version);
-    MYSQL_BIND_STR(program_modification_date);
+    MYSQL_BIND_STR(program_mod_date);
 
     MYSQL_BIND();
     MYSQL_EXECUTE();
@@ -765,10 +714,10 @@ int ndo_handle_system_command(int type, void * d)
     MYSQL_BIND_STR(data->command_line);
     MYSQL_BIND_INT(data->timeout);
     MYSQL_BIND_INT(data->early_timeout);
-    MYSQL_BIND_INT(data->expiration_time);
+    MYSQL_BIND_INT(data->execution_time);
     MYSQL_BIND_INT(data->return_code);
-    MYSQL_BIND_INT(data->output);
-    MYSQL_BIND_INT(data->long_output);
+    MYSQL_BIND_STR(data->output);
+    MYSQL_BIND_STR(data->output);
 
     MYSQL_BIND_INT(data->start_time.tv_sec);
     MYSQL_BIND_INT(data->start_time.tv_usec);
@@ -777,10 +726,10 @@ int ndo_handle_system_command(int type, void * d)
     MYSQL_BIND_STR(data->command_line);
     MYSQL_BIND_INT(data->timeout);
     MYSQL_BIND_INT(data->early_timeout);
-    MYSQL_BIND_INT(data->expiration_time);
+    MYSQL_BIND_INT(data->execution_time);
     MYSQL_BIND_INT(data->return_code);
-    MYSQL_BIND_INT(data->output);
-    MYSQL_BIND_INT(data->long_output);
+    MYSQL_BIND_STR(data->output);
+    MYSQL_BIND_STR(data->output);
 
     MYSQL_BIND();
     MYSQL_EXECUTE();
@@ -794,7 +743,7 @@ int ndo_handle_event_handler(int type, void * d)
     nebstruct_event_handler_data * data = d;
     int object_id = 0;
 
-    if (data->eventhandler_type == SERVICE_EVENTHANDLER || data->eventhandler_type == GLOBAL_SERVICE_EVENT_HANDLER) {
+    if (data->eventhandler_type == SERVICE_EVENTHANDLER || data->eventhandler_type == GLOBAL_SERVICE_EVENTHANDLER) {
         object_id = ndo_get_object_id_name2(TRUE, NDO_OBJECTTYPE_SERVICE, data->host_name, data->service_description);
     }
     else {
@@ -823,7 +772,7 @@ int ndo_handle_event_handler(int type, void * d)
     MYSQL_BIND_INT(data->execution_time);
     MYSQL_BIND_INT(data->return_code);
     MYSQL_BIND_STR(data->output);
-    MYSQL_BIND_STR(data->long_output);
+    MYSQL_BIND_STR(data->output);
 
     MYSQL_BIND_INT(data->start_time.tv_sec);
     MYSQL_BIND_INT(data->start_time.tv_usec);
@@ -841,7 +790,7 @@ int ndo_handle_event_handler(int type, void * d)
     MYSQL_BIND_INT(data->execution_time);
     MYSQL_BIND_INT(data->return_code);
     MYSQL_BIND_STR(data->output);
-    MYSQL_BIND_STR(data->long_output);
+    MYSQL_BIND_STR(data->output);
 
     MYSQL_BIND();
     MYSQL_EXECUTE();
@@ -877,7 +826,7 @@ int ndo_handle_notification(int type, void * d)
     MYSQL_BIND_INT(object_id);
     MYSQL_BIND_INT(data->state);
     MYSQL_BIND_STR(data->output);
-    MYSQL_BIND_STR(data->long_output);
+    MYSQL_BIND_STR(data->output);
     MYSQL_BIND_INT(data->escalated);
     MYSQL_BIND_INT(data->contacts_notified);
 
@@ -890,7 +839,7 @@ int ndo_handle_notification(int type, void * d)
     MYSQL_BIND_INT(object_id);
     MYSQL_BIND_INT(data->state);
     MYSQL_BIND_STR(data->output);
-    MYSQL_BIND_STR(data->long_output);
+    MYSQL_BIND_STR(data->output);
     MYSQL_BIND_INT(data->escalated);
     MYSQL_BIND_INT(data->contacts_notified);
 
@@ -945,7 +894,7 @@ int ndo_handle_service_check(int type, void * d)
     MYSQL_BIND_INT(data->return_code);
     MYSQL_BIND_STR(data->output);
     MYSQL_BIND_STR(data->long_output);
-    MYSQL_BIND_STR(data->perfdata);
+    MYSQL_BIND_STR(data->perf_data);
     MYSQL_BIND_STR(data->command_name);
     MYSQL_BIND_STR(data->command_args);
     MYSQL_BIND_STR(data->command_line);
@@ -967,7 +916,7 @@ int ndo_handle_service_check(int type, void * d)
     MYSQL_BIND_INT(data->return_code);
     MYSQL_BIND_STR(data->output);
     MYSQL_BIND_STR(data->long_output);
-    MYSQL_BIND_STR(data->perfdata);
+    MYSQL_BIND_STR(data->perf_data);
 
     MYSQL_BIND();
     MYSQL_EXECUTE();
@@ -1011,7 +960,7 @@ int ndo_handle_host_check(int type, void * d)
     MYSQL_BIND_INT(data->return_code);
     MYSQL_BIND_STR(data->output);
     MYSQL_BIND_STR(data->long_output);
-    MYSQL_BIND_STR(data->perfdata);
+    MYSQL_BIND_STR(data->perf_data);
     MYSQL_BIND_STR(data->command_name);
     MYSQL_BIND_STR(data->command_args);
     MYSQL_BIND_STR(data->command_line);
@@ -1033,7 +982,7 @@ int ndo_handle_host_check(int type, void * d)
     MYSQL_BIND_INT(data->return_code);
     MYSQL_BIND_STR(data->output);
     MYSQL_BIND_STR(data->long_output);
-    MYSQL_BIND_STR(data->perfdata);
+    MYSQL_BIND_STR(data->perf_data);
 
     MYSQL_BIND();
     MYSQL_EXECUTE();
@@ -1065,7 +1014,7 @@ int ndo_handle_comment(int type, void * d)
         MYSQL_BIND_INT(data->comment_type);
         MYSQL_BIND_INT(data->entry_type);
         MYSQL_BIND_INT(object_id);
-        MYSQL_BIND_INT(data->comment_time);
+        MYSQL_BIND_INT(data->entry_time);
         MYSQL_BIND_INT(data->comment_id);
         MYSQL_BIND_STR(data->author_name);
         MYSQL_BIND_STR(data->comment_data);
@@ -1079,7 +1028,7 @@ int ndo_handle_comment(int type, void * d)
         MYSQL_BIND_INT(data->comment_type);
         MYSQL_BIND_INT(data->entry_type);
         MYSQL_BIND_INT(object_id);
-        MYSQL_BIND_INT(data->comment_time);
+        MYSQL_BIND_INT(data->entry_time);
         MYSQL_BIND_INT(data->comment_id);
         MYSQL_BIND_STR(data->author_name);
         MYSQL_BIND_STR(data->comment_data);
@@ -1095,8 +1044,8 @@ int ndo_handle_comment(int type, void * d)
 
             strlen("INSERT INTO nagios_comments      ") = 33
 
-                     "INSERT INTO nagios_commenthistory" */
-        strncpy(str, "INSERT INTO nagios_comments      ", 33);
+                           "INSERT INTO nagios_commenthistory" */
+        strncpy(ndo_query, "INSERT INTO nagios_comments      ", 33);
 
         MYSQL_PREPARE();
 
@@ -1114,7 +1063,7 @@ int ndo_handle_comment(int type, void * d)
 
         MYSQL_BIND_INT(data->timestamp.tv_sec);
         MYSQL_BIND_INT(data->timestamp.tv_usec);
-        MYSQL_BIND_INT(data->comment_time);
+        MYSQL_BIND_INT(data->entry_time);
         MYSQL_BIND_INT(data->comment_id);
 
         MYSQL_BIND();
@@ -1127,7 +1076,7 @@ int ndo_handle_comment(int type, void * d)
 
         MYSQL_SET_SQL("DELETE FROM nagios_comments WHERE comment_time = FROM_UNIXTIME(?) AND internal_comment_id = ?");
 
-        MYSQL_BIND_INT(data->comment_time);
+        MYSQL_BIND_INT(data->entry_time);
         MYSQL_BIND_INT(data->comment_id);
 
         MYSQL_BIND();
@@ -1349,10 +1298,10 @@ int ndo_handle_host_status(int type, void * d)
     char * check_command_name = "";
 
     if (   data->object_ptr == NULL 
-        || data->object_ptr->event_handler_ptr == NULL
-        || data->object_ptr->check_command_ptr == NULL
-        || data->object_ptr->event_handler_ptr->name == NULL
-        || data->object_ptr->check_command_ptr->name == NULL) {
+        || ((host *) data->object_ptr)->event_handler_ptr == NULL
+        || ((host *) data->object_ptr)->check_command_ptr == NULL
+        || ((host *) data->object_ptr)->event_handler_ptr->name == NULL
+        || ((host *) data->object_ptr)->check_command_ptr->name == NULL) {
 
         NDO_REPORT_ERROR("Broker data pointer(s) is/are null");
         return NDO_OK;
@@ -1363,8 +1312,8 @@ int ndo_handle_host_status(int type, void * d)
     event_handler_name = hst->event_handler_ptr->name;
     check_command_name = hst->check_command_ptr->name;
 
-    host_object_id = ndo_get_object_id_name1(NDO_TRUE, NDO_OBJECTTYPE_HOST, hst->name);
-    timeperiod_object_id = ndo_get_object_id_name1(NDO_TRUE, NDO_OBJECTTYPE_TIMEPERIOD, tm->name);
+    host_object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_HOST, hst->name);
+    timeperiod_object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_TIMEPERIOD, tm->name);
 
     MYSQL_RESET_SQL();
     MYSQL_RESET_BIND();
@@ -1392,8 +1341,8 @@ int ndo_handle_host_status(int type, void * d)
     MYSQL_BIND_INT(hst->last_time_down);
     MYSQL_BIND_INT(hst->last_time_unreachable);
     MYSQL_BIND_INT(hst->state_type);
-    MYSQL_BIND_STR(hst->last_notification);
-    MYSQL_BIND_STR(hst->next_notification);
+    MYSQL_BIND_INT(hst->last_notification);
+    MYSQL_BIND_INT(hst->next_notification);
     MYSQL_BIND_INT(hst->no_more_notifications);
     MYSQL_BIND_INT(hst->notifications_enabled);
     MYSQL_BIND_INT(hst->problem_has_been_acknowledged);
@@ -1437,8 +1386,8 @@ int ndo_handle_host_status(int type, void * d)
     MYSQL_BIND_INT(hst->last_time_down);
     MYSQL_BIND_INT(hst->last_time_unreachable);
     MYSQL_BIND_INT(hst->state_type);
-    MYSQL_BIND_STR(hst->last_notification);
-    MYSQL_BIND_STR(hst->next_notification);
+    MYSQL_BIND_INT(hst->last_notification);
+    MYSQL_BIND_INT(hst->next_notification);
     MYSQL_BIND_INT(hst->no_more_notifications);
     MYSQL_BIND_INT(hst->notifications_enabled);
     MYSQL_BIND_INT(hst->problem_has_been_acknowledged);
@@ -1479,10 +1428,10 @@ int ndo_handle_service_status(int type, void * d)
     char * check_command_name = "";
 
     if (   data->object_ptr == NULL 
-        || data->object_ptr->event_handler_ptr == NULL
-        || data->object_ptr->check_command_ptr == NULL
-        || data->object_ptr->event_handler_ptr->name == NULL
-        || data->object_ptr->check_command_ptr->name == NULL) {
+        || ((service *) data->object_ptr)->event_handler_ptr == NULL
+        || ((service *) data->object_ptr)->check_command_ptr == NULL
+        || ((service *) data->object_ptr)->event_handler_ptr->name == NULL
+        || ((service *) data->object_ptr)->check_command_ptr->name == NULL) {
 
         NDO_REPORT_ERROR("Broker data pointer(s) is/are null");
         return NDO_OK;
@@ -1493,8 +1442,8 @@ int ndo_handle_service_status(int type, void * d)
     event_handler_name = svc->event_handler_ptr->name;
     check_command_name = svc->check_command_ptr->name;
 
-    service_object_id = ndo_get_object_id_name2(NDO_TRUE, NDO_OBJECTTYPE_SERVICE, svc->host_name, svc->description);
-    timeperiod_object_id = ndo_get_object_id_name1(NDO_TRUE, NDO_OBJECTTYPE_TIMEPERIOD, tm->name);
+    service_object_id = ndo_get_object_id_name2(TRUE, NDO_OBJECTTYPE_SERVICE, svc->host_name, svc->description);
+    timeperiod_object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_TIMEPERIOD, tm->name);
 
     MYSQL_RESET_SQL();
     MYSQL_RESET_BIND();
@@ -1676,15 +1625,33 @@ int ndo_handle_acknowledgement(int type, void * d)
 
 int ndo_handle_state_change(int type, void * d)
 {
-    nebstruct_state_change_data * data = d;
+    nebstruct_statechange_data * data = d;
 
     int object_id = 0;
+    int last_state = 0;
+    int last_hard_state = 0;
 
-    if (data->acknowledgement_type == SERVICE_STATECHANGE) {
-        object_id = ndo_get_object_id_name2(TRUE, NDO_OBJECTTYPE_SERVICE, data->host_name, data->service_description);
+    if (data->type != NEBTYPE_STATECHANGE_END) {
+        return NDO_OK;
+    }
+
+    if (data->statechange_type == SERVICE_STATECHANGE) {
+
+        service * svc = data->object_ptr;
+
+        object_id = ndo_get_object_id_name2(TRUE, NDO_OBJECTTYPE_SERVICE, svc->host_name, svc->description);
+
+        last_state = svc->last_state;
+        last_hard_state = svc->last_hard_state;
     }
     else {
-        object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_HOST, data->host_name);
+
+        host * hst = data->object_ptr;
+
+        object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_HOST, hst->name);
+
+        last_state = hst->last_state;
+        last_hard_state = hst->last_hard_state;
     }
 
     MYSQL_RESET_BIND();
@@ -1700,8 +1667,8 @@ int ndo_handle_state_change(int type, void * d)
     MYSQL_BIND_INT(data->state_type);
     MYSQL_BIND_INT(data->current_attempt);
     MYSQL_BIND_INT(data->max_attempts);
-    MYSQL_BIND_INT(data->last_state);
-    MYSQL_BIND_INT(data->last_hard_state);
+    MYSQL_BIND_INT(last_state);
+    MYSQL_BIND_INT(last_hard_state);
     MYSQL_BIND_STR(data->output);
     MYSQL_BIND_STR(data->longoutput);
 
@@ -1716,24 +1683,13 @@ int ndo_handle_contact_status(int type, void * d)
 
     int contact_object_id     = 0;
     contact * cnt             = NULL;
-    timeperiod * tm           = NULL;
-    char * event_handler_name = "";
-    char * check_command_name = "";
 
-    if (   data->object_ptr == NULL 
-        || data->object_ptr->event_handler_ptr == NULL
-        || data->object_ptr->check_command_ptr == NULL
-        || data->object_ptr->event_handler_ptr->name == NULL
-        || data->object_ptr->check_command_ptr->name == NULL) {
-
+    if (data->object_ptr == NULL) {
         NDO_REPORT_ERROR("Broker data pointer(s) is/are null");
         return NDO_OK;
     }
 
     cnt = data->object_ptr;
-    timeperiod = cnt->check_command_ptr;
-    event_handler_name = cnt->event_handler_ptr->name;
-    check_command_name = cnt->check_command_ptr->name;
 
     contact_object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_CONTACT, cnt->name);
 
@@ -2015,4 +1971,27 @@ int ndo_insert_object_id_name2(int object_type, char * name1, char * name2)
     NDO_HANDLE_ERROR("Unable to execute statement");
 
     return mysql_insert_id(mysql_connection);
+}
+
+int ndo_write_active_objects()
+{
+    return NDO_OK;
+}
+
+
+int ndo_write_config_file()
+{
+    return NDO_OK;
+}
+
+
+int ndo_write_object_config(int type)
+{
+    return NDO_OK;
+}
+
+
+int ndo_write_runtime_variables()
+{
+    return NDO_OK;
 }
