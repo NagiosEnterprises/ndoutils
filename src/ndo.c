@@ -397,6 +397,27 @@ int ndo_register_callbacks()
 {
     int result = 0;
 
+    ndo_process_options |= NDO_PROCESS_PROCESS;
+    ndo_process_options |= NDO_PROCESS_TIMED_EVENT;
+    ndo_process_options |= NDO_PROCESS_LOG;
+    ndo_process_options |= NDO_PROCESS_SYSTEM_COMMAND;
+    ndo_process_options |= NDO_PROCESS_EVENT_HANDLER;
+    ndo_process_options |= NDO_PROCESS_NOTIFICATION;
+    ndo_process_options |= NDO_PROCESS_SERVICE_CHECK;
+    ndo_process_options |= NDO_PROCESS_HOST_CHECK;
+    ndo_process_options |= NDO_PROCESS_COMMENT;
+    ndo_process_options |= NDO_PROCESS_DOWNTIME;
+    ndo_process_options |= NDO_PROCESS_FLAPPING;
+    ndo_process_options |= NDO_PROCESS_PROGRAM_STATUS;
+    ndo_process_options |= NDO_PROCESS_HOST_STATUS;
+    ndo_process_options |= NDO_PROCESS_SERVICE_STATUS;
+    ndo_process_options |= NDO_PROCESS_EXTERNAL_COMMAND;
+    ndo_process_options |= NDO_PROCESS_ACKNOWLEDGEMENT;
+    ndo_process_options |= NDO_PROCESS_STATE_CHANGE;
+    ndo_process_options |= NDO_PROCESS_CONTACT_STATUS;
+    ndo_process_options |= NDO_PROCESS_CONTACT_NOTIFICATION;
+    ndo_process_options |= NDO_PROCESS_CONTACT_NOTIFICATION_METHOD;
+
     if (ndo_process_options & NDO_PROCESS_PROCESS) {
         result += neb_register_callback(NEBCALLBACK_PROCESS_DATA, ndo_handle, 0, ndo_handle_process);
     }
@@ -662,7 +683,98 @@ int ndo_handle_process(int type, void * d)
 
 int ndo_handle_timed_event(int type, void * d)
 {
+    nebstruct_timed_event_data * data = d;
 
+    int object_id = 0;
+
+    if (data->type == NEBTYPE_TIMEDEVENT_SLEEP) {
+        return NDO_OK;
+    }
+
+    if (data->event_type == EVENT_SERVICE_CHECK) {
+
+        service * svc = data->event_data;
+        object_id = ndo_get_object_id_name2(TRUE, NDO_OBJECTTYPE_SERVICE, svc->host_name, svc->description);
+    }
+    else if (data->event_type == EVENT_HOST_CHECK) {
+
+        host * hst = data->event_data;
+        object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_HOST, hst->name);
+    }
+    else if (data->event_type == EVENT_SCHEDULED_DOWNTIME) {
+
+        scheduled_downtime * dwn = find_downtime(ANY_DOWNTIME, (unsigned long) data->event_data);
+
+        char * host_name = dwn->host_name;
+        char * service_description = dwn->service_description;
+
+        if (service_description != NULL && strlen(service_description) > 0) {
+            object_id = ndo_get_object_id_name2(TRUE, NDO_OBJECTTYPE_SERVICE, host_name, service_description);
+        }
+        else {
+            object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_HOST, host_name);
+        }
+    }
+
+    if (data->type == NEBTYPE_TIMEDEVENT_ADD) {
+
+        MYSQL_RESET_SQL();
+        MYSQL_RESET_BIND();
+
+        MYSQL_SET_SQL("INSERT INTO nagios_timedeventqueue SET instance_id = 1, event_type = ?, queued_time = ?, queued_time_usec = ?, scheduled_time = ?, recurring_event = ?, object_id = ? ON DUPLICATE KEY UPDATE instance_id = 1, event_type = ?, queued_time = ?, queued_time_usec = ?, scheduled_time = ?, recurring_event = ?, object_id = ?");
+        MYSQL_PREPARE();
+
+        MYSQL_BIND_INT(data->event_type);
+        MYSQL_BIND_INT(data->timestamp.tv_sec);
+        MYSQL_BIND_INT(data->timestamp.tv_usec);
+        MYSQL_BIND_INT(data->run_time);
+        MYSQL_BIND_INT(data->recurring);
+        MYSQL_BIND_INT(object_id);
+
+        MYSQL_BIND_INT(data->event_type);
+        MYSQL_BIND_INT(data->timestamp.tv_sec);
+        MYSQL_BIND_INT(data->timestamp.tv_usec);
+        MYSQL_BIND_INT(data->run_time);
+        MYSQL_BIND_INT(data->recurring);
+        MYSQL_BIND_INT(object_id);
+
+        MYSQL_BIND();
+        MYSQL_EXECUTE();
+    }
+
+    else if (data->type == NEBTYPE_TIMEDEVENT_REMOVE || data->type == NEBTYPE_TIMEDEVENT_EXECUTE) {
+
+        MYSQL_RESET_SQL();
+        MYSQL_RESET_BIND();
+
+        MYSQL_SET_SQL("DELETE FROM nagios_timedeventqueue WHERE instance_id = 1 AND event_type = ? AND scheduled_time = ? AND recurring_event = ? AND object_id = ?");
+        MYSQL_PREPARE();
+
+        MYSQL_BIND_INT(data->event_type);
+        MYSQL_BIND_INT(data->timestamp.tv_sec);
+        MYSQL_BIND_INT(data->recurring);
+        MYSQL_BIND_INT(object_id);
+
+        MYSQL_BIND();
+        MYSQL_EXECUTE();
+    }
+
+    if (    data->type == NEBTYPE_TIMEDEVENT_EXECUTE
+        && (data->event_type == EVENT_SERVICE_CHECK || data->event_type == EVENT_HOST_CHECK)) {
+
+        MYSQL_RESET_SQL();
+        MYSQL_RESET_BIND();
+
+        MYSQL_SET_SQL("DELETE FROM nagios_timedeventqueue WHERE instance_id = 1 AND scheduled_time < ?");
+        MYSQL_PREPARE();
+
+        MYSQL_BIND_INT(data->run_time);
+
+        MYSQL_BIND();
+        MYSQL_EXECUTE();
+    }
+
+    return NDO_OK;
 }
 
 
