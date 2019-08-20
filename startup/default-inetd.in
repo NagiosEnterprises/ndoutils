@@ -1,5 +1,0 @@
-#
-# Enable the following entry to enable the ndo2db daemon
-#ndo2db stream tcp nowait @ndo2db_user@ @sbindir@/ndo2db ndo2db -c @pkgsysconfdir@/ndo2db.cfg -i
-# Enable the following entry if the ndo2db daemon didn't link with libwrap
-#ndo2db stream tcp nowait @ndo2db_user@ /usr/sbin/tcpd @sbindir@/ndo2db -c @pkgsysconfdir@/ndo2db.cfg -i
