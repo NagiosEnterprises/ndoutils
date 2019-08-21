@@ -191,6 +191,63 @@ int nebmodule_deinit(int flags, int reason)
 
 int ndo_process_arguments(char * args)
 {
+    /* the only argument we accept is a config file location */
+
+    char * config_file = strdup(args);
+    char * free_orig = config_file;
+
+    int i = 0;
+    int len = strlen(config_file);
+
+    if (len < 1) {
+        printf("No config file specified");
+        return -1;
+    }
+
+    for (i = 0; i < len; i++) {
+        if (   config_file[i] == ' '
+            || config_file[i] == '\t'
+            || config_file[i] == '\n'
+            || config_file[i] == '\r') {
+            continue;
+        }
+        break;
+    }
+
+    if (i >= (len - 1)) {
+        printf("All whitespace");
+        return -1;
+    }
+
+    config_file += i;
+
+    /* get the new length */
+    len = strlen(config_file);
+
+    for (i = (len - 1); i >= 0; i--) {
+        if (   config_file[i] == ' '
+            || config_file[i] == '\t'
+            || config_file[i] == '\n'
+            || config_file[i] == '\r') {
+            continue;
+        }
+        break;
+    }
+
+    if (i >= strlen(args)) {
+        printf("Something went wrong..\n");
+        return -1;
+    }
+
+    config_file[i + 1] = '\0';
+
+    printf("config_file: [%s]\n", config_file);
+
+    free(free_orig);
+
+
+
+
     ndo_db_user = strdup("ndo");
     ndo_db_pass = strdup("ndo");
     ndo_db_name = strdup("ndo");
