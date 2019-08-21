@@ -2,7 +2,10 @@
 /*
 
 module:
-gcc -fPIC -g -O2 -I/usr/include/mysql -I../include/nagios -o ndo.o ndo.c -shared $(mysql_config --libs)
+gcc -fPIC -g3 -ggdb3 -fprofile-arcs -ftest-coverage -I/usr/include/mysql -I../include/nagios -o ndo.o ndo.c -shared $(mysql_config --libs)
+
+module testing:
+gcc -fPIC -g3 -ggdb3 -fprofile-arcs -ftest-coverage -I/usr/include/mysql -I../include/nagios -o ndo.o ndo.c -shared $(mysql_config --libs) -DTESTING
 
 executable:
 gcc -g -O2 -I/usr/include/mysql -I../include/nagios -o ndo ndo.c $(mysql_config --libs) -DTESTING
@@ -32,14 +35,9 @@ gcc -g -O2 -I/usr/include/mysql -I../include/nagios -o ndo ndo.c $(mysql_config 
 
 NEB_API_VERSION(CURRENT_NEB_API_VERSION)
 
-#define NDO_OK 0
-#define NDO_ERROR -1
-
 #ifndef ARRAY_SIZE
 #   define ARRAY_SIZE(x) (sizeof(x) / sizeof(x[0]))
 #endif
-
-#define NDO_REPORT(s) 
 
 /**** NAGIOS VARIABLES ****/
 extern command              * command_list;
@@ -181,6 +179,12 @@ char * get_program_version()
 char * get_program_modification_date()
 {
     return "2019-08-20";
+}
+
+struct scheduled_downtime *find_downtime(int i, unsigned long l) {
+
+    struct scheduled_downtime * dwn = malloc(sizeof(struct scheduled_downtime));
+    return dwn;
 }
 #endif
 
@@ -383,6 +387,8 @@ int ndo_initialize_prepared_statements()
 
 void ndo_disconnect_database()
 {
+    printf("%s\n", "yeah bitch");
+
     mysql_stmt_close(ndo_stmt);
 
     mysql_stmt_close(ndo_stmt_object_get_name1);
@@ -528,26 +534,17 @@ int ndo_deregister_callbacks()
 }
 
 
-#ifdef TESTING
-int main()
-{
-    /* just grab some memory for the handle */
-    void * handle = malloc(1);
-    nebmodule_init(0, NULL, handle);
-
-    nebmodule_deinit(0, 0);
-    free(handle);
-
-    return 0;
-}
-#endif
-
-
 int ndo_set_all_objects_inactive()
 {
-    MYSQL_SET_SQL("UPDATE nagios_objects SET is_active = 0");
-    MYSQL_PREPARE();
-    MYSQL_EXECUTE();
+    char * deactivate_sql = "UPDATE nagios_objects SET is_active = 0";
+
+    ndo_return = mysql_query(mysql_connection, deactivate_sql);
+    if (ndo_return != 0) {
+
+        char err[1024] = { 0 };
+        snprintf(err, 1023, "query(%s) failed with rc (%d), mysql (%d: %s)", deactivate_sql, ndo_return, mysql_errno(mysql_connection), mysql_error(mysql_connection));
+        ndo_log(err);
+    }
 
     return NDO_OK;
 }
@@ -1510,8 +1507,8 @@ int ndo_handle_host_status(int type, void * d)
     MYSQL_BIND_INT(hst->process_performance_data);
     MYSQL_BIND_INT(hst->obsess);
     MYSQL_BIND_INT(hst->modified_attributes);
-    MYSQL_BIND_STR(event_handler);
-    MYSQL_BIND_STR(check_command);
+    MYSQL_BIND_STR(hst->event_handler);
+    MYSQL_BIND_STR(hst->check_command);
     MYSQL_BIND_DOUBLE(hst->check_interval);
     MYSQL_BIND_DOUBLE(hst->retry_interval);
     MYSQL_BIND_INT(timeperiod_object_id);

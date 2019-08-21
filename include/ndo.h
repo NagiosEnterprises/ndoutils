@@ -1,4 +1,26 @@
+#ifndef NDO_H
+#define NDO_H
 
+#ifndef ARRAY_SIZE
+#   define ARRAY_SIZE(x) (sizeof(x) / sizeof(x[0]))
+#endif
+
+#define NDO_OK 0
+#define NDO_ERROR -1
+
+#ifndef TRUE
+#   define TRUE 1
+#elif TRUE != 1
+#   undef TRUE
+#   define TRUE 1
+#endif
+
+#ifndef FALSE
+#   define FALSE 0
+#elif FALSE != 0
+#   undef FALSE
+#   define FALSE 0
+#endif
 
 void ndo_log(char * buffer);
 int nebmodule_init(int flags, char * args, void * handle);
@@ -38,6 +60,8 @@ int ndo_write_config_file();
 int ndo_write_object_config(int type);
 int ndo_write_runtime_variables();
 
+
+int write_to_log(char * buffer, unsigned long l, time_t * t);
 
 #define GET_NAME1    0
 #define GET_NAME2    1
@@ -91,3 +115,5 @@ int ndo_insert_object_id_name2(int object_type, char * name1, char * name2);
 
 #define NDO_CONFIG_DUMP_ORIGINAL 1
 #define NDO_CONFIG_DUMP_RETAINED 2
+
+#endif /* NDO_H */
