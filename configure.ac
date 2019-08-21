@@ -61,6 +61,7 @@ else
     AC_MSG_ERROR([Unable to find mysql_config binary])
 fi
 
+
 AC_SUBST(DBLIBS)
 AC_SUBST(DBFLAGS)
 
@@ -72,4 +73,3 @@ AC_OUTPUT([
     test/Makefile
 
 ])
-

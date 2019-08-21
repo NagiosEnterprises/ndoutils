@@ -26,37 +26,26 @@ gcovr --exclude="test.c" -r ..
 #include "../include/ndo.h"
 #include "../include/nagios/downtime.h"
 
+#include "nagios-stubs.c"
+
+
 #define NUM_SUITES 1
 
-int neb_register_callback(int callback_type, void *mod_handle, int priority, int (*callback_func)(int, void *))
+
+void * neb_handle = NULL;
+
+
+void load_neb_module()
 {
-    return NDO_OK;
+    neb_handle = malloc(1);
+    nebmodule_init(0, "", neb_handle);
 }
 
-int neb_deregister_callback(int callback_type, int (*callback_func)(int, void *))
-{
-    return NDO_OK;
-}
 
-char * get_program_version()
+void unload_neb_module()
 {
-    return "1.0.0";
-}
-
-char * get_program_modification_date()
-{
-    return "2019-08-20";
-}
-
-struct scheduled_downtime *find_downtime(int i, unsigned long l)
-{
-    struct scheduled_downtime * dwn = malloc(sizeof(struct scheduled_downtime));
-    return dwn;
-}
-
-int write_to_log(char *buffer, unsigned long data_type, time_t *timestamp)
-{
-    printf("%s\n", buffer);
+    nebmodule_deinit(0, 0);
+    free(neb_handle);
 }
 
 
@@ -84,20 +73,6 @@ Suite * t_suite(void)
     suite_add_tcase(suite, tc_core);
 
     return suite;
-}
-
-void * neb_handle = NULL;
-
-void load_neb_module()
-{
-    neb_handle = malloc(1);
-    nebmodule_init(0, "", neb_handle);
-}
-
-void unload_neb_module()
-{
-    nebmodule_deinit(0, 0);
-    free(neb_handle);
 }
 
 

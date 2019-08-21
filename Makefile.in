@@ -1,5 +1,6 @@
 
 VALGRIND_OPTS=--leak-check=full --show-leak-kinds=all --track-origins=yes
+TESTDB=ndo
 
 
 .PHONY: all test clean distclean
@@ -10,8 +11,18 @@ none:
 	@echo ""
 	@echo "    make all"
 	@echo "    make ndo.o"
-	@echo "    make test"
 	@echo "    make clean"
+	@echo "    make distclean"
+	@echo ""
+	@echo "Testing targets:"
+	@echo "(./configure --enable-debugging --enable-coverage)"
+	@echo ""
+	@echo "    make inittest"
+	@echo "    make test"
+	@echo "    make memtest"
+	@echo "    make coverage"
+	@echo "    make report"
+	@echo "    make ndo.obj"
 	@echo ""
 
 
@@ -57,6 +68,18 @@ report: coverage
 		gcovr --exclude="test.c" -r . ; \
 	else \
 		echo "You must install gcovr first!"; \
+	fi
+
+
+inittest:
+	@if which mysql; then \
+		echo "You will be prompted for your mysql root password 3 times..."; \
+		mysql -u root -p -e "CREATE DATABASE $(TESTDB)"; \
+		mysql -u root -p -e "CREATE USER $(TESTDB)@'localhost' IDENTIFIED BY '$(TESTDB)'"; \
+		mysql -u root -p -e "GRANT ALL PRIVILEGES ON $(TESTDB).* TO '$(TESTDB)'@'localhost' WITH GRANT OPTION"; \
+		mysql -u $(TESTDB) -p$(TESTDB) $(TESTDB) < db/db.sql; \
+	else \
+		echo "You must have mysql client binary first!"; \
 	fi
 
 
