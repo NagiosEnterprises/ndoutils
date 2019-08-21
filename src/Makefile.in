@@ -1,0 +1,18 @@
+
+CC=@CC@
+
+CFLAGS=@CFLAGS@
+
+SHAREDFLAGS=-fPIC -shared
+
+DBLIBS=@DBLIBS@
+
+DBFLAGS=@DBFLAGS@
+
+
+ndo.o:
+	$(CC) $(SHAREDFLAGS) $(CFLAGS) $(DBFLAGS) ndo.c -o $@ $(DBLIBS)
+
+
+ndo.obj:
+	$(CC) $(CFLAGS) $(DBFLAGS) ndo.c -c -o $@

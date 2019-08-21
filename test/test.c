@@ -8,12 +8,10 @@ gcc -g test.c -lcheck -lsubunit -lm -lrt -lpthread -o test
 compile for coverage:
 gcc $(mysql_config --cflags) -g -ggdb3 -fprofile-arcs -ftest-coverage -o test test.c ../src/ndo.obj $(mysql_config --libs) -lcheck -lsubunit -lm -lrt -lpthread -ldl
 
-make coverage:
-lcov -c -d . -o coverage.info-file
+make coverage: (change the .. to . once this makes it in the main make file)
+lcov -c -d ../ -o coverage.info-file
 genhtml coverage.info-file -o coverage/
-
-coverage report:
-gcovr --exclude="test.c" -r . 
+gcovr --exclude="test.c" -r ..
 
 */
 
@@ -29,6 +27,37 @@ gcovr --exclude="test.c" -r .
 #include "../include/nagios/downtime.h"
 
 #define NUM_SUITES 1
+
+int neb_register_callback(int callback_type, void *mod_handle, int priority, int (*callback_func)(int, void *))
+{
+    return NDO_OK;
+}
+
+int neb_deregister_callback(int callback_type, int (*callback_func)(int, void *))
+{
+    return NDO_OK;
+}
+
+char * get_program_version()
+{
+    return "1.0.0";
+}
+
+char * get_program_modification_date()
+{
+    return "2019-08-20";
+}
+
+struct scheduled_downtime *find_downtime(int i, unsigned long l)
+{
+    struct scheduled_downtime * dwn = malloc(sizeof(struct scheduled_downtime));
+    return dwn;
+}
+
+int write_to_log(char *buffer, unsigned long data_type, time_t *timestamp)
+{
+    printf("%s\n", buffer);
+}
 
 
 START_TEST (booleans_are_sane)

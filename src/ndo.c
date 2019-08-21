@@ -1,15 +1,4 @@
 
-/*
-
-module:
-gcc -fPIC -g3 -ggdb3 -fprofile-arcs -ftest-coverage -I/usr/include/mysql -I../include/nagios -o ndo.o ndo.c -shared $(mysql_config --libs)
-
-object file for testing (including in test):
-gcc -g3 -ggdb3 -fprofile-arcs -ftest-coverage $(mysql_config --cflags) -c -o ndo.obj ndo.c -DTESTING
-
-
-*/
-
 #define NSCORE 1
 
 #include "../include/nagios/logging.h"
@@ -144,48 +133,16 @@ int ndo_process_options = 0;
 long ndo_last_notification_id = 0L;
 long ndo_last_contact_notification_id = 0L;
 
+
 void ndo_log(char * buffer)
 {
-#ifndef TESTING
     /* this is a quick way to suppress warnings about checking return status */
     if (write_to_log(buffer, NSLOG_INFO_MESSAGE, NULL) != NDO_OK) {
 
         /* there isn't much we can do other than shut everything down.. */
         return;
     }
-#else
-    printf("%s\n", buffer);
-#endif
 }
-
-#ifdef TESTING
-int neb_register_callback(int callback_type, void *mod_handle, int priority, int (*callback_func)(int, void *))
-{
-    return NDO_OK;
-}
-
-int neb_deregister_callback(int callback_type, int (*callback_func)(int, void *))
-{
-    return NDO_OK;
-}
-
-char * get_program_version()
-{
-    return "1.0.0";
-}
-
-char * get_program_modification_date()
-{
-    return "2019-08-20";
-}
-
-struct scheduled_downtime *find_downtime(int i, unsigned long l) {
-
-    struct scheduled_downtime * dwn = malloc(sizeof(struct scheduled_downtime));
-    return dwn;
-}
-#endif
-
 
 
 int nebmodule_init(int flags, char * args, void * handle)
@@ -385,8 +342,6 @@ int ndo_initialize_prepared_statements()
 
 void ndo_disconnect_database()
 {
-    printf("%s\n", "yeah bitch");
-
     mysql_stmt_close(ndo_stmt);
 
     mysql_stmt_close(ndo_stmt_object_get_name1);

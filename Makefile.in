@@ -1,0 +1,80 @@
+
+VALGRIND_OPTS=--leak-check=full --show-leak-kinds=all --track-origins=yes
+
+
+.PHONY: all test clean distclean
+
+
+none:
+	@echo "Use make with a target:"
+	@echo ""
+	@echo "    make all"
+	@echo "    make ndo.o"
+	@echo "    make test"
+	@echo "    make clean"
+	@echo ""
+
+
+ndo.o:
+	cd src/ && $(MAKE) $@
+
+
+ndo.obj:
+	cd src/ && $(MAKE) $@
+
+
+all: ndo.o
+
+
+test: ndo.obj
+	cd test/ && $(MAKE) $@
+
+
+coverage: test
+	@if which lcov; then \
+		lcov -c -d . -o test/coverage.info-file; \
+		genhtml test/coverage.info-file -o test/coverage/; \
+		echo "Your coverage report is in test/coverage/index.html"; \
+	else \
+		echo "You must install lcov first!"; \
+	fi
+
+
+memtest: test
+	@if which valgrind; then \
+		if test -f test/test; then \
+			valgrind $(VALGRIND_OPTS) test/test; \
+		else \
+			echo "No test binary found. Did your build succeed?"; \
+		fi \
+	else \
+		echo "You must install valgrind first!"; \
+	fi
+
+
+report: coverage
+	@if which gcovr; then \
+		gcovr --exclude="test.c" -r . ; \
+	else \
+		echo "You must install gcovr first!"; \
+	fi
+
+
+clean:
+	rm -f src/ndo.o
+	rm -f src/ndo.obj
+	rm -f test/test
+	rm -f config.log config.status
+	rm -f src/*.gcda src/*.gcno
+	rm -f test/*.gcda test/*.gcno
+
+
+distclean: clean
+	rm -fr test/coverage
+	rm -f  test/coverage.info-file
+	rm -rf autom4te.cache
+	rm -f  configure
+	rm -f  Makefile
+	rm -f  src/Makefile
+	rm -f  test/Makefile
+	rm -f  include/config.h

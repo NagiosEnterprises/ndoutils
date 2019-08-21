@@ -52,6 +52,19 @@ AC_ARG_ENABLE(
 )
 
 
+# Determine MySQL C flags and libraries
+# This also kind of determines if the mysql library is installed
+if which mysql_config; then
+    DBLIBS=`mysql_config --libs`
+    DBFLAGS=`mysql_config --cflags`
+else
+    AC_MSG_ERROR([Unable to find mysql_config binary])
+fi
+
+AC_SUBST(DBLIBS)
+AC_SUBST(DBFLAGS)
+
+
 AC_OUTPUT([
 
     Makefile
@@ -59,3 +72,4 @@ AC_OUTPUT([
     test/Makefile
 
 ])
+

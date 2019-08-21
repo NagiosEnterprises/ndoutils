@@ -1,0 +1,16 @@
+
+CC=@CC@
+
+CFLAGS=@CFLAGS@
+
+SHAREDFLAGS=@SHAREDFLAGS@
+
+DBLIBS=@DBLIBS@
+
+DBFLAGS=@DBFLAGS@
+
+TESTLIBS=-lcheck -lsubunit -lm -lrt -lpthread
+
+
+test:
+	$(CC) $(CFLAGS) $(DBFLAGS) test.c ../src/ndo.obj -o $@ $(DBLIBS) $(TESTLIBS)
