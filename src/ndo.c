@@ -4,11 +4,9 @@
 module:
 gcc -fPIC -g3 -ggdb3 -fprofile-arcs -ftest-coverage -I/usr/include/mysql -I../include/nagios -o ndo.o ndo.c -shared $(mysql_config --libs)
 
-module testing:
-gcc -fPIC -g3 -ggdb3 -fprofile-arcs -ftest-coverage -I/usr/include/mysql -I../include/nagios -o ndo.o ndo.c -shared $(mysql_config --libs) -DTESTING
+object file for testing (including in test):
+gcc -g3 -ggdb3 -fprofile-arcs -ftest-coverage $(mysql_config --cflags) -c -o ndo.obj ndo.c -DTESTING
 
-executable:
-gcc -g -O2 -I/usr/include/mysql -I../include/nagios -o ndo ndo.c $(mysql_config --libs) -DTESTING
 
 */
 

@@ -6,7 +6,7 @@ just compile:
 gcc -g test.c -lcheck -lsubunit -lm -lrt -lpthread -o test
 
 compile for coverage:
-gcc -g -ggdb3 -fprofile-arcs -ftest-coverage test.c -lcheck -lsubunit -lm -lrt -lpthread -ldl -o test
+gcc $(mysql_config --cflags) -g -ggdb3 -fprofile-arcs -ftest-coverage -o test test.c ../src/ndo.obj $(mysql_config --libs) -lcheck -lsubunit -lm -lrt -lpthread -ldl
 
 make coverage:
 lcov -c -d . -o coverage.info-file
@@ -17,6 +17,7 @@ gcovr --exclude="test.c" -r .
 
 */
 
+#include <mysql.h>
 #include <dlfcn.h>
 
 
@@ -60,35 +61,14 @@ void * neb_handle = NULL;
 
 void load_neb_module()
 {
-    int (*initfunc)(int, char *, void *);
-    
-    neb_handle = dlopen("/usr/local/nagios/bin/ndo.o", RTLD_NOW | RTLD_GLOBAL);
-    if (neb_handle == NULL) {
-        printf("%s\n", "Unable to load module");
-
-        char * err = dlerror();
-
-        if (err != NULL) {
-            printf(" > %s\n", err);
-        }
-
-        exit(EXIT_FAILURE);
-    }
-
-    initfunc = dlsym(neb_handle, "nebmodule_init");
-
-    (* initfunc)(0, "", neb_handle);
+    neb_handle = malloc(1);
+    nebmodule_init(0, "", neb_handle);
 }
 
 void unload_neb_module()
 {
-    int (*deinitfunc)(int, int);
-
-    deinitfunc = dlsym(neb_handle, "nebmodule_deinit");
-    
-    (* deinitfunc)(0, 0);
-
-    dlclose(neb_handle);
+    nebmodule_deinit(0, 0);
+    free(neb_handle);
 }
 
 
