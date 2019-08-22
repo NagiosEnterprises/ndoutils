@@ -60,6 +60,11 @@ int ndo_write_config_file();
 int ndo_write_object_config(int type);
 int ndo_write_runtime_variables();
 
+void ndo_process_config_line(char * line);
+int ndo_process_config_file();
+int ndo_config_sanity_check();
+char * ndo_strip(char * s);
+
 
 int write_to_log(char * buffer, unsigned long l, time_t * t);
 
@@ -90,12 +95,16 @@ int ndo_insert_object_id_name2(int object_type, char * name1, char * name2);
 #define NDO_PROCESS_SERVICE_STATUS                  (1 << 13)
 
 #define NDO_PROCESS_EXTERNAL_COMMAND                (1 << 17)
+#define NDO_PROCESS_OBJECT_CONFIG                   (1 << 18)
+#define NDO_PROCESS_MAIN_CONFIG                     (1 << 19)
+#define NDO_PROCESS_RETENTION                       (1 << 21)
 #define NDO_PROCESS_ACKNOWLEDGEMENT                 (1 << 22)
 #define NDO_PROCESS_STATE_CHANGE                    (1 << 23)
 #define NDO_PROCESS_CONTACT_STATUS                  (1 << 24)
 
 #define NDO_PROCESS_CONTACT_NOTIFICATION            (1 << 26)
 #define NDO_PROCESS_CONTACT_NOTIFICATION_METHOD     (1 << 27)
+
 
 
 #define NDO_OBJECTTYPE_HOST                1
@@ -112,8 +121,9 @@ int ndo_insert_object_id_name2(int object_type, char * name1, char * name2);
 #define NDO_OBJECTTYPE_COMMAND             12
 
 
-
+#define NDO_CONFIG_DUMP_NONE     0
 #define NDO_CONFIG_DUMP_ORIGINAL 1
 #define NDO_CONFIG_DUMP_RETAINED 2
+#define NDO_CONFIG_DUMP_ALL      3
 
 #endif /* NDO_H */

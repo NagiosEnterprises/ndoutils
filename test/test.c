@@ -35,10 +35,14 @@ gcovr --exclude="test.c" -r ..
 void * neb_handle = NULL;
 
 
-void load_neb_module()
+int load_neb_module()
 {
     neb_handle = malloc(1);
-    nebmodule_init(0, "", neb_handle);
+    if (neb_handle == NULL) {
+        return NDO_ERROR;
+    }
+
+    return nebmodule_init(0, "/home/heden/Repos/ndoutils/config/ndo.cfg-sample", neb_handle);
 }
 
 
@@ -81,7 +85,13 @@ int main(void)
     int number_failed = 0;
     int i = 0;
 
-    load_neb_module();
+    if (load_neb_module() != NDO_OK) {
+
+        free(neb_handle);
+
+        printf("%s\n", "Unable to load NEB Module");
+        exit(EXIT_FAILURE);
+    }
 
     Suite * s_core = t_suite();
 

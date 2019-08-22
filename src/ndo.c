@@ -129,6 +129,7 @@ MYSQL_STMT * ndo_stmt_object_insert_name2 = NULL;
 
 void * ndo_handle = NULL;
 int ndo_process_options = 0;
+char * ndo_config_file = NULL;
 
 long ndo_last_notification_id = 0L;
 long ndo_last_contact_notification_id = 0L;
@@ -159,6 +160,11 @@ int nebmodule_init(int flags, char * args, void * handle)
         return NDO_ERROR;
     }
 
+    result = ndo_process_config_file();
+    if (result != NDO_OK) {
+        return NDO_ERROR;
+    }
+
     result = ndo_initialize_database();
     if (result != NDO_OK) {
         return NDO_ERROR;
@@ -178,6 +184,10 @@ int nebmodule_deinit(int flags, int reason)
     ndo_deregister_callbacks();
     ndo_disconnect_database();
 
+    if (ndo_config_file != NULL) {
+        free(ndo_config_file);
+    }
+
     free(ndo_db_user);
     free(ndo_db_pass);
     free(ndo_db_name);
@@ -189,70 +199,341 @@ int nebmodule_deinit(int flags, int reason)
 }
 
 
-int ndo_process_arguments(char * args)
+/* free whatever this returns (unless it's null duh) */
+char * ndo_strip(char * s)
 {
-    /* the only argument we accept is a config file location */
-
-    char * config_file = strdup(args);
-    char * free_orig = config_file;
-
     int i = 0;
-    int len = strlen(config_file);
+    int len = 0;
+    char * str = NULL;
+    char * orig = NULL;
+    char * tmp = NULL;
 
-    if (len < 1) {
-        printf("No config file specified");
-        return -1;
+    if (s == NULL || strlen(s) == 0) {
+        return NULL;
+    }
+
+    str = strdup(s);
+    orig = str;
+
+    if (str == NULL) {
+        return NULL;
+    }
+
+    len = strlen(str);
+
+    if (len == 0) {
+        return str;
     }
 
     for (i = 0; i < len; i++) {
-        if (   config_file[i] == ' '
-            || config_file[i] == '\t'
-            || config_file[i] == '\n'
-            || config_file[i] == '\r') {
+        if (   str[i] == ' '
+            || str[i] == '\t'
+            || str[i] == '\n'
+            || str[i] == '\r') {
+
             continue;
         }
         break;
     }
+
+    str += i;
 
     if (i >= (len - 1)) {
-        printf("All whitespace");
-        return -1;
+        return str;
     }
 
-    config_file += i;
-
-    /* get the new length */
-    len = strlen(config_file);
+    len = strlen(str);
 
     for (i = (len - 1); i >= 0; i--) {
-        if (   config_file[i] == ' '
-            || config_file[i] == '\t'
-            || config_file[i] == '\n'
-            || config_file[i] == '\r') {
+        if (   str[i] == ' '
+            || str[i] == '\t'
+            || str[i] == '\n'
+            || str[i] == '\r') {
+
             continue;
         }
         break;
     }
 
-    if (i >= strlen(args)) {
-        printf("Something went wrong..\n");
-        return -1;
+    str[i + 1] = '\0';
+
+    tmp = strdup(str);
+    free(orig);
+    str = tmp;
+
+    return str;
+}
+
+
+int ndo_process_arguments(char * args)
+{
+    /* the only argument we accept is a config file location */
+    ndo_config_file = ndo_strip(args);
+
+    if (ndo_config_file == NULL || strlen(ndo_config_file) <= 0) {
+        ndo_log("No config file specified! (broker_module=/path/to/ndo.o /PATH/TO/CONFIG/FILE)");
+        return NDO_ERROR;
     }
 
-    config_file[i + 1] = '\0';
-
-    printf("config_file: [%s]\n", config_file);
-
-    free(free_orig);
-
-
-
-
-    ndo_db_user = strdup("ndo");
-    ndo_db_pass = strdup("ndo");
-    ndo_db_name = strdup("ndo");
-
     return NDO_OK;
+}
+
+
+char * ndo_read_config_file()
+{
+    FILE * fp = NULL;
+    char * contents = NULL;
+    int file_size = 0;
+    int read_size = 0;
+
+    if (ndo_config_file == NULL) {
+        ndo_log("No configuration specified");
+        return NULL;
+    }
+
+    fp = fopen(ndo_config_file, "r");
+
+    if (fp == NULL) {
+        ndo_log("Unable to open config file specified");
+        return NULL;
+    }
+
+    /* see how large the file is */
+    fseek(fp, 0, SEEK_END);
+    file_size = ftell(fp);
+    rewind(fp);
+
+    contents = calloc(file_size + 1, sizeof(char));
+
+    if (contents == NULL) {
+        ndo_log("Out of memory apparently. Something bad is about to happen");
+        fclose(fp);
+        return NULL;
+    }
+
+    read_size = fread(contents, sizeof(char), file_size, fp);
+
+    if (read_size != file_size) {
+        ndo_log("Unable to fread() config file");
+        free(contents);
+        fclose(fp);
+        return NULL;
+    }
+
+    fclose(fp);
+    return contents;
+}
+
+
+int ndo_process_config_file()
+{
+    char * config_file_contents = ndo_read_config_file();
+    char * current_line = config_file_contents;
+
+    if (config_file_contents == NULL) {
+        return NDO_ERROR;
+    }
+
+    while (current_line != NULL) {
+
+        char * next_line = strchr(current_line, '\n');
+
+        if (next_line != NULL) {
+            (* next_line) = '\0';
+        }
+
+        ndo_process_config_line(current_line);
+
+        if (next_line != NULL) {
+            (* next_line) = '\n';
+            current_line = next_line + 1;
+        }
+        else {
+            current_line = NULL;
+            break;
+        }
+    }
+
+    free(config_file_contents);
+    return ndo_config_sanity_check();
+}
+
+int ndo_config_sanity_check()
+{
+    return NDO_OK;
+}
+
+
+void ndo_process_config_line(char * line)
+{
+    char * key = NULL;
+    char * val = NULL;
+
+    if (line == NULL) {
+        return;
+    }
+
+    key = strtok(line, "=");
+    if (key == NULL) {
+        return;
+    }
+
+    val = strtok(NULL, "\0");
+    if (val == NULL) {
+        return;
+    }
+
+    key = ndo_strip(key);
+    if (key == NULL || strlen(key) == 0) {
+        return;
+    }
+
+    val = ndo_strip(val);
+
+    if (val == NULL || strlen(val) == 0) {
+
+        free(key);
+
+        if (val != NULL) {
+            free(val);
+        }
+
+        return;
+    }
+
+    /* skip comments */
+    if (key[0] == '#') {
+        free(key);
+        free(val);
+        return;
+    }
+
+    if (!strcmp("db_host", key)) {
+        ndo_db_host = strdup(val);
+    }
+    if (!strcmp("db_name", key)) {
+        ndo_db_name = strdup(val);
+    }
+    if (!strcmp("db_user", key)) {
+        ndo_db_user = strdup(val);
+    }
+    if (!strcmp("db_pass", key)) {
+        ndo_db_pass = strdup(val);
+    }
+    if (!strcmp("db_port", key)) {
+        ndo_db_port = atoi(val);
+    }
+    if (!strcmp("db_socket", key)) {
+        ndo_db_socket = strdup(val);
+        printf("\n\nsocket %s\n\n", key);
+    }
+    if (!strcmp("acknowledgement_data", key)) {
+        if (atoi(val) > 0) {
+            ndo_process_options |= NDO_PROCESS_ACKNOWLEDGEMENT;
+        }
+    }
+    if (!strcmp("comment_data", key)) {
+        if (atoi(val) > 0) {
+            ndo_process_options |= NDO_PROCESS_COMMENT;
+        }
+    }
+    if (!strcmp("contact_status_data", key)) {
+        if (atoi(val) > 0) {
+            ndo_process_options |= NDO_PROCESS_CONTACT_STATUS;
+        }
+    }
+    if (!strcmp("downtime_data", key)) {
+        if (atoi(val) > 0) {
+            ndo_process_options |= NDO_PROCESS_DOWNTIME;
+        }
+    }
+    if (!strcmp("event_handler_data", key)) {
+        if (atoi(val) > 0) {
+            ndo_process_options |= NDO_PROCESS_EVENT_HANDLER;
+        }
+    }
+    if (!strcmp("external_command_data", key)) {
+        if (atoi(val) > 0) {
+            ndo_process_options |= NDO_PROCESS_EXTERNAL_COMMAND;
+        }
+    }
+    if (!strcmp("flapping_data", key)) {
+        if (atoi(val) > 0) {
+            ndo_process_options |= NDO_PROCESS_FLAPPING;
+        }
+    }
+    if (!strcmp("host_check_data", key)) {
+        if (atoi(val) > 0) {
+            ndo_process_options |= NDO_PROCESS_HOST_CHECK;
+        }
+    }
+    if (!strcmp("host_status_data", key)) {
+        if (atoi(val) > 0) {
+            ndo_process_options |= NDO_PROCESS_HOST_STATUS;
+        }
+    }
+    if (!strcmp("log_data", key)) {
+        if (atoi(val) > 0) {
+            ndo_process_options |= NDO_PROCESS_LOG;
+        }
+    }
+    if (!strcmp("main_config_data", key)) {
+        if (atoi(val) > 0) {
+            ndo_process_options |= NDO_PROCESS_MAIN_CONFIG;
+        }
+    }
+    if (!strcmp("notification_data", key)) {
+        if (atoi(val) > 0) {
+            ndo_process_options |= NDO_PROCESS_NOTIFICATION;
+        }
+    }
+    if (!strcmp("object_config_data", key)) {
+        if (atoi(val) > 0) {
+            ndo_process_options |= NDO_PROCESS_OBJECT_CONFIG;
+        }
+    }
+    if (!strcmp("process_data", key)) {
+        if (atoi(val) > 0) {
+            ndo_process_options |= NDO_PROCESS_PROCESS;
+        }
+    }
+    if (!strcmp("program_status_data", key)) {
+        if (atoi(val) > 0) {
+            ndo_process_options |= NDO_PROCESS_PROGRAM_STATUS;
+        }
+    }
+    if (!strcmp("retention_data", key)) {
+        if (atoi(val) > 0) {
+            ndo_process_options |= NDO_PROCESS_RETENTION;
+        }
+    }
+    if (!strcmp("service_check_data", key)) {
+        if (atoi(val) > 0) {
+            ndo_process_options |= NDO_PROCESS_SERVICE_CHECK;
+        }
+    }
+    if (!strcmp("service_status_data", key)) {
+        if (atoi(val) > 0) {
+            ndo_process_options |= NDO_PROCESS_SERVICE_STATUS;
+        }
+    }
+    if (!strcmp("state_change_data", key)) {
+        if (atoi(val) > 0) {
+            ndo_process_options |= NDO_PROCESS_STATE_CHANGE;
+        }
+    }
+    if (!strcmp("system_command_data", key)) {
+        if (atoi(val) > 0) {
+            ndo_process_options |= NDO_PROCESS_SYSTEM_COMMAND;
+        }
+    }
+    if (!strcmp("timed_event_data", key)) {
+        if (atoi(val) > 0) {
+            ndo_process_options |= NDO_PROCESS_TIMED_EVENT;
+        }
+    }
+    free(key);
+    free(val);
 }
 
 

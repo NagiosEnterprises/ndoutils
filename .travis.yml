@@ -1,0 +1,114 @@
+language: c
+
+
+sudo: required
+
+
+services:
+  - mysql
+
+
+matrix:
+  include:
+
+    - os: linux
+      dist: trusty
+      addons:
+        apt:
+          packages:
+            - check
+            - build-essential
+            - libsubunit-dev
+            - gcovr
+            - lcov
+            - valgrind
+            - libmysqlclient-dev
+      env:
+        - MATRIX_EVAL="CC=gcc && CXX=g++"
+
+
+    - os: linux
+      dist: trusty
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - check
+            - build-essential
+            - libsubunit-dev
+            - g++-5
+            - gcovr
+            - lcov
+            - valgrind
+            - libmysqlclient-dev
+      env:
+        - MATRIX_EVAL="CC=gcc-5 && CXX=g++-5"
+
+
+    - os: linux
+      dist: trusty
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - check
+            - build-essential
+            - libsubunit-dev
+            - g++-6
+            - gcovr
+            - lcov
+            - valgrind
+            - libmysqlclient-dev
+      env:
+        - MATRIX_EVAL="CC=gcc-6 && CXX=g++-6"
+
+
+    - os: linux
+      dist: trusty
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - check
+            - build-essential
+            - libsubunit-dev
+            - g++-7
+            - gcovr
+            - lcov
+            - valgrind
+            - libmysqlclient-dev
+      env:
+        - MATRIX_EVAL="CC=gcc-7 && CXX=g++-7"
+
+
+    - os: linux
+      dist: trusty
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - check
+            - build-essential
+            - libsubunit-dev
+            - g++-8
+            - gcovr
+            - lcov
+            - valgrind
+            - libmysqlclient-dev
+      env:
+        - MATRIX_EVAL="CC=gcc-8 && CXX=g++-8"
+
+
+before_install:
+  - eval "${MATRIX_EVAL}"
+
+
+script:
+  - ./configure --enable-coverage --enable-debugging
+  - sed -i 's/-p -e/-e/' Makefile
+  - make memtest
+  - make coverage
