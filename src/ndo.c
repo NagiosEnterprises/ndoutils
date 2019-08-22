@@ -698,27 +698,6 @@ int ndo_register_callbacks()
 {
     int result = 0;
 
-    ndo_process_options |= NDO_PROCESS_PROCESS;
-    ndo_process_options |= NDO_PROCESS_TIMED_EVENT;
-    ndo_process_options |= NDO_PROCESS_LOG;
-    ndo_process_options |= NDO_PROCESS_SYSTEM_COMMAND;
-    ndo_process_options |= NDO_PROCESS_EVENT_HANDLER;
-    ndo_process_options |= NDO_PROCESS_NOTIFICATION;
-    ndo_process_options |= NDO_PROCESS_SERVICE_CHECK;
-    ndo_process_options |= NDO_PROCESS_HOST_CHECK;
-    ndo_process_options |= NDO_PROCESS_COMMENT;
-    ndo_process_options |= NDO_PROCESS_DOWNTIME;
-    ndo_process_options |= NDO_PROCESS_FLAPPING;
-    ndo_process_options |= NDO_PROCESS_PROGRAM_STATUS;
-    ndo_process_options |= NDO_PROCESS_HOST_STATUS;
-    ndo_process_options |= NDO_PROCESS_SERVICE_STATUS;
-    ndo_process_options |= NDO_PROCESS_EXTERNAL_COMMAND;
-    ndo_process_options |= NDO_PROCESS_ACKNOWLEDGEMENT;
-    ndo_process_options |= NDO_PROCESS_STATE_CHANGE;
-    ndo_process_options |= NDO_PROCESS_CONTACT_STATUS;
-    ndo_process_options |= NDO_PROCESS_CONTACT_NOTIFICATION;
-    ndo_process_options |= NDO_PROCESS_CONTACT_NOTIFICATION_METHOD;
-
     if (ndo_process_options & NDO_PROCESS_PROCESS) {
         result += neb_register_callback(NEBCALLBACK_PROCESS_DATA, ndo_handle, 0, ndo_handle_process);
     }
