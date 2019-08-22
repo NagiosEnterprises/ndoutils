@@ -23,6 +23,7 @@ matrix:
             - lcov
             - valgrind
             - libmysqlclient-dev
+            - autoconf
       env:
         - MATRIX_EVAL="CC=gcc && CXX=g++"
 
@@ -42,6 +43,7 @@ matrix:
             - lcov
             - valgrind
             - libmysqlclient-dev
+            - autoconf
       env:
         - MATRIX_EVAL="CC=gcc-5 && CXX=g++-5"
 
@@ -61,6 +63,7 @@ matrix:
             - lcov
             - valgrind
             - libmysqlclient-dev
+            - autoconf
       env:
         - MATRIX_EVAL="CC=gcc-6 && CXX=g++-6"
 
@@ -80,6 +83,7 @@ matrix:
             - lcov
             - valgrind
             - libmysqlclient-dev
+            - autoconf
       env:
         - MATRIX_EVAL="CC=gcc-7 && CXX=g++-7"
 
@@ -99,6 +103,7 @@ matrix:
             - lcov
             - valgrind
             - libmysqlclient-dev
+            - autoconf
       env:
         - MATRIX_EVAL="CC=gcc-8 && CXX=g++-8"
 
@@ -108,6 +113,7 @@ before_install:
 
 
 script:
+  - autoconf
   - ./configure --enable-coverage --enable-debugging
   - sed -i 's/-p -e/-e/' Makefile
   - make memtest
