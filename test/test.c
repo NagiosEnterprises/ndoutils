@@ -42,7 +42,7 @@ int load_neb_module()
         return NDO_ERROR;
     }
 
-    return nebmodule_init(0, "/home/heden/Repos/ndoutils/config/ndo.cfg-sample", neb_handle);
+    return nebmodule_init(0, "../config/ndo.cfg-sample", neb_handle);
 }
 
 
