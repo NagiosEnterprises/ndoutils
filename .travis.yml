@@ -116,5 +116,6 @@ script:
   - autoconf
   - ./configure --enable-coverage --enable-debugging
   - sed -i 's/-p -e/-e/' Makefile
+  - make inittest
   - make memtest
   - make coverage
