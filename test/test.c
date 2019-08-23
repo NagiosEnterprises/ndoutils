@@ -30,7 +30,7 @@ gcovr --exclude="test.c" -r ..
 #include "nagios-stubs.c"
 
 
-#define NUM_SUITES 1
+#define NUM_SUITES 2
 
 
 void * neb_handle = NULL;
@@ -103,6 +103,23 @@ START_TEST (log_data)
 END_TEST
 
 
+Suite * handler_suite(void)
+{
+    Suite * suite      = NULL;
+    TCase * tc_handler = NULL;
+
+    suite = suite_create("handler_suite");
+
+    tc_handler = tcase_create("broker handlers");
+
+    tcase_add_test(tc_handler, log_data);
+
+    suite_add_tcase(suite, tc_handler);
+
+    return suite;
+}
+
+
 int main(void)
 {
     int number_failed = 0;
@@ -117,6 +134,7 @@ int main(void)
     }
 
     Suite * s_core = t_suite();
+    Suite * s_handler = handler_suite();
 
     SRunner * runner[NUM_SUITES] = { NULL };
 
