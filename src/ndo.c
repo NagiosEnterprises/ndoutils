@@ -1058,6 +1058,10 @@ int ndo_handle_log(int type, void * d)
         return NDO_OK;
     }
 
+    if (data->data == NULL || strlen(data->data) == 0) {
+        return NDO_OK;
+    }
+
     MYSQL_RESET_SQL();
     MYSQL_RESET_BIND();
 

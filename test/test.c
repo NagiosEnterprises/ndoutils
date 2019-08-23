@@ -25,6 +25,7 @@ gcovr --exclude="test.c" -r ..
 
 #include "../include/ndo.h"
 #include "../include/nagios/downtime.h"
+#include "../include/nagios/nebstructs.h"
 
 #include "nagios-stubs.c"
 
@@ -78,6 +79,28 @@ Suite * t_suite(void)
 
     return suite;
 }
+
+
+START_TEST (log_data)
+{
+    nebstruct_log_data d;
+
+    d.type = 0;
+    d.flags = 0;
+    d.attr = 0;
+    gettimeofday(&(d.timestamp), NULL);
+
+    d.entry_time = 0;
+    d.data_type = 0;
+    d.data = strdup("log data");
+
+    ndo_handle_log(0, (void *) &d);
+
+    // do a query against log_data
+    // assert the values are what we set them
+    // set d.data to null and check again
+}
+END_TEST
 
 
 int main(void)
