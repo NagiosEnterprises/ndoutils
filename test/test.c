@@ -99,6 +99,8 @@ START_TEST (log_data)
     // do a query against log_data
     // assert the values are what we set them
     // set d.data to null and check again
+
+    free(d.data);
 }
 END_TEST
 
