@@ -139,6 +139,7 @@ int main(void)
     SRunner * runner[NUM_SUITES] = { NULL };
 
     runner[0] = srunner_create(s_core);
+    runner[1] = srunner_create(s_handler);
 
     for (i = 0; i < NUM_SUITES; i++) {
 
