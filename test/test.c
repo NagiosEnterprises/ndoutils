@@ -112,19 +112,19 @@ START_TEST (test_log_data)
     d.type = 0;
     d.flags = 0;
     d.attr = 0;
-    gettimeofday(test_&(test_d.timestamp), NULL);
+    gettimeofday(&(d.timestamp), NULL);
 
     d.entry_time = 0;
     d.data_type = 0;
-    d.data = strdup(test_"log data");
+    d.data = strdup("log data");
 
-    ndo_handle_log(test_0, (test_void *) &d);
+    ndo_handle_log(0, (void *) &d);
 
     // do a query against log_data
     // assert the values are what we set them
     // set d.data to null and check again
 
-    free(test_d.data);
+    free(d.data);
 }
 END_TEST
 
