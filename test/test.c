@@ -70,6 +70,7 @@ START_TEST (ndo_types_wont_kill_broker)
     ck_assert_int_eq(TRUE, NEB_TRUE);
     ck_assert_int_eq(FALSE, NEB_FALSE);
 }
+END_TEST
 
 
 Suite * t_suite(void)
