@@ -91,45 +91,45 @@ Suite * t_suite(void)
 }
 
 
-START_TEST (program_state)
+START_TEST (test_program_state)
 {
     nebstruct_process_data d;
 }
 END_TEST
 
 
-START_TEST (timed_event)
+START_TEST (test_timed_event)
 {
     nebstruct_timed_event_data d;
 }
 END_TEST
 
 
-START_TEST (log_data)
+START_TEST (test_log_data)
 {
     nebstruct_log_data d;
 
     d.type = 0;
     d.flags = 0;
     d.attr = 0;
-    gettimeofday(&(d.timestamp), NULL);
+    gettimeofday(test_&(test_d.timestamp), NULL);
 
     d.entry_time = 0;
     d.data_type = 0;
-    d.data = strdup("log data");
+    d.data = strdup(test_"log data");
 
-    ndo_handle_log(0, (void *) &d);
+    ndo_handle_log(test_0, (test_void *) &d);
 
     // do a query against log_data
     // assert the values are what we set them
     // set d.data to null and check again
 
-    free(d.data);
+    free(test_d.data);
 }
 END_TEST
 
 
-START_TEST (system_command)
+START_TEST (test_system_command)
 {
     nebstruct_system_command_data d;
 
@@ -137,119 +137,119 @@ START_TEST (system_command)
 END_TEST
 
 
-START_TEST (event_handler)
+START_TEST (test_event_handler)
 {
     nebstruct_event_handler_data d;
 }
 END_TEST
 
 
-START_TEST (host_check)
+START_TEST (test_host_check)
 {
     nebstruct_host_check_data d;
 }
 END_TEST
 
 
-START_TEST (service_check)
+START_TEST (test_service_check)
 {
     nebstruct_service_check_data d;
 }
 END_TEST
 
 
-START_TEST (comment_data)
+START_TEST (test_comment_data)
 {
     nebstruct_comment_data d;
 }
 END_TEST
 
 
-START_TEST (downtime_data)
+START_TEST (test_downtime_data)
 {
     nebstruct_downtime_data d;
 }
 END_TEST
 
 
-START_TEST (flapping_data)
+START_TEST (test_flapping_data)
 {
     nebstruct_flapping_data d;
 }
 END_TEST
 
 
-START_TEST (program_status)
+START_TEST (test_program_status)
 {
     nebstruct_program_status_data d;
 }
 END_TEST
 
 
-START_TEST (host_status)
+START_TEST (test_host_status)
 {
     nebstruct_host_status_data d;
 }
 END_TEST
 
 
-START_TEST (service_status)
+START_TEST (test_service_status)
 {
     nebstruct_service_status_data d;
 }
 END_TEST
 
 
-START_TEST (contact_status)
+START_TEST (test_contact_status)
 {
     nebstruct_service_status_data d;
 }
 END_TEST
 
 
-START_TEST (notification_data)
+START_TEST (test_notification_data)
 {
     nebstruct_notification_data d;
 }
 END_TEST
 
 
-START_TEST (contact_notification_data)
+START_TEST (test_contact_notification_data)
 {
     nebstruct_contact_notification_data d;
 }
 END_TEST
 
 
-START_TEST (contact_notification_method_data)
+START_TEST (test_contact_notification_method_data)
 {
     nebstruct_contact_notification_method_data d;
 }
 END_TEST
 
 
-START_TEST (external_command)
+START_TEST (test_external_command)
 {
     nebstruct_external_command_data d;
 }
 END_TEST
 
 
-START_TEST (retention_data)
+START_TEST (test_retention_data)
 {
     nebstruct_retention_data d;
 }
 END_TEST
 
 
-START_TEST (acknowledgement_data)
+START_TEST (test_acknowledgement_data)
 {
     nebstruct_acknowledgement_data d;
 }
 END_TEST
 
 
-START_TEST (statechange_data)
+START_TEST (test_statechange_data)
 {
     nebstruct_statechange_data d;
 }
@@ -265,27 +265,27 @@ Suite * handler_suite(void)
 
     tc_handler = tcase_create("broker handlers");
 
-    tcase_add_test(tc_handler, program_state);
-    tcase_add_test(tc_handler, timed_event);
-    tcase_add_test(tc_handler, log_data);
-    tcase_add_test(tc_handler, system_command);
-    tcase_add_test(tc_handler, event_handler);
-    tcase_add_test(tc_handler, host_check);
-    tcase_add_test(tc_handler, service_check);
-    tcase_add_test(tc_handler, comment_data);
-    tcase_add_test(tc_handler, downtime_data);
-    tcase_add_test(tc_handler, flapping_data);
-    tcase_add_test(tc_handler, program_status);
-    tcase_add_test(tc_handler, host_status);
-    tcase_add_test(tc_handler, service_status);
-    tcase_add_test(tc_handler, contact_status);
-    tcase_add_test(tc_handler, notification_data);
-    tcase_add_test(tc_handler, contact_notification_data);
-    tcase_add_test(tc_handler, contact_notification_method_data);
-    tcase_add_test(tc_handler, external_command);
-    tcase_add_test(tc_handler, retention_data);
-    tcase_add_test(tc_handler, acknowledgement_data);
-    tcase_add_test(tc_handler, statechange_data);
+    tcase_add_test(tc_handler, test_program_state);
+    tcase_add_test(tc_handler, test_timed_event);
+    tcase_add_test(tc_handler, test_log_data);
+    tcase_add_test(tc_handler, test_system_command);
+    tcase_add_test(tc_handler, test_event_handler);
+    tcase_add_test(tc_handler, test_host_check);
+    tcase_add_test(tc_handler, test_service_check);
+    tcase_add_test(tc_handler, test_comment_data);
+    tcase_add_test(tc_handler, test_downtime_data);
+    tcase_add_test(tc_handler, test_flapping_data);
+    tcase_add_test(tc_handler, test_program_status);
+    tcase_add_test(tc_handler, test_host_status);
+    tcase_add_test(tc_handler, test_service_status);
+    tcase_add_test(tc_handler, test_contact_status);
+    tcase_add_test(tc_handler, test_notification_data);
+    tcase_add_test(tc_handler, test_contact_notification_data);
+    tcase_add_test(tc_handler, test_contact_notification_method_data);
+    tcase_add_test(tc_handler, test_external_command);
+    tcase_add_test(tc_handler, test_retention_data);
+    tcase_add_test(tc_handler, test_acknowledgement_data);
+    tcase_add_test(tc_handler, test_statechange_data);
 
     suite_add_tcase(suite, tc_handler);
 
