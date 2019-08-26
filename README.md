@@ -73,7 +73,7 @@ This is mainly here for posterity and our own development teams sake, but when a
 1. `adaptive_contact_data` *unused*
 1. `external_command`
 1. `aggregated_status_data` *unused*
-1. `retention_data`
+1. `retention_data` *unused*
 1. `acknowledgement_data`
 1. `statechange_data`
 
@@ -86,5 +86,5 @@ cat base/broker.c | grep "^void broker_\|^int broker_" | sed 's/^\w* //' | sed '
 Or even better:
 
 ```
-cat base/broker.c | grep "^void broker_\|^int broker_" | sed 's/^\w* //' | sed 's/^broker_//' | sed 's/(.*//' | grep -v "^adaptive" | grep -v "^aggregated"
+cat base/broker.c | grep "^void broker_\|^int broker_" | sed 's/^\w* //' | sed 's/^broker_//' | sed 's/(.*//' | grep -v "^adaptive" | grep -v "^aggregated" | grep -v "^retention"
 ```

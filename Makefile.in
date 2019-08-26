@@ -54,7 +54,7 @@ coverage: test
 memtest: test
 	@if which valgrind; then \
 		if test -f test/test; then \
-			valgrind $(VALGRIND_OPTS) test/test; \
+			valgrind $(VALGRIND_OPTS) test/test $(NDO_CONFIG_FILE); \
 		else \
 			echo "No test binary found. Did your build succeed?"; \
 		fi \
@@ -65,7 +65,7 @@ memtest: test
 
 report: coverage
 	@if which gcovr; then \
-		gcovr --exclude="test.c" -r . ; \
+		gcovr --exclude="test/*" -r . ; \
 	else \
 		echo "You must install gcovr first!"; \
 	fi

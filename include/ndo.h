@@ -54,7 +54,8 @@ int ndo_handle_contact_status(int type, void * d);
 int ndo_handle_contact_notification(int type, void * d);
 int ndo_handle_contact_notification_method(int type, void * d);
 
-
+int ndo_table_genocide();
+int ndo_set_all_objects_inactive();
 int ndo_write_active_objects();
 int ndo_write_config_file();
 int ndo_write_object_config(int type);

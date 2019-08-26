@@ -29,3 +29,15 @@ int write_to_log(char *buffer, unsigned long data_type, time_t *timestamp)
 {
     printf("%s\n", buffer);
 }
+
+nagios_comment * find_service_comment(unsigned long l)
+{
+    nagios_comment * comment = malloc(sizeof(nagios_comment));
+    return comment;
+}
+
+nagios_comment * find_host_comment(unsigned long l)
+{
+    nagios_comment * comment = malloc(sizeof(nagios_comment));
+    return comment;
+}

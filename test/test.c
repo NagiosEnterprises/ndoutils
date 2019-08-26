@@ -25,6 +25,7 @@ gcovr --exclude="test.c" -r ..
 
 #include "../include/ndo.h"
 #include "../include/nagios/downtime.h"
+#include "../include/nagios/comments.h"
 #include "../include/nagios/nebstructs.h"
 #include "../include/nagios/neberrors.h"
 
@@ -37,14 +38,14 @@ gcovr --exclude="test.c" -r ..
 void * neb_handle = NULL;
 
 
-int load_neb_module()
+int load_neb_module(char * config_file)
 {
     neb_handle = malloc(1);
     if (neb_handle == NULL) {
         return NDO_ERROR;
     }
 
-    return nebmodule_init(0, "/home/travis/build/NagiosEnterprises/ndoutils/config/ndo.cfg-sample", neb_handle);
+    return nebmodule_init(0, config_file, neb_handle);
 }
 
 
@@ -292,19 +293,29 @@ Suite * handler_suite(void)
     return suite;
 }
 
-
-int main(void)
+int main(int argc, char const * argv[])
 {
     int number_failed = 0;
     int i = 0;
+    char * config_file = NULL;
 
-    if (load_neb_module() != NDO_OK) {
+    /* we must specify the location of the config file */
+    if (argc <= 1) {
+        printf("%s\n", "You must specify a config file location");
+        exit(EXIT_FAILURE);
+    }
+
+    config_file = strdup(argv[1]);
+
+    if (load_neb_module(config_file) != NDO_OK) {
 
         free(neb_handle);
 
         printf("%s\n", "Unable to load NEB Module");
         exit(EXIT_FAILURE);
     }
+
+    free(config_file);
 
     Suite * s_core = t_suite();
     Suite * s_handler = handler_suite();
