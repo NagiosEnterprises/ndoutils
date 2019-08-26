@@ -78,6 +78,14 @@ int ndo_table_genocide()
 
 int ndo_write_active_objects()
 {
+    ndo_write_commands();
+    ndo_write_timeperiods();
+    ndo_write_contacts();
+    ndo_write_contactgroups();
+    ndo_write_hosts();
+    ndo_write_hostgroups();
+    ndo_write_services();
+    ndo_write_servicegroups();
     return NDO_OK;
 }
 
@@ -98,3 +106,151 @@ int ndo_write_runtime_variables()
 {
     return NDO_OK;
 }
+
+
+int ndo_write_commands(int config_type)
+{
+    command * tmp = command_list;
+    int object_id = 0;
+
+    MYSQL_RESET_SQL();
+
+    MYSQL_SET_SQL("INSERT INTO nagios_commands SET instance_id = 1, object_id = ?, config_type = ?, command_line = ? ON DUPLICATE KEY UPDATE instance_id = 1, object_id = ?, config_type = ?, command_line = ?");
+    MYSQL_PREPARE();
+
+    while (tmp != NULL) {
+
+        object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_COMMAND, tmp->name);
+
+        MYSQL_RESET_BIND();
+
+        MYSQL_BIND_INT(object_id);
+        MYSQL_BIND_INT(config_type);
+        MYSQL_BIND_STR(tmp->command_line);
+
+        MYSQL_BIND_INT(object_id);
+        MYSQL_BIND_INT(config_type);
+        MYSQL_BIND_STR(tmp->command_line);
+
+        MYSQL_BIND();
+        MYSQL_EXECUTE();
+
+        tmp = tmp->next;
+    }
+
+    return NDO_OK;
+}
+
+
+int ndo_write_timeperiods(int config_type)
+{
+    timeperiod * tmp = timeperiod_list;
+    timerange * range = NULL;
+    int object_id = 0;
+
+    int day = 0;
+
+    /* if you have more than 2k timeperiods, you're doing something wrong */
+    int timeperiod_ids[2048] = { 0 };
+    int i = 0;
+
+    MYSQL_RESET_SQL();
+
+    MYSQL_SET_SQL("INSERT INTO nagios_timeperiods SET instance_id = 1, timeperiod_object_id = ?, config_type = ?, alias = ? ON DUPLICATE KEY UPDATE instance_id = 1, timeperiod_object_id = ?, config_type = ?, alias = ?");
+    MYSQL_PREPARE();
+
+    while (tmp != NULL) {
+
+        object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_TIMEPERIOD, tmp->name);
+
+        /* for later lookup */
+        timeperiod_ids[i] = object_id;
+        i++;
+
+        MYSQL_RESET_BIND();
+
+        MYSQL_BIND_INT(object_id);
+        MYSQL_BIND_INT(config_type);
+        MYSQL_BIND_STR(tmp->alias);
+
+        MYSQL_BIND_INT(object_id);
+        MYSQL_BIND_INT(config_type);
+        MYSQL_BIND_STR(tmp->alias);
+
+        MYSQL_BIND();
+        MYSQL_EXECUTE();
+
+        tmp = tmp->next;
+    }
+
+    /* now lets do the ranges */
+    tmp = timeperiod_list;
+    i = 0;
+    MYSQL_RESET_SQL();
+
+    MYSQL_SET_SQL("INSERT INTO nagios_timeperiod_timeranges SET instance_id = 1, timeperiod_id = ?, day = ?, start_sec = ?, end_sec = ? ON DUPLICATE KEY UPDATE instance_id = 1, timeperiod_id = ?, day = ?, start_sec = ?, end_sec = ?");
+    MYSQL_PREPARE();
+
+    while (tmp != NULL) {
+
+        object_id = timeperiod_ids[i];
+
+        for (day = 0; day < 7; day++) {
+
+            range = tmp->days[day];
+
+            MYSQL_BIND_INT(object_id);
+            MYSQL_BIND_INT(day);
+            MYSQL_BIND_INT(range->range_start);
+            MYSQL_BIND_INT(range->range_end);
+
+            MYSQL_BIND_INT(object_id);
+            MYSQL_BIND_INT(day);
+            MYSQL_BIND_INT(range->range_start);
+            MYSQL_BIND_INT(range->range_end);
+
+            MYSQL_BIND();
+            MYSQL_EXECUTE();
+        }
+
+        i++;
+        tmp = tmp->next;
+    }
+}
+
+
+int ndo_write_contacts(int config_type)
+{
+
+}
+
+
+int ndo_write_contactgroups(int config_type)
+{
+
+}
+
+
+int ndo_write_hosts(int config_type)
+{
+
+}
+
+
+int ndo_write_hostgroups(int config_type)
+{
+
+}
+
+
+int ndo_write_services(int config_type)
+{
+
+}
+
+
+int ndo_write_servicegroups(int config_type)
+{
+
+}
+

@@ -753,6 +753,10 @@ int ndo_register_callbacks()
         result += neb_register_callback(NEBCALLBACK_STATE_CHANGE_DATA, ndo_handle, 0, ndo_handle_state_change);
     }
 
+    if (ndo_config_dump_options & NDO_CONFIG_DUMP_RETENTION) {
+        result += neb_register_callback(NEBCALLBACK_RETENTION_DATA, ndo_handle, 0, ndo_handle_retention);
+    }
+
     if (result != 0) {
         ndo_log("Something went wrong registering callbacks!");
         return NDO_ERROR;
@@ -785,6 +789,8 @@ int ndo_deregister_callbacks()
     neb_deregister_callback(NEBCALLBACK_EXTERNAL_COMMAND_DATA, ndo_handle_external_command);
     neb_deregister_callback(NEBCALLBACK_ACKNOWLEDGEMENT_DATA, ndo_handle_acknowledgement);
     neb_deregister_callback(NEBCALLBACK_STATE_CHANGE_DATA, ndo_handle_state_change);
+
+    neb_deregister_callback(NEBCALLBACK_RETENTION_DATA, ndo_handle_retention);
 
     ndo_log("Callbacks deregistered");
     return NDO_OK;
