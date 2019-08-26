@@ -118,4 +118,4 @@ script:
   - sed -i 's/-p -e/-e/' Makefile
   - make inittest
   - make memtest
-  - make coverage
+  - make report
