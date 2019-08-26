@@ -65,7 +65,7 @@ END_TEST
 
 START_TEST (ndo_types_wont_kill_broker)
 {
-    ck_assert_int_eq(NDO_OK, NEB_TRUE);
+    ck_assert_int_eq(NDO_OK, NEB_OK);
     ck_assert_int_eq(NDO_ERROR, NEB_ERROR);
     ck_assert_int_eq(TRUE, NEB_TRUE);
     ck_assert_int_eq(FALSE, NEB_FALSE);
