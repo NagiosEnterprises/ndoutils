@@ -31,6 +31,24 @@ gcovr --exclude="test.c" -r ..
 
 #include "nagios-stubs.c"
 
+/**** NAGIOS VARIABLES ****/
+command              * command_list;
+timeperiod           * timeperiod_list;
+contact              * contact_list;
+contactgroup         * contactgroup_list;
+host                 * host_list;
+hostgroup            * hostgroup_list;
+service              * service_list;
+servicegroup         * servicegroup_list;
+hostescalation       * hostescalation_list;
+serviceescalation    * serviceescalation_list;
+hostdependency       * hostdependency_list;
+servicedependency    * servicedependency_list;
+char                 * config_file;
+sched_info             scheduling_info;
+char                 * global_host_event_handler;
+char                 * global_service_event_handler;
+int                  __nagios_object_structure_version;
 
 #define NUM_SUITES 2
 

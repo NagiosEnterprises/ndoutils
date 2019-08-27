@@ -1,23 +1,4 @@
 
-#include "../include/nagios/logging.h"
-#include "../include/nagios/nebstructs.h"
-#include "../include/nagios/nebmodules.h"
-#include "../include/nagios/nebcallbacks.h"
-#include "../include/nagios/broker.h"
-#include "../include/nagios/common.h"
-#include "../include/nagios/nagios.h"
-#include "../include/nagios/downtime.h"
-#include "../include/nagios/comments.h"
-#include "../include/nagios/macros.h"
-
-#include "../include/ndo.h"
-#include "../include/mysql-helpers.h"
-
-#include <stdio.h>
-#include <string.h>
-#include <mysql.h>
-#include <errmsg.h>
-
 int ndo_set_all_objects_inactive()
 {
     char * deactivate_sql = "UPDATE nagios_objects SET is_active = 0";
@@ -173,11 +154,6 @@ int ndo_write_timeperiods(int config_type)
     int * timeperiod_ids = NULL;
     int i = 0;
 
-    MYSQL_RESET_SQL();
-
-    MYSQL_SET_SQL("INSERT INTO nagios_timeperiods SET instance_id = 1, timeperiod_object_id = ?, config_type = ?, alias = ? ON DUPLICATE KEY UPDATE instance_id = 1, timeperiod_object_id = ?, config_type = ?, alias = ?");
-    MYSQL_PREPARE();
-
     /* get a count */
     while (tmp != NULL) {
         count++;
@@ -187,6 +163,11 @@ int ndo_write_timeperiods(int config_type)
     timeperiod_ids = calloc(count, sizeof(int));
 
     tmp = timeperiod_list;
+
+    MYSQL_RESET_SQL();
+
+    MYSQL_SET_SQL("INSERT INTO nagios_timeperiods SET instance_id = 1, timeperiod_object_id = ?, config_type = ?, alias = ? ON DUPLICATE KEY UPDATE instance_id = 1, timeperiod_object_id = ?, config_type = ?, alias = ?");
+    MYSQL_PREPARE();
 
     while (tmp != NULL) {
 
@@ -264,15 +245,10 @@ int ndo_write_contacts(int config_type)
     int j = 0;
 
     int notify_options[11] = { 0 };
-    int notify_options_i = 0;
 
     commandsmember * cmd = NULL;
     int notification_type = 0;
-
-    MYSQL_RESET_SQL();
-
-    MYSQL_SET_SQL("INSERT INTO nagios_contacts SET instance_id = 1, config_type = ?, contact_object_id = ?, alias = ?, email_address = ?, pager_address = ?, host_timeperiod_object_id = (SELECT object_id FROM nagios_objects WHERE name1 = ? and objecttype_id = 9 LIMIT 1), service_timeperiod_object_id = (SELECT object_id FROM nagios_objects WHERE name1 = ? and objecttype_id = 9 LIMIT 1), host_notifications_enabled = ?, service_notifications_enabled = ?, can_submit_commands = ?, notify_service_recovery = ?, notify_service_warning = ?, notify_service_unknown = ?, notify_service_critical = ?, notify_service_flapping = ?, notify_service_downtime = ?, notify_host_recovery = ?, notify_host_down = ?, notify_host_unreachable = ?, notify_host_flapping = ?, notify_host_downtime = ?, minimum_importance = ? ON DUPLICATE KEY UPDATE instance_id = 1, config_type = ?, contact_object_id = ?, alias = ?, email_address = ?, pager_address = ?, host_timeperiod_object_id = (SELECT object_id FROM nagios_objects WHERE name1 = ? and objecttype_id = 9 LIMIT 1), service_timeperiod_object_id = (SELECT object_id FROM nagios_objects WHERE name1 = ? and objecttype_id = 9 LIMIT 1), host_notifications_enabled = ?, service_notifications_enabled = ?, can_submit_commands = ?, notify_service_recovery = ?, notify_service_warning = ?, notify_service_unknown = ?, notify_service_critical = ?, notify_service_flapping = ?, notify_service_downtime = ?, notify_host_recovery = ?, notify_host_down = ?, notify_host_unreachable = ?, notify_host_flapping = ?, notify_host_downtime = ?, minimum_importance = ?");
-    MYSQL_PREPARE();
+    int address_number = 0;
 
     /* get a count */
     while (tmp != NULL) {
@@ -284,6 +260,11 @@ int ndo_write_contacts(int config_type)
 
     tmp = contact_list;
 
+    MYSQL_RESET_SQL();
+
+    MYSQL_SET_SQL("INSERT INTO nagios_contacts SET instance_id = 1, config_type = ?, contact_object_id = ?, alias = ?, email_address = ?, pager_address = ?, host_timeperiod_object_id = (SELECT object_id FROM nagios_objects WHERE name1 = ? and objecttype_id = 9 LIMIT 1), service_timeperiod_object_id = (SELECT object_id FROM nagios_objects WHERE name1 = ? and objecttype_id = 9 LIMIT 1), host_notifications_enabled = ?, service_notifications_enabled = ?, can_submit_commands = ?, notify_service_recovery = ?, notify_service_warning = ?, notify_service_unknown = ?, notify_service_critical = ?, notify_service_flapping = ?, notify_service_downtime = ?, notify_host_recovery = ?, notify_host_down = ?, notify_host_unreachable = ?, notify_host_flapping = ?, notify_host_downtime = ?, minimum_importance = ? ON DUPLICATE KEY UPDATE instance_id = 1, config_type = ?, contact_object_id = ?, alias = ?, email_address = ?, pager_address = ?, host_timeperiod_object_id = (SELECT object_id FROM nagios_objects WHERE name1 = ? and objecttype_id = 9 LIMIT 1), service_timeperiod_object_id = (SELECT object_id FROM nagios_objects WHERE name1 = ? and objecttype_id = 9 LIMIT 1), host_notifications_enabled = ?, service_notifications_enabled = ?, can_submit_commands = ?, notify_service_recovery = ?, notify_service_warning = ?, notify_service_unknown = ?, notify_service_critical = ?, notify_service_flapping = ?, notify_service_downtime = ?, notify_host_recovery = ?, notify_host_down = ?, notify_host_unreachable = ?, notify_host_flapping = ?, notify_host_downtime = ?, minimum_importance = ?");
+    MYSQL_PREPARE();
+
     while (tmp != NULL) {
 
         object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_CONTACT, tmp->name);
@@ -293,18 +274,17 @@ int ndo_write_contacts(int config_type)
 
         MYSQL_RESET_BIND();
 
-        notify_options_i = 0;
-        notify_options[notify_options_i++] = flag_isset(tmp->service_notification_options, OPT_UNKNOWN);
-        notify_options[notify_options_i++] = flag_isset(tmp->service_notification_options, OPT_WARNING);
-        notify_options[notify_options_i++] = flag_isset(tmp->service_notification_options, OPT_CRITICAL);
-        notify_options[notify_options_i++] = flag_isset(tmp->service_notification_options, OPT_RECOVERY);
-        notify_options[notify_options_i++] = flag_isset(tmp->service_notification_options, OPT_FLAPPING);
-        notify_options[notify_options_i++] = flag_isset(tmp->service_notification_options, OPT_DOWNTIME);
-        notify_options[notify_options_i++] = flag_isset(tmp->host_notification_options, OPT_RECOVERY);
-        notify_options[notify_options_i++] = flag_isset(tmp->host_notification_options, OPT_DOWN);
-        notify_options[notify_options_i++] = flag_isset(tmp->host_notification_options, OPT_UNREACHABLE);
-        notify_options[notify_options_i++] = flag_isset(tmp->host_notification_options, OPT_FLAPPING);
-        notify_options[notify_options_i++] = flag_isset(tmp->host_notification_options, OPT_DOWNTIME);
+        notify_options[0] = flag_isset(tmp->service_notification_options, OPT_UNKNOWN);
+        notify_options[1] = flag_isset(tmp->service_notification_options, OPT_WARNING);
+        notify_options[2] = flag_isset(tmp->service_notification_options, OPT_CRITICAL);
+        notify_options[3] = flag_isset(tmp->service_notification_options, OPT_RECOVERY);
+        notify_options[4] = flag_isset(tmp->service_notification_options, OPT_FLAPPING);
+        notify_options[5] = flag_isset(tmp->service_notification_options, OPT_DOWNTIME);
+        notify_options[6] = flag_isset(tmp->host_notification_options, OPT_RECOVERY);
+        notify_options[7] = flag_isset(tmp->host_notification_options, OPT_DOWN);
+        notify_options[8] = flag_isset(tmp->host_notification_options, OPT_UNREACHABLE);
+        notify_options[9] = flag_isset(tmp->host_notification_options, OPT_FLAPPING);
+        notify_options[10] = flag_isset(tmp->host_notification_options, OPT_DOWNTIME);
 
         MYSQL_BIND_INT(config_type);
         MYSQL_BIND_INT(object_id);
@@ -376,19 +356,21 @@ int ndo_write_contacts(int config_type)
 
     while (tmp != NULL) {
 
-        object_id = contacts_id[i];
+        object_id = contact_ids[i];
         i++;
 
-        for (j = 0; j < MAX_CONTACT_ADDRESS; j++) {
+        for (j = 0; j < MAX_CONTACT_ADDRESSES; j++) {
+
+            address_number = j + 1;
 
             MYSQL_RESET_BIND();
 
             MYSQL_BIND_INT(object_id);
-            MYSQL_BIND_INT(j + 1);
+            MYSQL_BIND_INT(address_number);
             MYSQL_BIND_STR(tmp->address[j]);
 
             MYSQL_BIND_INT(object_id);
-            MYSQL_BIND_INT(j + 1);
+            MYSQL_BIND_INT(address_number);
             MYSQL_BIND_STR(tmp->address[j]);
 
             MYSQL_BIND();
@@ -410,12 +392,12 @@ int ndo_write_contacts(int config_type)
 
     while (tmp != NULL) {
 
-        object_id = contacts_id[i];
+        object_id = contact_ids[i];
         i++;
 
         /* host commands */
 
-        cmd = tmp->host_notification_command;
+        cmd = tmp->host_notification_commands;
         notification_type = NDO_DATA_HOSTNOTIFICATIONCOMMAND;
 
         while (cmd != NULL) {
@@ -438,7 +420,7 @@ int ndo_write_contacts(int config_type)
 
         /* service commands */
 
-        cmd = tmp->host_notification_command;
+        cmd = tmp->host_notification_commands;
         notification_type = NDO_DATA_SERVICENOTIFICATIONCOMMAND;
 
         while (cmd != NULL) {
@@ -483,7 +465,7 @@ int ndo_write_contacts(int config_type)
 
 int ndo_write_contactgroups(int config_type)
 {
-    contactgroup * tmp = contactgroups_list;
+    contactgroup * tmp = contactgroup_list;
     int object_id = 0;
     int contact_object_id = 0;
 
@@ -491,12 +473,7 @@ int ndo_write_contactgroups(int config_type)
     int * contactgroup_ids = NULL;
     int i = 0;
 
-    contactgroupmember * member = NULL;
-
-    MYSQL_RESET_SQL();
-
-    MYSQL_SET_SQL("INSERT INTO nagios_contactgroups SET instance_id = 1, contactgroup_object_id = ?, config_type = ?, alias = ? ON DUPLICATE KEY UPDATE instance_id = 1, contactgroup_object_id = ?, config_type = ?, alias = ?");
-    MYSQL_PREPARE();
+    contactgroupsmember * member = NULL;
 
     /* get a count */
     while (tmp != NULL) {
@@ -506,11 +483,16 @@ int ndo_write_contactgroups(int config_type)
 
     contactgroup_ids = calloc(count, sizeof(int));
 
-    tmp = contactgroups_list;
+    tmp = contactgroup_list;
+
+    MYSQL_RESET_SQL();
+
+    MYSQL_SET_SQL("INSERT INTO nagios_contactgroups SET instance_id = 1, contactgroup_object_id = ?, config_type = ?, alias = ? ON DUPLICATE KEY UPDATE instance_id = 1, contactgroup_object_id = ?, config_type = ?, alias = ?");
+    MYSQL_PREPARE();
 
     while (tmp != NULL) {
 
-        object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_CONTACTGROUP, tmp->name);
+        object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_CONTACTGROUP, tmp->group_name);
 
         contactgroup_ids[i] = object_id;
         i++;
@@ -533,7 +515,7 @@ int ndo_write_contactgroups(int config_type)
 
     /* members */
 
-    tmp = contactgroups_list;
+    tmp = contactgroup_list;
     i = 0;
 
     MYSQL_RESET_SQL();
@@ -550,15 +532,15 @@ int ndo_write_contactgroups(int config_type)
 
         while (member != NULL) {
 
-            contact_object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_CONTACT, member->contact_name);
+            contact_object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_CONTACT, member->group_name);
 
             MYSQL_RESET_BIND();
 
-            MYSQL_BIND_INT(ndomod, object_id);
-            MYSQL_BIND_INT(ndomod, contact_object_id);
+            MYSQL_BIND_INT(object_id);
+            MYSQL_BIND_INT(contact_object_id);
 
-            MYSQL_BIND_INT(ndomod, object_id);
-            MYSQL_BIND_INT(ndomod, contact_object_id);
+            MYSQL_BIND_INT(object_id);
+            MYSQL_BIND_INT(contact_object_id);
 
             MYSQL_BIND();
             MYSQL_EXECUTE();
@@ -575,7 +557,195 @@ int ndo_write_contactgroups(int config_type)
 
 int ndo_write_hosts(int config_type)
 {
+    host * tmp = host_list;
+    int object_id = 0;
 
+    size_t count = 0;
+    int * host_ids = NULL;
+    int i = 0;
+
+    int host_options[11] = { 0 };
+
+    int check_command_id = 0;
+    char * check_command = NULL;
+    char * check_command_args = NULL;
+    int event_handler_id = 0;
+    char * event_handler = NULL;
+    char * event_handler_args = NULL;
+    int check_timeperiod_id = 0;
+    int notification_timeperiod_id = 0;
+
+    /* get a count */
+    while (tmp != NULL) {
+        count++;
+        tmp = tmp->next;
+    }
+
+    MYSQL_RESET_SQL();
+
+    /*
+    instance_id='%lu', config_type='%d', host_object_id='%lu', alias='%s', display_name='%s', address='%s', check_command_object_id='%lu', check_command_args='%s', eventhandler_command_object_id='%lu', eventhandler_command_args='%s', check_timeperiod_object_id='%lu', notification_timeperiod_object_id='%lu', failure_prediction_options='%s', check_interval='%lf', retry_interval='%lf', max_check_attempts='%d', first_notification_delay='%lf', notification_interval='%lf', notify_on_down='%d', notify_on_unreachable='%d', notify_on_recovery='%d', notify_on_flapping='%d', notify_on_downtime='%d', stalk_on_up='%d', stalk_on_down='%d', stalk_on_unreachable='%d', flap_detection_enabled='%d', flap_detection_on_up='%d', flap_detection_on_down='%d', flap_detection_on_unreachable='%d', low_flap_threshold='%lf', high_flap_threshold='%lf', process_performance_data='%d', freshness_checks_enabled='%d', freshness_threshold='%d', passive_checks_enabled='%d', event_handler_enabled='%d', active_checks_enabled='%d', retain_status_information='%d', retain_nonstatus_information='%d', notifications_enabled='%d', obsess_over_host='%d', failure_prediction_enabled='%d', notes='%s', notes_url='%s', action_url='%s', icon_image='%s', icon_image_alt='%s', vrml_image='%s', statusmap_image='%s', have_2d_coords='%d', x_2d='%d', y_2d='%d', have_3d_coords='%d', x_3d='%lf', y_3d='%lf', z_3d='%lf', importance='%d'
+    */
+
+
+    MYSQL_SET_SQL("INSERT INTO nagios_hosts SET instance_id = 1, config_type = ?, host_object_id = ?, alias = ?, display_name = ?, address = ?, check_command_object_id = ?, check_command_args = ?, eventhandler_command_object_id = ?, eventhandler_command_args = ?, check_timeperiod_object_id = ?, notification_timeperiod_object_id = ?, failure_prediction_options = '', check_interval = ?, retry_interval = ?, max_check_attempts = ?, first_notification_delay = ?, notification_interval = ?, notify_on_down = ?, notify_on_unreachable = ?, notify_on_recovery = ?, notify_on_flapping = ?, notify_on_downtime = ?, stalk_on_up = ?, stalk_on_down = ?, stalk_on_unreachable = ?, flap_detection_enabled = ?, flap_detection_on_up = ?, flap_detection_on_down = ?, flap_detection_on_unreachable = ?, low_flap_threshold = ?, high_flap_threshold = ?, process_performance_data = ?, freshness_checks_enabled = ?, freshness_threshold = ?, passive_checks_enabled = ?, event_handler_enabled = ?, active_checks_enabled = ?, retain_status_information = ?, retain_nonstatus_information = ?, notifications_enabled = ?, obsess_over_host = ?, failure_prediction_enabled = 0, notes = ?, notes_url = ?, action_url = ?, icon_image = ?, icon_image_alt = ?, vrml_image = ?, statusmap_image = ?, have_2d_coords = ?, x_2d = ?, y_2d = ?, have_3d_coords = ?, x_3d = ?, y_3d = ?, z_3d = ?, importance = ? ON DUPLICATE KEY UPDATE instance_id = 1, config_type = ?, host_object_id = ?, alias = ?, display_name = ?, address = ?, check_command_object_id = ?, check_command_args = ?, eventhandler_command_object_id = ?, eventhandler_command_args = ?, check_timeperiod_object_id = ?, notification_timeperiod_object_id = ?, failure_prediction_options = '', check_interval = ?, retry_interval = ?, max_check_attempts = ?, first_notification_delay = ?, notification_interval = ?, notify_on_down = ?, notify_on_unreachable = ?, notify_on_recovery = ?, notify_on_flapping = ?, notify_on_downtime = ?, stalk_on_up = ?, stalk_on_down = ?, stalk_on_unreachable = ?, flap_detection_enabled = ?, flap_detection_on_up = ?, flap_detection_on_down = ?, flap_detection_on_unreachable = ?, low_flap_threshold = ?, high_flap_threshold = ?, process_performance_data = ?, freshness_checks_enabled = ?, freshness_threshold = ?, passive_checks_enabled = ?, event_handler_enabled = ?, active_checks_enabled = ?, retain_status_information = ?, retain_nonstatus_information = ?, notifications_enabled = ?, obsess_over_host = ?, failure_prediction_enabled = 0, notes = ?, notes_url = ?, action_url = ?, icon_image = ?, icon_image_alt = ?, vrml_image = ?, statusmap_image = ?, have_2d_coords = ?, x_2d = ?, y_2d = ?, have_3d_coords = ?, x_3d = ?, y_3d = ?, z_3d = ?, importance = ?");
+    MYSQL_PREPARE();
+
+    host_ids = calloc(count, sizeof(int));
+
+    tmp = host_list;
+
+    while (tmp != NULL) {
+
+        object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_HOST, tmp->name);
+
+        host_ids[i] = object_id;
+        i++;
+
+        MYSQL_RESET_BIND();
+
+        check_command = strtok(tmp->check_command, "!");
+        check_command_args = strtok(NULL, "\0");
+        check_command_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_COMMAND, check_command);
+
+        event_handler = strtok(tmp->event_handler, "!");
+        event_handler_args = strtok(NULL, "\0");
+        event_handler_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_COMMAND, check_command);
+
+        check_timeperiod_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_TIMEPERIOD, tmp->check_period);
+        notification_timeperiod_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_TIMEPERIOD, tmp->notification_period);
+
+        host_options[0] = flag_isset(tmp->notification_options, OPT_DOWN);
+        host_options[1] = flag_isset(tmp->notification_options, OPT_UNREACHABLE);
+        host_options[2] = flag_isset(tmp->notification_options, OPT_RECOVERY);
+        host_options[3] = flag_isset(tmp->notification_options, OPT_FLAPPING);
+        host_options[4] = flag_isset(tmp->notification_options, OPT_DOWNTIME);
+        host_options[5] = flag_isset(tmp->flap_detection_options, OPT_UP);
+        host_options[6] = flag_isset(tmp->flap_detection_options, OPT_DOWN);
+        host_options[7] = flag_isset(tmp->flap_detection_options, OPT_UNREACHABLE);
+        host_options[8] = flag_isset(tmp->stalking_options, OPT_UP);
+        host_options[9] = flag_isset(tmp->stalking_options, OPT_DOWN);
+        host_options[10] = flag_isset(tmp->stalking_options, OPT_UNREACHABLE);
+
+        MYSQL_BIND_INT(config_type);
+        MYSQL_BIND_INT(object_id);
+        MYSQL_BIND_STR(tmp->alias);
+        MYSQL_BIND_STR(tmp->display_name);
+        MYSQL_BIND_STR(tmp->address);
+        MYSQL_BIND_INT(check_command_id);
+        MYSQL_BIND_STR(check_command_args);
+        MYSQL_BIND_INT(event_handler_id);
+        MYSQL_BIND_STR(event_handler_args);
+        MYSQL_BIND_INT(check_timeperiod_id);
+        MYSQL_BIND_INT(notification_timeperiod_id);
+        MYSQL_BIND_FLOAT(tmp->check_interval);
+        MYSQL_BIND_FLOAT(tmp->retry_interval);
+        MYSQL_BIND_INT(tmp->max_attempts);
+        MYSQL_BIND_FLOAT(tmp->first_notification_delay);
+        MYSQL_BIND_FLOAT(tmp->notification_interval);
+        MYSQL_BIND_INT(host_options[0]);
+        MYSQL_BIND_INT(host_options[1]);
+        MYSQL_BIND_INT(host_options[2]);
+        MYSQL_BIND_INT(host_options[3]);
+        MYSQL_BIND_INT(host_options[4]);
+        MYSQL_BIND_INT(tmp->flap_detection_enabled);
+        MYSQL_BIND_INT(host_options[5]);
+        MYSQL_BIND_INT(host_options[6]);
+        MYSQL_BIND_INT(host_options[7]);
+        MYSQL_BIND_INT(tmp->low_flap_threshold);
+        MYSQL_BIND_INT(tmp->high_flap_threshold);
+        MYSQL_BIND_INT(host_options[8]);
+        MYSQL_BIND_INT(host_options[9]);
+        MYSQL_BIND_INT(host_options[10]);
+        MYSQL_BIND_INT(tmp->stalking_options);
+        MYSQL_BIND_INT(tmp->check_freshness);
+        MYSQL_BIND_INT(tmp->freshness_threshold);
+        MYSQL_BIND_INT(tmp->process_performance_data);
+        MYSQL_BIND_INT(tmp->checks_enabled);
+        MYSQL_BIND_INT(tmp->accept_passive_checks);
+        MYSQL_BIND_INT(tmp->event_handler_enabled);
+        MYSQL_BIND_INT(tmp->retain_status_information);
+        MYSQL_BIND_INT(tmp->retain_nonstatus_information);
+        MYSQL_BIND_INT(tmp->notifications_enabled);
+        MYSQL_BIND_INT(tmp->obsess);
+        MYSQL_BIND_STR(tmp->notes);
+        MYSQL_BIND_STR(tmp->notes_url);
+        MYSQL_BIND_STR(tmp->action_url);
+        MYSQL_BIND_STR(tmp->icon_image);
+        MYSQL_BIND_STR(tmp->icon_image_alt);
+        MYSQL_BIND_STR(tmp->vrml_image);
+        MYSQL_BIND_STR(tmp->statusmap_image);
+        MYSQL_BIND_INT(tmp->have_2d_coords);
+        MYSQL_BIND_INT(tmp->x_2d);
+        MYSQL_BIND_INT(tmp->y_2d);
+        MYSQL_BIND_INT(tmp->have_3d_coords);
+        MYSQL_BIND_FLOAT(tmp->x_3d);
+        MYSQL_BIND_FLOAT(tmp->y_3d);
+        MYSQL_BIND_FLOAT(tmp->z_3d);
+        MYSQL_BIND_INT(tmp->hourly_value);
+
+        MYSQL_BIND_INT(config_type);
+        MYSQL_BIND_INT(object_id);
+        MYSQL_BIND_STR(tmp->alias);
+        MYSQL_BIND_STR(tmp->display_name);
+        MYSQL_BIND_STR(tmp->address);
+        MYSQL_BIND_INT(check_command_id);
+        MYSQL_BIND_STR(check_command_args);
+        MYSQL_BIND_INT(event_handler_id);
+        MYSQL_BIND_STR(event_handler_args);
+        MYSQL_BIND_INT(check_timeperiod_id);
+        MYSQL_BIND_INT(notification_timeperiod_id);
+        MYSQL_BIND_FLOAT(tmp->check_interval);
+        MYSQL_BIND_FLOAT(tmp->retry_interval);
+        MYSQL_BIND_INT(tmp->max_attempts);
+        MYSQL_BIND_FLOAT(tmp->first_notification_delay);
+        MYSQL_BIND_FLOAT(tmp->notification_interval);
+        MYSQL_BIND_INT(host_options[0]);
+        MYSQL_BIND_INT(host_options[1]);
+        MYSQL_BIND_INT(host_options[2]);
+        MYSQL_BIND_INT(host_options[3]);
+        MYSQL_BIND_INT(host_options[4]);
+        MYSQL_BIND_INT(tmp->flap_detection_enabled);
+        MYSQL_BIND_INT(host_options[5]);
+        MYSQL_BIND_INT(host_options[6]);
+        MYSQL_BIND_INT(host_options[7]);
+        MYSQL_BIND_INT(tmp->low_flap_threshold);
+        MYSQL_BIND_INT(tmp->high_flap_threshold);
+        MYSQL_BIND_INT(host_options[8]);
+        MYSQL_BIND_INT(host_options[9]);
+        MYSQL_BIND_INT(host_options[10]);
+        MYSQL_BIND_INT(tmp->stalking_options);
+        MYSQL_BIND_INT(tmp->check_freshness);
+        MYSQL_BIND_INT(tmp->freshness_threshold);
+        MYSQL_BIND_INT(tmp->process_performance_data);
+        MYSQL_BIND_INT(tmp->checks_enabled);
+        MYSQL_BIND_INT(tmp->accept_passive_checks);
+        MYSQL_BIND_INT(tmp->event_handler_enabled);
+        MYSQL_BIND_INT(tmp->retain_status_information);
+        MYSQL_BIND_INT(tmp->retain_nonstatus_information);
+        MYSQL_BIND_INT(tmp->notifications_enabled);
+        MYSQL_BIND_INT(tmp->obsess);
+        MYSQL_BIND_STR(tmp->notes);
+        MYSQL_BIND_STR(tmp->notes_url);
+        MYSQL_BIND_STR(tmp->action_url);
+        MYSQL_BIND_STR(tmp->icon_image);
+        MYSQL_BIND_STR(tmp->icon_image_alt);
+        MYSQL_BIND_STR(tmp->vrml_image);
+        MYSQL_BIND_STR(tmp->statusmap_image);
+        MYSQL_BIND_INT(tmp->have_2d_coords);
+        MYSQL_BIND_INT(tmp->x_2d);
+        MYSQL_BIND_INT(tmp->y_2d);
+        MYSQL_BIND_INT(tmp->have_3d_coords);
+        MYSQL_BIND_FLOAT(tmp->x_3d);
+        MYSQL_BIND_FLOAT(tmp->y_3d);
+        MYSQL_BIND_FLOAT(tmp->z_3d);
+        MYSQL_BIND_INT(tmp->hourly_value);
+
+        MYSQL_BIND();
+        MYSQL_EXECUTE();
+
+        tmp = tmp->next;
+    }
 }
 
 
@@ -596,3 +766,32 @@ int ndo_write_servicegroups(int config_type)
 
 }
 
+int ndo_save_customvariables(int object_id, int config_type, customvariablesmember * vars)
+{
+    customvariablesmember * tmp = vars;
+
+    MYSQL_RESET_SQL();
+
+    MYSQL_SET_SQL("INSERT INTO nagios_customvariables SET instance_id = 1, object_id = ?, config_type = ?, has_been_modified = ?, varname = ?, varvalue = ? ON DUPLICATE KEY UPDATE instance_id = 1, object_id = ?, config_type = ?, has_been_modified = ?, varname = ?, varvalue = ?");
+    MYSQL_PREPARE();
+
+    while (tmp != NULL) {
+
+        MYSQL_RESET_BIND();
+
+        MYSQL_BIND_INT(object_id);
+        MYSQL_BIND_INT(config_type);
+        MYSQL_BIND_INT(tmp->has_been_modified);
+        MYSQL_BIND_STR(tmp->variable_name);
+        MYSQL_BIND_STR(tmp->variable_value);
+
+        MYSQL_BIND_INT(object_id);
+        MYSQL_BIND_INT(config_type);
+        MYSQL_BIND_INT(tmp->has_been_modified);
+        MYSQL_BIND_STR(tmp->variable_name);
+        MYSQL_BIND_STR(tmp->variable_value);
+
+        MYSQL_BIND();
+        MYSQL_EXECUTE();
+    }
+}

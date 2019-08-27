@@ -26,18 +26,18 @@ none:
 	@echo ""
 
 
+ndo.so:
+	cd src/ && $(MAKE) $@
+
+
 ndo.o:
 	cd src/ && $(MAKE) $@
 
 
-ndo.obj:
-	cd src/ && $(MAKE) $@
+all: ndo.so
 
 
-all: ndo.o
-
-
-test: ndo.obj
+test: ndo.o
 	cd test/ && $(MAKE) $@
 
 

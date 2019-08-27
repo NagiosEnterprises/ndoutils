@@ -132,6 +132,10 @@ long ndo_last_notification_id = 0L;
 long ndo_last_contact_notification_id = 0L;
 
 
+#include "ndo-startup.c"
+#include "ndo-handlers.c"
+
+
 void ndo_log(char * buffer)
 {
     if (write_to_log(buffer, NSLOG_INFO_MESSAGE, NULL) != NDO_OK) {
@@ -745,7 +749,7 @@ int ndo_register_callbacks()
         result += neb_register_callback(NEBCALLBACK_STATE_CHANGE_DATA, ndo_handle, 0, ndo_handle_state_change);
     }
 
-    if (ndo_config_dump_options & NDO_CONFIG_DUMP_RETENTION) {
+    if (ndo_config_dump_options & NDO_CONFIG_DUMP_RETAINED) {
         result += neb_register_callback(NEBCALLBACK_RETENTION_DATA, ndo_handle, 0, ndo_handle_retention);
     }
 
