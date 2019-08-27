@@ -483,7 +483,93 @@ int ndo_write_contacts(int config_type)
 
 int ndo_write_contactgroups(int config_type)
 {
+    contactgroup * tmp = contactgroups_list;
+    int object_id = 0;
+    int contact_object_id = 0;
 
+    size_t count = 0;
+    int * contactgroup_ids = NULL;
+    int i = 0;
+
+    contactgroupmember * member = NULL;
+
+    MYSQL_RESET_SQL();
+
+    MYSQL_SET_SQL("INSERT INTO nagios_contactgroups SET instance_id = 1, contactgroup_object_id = ?, config_type = ?, alias = ? ON DUPLICATE KEY UPDATE instance_id = 1, contactgroup_object_id = ?, config_type = ?, alias = ?");
+    MYSQL_PREPARE();
+
+    /* get a count */
+    while (tmp != NULL) {
+        count++;
+        tmp = tmp->next;
+    }
+
+    contactgroup_ids = calloc(count, sizeof(int));
+
+    tmp = contactgroups_list;
+
+    while (tmp != NULL) {
+
+        object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_CONTACTGROUP, tmp->name);
+
+        contactgroup_ids[i] = object_id;
+        i++;
+
+        MYSQL_RESET_BIND();
+
+        MYSQL_BIND_INT(object_id);
+        MYSQL_BIND_INT(config_type);
+        MYSQL_BIND_STR(tmp->alias);
+
+        MYSQL_BIND_INT(object_id);
+        MYSQL_BIND_INT(config_type);
+        MYSQL_BIND_STR(tmp->alias);
+
+        MYSQL_BIND();
+        MYSQL_EXECUTE();
+
+        tmp = tmp->next;
+    }
+
+    /* members */
+
+    tmp = contactgroups_list;
+    i = 0;
+
+    MYSQL_RESET_SQL();
+
+    MYSQL_SET_SQL("INSERT INTO nagios_contactgroup_members SET instance_id = 1, contactgroup_id = ?, contact_object_id = ? ON DUPLICATE KEY UPDATE instance_id = 1, contactgroup_id = ?, contact_object_id = ?");
+    MYSQL_PREPARE();
+
+    while (tmp != NULL) {
+
+        object_id = contactgroup_ids[i];
+        i++;
+
+        member = tmp->members;
+
+        while (member != NULL) {
+
+            contact_object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_CONTACT, member->contact_name);
+
+            MYSQL_RESET_BIND();
+
+            MYSQL_BIND_INT(ndomod, object_id);
+            MYSQL_BIND_INT(ndomod, contact_object_id);
+
+            MYSQL_BIND_INT(ndomod, object_id);
+            MYSQL_BIND_INT(ndomod, contact_object_id);
+
+            MYSQL_BIND();
+            MYSQL_EXECUTE();
+
+            member = member->next;
+        }
+
+        tmp = tmp->next;
+    }
+
+    free(contactgroup_ids);
 }
 
 
