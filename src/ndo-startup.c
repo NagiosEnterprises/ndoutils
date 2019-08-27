@@ -1,4 +1,23 @@
 
+#include "../include/nagios/logging.h"
+#include "../include/nagios/nebstructs.h"
+#include "../include/nagios/nebmodules.h"
+#include "../include/nagios/nebcallbacks.h"
+#include "../include/nagios/broker.h"
+#include "../include/nagios/common.h"
+#include "../include/nagios/nagios.h"
+#include "../include/nagios/downtime.h"
+#include "../include/nagios/comments.h"
+#include "../include/nagios/macros.h"
+
+#include "../include/ndo.h"
+#include "../include/mysql-helpers.h"
+
+#include <stdio.h>
+#include <string.h>
+#include <mysql.h>
+#include <errmsg.h>
+
 int ndo_set_all_objects_inactive()
 {
     char * deactivate_sql = "UPDATE nagios_objects SET is_active = 0";

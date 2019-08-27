@@ -9,10 +9,20 @@ DBLIBS=@DBLIBS@
 
 DBFLAGS=@DBFLAGS@
 
+NDOOBJ=ndo.o ndo-handlers.o ndo-startup.o
+
+
+ndo.so:
+	$(CC) $(SHAREDFLAGS) $(CFLAGS) $(DBFLAGS) $(NDOOBJ) -o $@ $(DBLIBS)
+
 
 ndo.o:
-	$(CC) $(SHAREDFLAGS) $(CFLAGS) $(DBFLAGS) ndo.c -o $@ $(DBLIBS)
-
-
-ndo.obj:
 	$(CC) $(CFLAGS) $(DBFLAGS) ndo.c -c -o $@
+
+
+ndo-handlers.o:
+	$(CC) $(CFLAGS) $(DBFLAGS) ndo-handlers.c -c -o $@
+
+
+ndo-startup.o:
+	$(CC) $(CFLAGS) $(DBFLAGS) ndo-startup.c -c -o $@

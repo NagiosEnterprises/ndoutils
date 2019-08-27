@@ -11,6 +11,8 @@ DBFLAGS=@DBFLAGS@
 
 TESTLIBS=-lcheck -lsubunit -lm -lrt -lpthread
 
+NDOOBJ=../src/ndo.o ../src/ndo-handlers.o ../src/ndo-startup.o
+
 
 test:
-	$(CC) $(CFLAGS) $(DBFLAGS) test.c ../src/ndo.obj -o $@ $(DBLIBS) $(TESTLIBS)
+	$(CC) $(CFLAGS) $(DBFLAGS) test.c $(NDOOBJ) -o $@ $(DBLIBS) $(TESTLIBS)

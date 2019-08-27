@@ -1,4 +1,23 @@
 
+#include "../include/nagios/logging.h"
+#include "../include/nagios/nebstructs.h"
+#include "../include/nagios/nebmodules.h"
+#include "../include/nagios/nebcallbacks.h"
+#include "../include/nagios/broker.h"
+#include "../include/nagios/common.h"
+#include "../include/nagios/nagios.h"
+#include "../include/nagios/downtime.h"
+#include "../include/nagios/comments.h"
+#include "../include/nagios/macros.h"
+
+#include "../include/ndo.h"
+#include "../include/mysql-helpers.h"
+
+#include <stdio.h>
+#include <string.h>
+#include <mysql.h>
+#include <errmsg.h>
+
 // todo: all of the mysql bindings need to be gone through and compared against the schema to ensure doubles aren't being cast as ints (won't error, but the data won't be right either)
 
 int ndo_handle_process(int type, void * d)

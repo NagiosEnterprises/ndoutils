@@ -22,10 +22,6 @@
 
 NEB_API_VERSION(CURRENT_NEB_API_VERSION)
 
-#ifndef ARRAY_SIZE
-#   define ARRAY_SIZE(x) (sizeof(x) / sizeof(x[0]))
-#endif
-
 /**** NAGIOS VARIABLES ****/
 extern command              * command_list;
 extern timeperiod           * timeperiod_list;
@@ -134,10 +130,6 @@ char * ndo_config_file = NULL;
 
 long ndo_last_notification_id = 0L;
 long ndo_last_contact_notification_id = 0L;
-
-
-#include "ndo-handlers.c"
-#include "ndo-startup.c"
 
 
 void ndo_log(char * buffer)
