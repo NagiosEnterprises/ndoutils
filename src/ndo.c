@@ -966,3 +966,8 @@ int ndo_insert_object_id_name2(int object_type, char * name1, char * name2)
 
     return mysql_insert_id(mysql_connection);
 }
+
+int ndo_write_config(int type)
+{
+
+}

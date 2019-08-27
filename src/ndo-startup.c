@@ -473,7 +473,7 @@ int ndo_write_contactgroups(int config_type)
     int * contactgroup_ids = NULL;
     int i = 0;
 
-    contactgroupsmember * member = NULL;
+    contactsmember * member = NULL;
 
     /* get a count */
     while (tmp != NULL) {
@@ -532,7 +532,7 @@ int ndo_write_contactgroups(int config_type)
 
         while (member != NULL) {
 
-            contact_object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_CONTACT, member->group_name);
+            contact_object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_CONTACT, member->contact_name);
 
             MYSQL_RESET_BIND();
 
