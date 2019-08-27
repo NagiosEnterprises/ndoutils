@@ -12,7 +12,3 @@ DBFLAGS=@DBFLAGS@
 
 ndo.so:
 	$(CC) $(SHAREDFLAGS) $(CFLAGS) $(DBFLAGS) ndo.c -o $@ $(DBLIBS)
-
-
-ndo.o:
-	$(CC) $(CFLAGS) $(DBFLAGS) ndo.c -c -o $@

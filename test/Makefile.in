@@ -13,4 +13,4 @@ TESTLIBS=-lcheck -lsubunit -lm -lrt -lpthread
 
 
 test:
-	$(CC) $(CFLAGS) $(DBFLAGS) test.c ../src/ndo.o -o $@ $(DBLIBS) $(TESTLIBS)
+	$(CC) $(CFLAGS) $(DBFLAGS) test.c ../src/ndo.c -o $@ $(DBLIBS) $(TESTLIBS)

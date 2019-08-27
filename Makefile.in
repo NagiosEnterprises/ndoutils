@@ -37,7 +37,7 @@ ndo.o:
 all: ndo.so
 
 
-test: ndo.o
+test:
 	cd test/ && $(MAKE) $@
 
 
@@ -84,8 +84,7 @@ inittest:
 
 
 clean:
-	rm -f src/ndo.o
-	rm -f src/ndo.obj
+	rm -f src/ndo.so
 	rm -f test/test
 	rm -f config.log config.status
 	rm -f src/*.gcda src/*.gcno
