@@ -430,12 +430,10 @@ int ndo_write_contactgroups(int config_type)
     int i = 0;
 
     size_t count = 0;
-    int * object_ids = NULL;
     int * contactgroup_ids = NULL;
 
     COUNT_OBJECTS(tmp, contactgroup_list, count);
 
-    object_ids = calloc(count, sizeof(int));
     contactgroup_ids = calloc(count, sizeof(int));
 
     MYSQL_RESET_SQL();
@@ -446,7 +444,6 @@ int ndo_write_contactgroups(int config_type)
     while (tmp != NULL) {
 
         object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_CONTACTGROUP, tmp->group_name);
-        object_ids[i] = object_id;
 
         MYSQL_RESET_BIND();
 
@@ -469,7 +466,6 @@ int ndo_write_contactgroups(int config_type)
     ndo_write_contactgroup_members(contactgroup_ids);
 
     free(contactgroup_ids);
-    free(object_ids);
 }
 
 
@@ -536,7 +532,7 @@ int ndo_write_hosts(int config_type)
     COUNT_OBJECTS(tmp, host_list, count);
 
     object_ids = calloc(count, sizeof(int));
-    host_ids = calloc(count,sizeof(int));
+    host_ids = calloc(count, sizeof(int));
 
     MYSQL_RESET_SQL();
 
@@ -547,10 +543,6 @@ int ndo_write_hosts(int config_type)
 
     MYSQL_SET_SQL("INSERT INTO nagios_hosts SET instance_id = 1, config_type = ?, host_object_id = ?, alias = ?, display_name = ?, address = ?, check_command_object_id = ?, check_command_args = ?, eventhandler_command_object_id = ?, eventhandler_command_args = ?, check_timeperiod_object_id = ?, notification_timeperiod_object_id = ?, failure_prediction_options = '', check_interval = ?, retry_interval = ?, max_check_attempts = ?, first_notification_delay = ?, notification_interval = ?, notify_on_down = ?, notify_on_unreachable = ?, notify_on_recovery = ?, notify_on_flapping = ?, notify_on_downtime = ?, stalk_on_up = ?, stalk_on_down = ?, stalk_on_unreachable = ?, flap_detection_enabled = ?, flap_detection_on_up = ?, flap_detection_on_down = ?, flap_detection_on_unreachable = ?, low_flap_threshold = ?, high_flap_threshold = ?, process_performance_data = ?, freshness_checks_enabled = ?, freshness_threshold = ?, passive_checks_enabled = ?, event_handler_enabled = ?, active_checks_enabled = ?, retain_status_information = ?, retain_nonstatus_information = ?, notifications_enabled = ?, obsess_over_host = ?, failure_prediction_enabled = 0, notes = ?, notes_url = ?, action_url = ?, icon_image = ?, icon_image_alt = ?, vrml_image = ?, statusmap_image = ?, have_2d_coords = ?, x_2d = ?, y_2d = ?, have_3d_coords = ?, x_3d = ?, y_3d = ?, z_3d = ?, importance = ? ON DUPLICATE KEY UPDATE instance_id = 1, config_type = ?, host_object_id = ?, alias = ?, display_name = ?, address = ?, check_command_object_id = ?, check_command_args = ?, eventhandler_command_object_id = ?, eventhandler_command_args = ?, check_timeperiod_object_id = ?, notification_timeperiod_object_id = ?, failure_prediction_options = '', check_interval = ?, retry_interval = ?, max_check_attempts = ?, first_notification_delay = ?, notification_interval = ?, notify_on_down = ?, notify_on_unreachable = ?, notify_on_recovery = ?, notify_on_flapping = ?, notify_on_downtime = ?, stalk_on_up = ?, stalk_on_down = ?, stalk_on_unreachable = ?, flap_detection_enabled = ?, flap_detection_on_up = ?, flap_detection_on_down = ?, flap_detection_on_unreachable = ?, low_flap_threshold = ?, high_flap_threshold = ?, process_performance_data = ?, freshness_checks_enabled = ?, freshness_threshold = ?, passive_checks_enabled = ?, event_handler_enabled = ?, active_checks_enabled = ?, retain_status_information = ?, retain_nonstatus_information = ?, notifications_enabled = ?, obsess_over_host = ?, failure_prediction_enabled = 0, notes = ?, notes_url = ?, action_url = ?, icon_image = ?, icon_image_alt = ?, vrml_image = ?, statusmap_image = ?, have_2d_coords = ?, x_2d = ?, y_2d = ?, have_3d_coords = ?, x_3d = ?, y_3d = ?, z_3d = ?, importance = ?");
     MYSQL_PREPARE();
-
-    host_ids = calloc(count, sizeof(int));
-
-    tmp = host_list;
 
     while (tmp != NULL) {
 
@@ -714,7 +706,7 @@ int ndo_write_hosts(int config_type)
 }
 
 
-int ndo_write_host_parenthosts(host_ids)
+int ndo_write_host_parenthosts(int * host_ids)
 {
     host * tmp = host_list;
     hostsmember * parent = NULL;
@@ -754,7 +746,7 @@ int ndo_write_host_parenthosts(host_ids)
 }
 
 
-int ndo_write_host_contactgroups(host_ids)
+int ndo_write_host_contactgroups(int * host_ids)
 {
     host * tmp = host_list;
     contactgroupsmember * group = NULL;
@@ -794,7 +786,7 @@ int ndo_write_host_contactgroups(host_ids)
 }
 
 
-int ndo_write_host_contacts(host_ids)
+int ndo_write_host_contacts(int * host_ids)
 {
     host * tmp = host_list;
     contactsmember * cnt = NULL;
@@ -836,7 +828,87 @@ int ndo_write_host_contacts(host_ids)
 
 int ndo_write_hostgroups(int config_type)
 {
+    hostgroup * tmp = hostgroup_list;
+    int object_id = 0;
+    int i = 0;
 
+    size_t count = 0;
+    int * hostgroup_ids = NULL;
+
+    COUNT_OBJECTS(tmp, hostgroup_list, count);
+
+    hostgroup_ids = calloc(count, sizeof(int));
+
+    MYSQL_RESET_SQL();
+
+    MYSQL_SET_SQL("INSERT INTO nagios_hostgroups SET instance_id = 1, hostgroup_object_id = ?, config_type = ?, alias = ? ON DUPLICATE KEY UPDATE instance_id = 1, hostgroup_object_id = ?,config_type = ?, alias = ?");
+    MYSQL_PREPARE();
+
+    while (tmp != NULL) {
+
+        object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_HOSTGROUP, tmp->group_name);
+
+        MYSQL_RESET_BIND();
+
+        MYSQL_BIND_INT(object_id);
+        MYSQL_BIND_INT(config_type);
+        MYSQL_BIND_STR(tmp->alias);
+
+        MYSQL_BIND_INT(object_id);
+        MYSQL_BIND_INT(config_type);
+        MYSQL_BIND_STR(tmp->alias);
+
+        MYSQL_BIND();
+        MYSQL_EXECUTE();
+
+        hostgroup_ids[i] = mysql_insert_id(mysql_connection);
+        i++;
+        tmp = tmp->next;
+    }
+
+    ndo_write_hostgroup_members(hostgroup_ids);
+
+    free(hostgroup_ids);
+}
+
+
+int ndo_write_hostgroup_members(int * hostgroup_ids)
+{
+    hostgroup * tmp = hostgroup_list;
+    hostsmember * member = NULL;
+    int object_id = 0;
+    int i = 0;
+
+    MYSQL_RESET_SQL();
+
+    MYSQL_SET_SQL("INSERT INTO nagios_hostgroup_members SET instance_id = 1, hostgroup_id = ?, host_object_id = ? ON DUPLICATE KEY UPDATE instance_id = 1, hostgroup_id = ?, host_object_id = ?");
+    MYSQL_PREPARE();
+
+    while (tmp != NULL) {
+
+        member = tmp->members;
+
+        while (member != NULL) {
+
+            object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_HOST, member->host_name);
+
+            MYSQL_RESET_BIND();
+
+            MYSQL_BIND_INT(hostgroup_ids[i]);
+            MYSQL_BIND_INT(object_id);
+
+            MYSQL_BIND_INT(hostgroup_ids[i]);
+            MYSQL_BIND_INT(object_id);
+
+            MYSQL_BIND();
+            MYSQL_EXECUTE();
+
+            member = member->next;
+        }
+
+        i++;
+        tmp = tmp->next;
+    }
 }
 
 
