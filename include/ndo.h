@@ -111,6 +111,7 @@ int ndo_write_hostgroup_members(int * hostgroup_ids);
 int ndo_write_services(int config_type);
 
 int ndo_write_servicegroups(int config_type);
+int ndo_write_servicegroup_members(int * servicegroup_ids);
 
 
 #define COUNT_OBJECTS(objvar, listvar, countvar) \

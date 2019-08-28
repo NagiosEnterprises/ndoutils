@@ -920,8 +920,89 @@ int ndo_write_services(int config_type)
 
 int ndo_write_servicegroups(int config_type)
 {
+    servicegroup * tmp = servicegroup_list;
+    int object_id = 0;
+    int i = 0;
 
+    size_t count = 0;
+    int * servicegroup_ids = NULL;
+
+    COUNT_OBJECTS(tmp, servicegroup_list, count);
+
+    servicegroup_ids = calloc(count, sizeof(int));
+
+    MYSQL_RESET_SQL();
+
+    MYSQL_SET_SQL("INSERT INTO nagios_servicegroups SET instance_id = 1, servicegroup_object_id = ?, config_type = ?, alias = ? ON DUPLICATE KEY UPDATE instance_id = 1, servicegroup_object_id = ?,config_type = ?, alias = ?");
+    MYSQL_PREPARE();
+
+    while (tmp != NULL) {
+
+        object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_SERVICEGROUP, tmp->group_name);
+
+        MYSQL_RESET_BIND();
+
+        MYSQL_BIND_INT(object_id);
+        MYSQL_BIND_INT(config_type);
+        MYSQL_BIND_STR(tmp->alias);
+
+        MYSQL_BIND_INT(object_id);
+        MYSQL_BIND_INT(config_type);
+        MYSQL_BIND_STR(tmp->alias);
+
+        MYSQL_BIND();
+        MYSQL_EXECUTE();
+
+        servicegroup_ids[i] = mysql_insert_id(mysql_connection);
+        i++;
+        tmp = tmp->next;
+    }
+
+    ndo_write_servicegroup_members(servicegroup_ids);
+
+    free(servicegroup_ids);
 }
+
+
+int ndo_write_servicegroup_members(int * servicegroup_ids)
+{
+    servicegroup * tmp = servicegroup_list;
+    servicesmember * member = NULL;
+    int object_id = 0;
+    int i = 0;
+
+    MYSQL_RESET_SQL();
+
+    MYSQL_SET_SQL("INSERT INTO nagios_servicegroup_members SET instance_id = 1, servicegroup_id = ?, service_object_id = ? ON DUPLICATE KEY UPDATE instance_id = 1, servicegroup_id = ?, service_object_id = ?");
+    MYSQL_PREPARE();
+
+    while (tmp != NULL) {
+
+        member = tmp->members;
+
+        while (member != NULL) {
+
+            object_id = ndo_get_object_id_name2(TRUE, NDO_OBJECTTYPE_SERVICE, member->host_name, member->service_description);
+
+            MYSQL_RESET_BIND();
+
+            MYSQL_BIND_INT(servicegroup_ids[i]);
+            MYSQL_BIND_INT(object_id);
+
+            MYSQL_BIND_INT(servicegroup_ids[i]);
+            MYSQL_BIND_INT(object_id);
+
+            MYSQL_BIND();
+            MYSQL_EXECUTE();
+
+            member = member->next;
+        }
+
+        i++;
+        tmp = tmp->next;
+    }
+}
+
 
 int ndo_save_customvariables(int object_id, int config_type, customvariablesmember * vars)
 {
