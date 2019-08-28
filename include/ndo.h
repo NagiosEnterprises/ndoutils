@@ -87,8 +87,15 @@ int ndo_insert_object_id_name2(int object_type, char * name1, char * name2);
 int ndo_write_timeperiods(int config_type);
 int ndo_write_timeperiod_timeranges(int * timeperiod_ids);
 
+int ndo_write_contact_addresses(int * contact_ids)
+int ndo_write_contact_notificationcommands(int * contact_ids)
+int ndo_write_contact_notificationcommands_cmd(commandsmember * cmd, int notification_type, int * contact_ids, int i);
 
+int ndo_write_contactgroup_members(int * contactgroup_ids);
 
+int ndo_write_host_parenthosts(int * host_ids);
+int ndo_write_host_contactgroups(int * host_ids);
+int ndo_write_host_contacts(int * host_ids);
 
 
 #define COUNT_OBJECTS(objvar, listvar, countvar) \

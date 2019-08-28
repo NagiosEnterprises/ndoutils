@@ -147,10 +147,10 @@ int ndo_write_timeperiods(int config_type)
     timeperiod * tmp = timeperiod_list;
     timerange * range = NULL;
     int object_id = 0;
+    int i = 0;
 
     size_t count = 0;
     int * timeperiod_ids = NULL;
-    int i = 0;
 
     COUNT_OBJECTS(tmp, timeperiod_list, count);
 
@@ -193,8 +193,8 @@ int ndo_write_timeperiod_timeranges(int * timeperiod_ids)
 {
     timeperiod * tmp = timeperiod_list;
     timerange * range = NULL;
-
     int i = 0;
+
     int day = 0;
 
     MYSQL_RESET_SQL();
@@ -234,11 +234,11 @@ int ndo_write_contacts(int config_type)
 {
     contact * tmp = contact_list;
     int object_id = 0;
+    int i = 0;
 
     size_t count = 0;
     int * object_ids = NULL;
     int * contact_ids = NULL;
-    int i = 0;
 
     int notify_options[11] = { 0 };
 
@@ -344,6 +344,7 @@ int ndo_write_contact_addresses(int * contact_ids)
 {
     contact * tmp = contact_list;
     int i = 0;
+
     int address_number = 0;
 
     MYSQL_RESET_SQL();
@@ -380,7 +381,6 @@ int ndo_write_contact_notificationcommands(int * contact_ids)
     contact * tmp = contact_list;
     commandsmember * cmd = NULL;
     int object_id = 0;
-    int notification_type = 0;
     int i = 0;
 
     MYSQL_RESET_SQL();
@@ -390,58 +390,35 @@ int ndo_write_contact_notificationcommands(int * contact_ids)
 
     while (tmp != NULL) {
 
-        /* host commands */
-
-        cmd = tmp->host_notification_commands;
-        notification_type = NDO_DATA_HOSTNOTIFICATIONCOMMAND;
-
-        object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_COMMAND, cmd->command);
-
-        while (cmd != NULL) {
-
-            MYSQL_RESET_BIND();
-
-            MYSQL_BIND_INT(contact_ids[i]);
-            MYSQL_BIND_INT(notification_type);
-            MYSQL_BIND_INT(object_id);
-
-            MYSQL_BIND_INT(contact_ids[i]);
-            MYSQL_BIND_INT(notification_type);
-            MYSQL_BIND_INT(object_id);
-
-            MYSQL_BIND();
-            MYSQL_EXECUTE();
-
-            cmd = cmd->next;
-        }
-
-        /* service commands */
-
-        cmd = tmp->host_notification_commands;
-        notification_type = NDO_DATA_SERVICENOTIFICATIONCOMMAND;
-
-        object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_COMMAND, cmd->command);
-
-        while (cmd != NULL) {
-
-            MYSQL_RESET_BIND();
-
-            MYSQL_BIND_INT(contact_ids[i]);
-            MYSQL_BIND_INT(notification_type);
-            MYSQL_BIND_INT(object_id);
-
-            MYSQL_BIND_INT(contact_ids[i]);
-            MYSQL_BIND_INT(notification_type);
-            MYSQL_BIND_INT(object_id);
-
-            MYSQL_BIND();
-            MYSQL_EXECUTE();
-
-            cmd = cmd->next;
-        }
+        ndo_write_contact_notificationcommands_cmd(tmp->host_notification_commands, NDO_DATA_HOSTNOTIFICATIONCOMMAND, contact_ids, i);
+        ndo_write_contact_notificationcommands_cmd(tmp->service_notification_commands, NDO_DATA_SERVICENOTIFICATIONCOMMAND, contact_ids, i);
 
         i++;
         tmp = tmp->next;        
+    }
+}
+
+
+int ndo_write_contact_notificationcommands_cmd(commandsmember * cmd, int notification_type, int * contact_ids, int i)
+{
+    int object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_COMMAND, cmd->command);
+
+    while (cmd != NULL) {
+
+        MYSQL_RESET_BIND();
+
+        MYSQL_BIND_INT(contact_ids[i]);
+        MYSQL_BIND_INT(notification_type);
+        MYSQL_BIND_INT(object_id);
+
+        MYSQL_BIND_INT(contact_ids[i]);
+        MYSQL_BIND_INT(notification_type);
+        MYSQL_BIND_INT(object_id);
+
+        MYSQL_BIND();
+        MYSQL_EXECUTE();
+
+        cmd = cmd->next;
     }
 }
 
@@ -450,25 +427,16 @@ int ndo_write_contactgroups(int config_type)
 {
     contactgroup * tmp = contactgroup_list;
     int object_id = 0;
-    int contact_object_id = 0;
+    int i = 0;
 
     size_t count = 0;
     int * object_ids = NULL;
     int * contactgroup_ids = NULL;
-    int i = 0;
 
-    contactsmember * member = NULL;
-
-    /* get a count */
-    while (tmp != NULL) {
-        count++;
-        tmp = tmp->next;
-    }
+    COUNT_OBJECTS(tmp, contactgroup_list, count);
 
     object_ids = calloc(count, sizeof(int));
     contactgroup_ids = calloc(count, sizeof(int));
-
-    tmp = contactgroup_list;
 
     MYSQL_RESET_SQL();
 
@@ -498,10 +466,19 @@ int ndo_write_contactgroups(int config_type)
         tmp = tmp->next;
     }
 
-    /* members */
+    ndo_write_contactgroup_members(contactgroup_ids);
 
-    tmp = contactgroup_list;
-    i = 0;
+    free(contactgroup_ids);
+    free(object_ids);
+}
+
+
+int ndo_write_contactgroup_members(int * contactgroup_ids)
+{
+    contactgroup * tmp = contactgroup_list;
+    contactsmember * member = NULL;
+    int object_id = 0;
+    int i = 0;
 
     MYSQL_RESET_SQL();
 
@@ -514,15 +491,15 @@ int ndo_write_contactgroups(int config_type)
 
         while (member != NULL) {
 
-            contact_object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_CONTACT, member->contact_name);
+            object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_CONTACT, member->contact_name);
 
             MYSQL_RESET_BIND();
 
             MYSQL_BIND_INT(contactgroup_ids[i]);
-            MYSQL_BIND_INT(contact_object_id);
+            MYSQL_BIND_INT(object_id);
 
             MYSQL_BIND_INT(contactgroup_ids[i]);
-            MYSQL_BIND_INT(contact_object_id);
+            MYSQL_BIND_INT(object_id);
 
             MYSQL_BIND();
             MYSQL_EXECUTE();
@@ -533,9 +510,6 @@ int ndo_write_contactgroups(int config_type)
         i++;
         tmp = tmp->next;
     }
-
-    free(contactgroup_ids);
-    free(object_ids);
 }
 
 
@@ -543,14 +517,13 @@ int ndo_write_hosts(int config_type)
 {
     host * tmp = host_list;
     int object_id = 0;
+    int i = 0;
 
     size_t count = 0;
     int * object_ids = NULL;
     int * host_ids = NULL;
-    int i = 0;
 
     int host_options[11] = { 0 };
-
     int check_command_id = 0;
     char * check_command = NULL;
     char * check_command_args = NULL;
@@ -560,15 +533,7 @@ int ndo_write_hosts(int config_type)
     int check_timeperiod_id = 0;
     int notification_timeperiod_id = 0;
 
-    hostsmember * parent = NULL;
-    contactgroupsmember * group = NULL;
-    contactsmember * cnt = NULL;
-
-    /* get a count */
-    while (tmp != NULL) {
-        count++;
-        tmp = tmp->next;
-    }
+    COUNT_OBJECTS(tmp, host_list, count);
 
     object_ids = calloc(count, sizeof(int));
     host_ids = calloc(count,sizeof(int));
@@ -739,10 +704,22 @@ int ndo_write_hosts(int config_type)
         tmp = tmp->next;
     }
 
-    /* parent hosts */
+    ndo_write_host_parenthosts(host_ids);
+    ndo_write_host_contactgroups(host_ids);
+    ndo_write_host_contacts(host_ids);
+    SAVE_CUSTOMVARIABLES(tmp, object_ids, NDO_OBJECTTYPE_HOST, tmp->custom_variables, i);
 
-    tmp = host_list;
-    i = 0;
+    free(host_ids);
+    free(object_ids);
+}
+
+
+int ndo_write_host_parenthosts(host_ids)
+{
+    host * tmp = host_list;
+    hostsmember * parent = NULL;
+    int object_id = 0;
+    int i = 0;
 
     MYSQL_RESET_SQL();
 
@@ -774,11 +751,15 @@ int ndo_write_hosts(int config_type)
         i++;
         tmp = tmp->next;
     }
+}
 
-    /* contact groups */
 
-    tmp = host_list;
-    i = 0;
+int ndo_write_host_contactgroups(host_ids)
+{
+    host * tmp = host_list;
+    contactgroupsmember * group = NULL;
+    int object_id = 0;
+    int i = 0;
 
     MYSQL_RESET_SQL();
 
@@ -810,11 +791,15 @@ int ndo_write_hosts(int config_type)
         i++;
         tmp = tmp->next;
     }
+}
 
-    /* contacts */
 
-    tmp = host_list;
-    i = 0;
+int ndo_write_host_contacts(host_ids)
+{
+    host * tmp = host_list;
+    contactsmember * cnt = NULL;
+    int object_id = 0;
+    int i = 0;
 
     MYSQL_RESET_SQL();
 
@@ -846,22 +831,6 @@ int ndo_write_hosts(int config_type)
         i++;
         tmp = tmp->next;
     }
-
-    /* and now custom variables */
-
-    tmp = host_list;
-    i = 0;
-
-    while (tmp != NULL) {
-
-        ndo_save_customvariables(object_ids[i], NDO_OBJECTTYPE_CONTACT, tmp->custom_variables);
-
-        i++;
-        tmp = tmp->next;
-    }
-
-    free(host_ids);
-    free(object_ids);
 }
 
 
@@ -893,6 +862,7 @@ int ndo_save_customvariables(int object_id, int config_type, customvariablesmemb
 
     while (tmp != NULL) {
 
+        // todo - probably don't need to reset each time for 1 prepared stmt
         MYSQL_RESET_BIND();
 
         MYSQL_BIND_INT(object_id);
@@ -909,5 +879,7 @@ int ndo_save_customvariables(int object_id, int config_type, customvariablesmemb
 
         MYSQL_BIND();
         MYSQL_EXECUTE();
+
+        tmp = tmp->next;
     }
 }
