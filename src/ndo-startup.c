@@ -916,6 +916,7 @@ int ndo_write_services(int config_type)
 {
     service * tmp = service_list;
     int object_id = 0;
+    int host_object_id = 0;
     int i = 0;
 
     size_t count = 0;
@@ -1001,22 +1002,22 @@ instance_id=1, config_type='%d', host_object_id='%lu', service_object_id='%lu', 
         MYSQL_BIND_INT(tmp->max_attempts);
         MYSQL_BIND_FLOAT(tmp->first_notification_delay);
         MYSQL_BIND_FLOAT(tmp->notification_interval);
-        MYSQL_BIND_INT(host_options[0]);
-        MYSQL_BIND_INT(host_options[1]);
-        MYSQL_BIND_INT(host_options[2]);
-        MYSQL_BIND_INT(host_options[3]);
-        MYSQL_BIND_INT(host_options[4]);
-        MYSQL_BIND_INT(host_options[5]);
-        MYSQL_BIND_INT(host_options[6]);
-        MYSQL_BIND_INT(host_options[7]);
-        MYSQL_BIND_INT(host_options[8]);
-        MYSQL_BIND_INT(host_options[9]);
+        MYSQL_BIND_INT(service_options[0]);
+        MYSQL_BIND_INT(service_options[1]);
+        MYSQL_BIND_INT(service_options[2]);
+        MYSQL_BIND_INT(service_options[3]);
+        MYSQL_BIND_INT(service_options[4]);
+        MYSQL_BIND_INT(service_options[5]);
+        MYSQL_BIND_INT(service_options[6]);
+        MYSQL_BIND_INT(service_options[7]);
+        MYSQL_BIND_INT(service_options[8]);
+        MYSQL_BIND_INT(service_options[9]);
         MYSQL_BIND_INT(tmp->is_volatile);
         MYSQL_BIND_INT(tmp->flap_detection_enabled);
-        MYSQL_BIND_INT(host_options[10]);
-        MYSQL_BIND_INT(host_options[11]);
-        MYSQL_BIND_INT(host_options[12]);
-        MYSQL_BIND_INT(host_options[13]);
+        MYSQL_BIND_INT(service_options[10]);
+        MYSQL_BIND_INT(service_options[11]);
+        MYSQL_BIND_INT(service_options[12]);
+        MYSQL_BIND_INT(service_options[13]);
         MYSQL_BIND_DOUBLE(tmp->low_flap_threshold);
         MYSQL_BIND_DOUBLE(tmp->high_flap_threshold);
         MYSQL_BIND_INT(tmp->process_performance_data);
@@ -1051,22 +1052,22 @@ instance_id=1, config_type='%d', host_object_id='%lu', service_object_id='%lu', 
         MYSQL_BIND_INT(tmp->max_attempts);
         MYSQL_BIND_FLOAT(tmp->first_notification_delay);
         MYSQL_BIND_FLOAT(tmp->notification_interval);
-        MYSQL_BIND_INT(host_options[0]);
-        MYSQL_BIND_INT(host_options[1]);
-        MYSQL_BIND_INT(host_options[2]);
-        MYSQL_BIND_INT(host_options[3]);
-        MYSQL_BIND_INT(host_options[4]);
-        MYSQL_BIND_INT(host_options[5]);
-        MYSQL_BIND_INT(host_options[6]);
-        MYSQL_BIND_INT(host_options[7]);
-        MYSQL_BIND_INT(host_options[8]);
-        MYSQL_BIND_INT(host_options[9]);
+        MYSQL_BIND_INT(service_options[0]);
+        MYSQL_BIND_INT(service_options[1]);
+        MYSQL_BIND_INT(service_options[2]);
+        MYSQL_BIND_INT(service_options[3]);
+        MYSQL_BIND_INT(service_options[4]);
+        MYSQL_BIND_INT(service_options[5]);
+        MYSQL_BIND_INT(service_options[6]);
+        MYSQL_BIND_INT(service_options[7]);
+        MYSQL_BIND_INT(service_options[8]);
+        MYSQL_BIND_INT(service_options[9]);
         MYSQL_BIND_INT(tmp->is_volatile);
         MYSQL_BIND_INT(tmp->flap_detection_enabled);
-        MYSQL_BIND_INT(host_options[10]);
-        MYSQL_BIND_INT(host_options[11]);
-        MYSQL_BIND_INT(host_options[12]);
-        MYSQL_BIND_INT(host_options[13]);
+        MYSQL_BIND_INT(service_options[10]);
+        MYSQL_BIND_INT(service_options[11]);
+        MYSQL_BIND_INT(service_options[12]);
+        MYSQL_BIND_INT(service_options[13]);
         MYSQL_BIND_DOUBLE(tmp->low_flap_threshold);
         MYSQL_BIND_DOUBLE(tmp->high_flap_threshold);
         MYSQL_BIND_INT(tmp->process_performance_data);
@@ -1090,6 +1091,135 @@ instance_id=1, config_type='%d', host_object_id='%lu', service_object_id='%lu', 
         MYSQL_EXECUTE();
 
         service_ids[i] = mysql_insert_id(mysql_connection);
+        i++;
+        tmp = tmp->next;
+    }
+
+    ndo_write_service_parentservices(service_ids);
+    ndo_write_service_contactgroups(service_ids);
+    ndo_write_service_contacts(service_ids);
+
+    SAVE_CUSTOMVARIABLES(tmp, object_ids, NDO_OBJECTTYPE_SERVICE, tmp->custom_variables, i);
+
+    free(service_ids);
+    free(object_ids);
+}
+
+
+int ndo_write_service_parentservices(int * service_ids)
+{
+    service * tmp = service_list;
+    servicesmember * parent = NULL;
+    int object_id = 0;
+    int i = 0;
+
+    MYSQL_RESET_SQL();
+
+    MYSQL_SET_SQL("INSERT INTO nagios_service_parentservices instance_id = 1, service_id = ?, parent_service_object_id = ? ON DUPLICATE KEY UPDATE instance_id = 1, service_id = ?, parent_service_object_id = ?");
+    MYSQL_PREPARE();
+
+    while (tmp != NULL) {
+
+        parent = tmp->parents;
+
+        while (parent != NULL) {
+
+            object_id = ndo_get_object_id_name2(TRUE, NDO_OBJECTTYPE_SERVICE, parent->host_name, parent->service_description);
+
+            MYSQL_RESET_BIND();
+
+            MYSQL_BIND_INT(service_ids[i]);
+            MYSQL_BIND_INT(object_id);
+
+            MYSQL_BIND_INT(service_ids[i]);
+            MYSQL_BIND_INT(object_id);
+
+            MYSQL_BIND();
+            MYSQL_EXECUTE();
+
+            parent = parent->next;
+        }
+
+        i++;
+        tmp = tmp->next;
+    }
+}
+
+
+int ndo_write_service_contactgroups(int * service_ids)
+{
+    service * tmp = service_list;
+    contactgroupsmember * group = NULL;
+    int object_id = 0;
+    int i = 0;
+
+    MYSQL_RESET_SQL();
+
+    MYSQL_SET_SQL("INSERT INTO nagios_service_contactgroups SET instance_id = 1, service_id = ?, contactgroup_object_id = ? ON DUPLICATE KEY UPDATE instance_id = 1, service_id = ?, contactgroup_object_id = ?");
+    MYSQL_PREPARE();
+
+    while (tmp != NULL) {
+
+        group = tmp->contact_groups;
+
+        while (group != NULL) {
+
+            object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_CONTACTGROUP, group->group_name);
+
+            MYSQL_RESET_BIND();
+
+            MYSQL_BIND_INT(service_ids[i]);
+            MYSQL_BIND_INT(object_id);
+
+            MYSQL_BIND_INT(service_ids[i]);
+            MYSQL_BIND_INT(object_id);
+
+            MYSQL_BIND();
+            MYSQL_EXECUTE();
+
+            group = group->next;
+        }
+
+        i++;
+        tmp = tmp->next;
+    }
+}
+
+
+int ndo_write_service_contacts(int * service_ids)
+{
+    service * tmp = service_list;
+    contactsmember * cnt = NULL;
+    int object_id = 0;
+    int i = 0;
+
+    MYSQL_RESET_SQL();
+
+    MYSQL_SET_SQL("INSERT INTO nagios_service_contacts SET instance_id = 1, service_id = ?, contact_object_id = ? ON DUPLICATE KEY UPDATE instance_id = 1, service_id = ?, contact_object_id = ?");
+    MYSQL_PREPARE();
+
+    while (tmp != NULL) {
+
+        cnt = tmp->contacts;
+
+        while (cnt != NULL) {
+
+            object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_CONTACT, cnt->contact_name);
+
+            MYSQL_RESET_BIND();
+
+            MYSQL_BIND_INT(service_ids[i]);
+            MYSQL_BIND_INT(object_id);
+
+            MYSQL_BIND_INT(service_ids[i]);
+            MYSQL_BIND_INT(object_id);
+
+            MYSQL_BIND();
+            MYSQL_EXECUTE();
+
+            cnt = cnt->next;
+        }
+
         i++;
         tmp = tmp->next;
     }

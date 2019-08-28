@@ -109,6 +109,9 @@ int ndo_write_hostgroups(int config_type);
 int ndo_write_hostgroup_members(int * hostgroup_ids);
 
 int ndo_write_services(int config_type);
+int ndo_write_service_parentservices(int * service_ids);
+int ndo_write_service_contactgroups(int * service_ids);
+int ndo_write_service_contacts(int * service_ids);
 
 int ndo_write_servicegroups(int config_type);
 int ndo_write_servicegroup_members(int * servicegroup_ids);
