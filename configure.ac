@@ -22,37 +22,28 @@ AC_CHECK_HEADERS([string.h])
 AC_CHECK_HEADERS([mysql/mysql.h], [],  [AC_MSG_ERROR([Can't locate mysql headers])])
 AC_CHECK_HEADERS([mysql/errmsg.h], [], [AC_MSG_ERROR([Can't locate mysql headers])])
 
-AC_CHECK_HEADERS([check.h], [], [AC_MSG_ERROR(Can't locate libcheck headers)])
-AC_CHECK_LIB(subunit, subunit_test_start)
-
 AC_FUNC_MALLOC
 
-
-# Enable debugging
-# ./configure --enable-debugging
+# Enable testing
 AC_ARG_ENABLE(
 
-    debugging,
+    testing,
     AC_HELP_STRING(
-        [--enable-debugging],
-        [Pass debugging flags to the compiler]
-    ),
-    [CFLAGS="${CFLAGS} -O0 -g3 -ggdb3"]
-)
-
-
-# Enable coverage reporting
-# ./configure --enable-coverage
-AC_ARG_ENABLE(
-
-    coverage,
-    AC_HELP_STRING(
-        [--enable-coverage],
-        [Pass coverage flags to the compiler]
+        [--enable-testing],
+        [Create the 'make test' target (requires subunit and libcheck)]
     ),
     [CFLAGS="${CFLAGS} -O0 -g3 -ggdb3 -fprofile-arcs -ftest-coverage"]
 )
 
+# Check dependencies for enable-testing
+if test "x$enable_testing" != "x" ; then
+
+    AC_CHECK_HEADERS([check.h], [], [AC_MSG_ERROR(Can't locate libcheck headers)])
+    AC_CHECK_LIB(subunit, subunit_test_start)
+    AC_SUBST(tests_enabled, [enabled])
+else
+    AC_SUBST(tests_enabled, [disabled])
+fi
 
 # Determine MySQL C flags and libraries
 # This also kind of determines if the mysql library is installed

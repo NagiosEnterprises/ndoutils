@@ -36,9 +36,14 @@ ndo.o:
 
 all: ndo.so
 
+test-enabled:
+	cd test/ && $(MAKE) test
+
+test-disabled:
+	@echo "Testing disabled. Please run ./configure --enable-testing"
 
 test:
-	cd test/ && $(MAKE) $@
+	$(MAKE) test-@tests_enabled@
 
 
 coverage: test
