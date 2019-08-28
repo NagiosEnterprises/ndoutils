@@ -84,6 +84,20 @@ int ndo_get_object_id_name2(int insert, int object_type, char * name1, char * na
 int ndo_insert_object_id_name1(int object_type, char * name1);
 int ndo_insert_object_id_name2(int object_type, char * name1, char * name2);
 
+int ndo_write_timeperiods(int config_type);
+int ndo_write_timeperiod_timeranges(int * timeperiod_ids);
+
+
+
+#define COUNT_OBJECTS(objvar, listvar, countvar) \
+do { \
+    while (objvar != NULL) { \
+        countvar++; \
+        objvar = objvar->next; \
+    } \
+    objvar = listvar; \
+while (0)
+
 
 #define NDO_PROCESS_PROCESS                         (1 << 0)
 #define NDO_PROCESS_TIMED_EVENT                     (1 << 1)
