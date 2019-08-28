@@ -89,6 +89,8 @@ int ndo_write_timeperiod_timeranges(int * timeperiod_ids);
 
 
 
+
+
 #define COUNT_OBJECTS(objvar, listvar, countvar) \
 do { \
     while (objvar != NULL) { \
@@ -96,7 +98,20 @@ do { \
         objvar = objvar->next; \
     } \
     objvar = listvar; \
-while (0)
+} while (0)
+
+
+
+
+#define SAVE_CUSTOMVARIABLES(objvar, objidvar, objtype, customvars, i) \
+do { \
+    while (objvar != NULL) { \
+        ndo_save_customvariables(objidvar[i], objtype, customvars); \
+        i++; \
+        objvar = objvar->next; \
+    } \
+} while(0)
+
 
 
 #define NDO_PROCESS_PROCESS                         (1 << 0)
