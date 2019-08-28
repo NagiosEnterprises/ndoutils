@@ -78,14 +78,14 @@ int ndo_table_genocide()
 
 int ndo_write_active_objects()
 {
-    ndo_write_commands();
-    ndo_write_timeperiods();
-    ndo_write_contacts();
-    ndo_write_contactgroups();
-    ndo_write_hosts();
-    ndo_write_hostgroups();
-    ndo_write_services();
-    ndo_write_servicegroups();
+    ndo_write_commands(NDO_CONFIG_DUMP_ORIGINAL);
+    ndo_write_timeperiods(NDO_CONFIG_DUMP_ORIGINAL);
+    ndo_write_contacts(NDO_CONFIG_DUMP_ORIGINAL);
+    ndo_write_contactgroups(NDO_CONFIG_DUMP_ORIGINAL);
+    ndo_write_hosts(NDO_CONFIG_DUMP_ORIGINAL);
+    ndo_write_hostgroups(NDO_CONFIG_DUMP_ORIGINAL);
+    ndo_write_services(NDO_CONFIG_DUMP_ORIGINAL);
+    ndo_write_servicegroups(NDO_CONFIG_DUMP_ORIGINAL);
     return NDO_OK;
 }
 
@@ -326,7 +326,7 @@ int ndo_write_contacts(int config_type)
         MYSQL_BIND();
         MYSQL_EXECUTE();
 
-        contactgroup_ids[i] = mysql_insert_id(mysql_connection);
+        contact_ids[i] = mysql_insert_id(mysql_connection);
         i++;
         tmp = tmp->next;
     }
@@ -338,16 +338,6 @@ int ndo_write_contacts(int config_type)
     free(contact_ids);
     free(object_ids);
 }
-
-#define SAVE_CUSTOMVARIABLES(objvar, objidvar, objtype, customvars, i) \
-do { \
-    while (objvar != NULL) { \
-        ndo_save_customvariables(objidvar[i], objtype, customvars); \
-        i++; \
-        objvar = objvar->next; \
-    } \
-} while(0)
-
 
 
 int ndo_write_contact_addresses(int * contact_ids)
@@ -387,9 +377,11 @@ int ndo_write_contact_addresses(int * contact_ids)
 
 int ndo_write_contact_notificationcommands(int * contact_ids)
 {
+    contact * tmp = contact_list;
     commandsmember * cmd = NULL;
     int object_id = 0;
     int notification_type = 0;
+    int i = 0;
 
     MYSQL_RESET_SQL();
 
@@ -831,7 +823,7 @@ int ndo_write_hosts(int config_type)
 
     while (tmp != NULL) {
 
-        cnt = cnt->contacts;
+        cnt = tmp->contacts;
 
         while (cnt != NULL) {
 
@@ -857,7 +849,7 @@ int ndo_write_hosts(int config_type)
 
     /* and now custom variables */
 
-    tmp = contact_list;
+    tmp = host_list;
     i = 0;
 
     while (tmp != NULL) {
