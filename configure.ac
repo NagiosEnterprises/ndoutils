@@ -22,6 +22,8 @@ AC_CHECK_HEADERS([string.h])
 AC_CHECK_HEADERS([mysql/mysql.h], [],  [AC_MSG_ERROR([Can't locate mysql headers])])
 AC_CHECK_HEADERS([mysql/errmsg.h], [], [AC_MSG_ERROR([Can't locate mysql headers])])
 
+AC_CHECK_HEADERS([check.h], [], [AC_MSG_ERROR(Can't locate libcheck headers)])
+
 
 AC_FUNC_MALLOC
 
