@@ -567,12 +567,12 @@ int ndo_write_hosts(int config_type)
         host_options[2] = flag_isset(tmp->notification_options, OPT_RECOVERY);
         host_options[3] = flag_isset(tmp->notification_options, OPT_FLAPPING);
         host_options[4] = flag_isset(tmp->notification_options, OPT_DOWNTIME);
-        host_options[5] = flag_isset(tmp->flap_detection_options, OPT_UP);
-        host_options[6] = flag_isset(tmp->flap_detection_options, OPT_DOWN);
-        host_options[7] = flag_isset(tmp->flap_detection_options, OPT_UNREACHABLE);
-        host_options[8] = flag_isset(tmp->stalking_options, OPT_UP);
-        host_options[9] = flag_isset(tmp->stalking_options, OPT_DOWN);
-        host_options[10] = flag_isset(tmp->stalking_options, OPT_UNREACHABLE);
+        host_options[5] = flag_isset(tmp->stalking_options, OPT_UP);
+        host_options[6] = flag_isset(tmp->stalking_options, OPT_DOWN);
+        host_options[7] = flag_isset(tmp->stalking_options, OPT_UNREACHABLE);
+        host_options[8] = flag_isset(tmp->flap_detection_options, OPT_UP);
+        host_options[9] = flag_isset(tmp->flap_detection_options, OPT_DOWN);
+        host_options[10] = flag_isset(tmp->flap_detection_options, OPT_UNREACHABLE);
 
         MYSQL_BIND_INT(config_type);
         MYSQL_BIND_INT(object_id);
@@ -599,8 +599,8 @@ int ndo_write_hosts(int config_type)
         MYSQL_BIND_INT(host_options[5]);
         MYSQL_BIND_INT(host_options[6]);
         MYSQL_BIND_INT(host_options[7]);
-        MYSQL_BIND_INT(tmp->low_flap_threshold);
-        MYSQL_BIND_INT(tmp->high_flap_threshold);
+        MYSQL_BIND_DOUBLE(tmp->low_flap_threshold);
+        MYSQL_BIND_DOUBLE(tmp->high_flap_threshold);
         MYSQL_BIND_INT(host_options[8]);
         MYSQL_BIND_INT(host_options[9]);
         MYSQL_BIND_INT(host_options[10]);
@@ -656,8 +656,8 @@ int ndo_write_hosts(int config_type)
         MYSQL_BIND_INT(host_options[5]);
         MYSQL_BIND_INT(host_options[6]);
         MYSQL_BIND_INT(host_options[7]);
-        MYSQL_BIND_INT(tmp->low_flap_threshold);
-        MYSQL_BIND_INT(tmp->high_flap_threshold);
+        MYSQL_BIND_DOUBLE(tmp->low_flap_threshold);
+        MYSQL_BIND_DOUBLE(tmp->high_flap_threshold);
         MYSQL_BIND_INT(host_options[8]);
         MYSQL_BIND_INT(host_options[9]);
         MYSQL_BIND_INT(host_options[10]);
@@ -914,7 +914,185 @@ int ndo_write_hostgroup_members(int * hostgroup_ids)
 
 int ndo_write_services(int config_type)
 {
+    service * tmp = service_list;
+    int object_id = 0;
+    int i = 0;
 
+    size_t count = 0;
+    int * object_ids = NULL;
+    int * service_ids = NULL;
+
+    int service_options[14] = { 0 };
+    int check_command_id = 0;
+    char * check_command = NULL;
+    char * check_command_args = NULL;
+    int event_handler_id = 0;
+    char * event_handler = NULL;
+    char * event_handler_args = NULL;
+    int check_timeperiod_id = 0;
+    int notification_timeperiod_id = 0;
+
+    COUNT_OBJECTS(tmp, service_list, count);
+
+    object_ids = calloc(count, sizeof(int));
+    service_ids = calloc(count, sizeof(int));
+
+    MYSQL_RESET_SQL();
+
+/*
+
+line 4460 in ndomod.c
+line 3586 in dbhandlers.c
+
+instance_id=1, config_type='%d', host_object_id='%lu', service_object_id='%lu', display_name='%s', check_command_object_id='%lu', check_command_args='%s', eventhandler_command_object_id='%lu', eventhandler_command_args='%s', check_timeperiod_object_id='%lu', notification_timeperiod_object_id='%lu', failure_prediction_options='%s', check_interval='%lf', retry_interval='%lf', max_check_attempts='%d', first_notification_delay='%lf', notification_interval='%lf', notify_on_warning='%d', notify_on_unknown='%d', notify_on_critical='%d', notify_on_recovery='%d', notify_on_flapping='%d', notify_on_downtime='%d', stalk_on_ok='%d', stalk_on_warning='%d', stalk_on_unknown='%d', stalk_on_critical='%d', is_volatile='%d', flap_detection_enabled='%d', flap_detection_on_ok='%d', flap_detection_on_warning='%d', flap_detection_on_unknown='%d', flap_detection_on_critical='%d', low_flap_threshold='%lf', high_flap_threshold='%lf', process_performance_data='%d', freshness_checks_enabled='%d', freshness_threshold='%d', passive_checks_enabled='%d', event_handler_enabled='%d', active_checks_enabled='%d', retain_status_information='%d', retain_nonstatus_information='%d', notifications_enabled='%d', obsess_over_service='%d', failure_prediction_enabled='%d', notes='%s', notes_url='%s', action_url='%s', icon_image='%s', icon_image_alt='%s', importance='%d'
+
+*/
+
+    MYSQL_SET_SQL("INSERT INTO nagios_services SET instance_id = 1, config_type = ?, host_object_id = ?, service_object_id = ?, display_name = ?, check_command_object_id = ?, check_command_args = ?, eventhandler_command_object_id = ?, eventhandler_command_args = ?, check_timeperiod_object_id = ?, notification_timeperiod_object_id = ?, failure_prediction_options = '', check_interval = ?, retry_interval = ?, max_check_attempts = ?, first_notification_delay = ?, notification_interval = ?, notify_on_warning = ?, notify_on_unknown = ?, notify_on_critical = ?, notify_on_recovery = ?, notify_on_flapping = ?, notify_on_downtime = ?, stalk_on_ok = ?, stalk_on_warning = ?, stalk_on_unknown = ?, stalk_on_critical = ?, is_volatile = ?, flap_detection_enabled = ?, flap_detection_on_ok = ?, flap_detection_on_warning = ?, flap_detection_on_unknown = ?, flap_detection_on_critical = ?, low_flap_threshold = ?, high_flap_threshold = ?, process_performance_data = ?, freshness_checks_enabled = ?, freshness_threshold = ?, passive_checks_enabled = ?, event_handler_enabled = ?, active_checks_enabled = ?, retain_status_information = ?, retain_nonstatus_information = ?, notifications_enabled = ?, obsess_over_service = ?, failure_prediction_enabled = 0, notes = ?, notes_url = ?, action_url = ?, icon_image = ?, icon_image_alt = ?, importance = ? ON DUPLICATE KEY UPDATE instance_id = 1, config_type = ?, host_object_id = ?, service_object_id = ?, display_name = ?, check_command_object_id = ?, check_command_args = ?, eventhandler_command_object_id = ?, eventhandler_command_args = ?, check_timeperiod_object_id = ?, notification_timeperiod_object_id = ?, failure_prediction_options = '', check_interval = ?, retry_interval = ?, max_check_attempts = ?, first_notification_delay = ?, notification_interval = ?, notify_on_warning = ?, notify_on_unknown = ?, notify_on_critical = ?, notify_on_recovery = ?, notify_on_flapping = ?, notify_on_downtime = ?, stalk_on_ok = ?, stalk_on_warning = ?, stalk_on_unknown = ?, stalk_on_critical = ?, is_volatile = ?, flap_detection_enabled = ?, flap_detection_on_ok = ?, flap_detection_on_warning = ?, flap_detection_on_unknown = ?, flap_detection_on_critical = ?, low_flap_threshold = ?, high_flap_threshold = ?, process_performance_data = ?, freshness_checks_enabled = ?, freshness_threshold = ?, passive_checks_enabled = ?, event_handler_enabled = ?, active_checks_enabled = ?, retain_status_information = ?, retain_nonstatus_information = ?, notifications_enabled = ?, obsess_over_service = ?, failure_prediction_enabled = 0, notes = ?, notes_url = ?, action_url = ?, icon_image = ?, icon_image_alt = ?, importance = ?");
+    MYSQL_PREPARE();
+
+    while (tmp != NULL) {
+
+        object_id = ndo_get_object_id_name2(TRUE, NDO_OBJECTTYPE_SERVICE, tmp->host_name, tmp->description);
+        object_ids[i] = object_id;
+
+        host_object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_HOST, tmp->host_name);
+
+        MYSQL_RESET_BIND();
+
+        check_command = strtok(tmp->check_command, "!");
+        check_command_args = strtok(NULL, "\0");
+        check_command_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_COMMAND, check_command);
+
+        event_handler = strtok(tmp->event_handler, "!");
+        event_handler_args = strtok(NULL, "\0");
+        event_handler_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_COMMAND, check_command);
+
+        check_timeperiod_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_TIMEPERIOD, tmp->check_period);
+        notification_timeperiod_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_TIMEPERIOD, tmp->notification_period);
+
+        service_options[0] = flag_isset(tmp->notification_options, OPT_WARNING);
+        service_options[1] = flag_isset(tmp->notification_options, OPT_UNKNOWN);
+        service_options[2] = flag_isset(tmp->notification_options, OPT_CRITICAL);
+        service_options[3] = flag_isset(tmp->notification_options, OPT_RECOVERY);
+        service_options[4] = flag_isset(tmp->notification_options, OPT_FLAPPING);
+        service_options[5] = flag_isset(tmp->notification_options, OPT_DOWNTIME);
+        service_options[6] = flag_isset(tmp->stalking_options, OPT_OK);
+        service_options[7] = flag_isset(tmp->stalking_options, OPT_WARNING);
+        service_options[8] = flag_isset(tmp->stalking_options, OPT_UNKNOWN);
+        service_options[9] = flag_isset(tmp->stalking_options, OPT_CRITICAL);
+        service_options[10] = flag_isset(tmp->flap_detection_options, OPT_OK);
+        service_options[11] = flag_isset(tmp->flap_detection_options, OPT_WARNING);
+        service_options[12] = flag_isset(tmp->flap_detection_options, OPT_UNKNOWN);
+        service_options[13] = flag_isset(tmp->flap_detection_options, OPT_CRITICAL);
+
+        MYSQL_BIND_INT(config_type);
+        MYSQL_BIND_INT(host_object_id);
+        MYSQL_BIND_INT(object_id);
+        MYSQL_BIND_STR(tmp->description);
+        MYSQL_BIND_INT(check_command_id);
+        MYSQL_BIND_STR(check_command_args);
+        MYSQL_BIND_INT(event_handler_id);
+        MYSQL_BIND_STR(event_handler_args);
+        MYSQL_BIND_INT(check_timeperiod_id);
+        MYSQL_BIND_INT(notification_timeperiod_id);
+        MYSQL_BIND_FLOAT(tmp->check_interval);
+        MYSQL_BIND_FLOAT(tmp->retry_interval);
+        MYSQL_BIND_INT(tmp->max_attempts);
+        MYSQL_BIND_FLOAT(tmp->first_notification_delay);
+        MYSQL_BIND_FLOAT(tmp->notification_interval);
+        MYSQL_BIND_INT(host_options[0]);
+        MYSQL_BIND_INT(host_options[1]);
+        MYSQL_BIND_INT(host_options[2]);
+        MYSQL_BIND_INT(host_options[3]);
+        MYSQL_BIND_INT(host_options[4]);
+        MYSQL_BIND_INT(host_options[5]);
+        MYSQL_BIND_INT(host_options[6]);
+        MYSQL_BIND_INT(host_options[7]);
+        MYSQL_BIND_INT(host_options[8]);
+        MYSQL_BIND_INT(host_options[9]);
+        MYSQL_BIND_INT(tmp->is_volatile);
+        MYSQL_BIND_INT(tmp->flap_detection_enabled);
+        MYSQL_BIND_INT(host_options[10]);
+        MYSQL_BIND_INT(host_options[11]);
+        MYSQL_BIND_INT(host_options[12]);
+        MYSQL_BIND_INT(host_options[13]);
+        MYSQL_BIND_DOUBLE(tmp->low_flap_threshold);
+        MYSQL_BIND_DOUBLE(tmp->high_flap_threshold);
+        MYSQL_BIND_INT(tmp->process_performance_data);
+        MYSQL_BIND_INT(tmp->check_freshness);
+        MYSQL_BIND_INT(tmp->freshness_threshold);
+        MYSQL_BIND_INT(tmp->accept_passive_checks);
+        MYSQL_BIND_INT(tmp->event_handler_enabled);
+        MYSQL_BIND_INT(tmp->checks_enabled);
+        MYSQL_BIND_INT(tmp->retain_status_information);
+        MYSQL_BIND_INT(tmp->retain_nonstatus_information);
+        MYSQL_BIND_INT(tmp->notifications_enabled);
+        MYSQL_BIND_INT(tmp->obsess);
+        MYSQL_BIND_STR(tmp->notes);
+        MYSQL_BIND_STR(tmp->notes_url);
+        MYSQL_BIND_STR(tmp->action_url);
+        MYSQL_BIND_STR(tmp->icon_image);
+        MYSQL_BIND_STR(tmp->icon_image_alt);
+        MYSQL_BIND_INT(tmp->hourly_value);
+
+        MYSQL_BIND_INT(config_type);
+        MYSQL_BIND_INT(host_object_id);
+        MYSQL_BIND_INT(object_id);
+        MYSQL_BIND_STR(tmp->description);
+        MYSQL_BIND_INT(check_command_id);
+        MYSQL_BIND_STR(check_command_args);
+        MYSQL_BIND_INT(event_handler_id);
+        MYSQL_BIND_STR(event_handler_args);
+        MYSQL_BIND_INT(check_timeperiod_id);
+        MYSQL_BIND_INT(notification_timeperiod_id);
+        MYSQL_BIND_FLOAT(tmp->check_interval);
+        MYSQL_BIND_FLOAT(tmp->retry_interval);
+        MYSQL_BIND_INT(tmp->max_attempts);
+        MYSQL_BIND_FLOAT(tmp->first_notification_delay);
+        MYSQL_BIND_FLOAT(tmp->notification_interval);
+        MYSQL_BIND_INT(host_options[0]);
+        MYSQL_BIND_INT(host_options[1]);
+        MYSQL_BIND_INT(host_options[2]);
+        MYSQL_BIND_INT(host_options[3]);
+        MYSQL_BIND_INT(host_options[4]);
+        MYSQL_BIND_INT(host_options[5]);
+        MYSQL_BIND_INT(host_options[6]);
+        MYSQL_BIND_INT(host_options[7]);
+        MYSQL_BIND_INT(host_options[8]);
+        MYSQL_BIND_INT(host_options[9]);
+        MYSQL_BIND_INT(tmp->is_volatile);
+        MYSQL_BIND_INT(tmp->flap_detection_enabled);
+        MYSQL_BIND_INT(host_options[10]);
+        MYSQL_BIND_INT(host_options[11]);
+        MYSQL_BIND_INT(host_options[12]);
+        MYSQL_BIND_INT(host_options[13]);
+        MYSQL_BIND_DOUBLE(tmp->low_flap_threshold);
+        MYSQL_BIND_DOUBLE(tmp->high_flap_threshold);
+        MYSQL_BIND_INT(tmp->process_performance_data);
+        MYSQL_BIND_INT(tmp->check_freshness);
+        MYSQL_BIND_INT(tmp->freshness_threshold);
+        MYSQL_BIND_INT(tmp->accept_passive_checks);
+        MYSQL_BIND_INT(tmp->event_handler_enabled);
+        MYSQL_BIND_INT(tmp->checks_enabled);
+        MYSQL_BIND_INT(tmp->retain_status_information);
+        MYSQL_BIND_INT(tmp->retain_nonstatus_information);
+        MYSQL_BIND_INT(tmp->notifications_enabled);
+        MYSQL_BIND_INT(tmp->obsess);
+        MYSQL_BIND_STR(tmp->notes);
+        MYSQL_BIND_STR(tmp->notes_url);
+        MYSQL_BIND_STR(tmp->action_url);
+        MYSQL_BIND_STR(tmp->icon_image);
+        MYSQL_BIND_STR(tmp->icon_image_alt);
+        MYSQL_BIND_INT(tmp->hourly_value);
+
+        MYSQL_BIND();
+        MYSQL_EXECUTE();
+
+        service_ids[i] = mysql_insert_id(mysql_connection);
+        i++;
+        tmp = tmp->next;
+    }
 }
 
 
