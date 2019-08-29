@@ -18,6 +18,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <errmsg.h>
+#include <time.h>
 
 NEB_API_VERSION(CURRENT_NEB_API_VERSION)
 

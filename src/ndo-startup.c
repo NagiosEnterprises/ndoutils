@@ -78,6 +78,14 @@ int ndo_table_genocide()
 
 int ndo_write_active_objects()
 {
+    struct timeval tv;
+    char msg[1024];
+
+    gettimeofday(&tv, NULL);
+
+    sprintf(msg, "write_active_objects begin - %ld.%06ld", tv.tv_sec, tv.tv_usec);
+    ndo_log(msg);
+
     ndo_write_commands(NDO_CONFIG_DUMP_ORIGINAL);
     ndo_write_timeperiods(NDO_CONFIG_DUMP_ORIGINAL);
     ndo_write_contacts(NDO_CONFIG_DUMP_ORIGINAL);
@@ -88,6 +96,12 @@ int ndo_write_active_objects()
     ndo_write_servicegroups(NDO_CONFIG_DUMP_ORIGINAL);
     ndo_write_hostescalations(NDO_CONFIG_DUMP_ORIGINAL);
     ndo_write_serviceescalations(NDO_CONFIG_DUMP_ORIGINAL);
+
+    gettimeofday(&tv, NULL);
+
+    sprintf(msg, "write_active_objects end   - %ld.%06ld", tv.tv_sec, tv.tv_usec);
+    ndo_log(msg);
+
     return NDO_OK;
 }
 
@@ -120,7 +134,6 @@ int ndo_write_commands(int config_type)
     MYSQL_SET_SQL("INSERT INTO nagios_commands SET instance_id = 1, object_id = ?, config_type = ?, command_line = ? ON DUPLICATE KEY UPDATE instance_id = 1, object_id = ?, config_type = ?, command_line = ?");
 
     MYSQL_PREPARE();
-
 
     while (tmp != NULL) {
 
