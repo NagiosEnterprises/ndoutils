@@ -215,7 +215,7 @@ START_TEST (test_comment_data)
     mysql_query(mysql_connection, "SELECT 1 FROM nagios_commenthistory "
      " WHERE comment_type = 1 AND entry_type = 1 AND comment_time = FROM_UNIXTIME(1567021619) "
        " AND internal_comment_id = 1 AND author_name = 'Nagios Admin' "
-       " AND comment_data = 'i just rly wanted to comment on this' AND is_persistent = 1 "
+       " AND comment_data = 'this is a unique comment' AND is_persistent = 1 "
        " AND comment_source = 1 AND expires = 0 AND expiration_time = FROM_UNIXTIME(0) "
        " AND entry_time = FROM_UNIXTIME(1567021700) AND entry_time_usec = 29064 ");
 
@@ -236,7 +236,7 @@ START_TEST (test_comment_data)
     mysql_query(mysql_connection, "SELECT 2 FROM nagios_comments "
      " WHERE comment_type = 1 AND entry_type = 1 AND comment_time = FROM_UNIXTIME(1567021619) "
        " AND internal_comment_id = 1 AND author_name = 'Nagios Admin' "
-       " AND comment_data = 'i just rly wanted to comment on this' AND is_persistent = 1 "
+       " AND comment_data = 'this is a unique comment' AND is_persistent = 1 "
        " AND comment_source = 1 AND expires = 0 AND expiration_time = FROM_UNIXTIME(0) "
        " AND entry_time = FROM_UNIXTIME(1567021700) AND entry_time_usec = 29064 ");
 
