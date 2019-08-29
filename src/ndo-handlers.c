@@ -188,21 +188,18 @@ int ndo_handle_log(int type, void * d)
     ndo_log_data_bind[0].buffer = &(data->entry_time);
 
     ndo_log_data_bind[1].buffer_type = MYSQL_TYPE_LONG;
-    ndo_log_data_bind[1].buffer = &(data->entry_time);
+    ndo_log_data_bind[1].buffer = &(data->timestamp.tv_sec);
 
     ndo_log_data_bind[2].buffer_type = MYSQL_TYPE_LONG;
-    ndo_log_data_bind[2].buffer = &(data->timestamp.tv_sec);
+    ndo_log_data_bind[2].buffer = &(data->timestamp.tv_usec);
 
     ndo_log_data_bind[3].buffer_type = MYSQL_TYPE_LONG;
-    ndo_log_data_bind[3].buffer = &(data->timestamp.tv_usec);
+    ndo_log_data_bind[3].buffer = &(data->data_type);
 
-    ndo_log_data_bind[4].buffer_type = MYSQL_TYPE_LONG;
-    ndo_log_data_bind[4].buffer = &(data->data_type);
-
-    ndo_log_data_bind[5].buffer_type = MYSQL_TYPE_STRING;
-    ndo_log_data_bind[5].buffer_length = MAX_BIND_BUFFER;
-    ndo_log_data_bind[5].buffer = data->data;
-    ndo_log_data_bind[5].length = &(ndo_tmp_str_len[0]);
+    ndo_log_data_bind[4].buffer_type = MYSQL_TYPE_STRING;
+    ndo_log_data_bind[4].buffer_length = MAX_BIND_BUFFER;
+    ndo_log_data_bind[4].buffer = data->data;
+    ndo_log_data_bind[4].length = &(ndo_tmp_str_len[0]);
 
     ndo_log_data_return = mysql_stmt_bind_param(ndo_stmt_log_data, ndo_log_data_bind);
     if (ndo_log_data_return != 0) {

@@ -127,7 +127,7 @@ MYSQL_STMT * ndo_stmt_object_get_name2 = NULL;
 MYSQL_STMT * ndo_stmt_object_insert_name1 = NULL;
 MYSQL_STMT * ndo_stmt_object_insert_name2 = NULL;
 
-MYSQL_BIND ndo_log_data_bind[6];
+MYSQL_BIND ndo_log_data_bind[5];
 MYSQL_STMT * ndo_stmt_log_data = NULL;
 int ndo_log_data_return = 0;
 
