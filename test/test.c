@@ -28,6 +28,7 @@ gcovr --exclude="test.c" -r ..
 #include "../include/nagios/comments.h"
 #include "../include/nagios/nebstructs.h"
 #include "../include/nagios/neberrors.h"
+#include "../include/nagios/broker.h"
 
 #include "nagios-stubs.c"
 

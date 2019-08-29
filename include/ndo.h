@@ -24,6 +24,8 @@
 
 #include "../include/nagios/objects.h"
 
+#include <mysql.h>
+
 void ndo_log(char * buffer);
 int nebmodule_init(int flags, char * args, void * handle);
 int nebmodule_deinit(int flags, int reason);
@@ -87,7 +89,7 @@ int ndo_insert_object_id_name2(int object_type, char * name1, char * name2);
 int ndo_write_timeperiods(int config_type);
 int ndo_write_timeperiod_timeranges(int * timeperiod_ids);
 
-
+MYSQL * mysql_connection;
 
 
 
