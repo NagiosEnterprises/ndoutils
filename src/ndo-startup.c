@@ -86,6 +86,8 @@ int ndo_write_active_objects()
     ndo_write_hostgroups(NDO_CONFIG_DUMP_ORIGINAL);
     ndo_write_services(NDO_CONFIG_DUMP_ORIGINAL);
     ndo_write_servicegroups(NDO_CONFIG_DUMP_ORIGINAL);
+    ndo_write_host_escalations(NDO_CONFIG_DUMP_ORIGINAL);
+    ndo_write_service_escalations(NDO_CONFIG_DUMP_ORIGINAL);
     return NDO_OK;
 }
 
@@ -536,11 +538,6 @@ int ndo_write_hosts(int config_type)
 
     MYSQL_RESET_SQL();
 
-    /*
-    instance_id='%lu', config_type='%d', host_object_id='%lu', alias='%s', display_name='%s', address='%s', check_command_object_id='%lu', check_command_args='%s', eventhandler_command_object_id='%lu', eventhandler_command_args='%s', check_timeperiod_object_id='%lu', notification_timeperiod_object_id='%lu', failure_prediction_options='%s', check_interval='%lf', retry_interval='%lf', max_check_attempts='%d', first_notification_delay='%lf', notification_interval='%lf', notify_on_down='%d', notify_on_unreachable='%d', notify_on_recovery='%d', notify_on_flapping='%d', notify_on_downtime='%d', stalk_on_up='%d', stalk_on_down='%d', stalk_on_unreachable='%d', flap_detection_enabled='%d', flap_detection_on_up='%d', flap_detection_on_down='%d', flap_detection_on_unreachable='%d', low_flap_threshold='%lf', high_flap_threshold='%lf', process_performance_data='%d', freshness_checks_enabled='%d', freshness_threshold='%d', passive_checks_enabled='%d', event_handler_enabled='%d', active_checks_enabled='%d', retain_status_information='%d', retain_nonstatus_information='%d', notifications_enabled='%d', obsess_over_host='%d', failure_prediction_enabled='%d', notes='%s', notes_url='%s', action_url='%s', icon_image='%s', icon_image_alt='%s', vrml_image='%s', statusmap_image='%s', have_2d_coords='%d', x_2d='%d', y_2d='%d', have_3d_coords='%d', x_3d='%lf', y_3d='%lf', z_3d='%lf', importance='%d'
-    */
-
-
     MYSQL_SET_SQL("INSERT INTO nagios_hosts SET instance_id = 1, config_type = ?, host_object_id = ?, alias = ?, display_name = ?, address = ?, check_command_object_id = ?, check_command_args = ?, eventhandler_command_object_id = ?, eventhandler_command_args = ?, check_timeperiod_object_id = ?, notification_timeperiod_object_id = ?, failure_prediction_options = '', check_interval = ?, retry_interval = ?, max_check_attempts = ?, first_notification_delay = ?, notification_interval = ?, notify_on_down = ?, notify_on_unreachable = ?, notify_on_recovery = ?, notify_on_flapping = ?, notify_on_downtime = ?, stalk_on_up = ?, stalk_on_down = ?, stalk_on_unreachable = ?, flap_detection_enabled = ?, flap_detection_on_up = ?, flap_detection_on_down = ?, flap_detection_on_unreachable = ?, low_flap_threshold = ?, high_flap_threshold = ?, process_performance_data = ?, freshness_checks_enabled = ?, freshness_threshold = ?, passive_checks_enabled = ?, event_handler_enabled = ?, active_checks_enabled = ?, retain_status_information = ?, retain_nonstatus_information = ?, notifications_enabled = ?, obsess_over_host = ?, failure_prediction_enabled = 0, notes = ?, notes_url = ?, action_url = ?, icon_image = ?, icon_image_alt = ?, vrml_image = ?, statusmap_image = ?, have_2d_coords = ?, x_2d = ?, y_2d = ?, have_3d_coords = ?, x_3d = ?, y_3d = ?, z_3d = ?, importance = ? ON DUPLICATE KEY UPDATE instance_id = 1, config_type = ?, host_object_id = ?, alias = ?, display_name = ?, address = ?, check_command_object_id = ?, check_command_args = ?, eventhandler_command_object_id = ?, eventhandler_command_args = ?, check_timeperiod_object_id = ?, notification_timeperiod_object_id = ?, failure_prediction_options = '', check_interval = ?, retry_interval = ?, max_check_attempts = ?, first_notification_delay = ?, notification_interval = ?, notify_on_down = ?, notify_on_unreachable = ?, notify_on_recovery = ?, notify_on_flapping = ?, notify_on_downtime = ?, stalk_on_up = ?, stalk_on_down = ?, stalk_on_unreachable = ?, flap_detection_enabled = ?, flap_detection_on_up = ?, flap_detection_on_down = ?, flap_detection_on_unreachable = ?, low_flap_threshold = ?, high_flap_threshold = ?, process_performance_data = ?, freshness_checks_enabled = ?, freshness_threshold = ?, passive_checks_enabled = ?, event_handler_enabled = ?, active_checks_enabled = ?, retain_status_information = ?, retain_nonstatus_information = ?, notifications_enabled = ?, obsess_over_host = ?, failure_prediction_enabled = 0, notes = ?, notes_url = ?, action_url = ?, icon_image = ?, icon_image_alt = ?, vrml_image = ?, statusmap_image = ?, have_2d_coords = ?, x_2d = ?, y_2d = ?, have_3d_coords = ?, x_3d = ?, y_3d = ?, z_3d = ?, importance = ?");
     MYSQL_PREPARE();
 
@@ -940,15 +937,6 @@ int ndo_write_services(int config_type)
 
     MYSQL_RESET_SQL();
 
-/*
-
-line 4460 in ndomod.c
-line 3586 in dbhandlers.c
-
-instance_id=1, config_type='%d', host_object_id='%lu', service_object_id='%lu', display_name='%s', check_command_object_id='%lu', check_command_args='%s', eventhandler_command_object_id='%lu', eventhandler_command_args='%s', check_timeperiod_object_id='%lu', notification_timeperiod_object_id='%lu', failure_prediction_options='%s', check_interval='%lf', retry_interval='%lf', max_check_attempts='%d', first_notification_delay='%lf', notification_interval='%lf', notify_on_warning='%d', notify_on_unknown='%d', notify_on_critical='%d', notify_on_recovery='%d', notify_on_flapping='%d', notify_on_downtime='%d', stalk_on_ok='%d', stalk_on_warning='%d', stalk_on_unknown='%d', stalk_on_critical='%d', is_volatile='%d', flap_detection_enabled='%d', flap_detection_on_ok='%d', flap_detection_on_warning='%d', flap_detection_on_unknown='%d', flap_detection_on_critical='%d', low_flap_threshold='%lf', high_flap_threshold='%lf', process_performance_data='%d', freshness_checks_enabled='%d', freshness_threshold='%d', passive_checks_enabled='%d', event_handler_enabled='%d', active_checks_enabled='%d', retain_status_information='%d', retain_nonstatus_information='%d', notifications_enabled='%d', obsess_over_service='%d', failure_prediction_enabled='%d', notes='%s', notes_url='%s', action_url='%s', icon_image='%s', icon_image_alt='%s', importance='%d'
-
-*/
-
     MYSQL_SET_SQL("INSERT INTO nagios_services SET instance_id = 1, config_type = ?, host_object_id = ?, service_object_id = ?, display_name = ?, check_command_object_id = ?, check_command_args = ?, eventhandler_command_object_id = ?, eventhandler_command_args = ?, check_timeperiod_object_id = ?, notification_timeperiod_object_id = ?, failure_prediction_options = '', check_interval = ?, retry_interval = ?, max_check_attempts = ?, first_notification_delay = ?, notification_interval = ?, notify_on_warning = ?, notify_on_unknown = ?, notify_on_critical = ?, notify_on_recovery = ?, notify_on_flapping = ?, notify_on_downtime = ?, stalk_on_ok = ?, stalk_on_warning = ?, stalk_on_unknown = ?, stalk_on_critical = ?, is_volatile = ?, flap_detection_enabled = ?, flap_detection_on_ok = ?, flap_detection_on_warning = ?, flap_detection_on_unknown = ?, flap_detection_on_critical = ?, low_flap_threshold = ?, high_flap_threshold = ?, process_performance_data = ?, freshness_checks_enabled = ?, freshness_threshold = ?, passive_checks_enabled = ?, event_handler_enabled = ?, active_checks_enabled = ?, retain_status_information = ?, retain_nonstatus_information = ?, notifications_enabled = ?, obsess_over_service = ?, failure_prediction_enabled = 0, notes = ?, notes_url = ?, action_url = ?, icon_image = ?, icon_image_alt = ?, importance = ? ON DUPLICATE KEY UPDATE instance_id = 1, config_type = ?, host_object_id = ?, service_object_id = ?, display_name = ?, check_command_object_id = ?, check_command_args = ?, eventhandler_command_object_id = ?, eventhandler_command_args = ?, check_timeperiod_object_id = ?, notification_timeperiod_object_id = ?, failure_prediction_options = '', check_interval = ?, retry_interval = ?, max_check_attempts = ?, first_notification_delay = ?, notification_interval = ?, notify_on_warning = ?, notify_on_unknown = ?, notify_on_critical = ?, notify_on_recovery = ?, notify_on_flapping = ?, notify_on_downtime = ?, stalk_on_ok = ?, stalk_on_warning = ?, stalk_on_unknown = ?, stalk_on_critical = ?, is_volatile = ?, flap_detection_enabled = ?, flap_detection_on_ok = ?, flap_detection_on_warning = ?, flap_detection_on_unknown = ?, flap_detection_on_critical = ?, low_flap_threshold = ?, high_flap_threshold = ?, process_performance_data = ?, freshness_checks_enabled = ?, freshness_threshold = ?, passive_checks_enabled = ?, event_handler_enabled = ?, active_checks_enabled = ?, retain_status_information = ?, retain_nonstatus_information = ?, notifications_enabled = ?, obsess_over_service = ?, failure_prediction_enabled = 0, notes = ?, notes_url = ?, action_url = ?, icon_image = ?, icon_image_alt = ?, importance = ?");
     MYSQL_PREPARE();
 
@@ -1343,4 +1331,69 @@ int ndo_save_customvariables(int object_id, int config_type, customvariablesmemb
 
         tmp = tmp->next;
     }
+}
+
+
+int ndo_write_host_escalations(NDO_CONFIG_DUMP_ORIGINAL)
+{
+    hostescalation * tmp = hostescalation_list;
+    int host_object_id = 0;
+    int timeperiod_object_id = 0;
+    int i = 0;
+
+    size_t count = (size_t) num_objects.hostescalations;
+    int * object_ids = calloc(count, sizeof(int));
+    int * hostescalation_ids = calloc(count, sizeof(int));
+
+    int hostescalation_options[3] = { 0 };
+
+    MYSQL_RESET_SQL();
+
+    MYSQL_SET_SQL("INSERT INTO nagios_hostescalations instance_id = 1, config_type = ?, host_object_id = ?, timeperiod_object_id = ?, first_notification = ?, last_notification = ?, notification_interval = ?, escalate_on_recovery = ?, escalate_on_down = ?, escalate_on_unreachable = ? ON DUPLICATE KEY UPDATE instance_id = 1, config_type = ?, host_object_id = ?, timeperiod_object_id = ?, first_notification = ?, last_notification = ?, notification_interval = ?, escalate_on_recovery = ?, escalate_on_down = ?, escalate_on_unreachable = ?");
+    MYSQL_PREPARE();
+
+    while (tmp != NULL) {
+
+        host_object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_HOST, tmp->host_name);
+        timeperiod_object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_TIMEPERIOD, tmp->escalation_period);
+
+        MYSQL_RESET_BIND();
+
+        hostescalation_options[0] = flag_isset(tmp->escalation_options, OPT_RECOVERY);
+        hostescalation_options[1] = flag_isset(tmp->escalation_options, OPT_DOWN);
+        hostescalation_options[2] = flag_isset(tmp->escalation_options, OPT_UNREACHABLE);
+
+        MYSQL_BIND_INT(config_type);
+        MYSQL_BIND_INT(host_object_id);
+        MYSQL_BIND_INT(timeperiod_object_id);
+        MYSQL_BIND_INT(tmp->first_notification);
+        MYSQL_BIND_INT(tmp->last_notification);
+        MYSQL_BIND_FLOAT(tmp->notification_interval);
+        MYSQL_BIND_INT(hostescalation_options[0]);
+        MYSQL_BIND_INT(hostescalation_options[1]);
+        MYSQL_BIND_INT(hostescalation_options[2]);
+
+        MYSQL_BIND_INT(config_type);
+        MYSQL_BIND_INT(host_object_id);
+        MYSQL_BIND_INT(timeperiod_object_id);
+        MYSQL_BIND_INT(tmp->first_notification);
+        MYSQL_BIND_INT(tmp->last_notification);
+        MYSQL_BIND_FLOAT(tmp->notification_interval);
+        MYSQL_BIND_INT(hostescalation_options[0]);
+        MYSQL_BIND_INT(hostescalation_options[1]);
+        MYSQL_BIND_INT(hostescalation_options[2]);
+
+        MYSQL_BIND();
+        MYSQL_EXECUTE();
+
+        hostescalation_ids[i] = mysql_insert_id(mysql_connection);
+        i++;
+        tmp = tmp->next;        
+    }
+}
+
+
+int ndo_write_service_escalations(NDO_CONFIG_DUMP_ORIGINAL)
+{
+
 }
