@@ -110,7 +110,7 @@ int ndo_handle_timed_event(int type, void * d)
         MYSQL_RESET_SQL();
         MYSQL_RESET_BIND();
 
-        MYSQL_SET_SQL("INSERT INTO nagios_timedeventqueue SET instance_id = 1, event_type = ?, queued_time = ?, queued_time_usec = ?, scheduled_time = ?, recurring_event = ?, object_id = ? ON DUPLICATE KEY UPDATE instance_id = 1, event_type = ?, queued_time = ?, queued_time_usec = ?, scheduled_time = ?, recurring_event = ?, object_id = ?");
+        MYSQL_SET_SQL("INSERT INTO nagios_timedeventqueue SET instance_id = 1, event_type = ?, queued_time = FROM_UNIXTIME(?), queued_time_usec = ?, scheduled_time = FROM_UNIXTIME(?), recurring_event = ?, object_id = ? ON DUPLICATE KEY UPDATE instance_id = 1, event_type = ?, queued_time = ?, queued_time_usec = ?, scheduled_time = ?, recurring_event = ?, object_id = ?");
         MYSQL_PREPARE();
 
         MYSQL_BIND_INT(data->event_type);
@@ -136,7 +136,7 @@ int ndo_handle_timed_event(int type, void * d)
         MYSQL_RESET_SQL();
         MYSQL_RESET_BIND();
 
-        MYSQL_SET_SQL("DELETE FROM nagios_timedeventqueue WHERE instance_id = 1 AND event_type = ? AND scheduled_time = ? AND recurring_event = ? AND object_id = ?");
+        MYSQL_SET_SQL("DELETE FROM nagios_timedeventqueue WHERE instance_id = 1 AND event_type = ? AND scheduled_time = FROM_UNIXTIME(?) AND recurring_event = ? AND object_id = ?");
         MYSQL_PREPARE();
 
         MYSQL_BIND_INT(data->event_type);
@@ -154,7 +154,7 @@ int ndo_handle_timed_event(int type, void * d)
         MYSQL_RESET_SQL();
         MYSQL_RESET_BIND();
 
-        MYSQL_SET_SQL("DELETE FROM nagios_timedeventqueue WHERE instance_id = 1 AND scheduled_time < ?");
+        MYSQL_SET_SQL("DELETE FROM nagios_timedeventqueue WHERE instance_id = 1 AND scheduled_time < FROM_UNIXTIME(?)");
         MYSQL_PREPARE();
 
         MYSQL_BIND_INT(data->run_time);
@@ -187,22 +187,22 @@ int ndo_handle_log(int type, void * d)
     ndo_log_data_bind[0].buffer_type = MYSQL_TYPE_LONG;
     ndo_log_data_bind[0].buffer = &(data->entry_time);
 
-    ndo_log_data_bind[0].buffer_type = MYSQL_TYPE_LONG;
-    ndo_log_data_bind[0].buffer = &(data->entry_time);
+    ndo_log_data_bind[1].buffer_type = MYSQL_TYPE_LONG;
+    ndo_log_data_bind[1].buffer = &(data->entry_time);
 
-    ndo_log_data_bind[0].buffer_type = MYSQL_TYPE_LONG;
-    ndo_log_data_bind[0].buffer = &(data->timestamp.tv_sec);
+    ndo_log_data_bind[2].buffer_type = MYSQL_TYPE_LONG;
+    ndo_log_data_bind[2].buffer = &(data->timestamp.tv_sec);
 
-    ndo_log_data_bind[0].buffer_type = MYSQL_TYPE_LONG;
-    ndo_log_data_bind[0].buffer = &(data->timestamp.tv_usec);
+    ndo_log_data_bind[3].buffer_type = MYSQL_TYPE_LONG;
+    ndo_log_data_bind[3].buffer = &(data->timestamp.tv_usec);
 
-    ndo_log_data_bind[0].buffer_type = MYSQL_TYPE_LONG;
-    ndo_log_data_bind[0].buffer = &(data->data_type);
+    ndo_log_data_bind[4].buffer_type = MYSQL_TYPE_LONG;
+    ndo_log_data_bind[4].buffer = &(data->data_type);
 
-    ndo_log_data_bind[1].buffer_type = MYSQL_TYPE_STRING;
-    ndo_log_data_bind[1].buffer_length = MAX_BIND_BUFFER;
-    ndo_log_data_bind[1].buffer = data->data;
-    ndo_log_data_bind[1].length = &(ndo_tmp_str_len[0]);
+    ndo_log_data_bind[5].buffer_type = MYSQL_TYPE_STRING;
+    ndo_log_data_bind[5].buffer_length = MAX_BIND_BUFFER;
+    ndo_log_data_bind[5].buffer = data->data;
+    ndo_log_data_bind[5].length = &(ndo_tmp_str_len[0]);
 
     ndo_log_data_return = mysql_stmt_bind_param(ndo_stmt_log_data, ndo_log_data_bind);
     if (ndo_log_data_return != 0) {
@@ -756,7 +756,7 @@ int ndo_handle_program_status(int type, void * d)
     MYSQL_RESET_SQL();
     MYSQL_RESET_BIND();
 
-    MYSQL_SET_SQL("INSERT INTO nagios_programstatus SET instance_id = 1, status_update_time = ?, program_start_time = FROM_UNIXTIME(?), is_currently_running = 1, process_id = ?, daemon_mode = ?, last_command_check = FROM_UNIXTIME(0), last_log_rotation = FROM_UNIXTIME(?), notifications_enabled = ?, active_service_checks_enabled = ?, passive_service_checks_enabled = ?, active_host_checks_enabled = ?, passive_host_checks_enabled = ?, event_handlers_enabled = ?, flap_detection_enabled = ?, failure_prediction_enabled = ?, process_performance_data = ?, obsess_over_hosts = ?, obsess_over_services = ?, modified_host_attributes = ?, modified_service_attributes = ?, global_host_event_handler = ?, global_service_event_handler = ? ON DUPLICATE KEY UPDATE instance_id = 1, status_update_time = ?, program_start_time = FROM_UNIXTIME(?), is_currently_running = 1, process_id = ?, daemon_mode = ?, last_command_check = FROM_UNIXTIME(0), last_log_rotation = FROM_UNIXTIME(?), notifications_enabled = ?, active_service_checks_enabled = ?, passive_service_checks_enabled = ?, active_host_checks_enabled = ?, passive_host_checks_enabled = ?, event_handlers_enabled = ?, flap_detection_enabled = ?, failure_prediction_enabled = ?, process_performance_data = ?, obsess_over_hosts = ?, obsess_over_services = ?, modified_host_attributes = ?, modified_service_attributes = ?, global_host_event_handler = ?, global_service_event_handler = ?");
+    MYSQL_SET_SQL("INSERT INTO nagios_programstatus SET instance_id = 1, status_update_time = FROM_UNIXTIME(?), program_start_time = FROM_UNIXTIME(?), is_currently_running = 1, process_id = ?, daemon_mode = ?, last_command_check = FROM_UNIXTIME(0), last_log_rotation = FROM_UNIXTIME(?), notifications_enabled = ?, active_service_checks_enabled = ?, passive_service_checks_enabled = ?, active_host_checks_enabled = ?, passive_host_checks_enabled = ?, event_handlers_enabled = ?, flap_detection_enabled = ?, failure_prediction_enabled = 0, process_performance_data = ?, obsess_over_hosts = ?, obsess_over_services = ?, modified_host_attributes = ?, modified_service_attributes = ?, global_host_event_handler = ?, global_service_event_handler = ? ON DUPLICATE KEY UPDATE instance_id = 1, status_update_time = FROM_UNIXTIME(?), program_start_time = FROM_UNIXTIME(?), is_currently_running = 1, process_id = ?, daemon_mode = ?, last_command_check = FROM_UNIXTIME(0), last_log_rotation = FROM_UNIXTIME(?), notifications_enabled = ?, active_service_checks_enabled = ?, passive_service_checks_enabled = ?, active_host_checks_enabled = ?, passive_host_checks_enabled = ?, event_handlers_enabled = ?, flap_detection_enabled = ?, failure_prediction_enabled = 0, process_performance_data = ?, obsess_over_hosts = ?, obsess_over_services = ?, modified_host_attributes = ?, modified_service_attributes = ?, global_host_event_handler = ?, global_service_event_handler = ?");
     MYSQL_PREPARE();
 
     MYSQL_BIND_INT(data->timestamp.tv_sec);
@@ -1206,7 +1206,7 @@ int ndo_handle_contact_notification_method(int type, void * d)
     MYSQL_RESET_BIND();
     MYSQL_RESET_SQL();
 
-    MYSQL_SET_SQL("INSERT INTO nagios_contactnotificationmethod SET instance_id = 1, contactnotification_id = ?, start_time = FROM_UNIXTIME(?), start_time_usec = ?, end_time = FROM_UNIXTIME(?), end_time_usec = ?, command_object_id = ?, command_args = ? ON DUPLICATE KEY UPDATE instance_id = 1, contactnotification_id = ?, start_time = FROM_UNIXTIME(?), start_time_usec = ?, end_time = FROM_UNIXTIME(?), end_time_usec = ?, command_object_id = ?, command_args = ?");
+    MYSQL_SET_SQL("INSERT INTO nagios_contactnotificationmethods SET instance_id = 1, contactnotification_id = ?, start_time = FROM_UNIXTIME(?), start_time_usec = ?, end_time = FROM_UNIXTIME(?), end_time_usec = ?, command_object_id = ?, command_args = ? ON DUPLICATE KEY UPDATE instance_id = 1, contactnotification_id = ?, start_time = FROM_UNIXTIME(?), start_time_usec = ?, end_time = FROM_UNIXTIME(?), end_time_usec = ?, command_object_id = ?, command_args = ?");
     MYSQL_PREPARE();
 
     MYSQL_BIND_INT(ndo_last_contact_notification_id);
