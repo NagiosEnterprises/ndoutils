@@ -671,11 +671,11 @@ int ndo_initialize_prepared_statements()
     ndo_return = mysql_stmt_prepare(ndo_stmt_object_get_name2, ndo_query, strlen(ndo_query));
     // todo
 
-    strncpy(ndo_query, "INSERT INTO nagios_objects (objecttype_id, name1) VALUES (?, ?)", MAX_SQL_BUFFER);
+    strncpy(ndo_query, "INSERT INTO nagios_objects SET objecttype_id = ?, name1 = ? ON DUPLICATE KEY UPDATE is_active = 1", MAX_SQL_BUFFER);
     ndo_return = mysql_stmt_prepare(ndo_stmt_object_insert_name1, ndo_query, strlen(ndo_query));
     // todo
 
-    strncpy(ndo_query, "INSERT INTO nagios_objects (objecttype_id, name1, name2) VALUES (?, ?, ?)", MAX_SQL_BUFFER);
+    strncpy(ndo_query, "INSERT INTO nagios_objects SET objecttype_id = ?, name1 = ?, name2 = ? ON DUPLICATE KEY UPDATE is_active = 1", MAX_SQL_BUFFER);
     ndo_return = mysql_stmt_prepare(ndo_stmt_object_insert_name2, ndo_query, strlen(ndo_query));
     // todo
 
