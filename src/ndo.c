@@ -32,7 +32,9 @@ extern hostgroup            * hostgroup_list;
 extern service              * service_list;
 extern servicegroup         * servicegroup_list;
 extern hostescalation       * hostescalation_list;
+extern hostescalation      ** hostescalation_ary;
 extern serviceescalation    * serviceescalation_list;
+extern serviceescalation   ** serviceescalation_ary;
 extern hostdependency       * hostdependency_list;
 extern servicedependency    * servicedependency_list;
 
@@ -42,6 +44,8 @@ extern char                 * global_host_event_handler;
 extern char                 * global_service_event_handler;
 
 extern int                  __nagios_object_structure_version;
+
+extern struct object_count    num_objects;
 
 #define NDO_REPORT_ERROR(err) \
 do { \

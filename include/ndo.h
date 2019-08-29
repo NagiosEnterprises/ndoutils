@@ -116,6 +116,16 @@ int ndo_write_service_contacts(int * service_ids);
 int ndo_write_servicegroups(int config_type);
 int ndo_write_servicegroup_members(int * servicegroup_ids);
 
+int ndo_write_hostescalations(int config_type);
+int ndo_write_hostescalation_contactgroups(int * hostescalation_ids);
+int ndo_write_hostescalation_contacts(int * hostescalation_ids);
+
+int ndo_write_serviceescalations(int config_type);
+int ndo_write_serviceescalation_contactgroups(int * serviceescalation_ids);
+int ndo_write_serviceescalation_contacts(int * serviceescalation_ids);
+
+
+
 
 #define COUNT_OBJECTS(objvar, listvar, countvar) \
 do { \

@@ -86,8 +86,8 @@ int ndo_write_active_objects()
     ndo_write_hostgroups(NDO_CONFIG_DUMP_ORIGINAL);
     ndo_write_services(NDO_CONFIG_DUMP_ORIGINAL);
     ndo_write_servicegroups(NDO_CONFIG_DUMP_ORIGINAL);
-    ndo_write_host_escalations(NDO_CONFIG_DUMP_ORIGINAL);
-    ndo_write_service_escalations(NDO_CONFIG_DUMP_ORIGINAL);
+    ndo_write_hostescalations(NDO_CONFIG_DUMP_ORIGINAL);
+    ndo_write_serviceescalations(NDO_CONFIG_DUMP_ORIGINAL);
     return NDO_OK;
 }
 
@@ -1334,9 +1334,9 @@ int ndo_save_customvariables(int object_id, int config_type, customvariablesmemb
 }
 
 
-int ndo_write_host_escalations(NDO_CONFIG_DUMP_ORIGINAL)
+int ndo_write_hostescalations(int config_type)
 {
-    hostescalation * tmp = hostescalation_list;
+    hostescalation * tmp = NULL;
     int host_object_id = 0;
     int timeperiod_object_id = 0;
     int i = 0;
@@ -1349,10 +1349,12 @@ int ndo_write_host_escalations(NDO_CONFIG_DUMP_ORIGINAL)
 
     MYSQL_RESET_SQL();
 
-    MYSQL_SET_SQL("INSERT INTO nagios_hostescalations instance_id = 1, config_type = ?, host_object_id = ?, timeperiod_object_id = ?, first_notification = ?, last_notification = ?, notification_interval = ?, escalate_on_recovery = ?, escalate_on_down = ?, escalate_on_unreachable = ? ON DUPLICATE KEY UPDATE instance_id = 1, config_type = ?, host_object_id = ?, timeperiod_object_id = ?, first_notification = ?, last_notification = ?, notification_interval = ?, escalate_on_recovery = ?, escalate_on_down = ?, escalate_on_unreachable = ?");
+    MYSQL_SET_SQL("INSERT INTO nagios_hostescalations SET instance_id = 1, config_type = ?, host_object_id = ?, timeperiod_object_id = ?, first_notification = ?, last_notification = ?, notification_interval = ?, escalate_on_recovery = ?, escalate_on_down = ?, escalate_on_unreachable = ? ON DUPLICATE KEY UPDATE instance_id = 1, config_type = ?, host_object_id = ?, timeperiod_object_id = ?, first_notification = ?, last_notification = ?, notification_interval = ?, escalate_on_recovery = ?, escalate_on_down = ?, escalate_on_unreachable = ?");
     MYSQL_PREPARE();
 
-    while (tmp != NULL) {
+    for (i = 0; i < num_objects.hostescalations; i++) {
+
+        tmp = hostescalation_ary[i];
 
         host_object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_HOST, tmp->host_name);
         timeperiod_object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_TIMEPERIOD, tmp->escalation_period);
@@ -1387,13 +1389,230 @@ int ndo_write_host_escalations(NDO_CONFIG_DUMP_ORIGINAL)
         MYSQL_EXECUTE();
 
         hostescalation_ids[i] = mysql_insert_id(mysql_connection);
-        i++;
-        tmp = tmp->next;        
+    }
+
+    ndo_write_hostescalation_contactgroups(hostescalation_ids);
+    ndo_write_hostescalation_contacts(hostescalation_ids);
+}
+
+
+int ndo_write_hostescalation_contactgroups(int * hostescalation_ids)
+{
+    hostescalation * tmp = NULL;
+    contactgroupsmember * group = NULL;
+    int object_id = 0;
+    int i = 0;
+
+    MYSQL_RESET_SQL();
+
+    MYSQL_SET_SQL("INSERT INTO nagios_hostescalation_contactgroups SET instance_id = 1, hostescalation_id = ?, contactgroup_object_id = ? ON DUPLICATE KEY UPDATE instance_id = 1, hostescalation_id = ?, contactgroup_object_id = ?");
+    MYSQL_PREPARE();
+
+    for (i = 0; i < num_objects.hostescalations; i++) {
+
+        tmp = hostescalation_ary[i];
+
+        group = tmp->contact_groups;
+
+        while (group != NULL) {
+
+            object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_CONTACTGROUP, group->group_name);
+
+            MYSQL_RESET_BIND();
+
+            MYSQL_BIND_INT(hostescalation_ids[i]);
+            MYSQL_BIND_INT(object_id);
+
+            MYSQL_BIND_INT(hostescalation_ids[i]);
+            MYSQL_BIND_INT(object_id);
+
+            MYSQL_BIND();
+            MYSQL_EXECUTE();
+
+            group = group->next;
+        }
     }
 }
 
 
-int ndo_write_service_escalations(NDO_CONFIG_DUMP_ORIGINAL)
+int ndo_write_hostescalation_contacts(int * hostescalation_ids)
 {
+    hostescalation * tmp = NULL;
+    contactsmember * cnt = NULL;
+    int object_id = 0;
+    int i = 0;
 
+    MYSQL_RESET_SQL();
+
+    MYSQL_SET_SQL("INSERT INTO nagios_hostescalation_contacts SET instance_id = 1, hostescalation_id = ?, contact_object_id = ? ON DUPLICATE KEY UPDATE instance_id = 1, service_id = ?, contact_object_id = ?");
+    MYSQL_PREPARE();
+
+    for (i = 0; i < num_objects.hostescalations; i++) {
+
+        tmp = hostescalation_ary[i];
+
+        cnt = tmp->contacts;
+
+        while (cnt != NULL) {
+
+            object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_CONTACT, cnt->contact_name);
+
+            MYSQL_RESET_BIND();
+
+            MYSQL_BIND_INT(hostescalation_ids[i]);
+            MYSQL_BIND_INT(object_id);
+
+            MYSQL_BIND_INT(hostescalation_ids[i]);
+            MYSQL_BIND_INT(object_id);
+
+            MYSQL_BIND();
+            MYSQL_EXECUTE();
+
+            cnt = cnt->next;
+        }
+    }
+}
+
+
+
+int ndo_write_serviceescalations(int config_type)
+{
+    serviceescalation * tmp = NULL;
+    int service_object_id = 0;
+    int timeperiod_object_id = 0;
+    int i = 0;
+
+    size_t count = (size_t) num_objects.serviceescalations;
+    int * object_ids = calloc(count, sizeof(int));
+    int * serviceescalation_ids = calloc(count, sizeof(int));
+
+    int serviceescalation_options[4] = { 0 };
+
+    MYSQL_RESET_SQL();
+
+    MYSQL_SET_SQL("INSERT INTO nagios_serviceescalations SET instance_id = 1, config_type = ?, service_object_id = ?, timeperiod_object_id = ?, first_notification = ?, last_notification = ?, notification_interval = ?, escalate_on_recovery = ?, escalate_on_warning = ?, escalate_on_unknown = ?, escalate_on_critical = ? ON DUPLICATE KEY UPDATE instance_id = 1, config_type = ?, service_object_id = ?, timeperiod_object_id = ?, first_notification = ?, last_notification = ?, notification_interval = ?, escalate_on_recovery = ?, escalate_on_warning = ?, escalate_on_unknown = ?, escalate_on_critical = ?");
+    MYSQL_PREPARE();
+
+    for (i = 0; i < num_objects.serviceescalations; i++) {
+
+        tmp = serviceescalation_ary[i];
+
+        service_object_id = ndo_get_object_id_name2(TRUE, NDO_OBJECTTYPE_SERVICE, tmp->host_name, tmp->description);
+        timeperiod_object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_TIMEPERIOD, tmp->escalation_period);
+
+        MYSQL_RESET_BIND();
+
+        serviceescalation_options[0] = flag_isset(tmp->escalation_options, OPT_RECOVERY);
+        serviceescalation_options[1] = flag_isset(tmp->escalation_options, OPT_WARNING);
+        serviceescalation_options[2] = flag_isset(tmp->escalation_options, OPT_UNKNOWN);
+        serviceescalation_options[3] = flag_isset(tmp->escalation_options, OPT_CRITICAL);
+
+        MYSQL_BIND_INT(config_type);
+        MYSQL_BIND_INT(service_object_id);
+        MYSQL_BIND_INT(timeperiod_object_id);
+        MYSQL_BIND_INT(tmp->first_notification);
+        MYSQL_BIND_INT(tmp->last_notification);
+        MYSQL_BIND_FLOAT(tmp->notification_interval);
+        MYSQL_BIND_INT(serviceescalation_options[0]);
+        MYSQL_BIND_INT(serviceescalation_options[1]);
+        MYSQL_BIND_INT(serviceescalation_options[2]);
+        MYSQL_BIND_INT(serviceescalation_options[3]);
+
+        MYSQL_BIND_INT(config_type);
+        MYSQL_BIND_INT(service_object_id);
+        MYSQL_BIND_INT(timeperiod_object_id);
+        MYSQL_BIND_INT(tmp->first_notification);
+        MYSQL_BIND_INT(tmp->last_notification);
+        MYSQL_BIND_FLOAT(tmp->notification_interval);
+        MYSQL_BIND_INT(serviceescalation_options[0]);
+        MYSQL_BIND_INT(serviceescalation_options[1]);
+        MYSQL_BIND_INT(serviceescalation_options[2]);
+        MYSQL_BIND_INT(serviceescalation_options[3]);
+
+        MYSQL_BIND();
+        MYSQL_EXECUTE();
+
+        serviceescalation_ids[i] = mysql_insert_id(mysql_connection);   
+    }
+
+    ndo_write_serviceescalation_contactgroups(serviceescalation_ids);
+    ndo_write_serviceescalation_contacts(serviceescalation_ids);
+}
+
+
+int ndo_write_serviceescalation_contactgroups(int * serviceescalation_ids)
+{
+    serviceescalation * tmp = NULL;
+    contactgroupsmember * group = NULL;
+    int object_id = 0;
+    int i = 0;
+
+    MYSQL_RESET_SQL();
+
+    MYSQL_SET_SQL("INSERT INTO nagios_serviceescalation_contactgroups SET instance_id = 1, serviceescalation_id = ?, contactgroup_object_id = ? ON DUPLICATE KEY UPDATE instance_id = 1, serviceescalation_id = ?, contactgroup_object_id = ?");
+    MYSQL_PREPARE();
+
+    for (i = 0; i < num_objects.serviceescalations; i++) {
+
+        tmp = serviceescalation_ary[i];
+
+        group = tmp->contact_groups;
+
+        while (group != NULL) {
+
+            object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_CONTACTGROUP, group->group_name);
+
+            MYSQL_RESET_BIND();
+
+            MYSQL_BIND_INT(serviceescalation_ids[i]);
+            MYSQL_BIND_INT(object_id);
+
+            MYSQL_BIND_INT(serviceescalation_ids[i]);
+            MYSQL_BIND_INT(object_id);
+
+            MYSQL_BIND();
+            MYSQL_EXECUTE();
+
+            group = group->next;
+        }
+    }
+}
+
+
+int ndo_write_serviceescalation_contacts(int * serviceescalation_ids)
+{
+    serviceescalation * tmp = NULL;
+    contactsmember * cnt = NULL;
+    int object_id = 0;
+    int i = 0;
+
+    MYSQL_RESET_SQL();
+
+    MYSQL_SET_SQL("INSERT INTO nagios_serviceescalation_contacts SET instance_id = 1, serviceescalation_id = ?, contact_object_id = ? ON DUPLICATE KEY UPDATE instance_id = 1, service_id = ?, contact_object_id = ?");
+    MYSQL_PREPARE();
+
+    for (i = 0; i < num_objects.serviceescalations; i++) {
+
+        tmp = serviceescalation_ary[i];
+
+        cnt = tmp->contacts;
+
+        while (cnt != NULL) {
+
+            object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_CONTACT, cnt->contact_name);
+
+            MYSQL_RESET_BIND();
+
+            MYSQL_BIND_INT(serviceescalation_ids[i]);
+            MYSQL_BIND_INT(object_id);
+
+            MYSQL_BIND_INT(serviceescalation_ids[i]);
+            MYSQL_BIND_INT(object_id);
+
+            MYSQL_BIND();
+            MYSQL_EXECUTE();
+
+            cnt = cnt->next;
+        }
+    }
 }
