@@ -182,21 +182,43 @@ int ndo_handle_log(int type, void * d)
         return NDO_OK;
     }
 
-    MYSQL_RESET_SQL();
-    MYSQL_RESET_BIND();
+    ndo_tmp_str_len[0] = strlen(data->data);
 
-    MYSQL_SET_SQL("INSERT INTO nagios_logentries SET instance_id = 1, logentry_time = FROM_UNIXTIME(?), entry_time = FROM_UNIXTIME(?), entry_time_usec = ?, logentry_type = ?, logentry_data = ?, realtime_data = 1, inferred_data_extracted = 1");
-    MYSQL_PREPARE();
+    ndo_log_data_bind[0].buffer_type = MYSQL_TYPE_LONG;
+    ndo_log_data_bind[0].buffer = &(data->entry_time);
 
-    MYSQL_BIND_INT(data->entry_time);
-    MYSQL_BIND_INT(data->entry_time);
-    MYSQL_BIND_INT(data->timestamp.tv_sec);
-    MYSQL_BIND_INT(data->timestamp.tv_usec);
-    MYSQL_BIND_INT(data->data_type);
-    MYSQL_BIND_STR(data->data);
+    ndo_log_data_bind[0].buffer_type = MYSQL_TYPE_LONG;
+    ndo_log_data_bind[0].buffer = &(data->entry_time);
 
-    MYSQL_BIND();
-    MYSQL_EXECUTE();
+    ndo_log_data_bind[0].buffer_type = MYSQL_TYPE_LONG;
+    ndo_log_data_bind[0].buffer = &(data->timestamp.tv_sec);
+
+    ndo_log_data_bind[0].buffer_type = MYSQL_TYPE_LONG;
+    ndo_log_data_bind[0].buffer = &(data->timestamp.tv_usec);
+
+    ndo_log_data_bind[0].buffer_type = MYSQL_TYPE_LONG;
+    ndo_log_data_bind[0].buffer = &(data->data_type);
+
+    ndo_log_data_bind[1].buffer_type = MYSQL_TYPE_STRING;
+    ndo_log_data_bind[1].buffer_length = MAX_BIND_BUFFER;
+    ndo_log_data_bind[1].buffer = data->data;
+    ndo_log_data_bind[1].length = &(ndo_tmp_str_len[0]);
+
+    ndo_log_data_return = mysql_stmt_bind_param(ndo_stmt_log_data, ndo_log_data_bind);
+    if (ndo_log_data_return != 0) {
+        ndo_log("Log Data: Unable to bind parameters");
+        snprintf(ndo_error_msg, 1023, "ndo_log_data_return = %d (%s)", ndo_log_data_return, mysql_stmt_error(ndo_stmt_log_data));
+        ndo_log(ndo_error_msg);
+        return NDO_ERROR;
+    }
+
+    ndo_return = mysql_stmt_execute(ndo_stmt_log_data);
+    if (ndo_log_data_return != 0) {
+        ndo_log("Log Data: Unable to execute statement");
+        snprintf(ndo_error_msg, 1023, "ndo_log_data_return = %d (%s)", ndo_log_data_return, mysql_stmt_error(ndo_stmt_log_data));
+        ndo_log(ndo_error_msg);
+        return NDO_ERROR;
+    }
 
     return NDO_OK;
 }

@@ -50,7 +50,7 @@ extern struct object_count    num_objects;
 
 #define NDO_REPORT_ERROR(err) \
 do { \
-    snprintf(ndo_error_msg, 1023, "%s(%d): %s", __func__, __LINE__, err); \
+    snprintf(ndo_error_msg, 1023, "%s(%s:%d): %s", __func__, __FILE__, __LINE__, err); \
     ndo_log(ndo_error_msg); \
 } while (0)
 
@@ -58,9 +58,9 @@ do { \
 #define NDO_HANDLE_ERROR(err) \
 do { \
     if (ndo_return != 0) { \
-        NDO_REPORT_ERROR(err); \
-        snprintf(ndo_error_msg, 1023, "ndo_return = %d", ndo_return); \
+        snprintf(ndo_error_msg, 1023, "ndo_return = %d (%s)", ndo_return, mysql_stmt_error(ndo_stmt)); \
         ndo_log(ndo_error_msg); \
+        NDO_REPORT_ERROR(err); \
         return NDO_ERROR; \
     } \
 } while (0)
@@ -92,7 +92,7 @@ do { \
 #define MAX_SQL_BUFFER 4096
 #define MAX_SQL_BINDINGS 64
 #define MAX_SQL_RESULT_BINDINGS 16
-#define MAX_BIND_BUFFER 256
+#define MAX_BIND_BUFFER 4096
 #define MAX_INSERT_VALUES 250
 
 int ndo_database_connected = FALSE;
@@ -126,6 +126,10 @@ MYSQL_STMT * ndo_stmt_object_get_name1 = NULL;
 MYSQL_STMT * ndo_stmt_object_get_name2 = NULL;
 MYSQL_STMT * ndo_stmt_object_insert_name1 = NULL;
 MYSQL_STMT * ndo_stmt_object_insert_name2 = NULL;
+
+MYSQL_BIND ndo_log_data_bind[6];
+MYSQL_STMT * ndo_stmt_log_data = NULL;
+int ndo_log_data_return = 0;
 
 void * ndo_handle = NULL;
 int ndo_process_options = 0;
@@ -644,11 +648,14 @@ int ndo_initialize_prepared_statements()
     ndo_stmt_object_insert_name1 = mysql_stmt_init(mysql_connection);
     ndo_stmt_object_insert_name2 = mysql_stmt_init(mysql_connection);
 
+    ndo_stmt_log_data = mysql_stmt_init(mysql_connection);
+
     if (   ndo_stmt == NULL
         || ndo_stmt_object_get_name1 == NULL
         || ndo_stmt_object_get_name2 == NULL
         || ndo_stmt_object_insert_name1 == NULL
-        || ndo_stmt_object_insert_name2 == NULL) {
+        || ndo_stmt_object_insert_name2 == NULL
+        || ndo_stmt_log_data == NULL) {
 
         ndo_log("Unable to initialize prepared statements");
     }
@@ -671,6 +678,9 @@ int ndo_initialize_prepared_statements()
     ndo_return = mysql_stmt_prepare(ndo_stmt_object_insert_name2, ndo_query, strlen(ndo_query));
     // todo
 
+    strncpy(ndo_query, "INSERT INTO nagios_logentries SET instance_id = 1, logentry_time = FROM_UNIXTIME(?), entry_time = FROM_UNIXTIME(?), entry_time_usec = ?, logentry_type = ?, logentry_data = ?, realtime_data = 1, inferred_data_extracted = 1", MAX_SQL_BUFFER);
+    ndo_return = mysql_stmt_prepare(ndo_stmt_log_data, ndo_query, strlen(ndo_query));
+    // todo
 
     return NDO_OK;
 }

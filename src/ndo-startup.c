@@ -118,7 +118,9 @@ int ndo_write_commands(int config_type)
     MYSQL_RESET_SQL();
 
     MYSQL_SET_SQL("INSERT INTO nagios_commands SET instance_id = 1, object_id = ?, config_type = ?, command_line = ? ON DUPLICATE KEY UPDATE instance_id = 1, object_id = ?, config_type = ?, command_line = ?");
+
     MYSQL_PREPARE();
+
 
     while (tmp != NULL) {
 
@@ -207,23 +209,23 @@ int ndo_write_timeperiod_timeranges(int * timeperiod_ids)
     while (tmp != NULL) {
 
         for (day = 0; day < 7; day++) {
+            for (range = tmp->days[day]; range != NULL; range = range->next) {
 
-            range = tmp->days[day];
+                MYSQL_RESET_BIND();
 
-            MYSQL_RESET_BIND();
+                MYSQL_BIND_INT(timeperiod_ids[i]);
+                MYSQL_BIND_INT(day);
+                MYSQL_BIND_INT(range->range_start);
+                MYSQL_BIND_INT(range->range_end);
 
-            MYSQL_BIND_INT(timeperiod_ids[i]);
-            MYSQL_BIND_INT(day);
-            MYSQL_BIND_INT(range->range_start);
-            MYSQL_BIND_INT(range->range_end);
+                MYSQL_BIND_INT(timeperiod_ids[i]);
+                MYSQL_BIND_INT(day);
+                MYSQL_BIND_INT(range->range_start);
+                MYSQL_BIND_INT(range->range_end);
 
-            MYSQL_BIND_INT(timeperiod_ids[i]);
-            MYSQL_BIND_INT(day);
-            MYSQL_BIND_INT(range->range_start);
-            MYSQL_BIND_INT(range->range_end);
-
-            MYSQL_BIND();
-            MYSQL_EXECUTE();
+                MYSQL_BIND();
+                MYSQL_EXECUTE();
+            }
         }
 
         i++;
@@ -243,6 +245,8 @@ int ndo_write_contacts(int config_type)
     int * contact_ids = NULL;
 
     int notify_options[11] = { 0 };
+    int host_timeperiod_object_id = 0;
+    int service_timeperiod_object_id = 0;
 
     COUNT_OBJECTS(tmp, contact_list, count);
 
@@ -251,7 +255,7 @@ int ndo_write_contacts(int config_type)
 
     MYSQL_RESET_SQL();
 
-    MYSQL_SET_SQL("INSERT INTO nagios_contacts SET instance_id = 1, config_type = ?, contact_object_id = ?, alias = ?, email_address = ?, pager_address = ?, host_timeperiod_object_id = (SELECT object_id FROM nagios_objects WHERE name1 = ? and objecttype_id = 9 LIMIT 1), service_timeperiod_object_id = (SELECT object_id FROM nagios_objects WHERE name1 = ? and objecttype_id = 9 LIMIT 1), host_notifications_enabled = ?, service_notifications_enabled = ?, can_submit_commands = ?, notify_service_recovery = ?, notify_service_warning = ?, notify_service_unknown = ?, notify_service_critical = ?, notify_service_flapping = ?, notify_service_downtime = ?, notify_host_recovery = ?, notify_host_down = ?, notify_host_unreachable = ?, notify_host_flapping = ?, notify_host_downtime = ?, minimum_importance = ? ON DUPLICATE KEY UPDATE instance_id = 1, config_type = ?, contact_object_id = ?, alias = ?, email_address = ?, pager_address = ?, host_timeperiod_object_id = (SELECT object_id FROM nagios_objects WHERE name1 = ? and objecttype_id = 9 LIMIT 1), service_timeperiod_object_id = (SELECT object_id FROM nagios_objects WHERE name1 = ? and objecttype_id = 9 LIMIT 1), host_notifications_enabled = ?, service_notifications_enabled = ?, can_submit_commands = ?, notify_service_recovery = ?, notify_service_warning = ?, notify_service_unknown = ?, notify_service_critical = ?, notify_service_flapping = ?, notify_service_downtime = ?, notify_host_recovery = ?, notify_host_down = ?, notify_host_unreachable = ?, notify_host_flapping = ?, notify_host_downtime = ?, minimum_importance = ?");
+    MYSQL_SET_SQL("INSERT INTO nagios_contacts SET instance_id = 1, config_type = ?, contact_object_id = ?, alias = ?, email_address = ?, pager_address = ?, host_timeperiod_object_id = ?, service_timeperiod_object_id = ?, host_notifications_enabled = ?, service_notifications_enabled = ?, can_submit_commands = ?, notify_service_recovery = ?, notify_service_warning = ?, notify_service_unknown = ?, notify_service_critical = ?, notify_service_flapping = ?, notify_service_downtime = ?, notify_host_recovery = ?, notify_host_down = ?, notify_host_unreachable = ?, notify_host_flapping = ?, notify_host_downtime = ?, minimum_importance = ? ON DUPLICATE KEY UPDATE instance_id = 1, config_type = ?, contact_object_id = ?, alias = ?, email_address = ?, pager_address = ?, host_timeperiod_object_id = ?, service_timeperiod_object_id = ?, host_notifications_enabled = ?, service_notifications_enabled = ?, can_submit_commands = ?, notify_service_recovery = ?, notify_service_warning = ?, notify_service_unknown = ?, notify_service_critical = ?, notify_service_flapping = ?, notify_service_downtime = ?, notify_host_recovery = ?, notify_host_down = ?, notify_host_unreachable = ?, notify_host_flapping = ?, notify_host_downtime = ?, minimum_importance = ?");
     MYSQL_PREPARE();
 
     while (tmp != NULL) {
@@ -259,12 +263,15 @@ int ndo_write_contacts(int config_type)
         object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_CONTACT, tmp->name);
         object_ids[i] = object_id;
 
+        host_timeperiod_object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_TIMEPERIOD, tmp->host_notification_period);
+        service_timeperiod_object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_TIMEPERIOD, tmp->service_notification_period);
+
         MYSQL_RESET_BIND();
 
-        notify_options[0] = flag_isset(tmp->service_notification_options, OPT_UNKNOWN);
+        notify_options[0] = flag_isset(tmp->service_notification_options, OPT_RECOVERY);
         notify_options[1] = flag_isset(tmp->service_notification_options, OPT_WARNING);
-        notify_options[2] = flag_isset(tmp->service_notification_options, OPT_CRITICAL);
-        notify_options[3] = flag_isset(tmp->service_notification_options, OPT_RECOVERY);
+        notify_options[2] = flag_isset(tmp->service_notification_options, OPT_UNKNOWN);
+        notify_options[3] = flag_isset(tmp->service_notification_options, OPT_CRITICAL);
         notify_options[4] = flag_isset(tmp->service_notification_options, OPT_FLAPPING);
         notify_options[5] = flag_isset(tmp->service_notification_options, OPT_DOWNTIME);
         notify_options[6] = flag_isset(tmp->host_notification_options, OPT_RECOVERY);
@@ -278,13 +285,11 @@ int ndo_write_contacts(int config_type)
         MYSQL_BIND_STR(tmp->alias);
         MYSQL_BIND_STR(tmp->email);
         MYSQL_BIND_STR(tmp->pager);
-        MYSQL_BIND_STR(tmp->email);
-        MYSQL_BIND_STR(tmp->host_notification_period);
-        MYSQL_BIND_STR(tmp->service_notification_period);
+        MYSQL_BIND_INT(host_timeperiod_object_id);
+        MYSQL_BIND_INT(service_timeperiod_object_id);
         MYSQL_BIND_INT(tmp->host_notifications_enabled);
         MYSQL_BIND_INT(tmp->service_notifications_enabled);
         MYSQL_BIND_INT(tmp->can_submit_commands);
-
         MYSQL_BIND_INT(notify_options[0]);
         MYSQL_BIND_INT(notify_options[1]);
         MYSQL_BIND_INT(notify_options[2]);
@@ -296,7 +301,6 @@ int ndo_write_contacts(int config_type)
         MYSQL_BIND_INT(notify_options[8]);
         MYSQL_BIND_INT(notify_options[9]);
         MYSQL_BIND_INT(notify_options[10]);
-
         MYSQL_BIND_INT(tmp->minimum_value);
 
         MYSQL_BIND_INT(config_type);
@@ -304,13 +308,11 @@ int ndo_write_contacts(int config_type)
         MYSQL_BIND_STR(tmp->alias);
         MYSQL_BIND_STR(tmp->email);
         MYSQL_BIND_STR(tmp->pager);
-        MYSQL_BIND_STR(tmp->email);
-        MYSQL_BIND_STR(tmp->host_notification_period);
-        MYSQL_BIND_STR(tmp->service_notification_period);
+        MYSQL_BIND_INT(host_timeperiod_object_id);
+        MYSQL_BIND_INT(service_timeperiod_object_id);
         MYSQL_BIND_INT(tmp->host_notifications_enabled);
         MYSQL_BIND_INT(tmp->service_notifications_enabled);
         MYSQL_BIND_INT(tmp->can_submit_commands);
-
         MYSQL_BIND_INT(notify_options[0]);
         MYSQL_BIND_INT(notify_options[1]);
         MYSQL_BIND_INT(notify_options[2]);
@@ -322,7 +324,6 @@ int ndo_write_contacts(int config_type)
         MYSQL_BIND_INT(notify_options[8]);
         MYSQL_BIND_INT(notify_options[9]);
         MYSQL_BIND_INT(notify_options[10]);
-
         MYSQL_BIND_INT(tmp->minimum_value);
 
         MYSQL_BIND();
@@ -592,22 +593,21 @@ int ndo_write_hosts(int config_type)
         MYSQL_BIND_INT(host_options[2]);
         MYSQL_BIND_INT(host_options[3]);
         MYSQL_BIND_INT(host_options[4]);
-        MYSQL_BIND_INT(tmp->flap_detection_enabled);
         MYSQL_BIND_INT(host_options[5]);
         MYSQL_BIND_INT(host_options[6]);
         MYSQL_BIND_INT(host_options[7]);
-        MYSQL_BIND_DOUBLE(tmp->low_flap_threshold);
-        MYSQL_BIND_DOUBLE(tmp->high_flap_threshold);
+        MYSQL_BIND_INT(tmp->flap_detection_enabled);
         MYSQL_BIND_INT(host_options[8]);
         MYSQL_BIND_INT(host_options[9]);
         MYSQL_BIND_INT(host_options[10]);
-        MYSQL_BIND_INT(tmp->stalking_options);
+        MYSQL_BIND_DOUBLE(tmp->low_flap_threshold);
+        MYSQL_BIND_DOUBLE(tmp->high_flap_threshold);
+        MYSQL_BIND_INT(tmp->process_performance_data);
         MYSQL_BIND_INT(tmp->check_freshness);
         MYSQL_BIND_INT(tmp->freshness_threshold);
-        MYSQL_BIND_INT(tmp->process_performance_data);
-        MYSQL_BIND_INT(tmp->checks_enabled);
         MYSQL_BIND_INT(tmp->accept_passive_checks);
         MYSQL_BIND_INT(tmp->event_handler_enabled);
+        MYSQL_BIND_INT(tmp->checks_enabled);
         MYSQL_BIND_INT(tmp->retain_status_information);
         MYSQL_BIND_INT(tmp->retain_nonstatus_information);
         MYSQL_BIND_INT(tmp->notifications_enabled);
@@ -649,22 +649,21 @@ int ndo_write_hosts(int config_type)
         MYSQL_BIND_INT(host_options[2]);
         MYSQL_BIND_INT(host_options[3]);
         MYSQL_BIND_INT(host_options[4]);
-        MYSQL_BIND_INT(tmp->flap_detection_enabled);
         MYSQL_BIND_INT(host_options[5]);
         MYSQL_BIND_INT(host_options[6]);
         MYSQL_BIND_INT(host_options[7]);
-        MYSQL_BIND_DOUBLE(tmp->low_flap_threshold);
-        MYSQL_BIND_DOUBLE(tmp->high_flap_threshold);
+        MYSQL_BIND_INT(tmp->flap_detection_enabled);
         MYSQL_BIND_INT(host_options[8]);
         MYSQL_BIND_INT(host_options[9]);
         MYSQL_BIND_INT(host_options[10]);
-        MYSQL_BIND_INT(tmp->stalking_options);
+        MYSQL_BIND_DOUBLE(tmp->low_flap_threshold);
+        MYSQL_BIND_DOUBLE(tmp->high_flap_threshold);
+        MYSQL_BIND_INT(tmp->process_performance_data);
         MYSQL_BIND_INT(tmp->check_freshness);
         MYSQL_BIND_INT(tmp->freshness_threshold);
-        MYSQL_BIND_INT(tmp->process_performance_data);
-        MYSQL_BIND_INT(tmp->checks_enabled);
         MYSQL_BIND_INT(tmp->accept_passive_checks);
         MYSQL_BIND_INT(tmp->event_handler_enabled);
+        MYSQL_BIND_INT(tmp->checks_enabled);
         MYSQL_BIND_INT(tmp->retain_status_information);
         MYSQL_BIND_INT(tmp->retain_nonstatus_information);
         MYSQL_BIND_INT(tmp->notifications_enabled);
@@ -712,7 +711,7 @@ int ndo_write_host_parenthosts(int * host_ids)
 
     MYSQL_RESET_SQL();
 
-    MYSQL_SET_SQL("INSERT INTO nagios_host_parenthosts instance_id = 1, host_id = ?, parent_host_object_id = ? ON DUPLICATE KEY UPDATE instance_id = 1, host_id = ?, parent_host_object_id = ?");
+    MYSQL_SET_SQL("INSERT INTO nagios_host_parenthosts SET instance_id = 1, host_id = ?, parent_host_object_id = ? ON DUPLICATE KEY UPDATE instance_id = 1, host_id = ?, parent_host_object_id = ?");
     MYSQL_PREPARE();
 
     while (tmp != NULL) {
@@ -1103,7 +1102,7 @@ int ndo_write_service_parentservices(int * service_ids)
 
     MYSQL_RESET_SQL();
 
-    MYSQL_SET_SQL("INSERT INTO nagios_service_parentservices instance_id = 1, service_id = ?, parent_service_object_id = ? ON DUPLICATE KEY UPDATE instance_id = 1, service_id = ?, parent_service_object_id = ?");
+    MYSQL_SET_SQL("INSERT INTO nagios_service_parentservices SET instance_id = 1, service_id = ?, parent_service_object_id = ? ON DUPLICATE KEY UPDATE instance_id = 1, service_id = ?, parent_service_object_id = ?");
     MYSQL_PREPARE();
 
     while (tmp != NULL) {
@@ -1444,7 +1443,7 @@ int ndo_write_hostescalation_contacts(int * hostescalation_ids)
 
     MYSQL_RESET_SQL();
 
-    MYSQL_SET_SQL("INSERT INTO nagios_hostescalation_contacts SET instance_id = 1, hostescalation_id = ?, contact_object_id = ? ON DUPLICATE KEY UPDATE instance_id = 1, service_id = ?, contact_object_id = ?");
+    MYSQL_SET_SQL("INSERT INTO nagios_hostescalation_contacts SET instance_id = 1, hostescalation_id = ?, contact_object_id = ? ON DUPLICATE KEY UPDATE instance_id = 1, hostescalation_id = ?, contact_object_id = ?");
     MYSQL_PREPARE();
 
     for (i = 0; i < num_objects.hostescalations; i++) {
@@ -1588,7 +1587,7 @@ int ndo_write_serviceescalation_contacts(int * serviceescalation_ids)
 
     MYSQL_RESET_SQL();
 
-    MYSQL_SET_SQL("INSERT INTO nagios_serviceescalation_contacts SET instance_id = 1, serviceescalation_id = ?, contact_object_id = ? ON DUPLICATE KEY UPDATE instance_id = 1, service_id = ?, contact_object_id = ?");
+    MYSQL_SET_SQL("INSERT INTO nagios_serviceescalation_contacts SET instance_id = 1, serviceescalation_id = ?, contact_object_id = ? ON DUPLICATE KEY UPDATE instance_id = 1, serviceescalation_id = ?, contact_object_id = ?");
     MYSQL_PREPARE();
 
     for (i = 0; i < num_objects.serviceescalations; i++) {
