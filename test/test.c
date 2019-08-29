@@ -180,7 +180,132 @@ END_TEST
 
 START_TEST (test_comment_data)
 {
-    nebstruct_comment_data d;
+    nebstruct_comment_data d_add;
+    nebstruct_comment_data d_delete;
+    MYSQL_ROW tmp_row;
+    MYSQL_RES *tmp_result;
+
+    /* Add a host comment */
+    d_add.type = NEBTYPE_COMMENT_ADD;
+    d_add.flags = 0;
+    d_add.attr = 0;
+    d_add.timestamp = (struct timeval) { .tv_sec = 1567021700, .tv_usec = 29064 };
+    d_add.comment_type = 1;
+    d_add.host_name = strdup("_testhost_1");
+    d_add.service_description = NULL;
+    d_add.entry_time = 1567021619,
+    d_add.author_name = strdup("Nagios Admin");
+    d_add.comment_data = strdup("this is a unique comment");
+    d_add.persistent = 1;
+    d_add.source = 1;
+    d_add.entry_type = 1;
+    d_add.expires = 0;
+    d_add.expire_time = 0;
+    d_add.comment_id = 1;
+    d_add.object_ptr = NULL;
+
+    ndo_handle_comment(0, &d_add);
+
+
+    /* Verify that the comment shows in commenthistory */
+    mysql_query(mysql_connection, "SELECT 1 FROM nagios_commenthistory "
+     " WHERE comment_type = 1 AND entry_type = 1 AND comment_time = FROM_UNIXTIME(1567021619) "
+       " AND internal_comment_id = 1 AND author_name = 'Nagios Admin' "
+       " AND comment_data = 'i just rly wanted to comment on this' AND is_persistent = 1 "
+       " AND comment_source = 1 AND expires = 0 AND expiration_time = FROM_UNIXTIME(0) "
+       " AND entry_time = FROM_UNIXTIME(1567021700) AND entry_time_usec = 29064 ");
+
+    tmp_result = mysql_store_result(mysql_connection);
+    ck_assert(tmp_result != NULL);
+
+    if (tmp_result != NULL) {
+        tmp_row = mysql_fetch_row(tmp_result);
+    }
+    ck_assert(tmp_row != NULL);
+
+    if (tmp_row != NULL) {
+        ck_assert_int_eq(strcmp(tmp_row[0], "1"), 0);
+    }
+    mysql_free_result(tmp_result);
+
+    /* Verify that the comment shows in comments */
+    mysql_query(mysql_connection, "SELECT 2 FROM nagios_comments "
+     " WHERE comment_type = 1 AND entry_type = 1 AND comment_time = FROM_UNIXTIME(1567021619) "
+       " AND internal_comment_id = 1 AND author_name = 'Nagios Admin' "
+       " AND comment_data = 'i just rly wanted to comment on this' AND is_persistent = 1 "
+       " AND comment_source = 1 AND expires = 0 AND expiration_time = FROM_UNIXTIME(0) "
+       " AND entry_time = FROM_UNIXTIME(1567021700) AND entry_time_usec = 29064 ");
+
+    tmp_result = mysql_store_result(mysql_connection);
+    ck_assert(tmp_result != NULL);
+
+    if (tmp_result != NULL) {
+        tmp_row = mysql_fetch_row(tmp_result);
+    }
+    ck_assert(tmp_row != NULL);
+
+    if (tmp_row != NULL) {
+        ck_assert_int_eq(strcmp(tmp_row[0], "2"), 0);
+    }
+    mysql_free_result(tmp_result);
+
+    /* Now, delete the comment */
+
+    d_delete.type = NEBTYPE_COMMENT_DELETE;
+    d_delete.flags = 0;
+    d_delete.attr = 0;
+    d_delete.timestamp = (struct timeval) { .tv_sec = 1567089801, .tv_usec = 725979 };
+    d_delete.comment_type = 1;
+    d_delete.host_name = strdup("_testhost_1");
+    d_delete.service_description = NULL;
+    d_delete.entry_time = 1567021619;
+    d_delete.author_name = strdup("Nagios Admin");
+    d_delete.comment_data = strdup("this is a unique comment");
+    d_delete.persistent = 1;
+    d_delete.source = 1;
+    d_delete.entry_type = 1;
+    d_delete.expires = 0;
+    d_delete.expire_time = 0;
+    d_delete.comment_id = 1;
+    d_delete.object_ptr = NULL;
+
+    ndo_handle_comment(0, &d_delete);
+
+    /* Comment should be present in commenthistory with deletion time */
+    mysql_query(mysql_connection, "SELECT 3 FROM nagios_commenthistory "
+        " WHERE internal_comment_id = 1 AND deletion_time IS NOT NULL");
+
+    tmp_result = mysql_store_result(mysql_connection);
+    ck_assert(tmp_result != NULL);
+
+    if (tmp_result != NULL) {
+        tmp_row = mysql_fetch_row(tmp_result);
+    }
+    ck_assert(tmp_row != NULL);
+
+    if (tmp_row != NULL) {
+        ck_assert_int_eq(strcmp(tmp_row[0], "3"), 0);
+    }
+    mysql_free_result(tmp_result);
+
+    /* Comment should be deleted from comments table */
+    mysql_query(mysql_connection, "SELECT 4 FROM nagios_comments "
+        " WHERE internal_comment_id = 1");
+
+    tmp_result = mysql_store_result(mysql_connection);
+    ck_assert(tmp_result != NULL);
+
+    if (tmp_result != NULL) {
+        tmp_row = mysql_fetch_row(tmp_result);
+    }
+    ck_assert(tmp_row != NULL);
+
+    if (tmp_row != NULL) {
+        ck_assert(tmp_row == NULL);
+    }
+    mysql_free_result(tmp_result);
+
+
 }
 END_TEST
 
