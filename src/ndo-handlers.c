@@ -276,7 +276,7 @@ int ndo_handle_event_handler(int type, void * d)
         object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_HOST, data->host_name);
     }
 
-    command_object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_COMMAND, tmp->command_name);
+    command_object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_COMMAND, data->command_name);
 
     MYSQL_RESET_SQL();
     MYSQL_RESET_BIND();
@@ -292,7 +292,7 @@ int ndo_handle_event_handler(int type, void * d)
     MYSQL_BIND_INT(object_id);
     MYSQL_BIND_INT(data->state);
     MYSQL_BIND_INT(data->state_type);
-    MYSQL_BIND_STR(command_object_id);
+    MYSQL_BIND_INT(command_object_id);
     MYSQL_BIND_STR(data->command_args);
     MYSQL_BIND_STR(data->command_line);
     MYSQL_BIND_INT(data->timeout);
@@ -310,7 +310,7 @@ int ndo_handle_event_handler(int type, void * d)
     MYSQL_BIND_INT(object_id);
     MYSQL_BIND_INT(data->state);
     MYSQL_BIND_INT(data->state_type);
-    MYSQL_BIND_STR(command_object_id);
+    MYSQL_BIND_INT(command_object_id);
     MYSQL_BIND_STR(data->command_args);
     MYSQL_BIND_STR(data->command_line);
     MYSQL_BIND_INT(data->timeout);
@@ -367,7 +367,7 @@ int ndo_handle_host_check(int type, void * d)
     MYSQL_BIND_STR(data->output);
     MYSQL_BIND_STR(data->long_output);
     MYSQL_BIND_STR(data->perf_data);
-    MYSQL_BIND_STR(command_object_id);
+    MYSQL_BIND_INT(command_object_id);
     MYSQL_BIND_STR(data->command_args);
     MYSQL_BIND_STR(data->command_line);
 
@@ -437,7 +437,7 @@ int ndo_handle_service_check(int type, void * d)
     MYSQL_BIND_STR(data->output);
     MYSQL_BIND_STR(data->long_output);
     MYSQL_BIND_STR(data->perf_data);
-    MYSQL_BIND_STR(command_object_id);
+    MYSQL_BIND_INT(command_object_id);
     MYSQL_BIND_STR(data->command_args);
     MYSQL_BIND_STR(data->command_line);
 
