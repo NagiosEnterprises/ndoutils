@@ -1616,3 +1616,116 @@ int ndo_write_serviceescalation_contacts(int * serviceescalation_ids)
         }
     }
 }
+
+
+int ndo_write_hostdependencies(int config_type)
+{
+    hostdependency * tmp = NULL;
+    int host_object_id = 0;
+    int dependent_host_object_id = 0;
+    int timeperiod_object_id = 0;
+    int i = 0;
+
+    int hostdependency_options[3] = { 0 };
+
+    MYSQL_RESET_SQL();
+
+    MYSQL_SET_SQL("INSERT INTO nagios_hostdependencies SET instance_id = 1, config_type = ?, host_object_id = ?, dependent_host_object_id = ?, dependency_type = ?, inherits_parent = ?, timeperiod_object_id = ?, fail_on_up = ?, fail_on_down = ?, fail_on_unreachable = ? ON DUPLICATE KEY UPDATE instance_id = 1, config_type = ?, host_object_id = ?, dependent_host_object_id = ?, dependency_type = ?, inherits_parent = ?, timeperiod_object_id = ?, fail_on_up = ?, fail_on_down = ?, fail_on_unreachable = ?");
+    MYSQL_PREPARE();
+
+    for (i = 0; i < num_objects.hostdependencies; i++) {
+
+        tmp = hostdependency_ary[i];
+
+        host_object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_HOST, tmp->host_name);
+        dependent_host_object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_HOST, tmp->dependent_host_name);
+        timeperiod_object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_TIMEPERIOD, tmp->dependency_period);
+
+        MYSQL_RESET_BIND();
+
+        hostdependency_options[0] = flag_isset(tmp->failure_options, OPT_UP);
+        hostdependency_options[1] = flag_isset(tmp->failure_options, OPT_DOWN);
+        hostdependency_options[2] = flag_isset(tmp->failure_options, OPT_UNREACHABLE);
+
+        MYSQL_BIND_INT(config_type);
+        MYSQL_BIND_INT(host_object_id);
+        MYSQL_BIND_INT(dependent_host_object_id);
+        MYSQL_BIND_INT(tmp->dependency_type);
+        MYSQL_BIND_INT(tmp->inherits_parent);
+        MYSQL_BIND_INT(timeperiod_object_id);
+        MYSQL_BIND_INT(hostdependency_options[0]);
+        MYSQL_BIND_INT(hostdependency_options[1]);
+        MYSQL_BIND_INT(hostdependency_options[2]);
+
+        MYSQL_BIND_INT(config_type);
+        MYSQL_BIND_INT(host_object_id);
+        MYSQL_BIND_INT(dependent_host_object_id);
+        MYSQL_BIND_INT(tmp->dependency_type);
+        MYSQL_BIND_INT(tmp->inherits_parent);
+        MYSQL_BIND_INT(timeperiod_object_id);
+        MYSQL_BIND_INT(hostdependency_options[0]);
+        MYSQL_BIND_INT(hostdependency_options[1]);
+        MYSQL_BIND_INT(hostdependency_options[2]);
+
+        MYSQL_BIND();
+        MYSQL_EXECUTE();
+    }
+}
+
+
+int ndo_write_servicedependencies(int config_type)
+{
+    servicedependency * tmp = NULL;
+    int service_object_id = 0;
+    int dependent_service_object_id = 0;
+    int timeperiod_object_id = 0;
+    int i = 0;
+
+    int servicedependency_options[4] = { 0 };
+
+    MYSQL_RESET_SQL();
+
+    MYSQL_SET_SQL("INSERT INTO nagios_servicedependencies SET instance_id = 1, config_type = ?, service_object_id = ?, dependent_service_object_id = ?, dependency_type = ?, inherits_parent = ?, timeperiod_object_id = ?, fail_on_up = ?, fail_on_down = ?, fail_on_unreachable = ? ON DUPLICATE KEY UPDATE instance_id = 1, config_type = ?, service_object_id = ?, dependent_service_object_id = ?, dependency_type = ?, inherits_parent = ?, timeperiod_object_id = ?, fail_on_up = ?, fail_on_down = ?, fail_on_unreachable = ?");
+    MYSQL_PREPARE();
+
+    for (i = 0; i < num_objects.servicedependencies; i++) {
+
+        tmp = servicedependency_ary[i];
+
+        service_object_id = ndo_get_object_id_name2(TRUE, NDO_OBJECTTYPE_SERVICE, tmp->host_name, tmp->service_description);
+        dependent_service_object_id = ndo_get_object_id_name2(TRUE, NDO_OBJECTTYPE_SERVICE, tmp->dependent_host_name, tmp->dependent_service_description);
+        timeperiod_object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_TIMEPERIOD, tmp->dependency_period);
+
+        MYSQL_RESET_BIND();
+
+        servicedependency_options[0] = flag_isset(tmp->failure_options, OPT_OK);
+        servicedependency_options[1] = flag_isset(tmp->failure_options, OPT_WARNING);
+        servicedependency_options[2] = flag_isset(tmp->failure_options, OPT_UNKNOWN);
+        servicedependency_options[3] = flag_isset(tmp->failure_options, OPT_CRITICAL);
+
+        MYSQL_BIND_INT(config_type);
+        MYSQL_BIND_INT(service_object_id);
+        MYSQL_BIND_INT(dependent_service_object_id);
+        MYSQL_BIND_INT(tmp->dependency_type);
+        MYSQL_BIND_INT(tmp->inherits_parent);
+        MYSQL_BIND_INT(timeperiod_object_id);
+        MYSQL_BIND_INT(servicedependency_options[0]);
+        MYSQL_BIND_INT(servicedependency_options[1]);
+        MYSQL_BIND_INT(servicedependency_options[2]);
+        MYSQL_BIND_INT(servicedependency_options[3]);
+
+        MYSQL_BIND_INT(config_type);
+        MYSQL_BIND_INT(service_object_id);
+        MYSQL_BIND_INT(dependent_service_object_id);
+        MYSQL_BIND_INT(tmp->dependency_type);
+        MYSQL_BIND_INT(tmp->inherits_parent);
+        MYSQL_BIND_INT(timeperiod_object_id);
+        MYSQL_BIND_INT(servicedependency_options[0]);
+        MYSQL_BIND_INT(servicedependency_options[1]);
+        MYSQL_BIND_INT(servicedependency_options[2]);
+        MYSQL_BIND_INT(servicedependency_options[3]);
+        
+        MYSQL_BIND();
+        MYSQL_EXECUTE();
+    }
+}

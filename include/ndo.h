@@ -126,8 +126,11 @@ int ndo_write_serviceescalations(int config_type);
 int ndo_write_serviceescalation_contactgroups(int * serviceescalation_ids);
 int ndo_write_serviceescalation_contacts(int * serviceescalation_ids);
 
-MYSQL * mysql_connection;
+int ndo_write_hostdependencies(int config_type);
 
+int ndo_write_servicedependencies(int config_type);
+
+MYSQL * mysql_connection;
 
 
 #define COUNT_OBJECTS(objvar, listvar, countvar) \

@@ -35,7 +35,9 @@ extern hostescalation      ** hostescalation_ary;
 extern serviceescalation    * serviceescalation_list;
 extern serviceescalation   ** serviceescalation_ary;
 extern hostdependency       * hostdependency_list;
+extern hostdependency      ** hostdependency_ary;
 extern servicedependency    * servicedependency_list;
+extern servicedependency   ** servicedependency_ary;
 
 extern char                 * config_file;
 extern sched_info             scheduling_info;
