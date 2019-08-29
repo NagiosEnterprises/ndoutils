@@ -24,6 +24,8 @@
 
 #include "../include/nagios/objects.h"
 
+#include <mysql.h>
+
 void ndo_log(char * buffer);
 int nebmodule_init(int flags, char * args, void * handle);
 int nebmodule_deinit(int flags, int reason);
@@ -127,6 +129,8 @@ int ndo_write_serviceescalation_contacts(int * serviceescalation_ids);
 int ndo_write_hostdependencies(int config_type);
 
 int ndo_write_servicedependencies(int config_type);
+
+MYSQL * mysql_connection;
 
 
 #define COUNT_OBJECTS(objvar, listvar, countvar) \

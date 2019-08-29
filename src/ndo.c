@@ -17,7 +17,6 @@
 
 #include <stdio.h>
 #include <string.h>
-#include <mysql.h>
 #include <errmsg.h>
 
 NEB_API_VERSION(CURRENT_NEB_API_VERSION)
@@ -105,7 +104,6 @@ char * ndo_db_user = NULL;
 char * ndo_db_pass = NULL;
 char * ndo_db_name = NULL;
 
-MYSQL * mysql_connection;
 
 MYSQL_STMT * ndo_stmt = NULL;
 MYSQL_BIND ndo_bind[MAX_SQL_BINDINGS];
