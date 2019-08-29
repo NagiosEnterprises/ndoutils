@@ -520,6 +520,7 @@ int ndo_handle_comment(int type, void * d)
         MYSQL_RESET_BIND();
 
         MYSQL_SET_SQL("DELETE FROM nagios_comments WHERE comment_time = FROM_UNIXTIME(?) AND internal_comment_id = ?");
+        MYSQL_PREPARE();
 
         MYSQL_BIND_INT(data->entry_time);
         MYSQL_BIND_INT(data->comment_id);
