@@ -129,6 +129,8 @@ int ndo_write_commands(int config_type)
     command * tmp = command_list;
     int object_id = 0;
 
+    mysql_query(mysql_connection, "LOCK TABLES nagios_commands WRITE");
+
     MYSQL_RESET_SQL();
 
     MYSQL_SET_SQL("INSERT INTO nagios_commands SET instance_id = 1, object_id = ?, config_type = ?, command_line = ? ON DUPLICATE KEY UPDATE instance_id = 1, object_id = ?, config_type = ?, command_line = ?");
@@ -154,6 +156,8 @@ int ndo_write_commands(int config_type)
 
         tmp = tmp->next;
     }
+
+    mysql_query(mysql_connection, "UNLOCK TABLES");
 
     return NDO_OK;
 }
@@ -550,6 +554,8 @@ int ndo_write_hosts(int config_type)
     object_ids = calloc(count, sizeof(int));
     host_ids = calloc(count, sizeof(int));
 
+    mysql_query(mysql_connection, "LOCK TABLES nagios_hosts WRITE");
+
     MYSQL_RESET_SQL();
 
     MYSQL_SET_SQL("INSERT INTO nagios_hosts SET instance_id = 1, config_type = ?, host_object_id = ?, alias = ?, display_name = ?, address = ?, check_command_object_id = ?, check_command_args = ?, eventhandler_command_object_id = ?, eventhandler_command_args = ?, check_timeperiod_object_id = ?, notification_timeperiod_object_id = ?, failure_prediction_options = '', check_interval = ?, retry_interval = ?, max_check_attempts = ?, first_notification_delay = ?, notification_interval = ?, notify_on_down = ?, notify_on_unreachable = ?, notify_on_recovery = ?, notify_on_flapping = ?, notify_on_downtime = ?, stalk_on_up = ?, stalk_on_down = ?, stalk_on_unreachable = ?, flap_detection_enabled = ?, flap_detection_on_up = ?, flap_detection_on_down = ?, flap_detection_on_unreachable = ?, low_flap_threshold = ?, high_flap_threshold = ?, process_performance_data = ?, freshness_checks_enabled = ?, freshness_threshold = ?, passive_checks_enabled = ?, event_handler_enabled = ?, active_checks_enabled = ?, retain_status_information = ?, retain_nonstatus_information = ?, notifications_enabled = ?, obsess_over_host = ?, failure_prediction_enabled = 0, notes = ?, notes_url = ?, action_url = ?, icon_image = ?, icon_image_alt = ?, vrml_image = ?, statusmap_image = ?, have_2d_coords = ?, x_2d = ?, y_2d = ?, have_3d_coords = ?, x_3d = ?, y_3d = ?, z_3d = ?, importance = ? ON DUPLICATE KEY UPDATE instance_id = 1, config_type = ?, host_object_id = ?, alias = ?, display_name = ?, address = ?, check_command_object_id = ?, check_command_args = ?, eventhandler_command_object_id = ?, eventhandler_command_args = ?, check_timeperiod_object_id = ?, notification_timeperiod_object_id = ?, failure_prediction_options = '', check_interval = ?, retry_interval = ?, max_check_attempts = ?, first_notification_delay = ?, notification_interval = ?, notify_on_down = ?, notify_on_unreachable = ?, notify_on_recovery = ?, notify_on_flapping = ?, notify_on_downtime = ?, stalk_on_up = ?, stalk_on_down = ?, stalk_on_unreachable = ?, flap_detection_enabled = ?, flap_detection_on_up = ?, flap_detection_on_down = ?, flap_detection_on_unreachable = ?, low_flap_threshold = ?, high_flap_threshold = ?, process_performance_data = ?, freshness_checks_enabled = ?, freshness_threshold = ?, passive_checks_enabled = ?, event_handler_enabled = ?, active_checks_enabled = ?, retain_status_information = ?, retain_nonstatus_information = ?, notifications_enabled = ?, obsess_over_host = ?, failure_prediction_enabled = 0, notes = ?, notes_url = ?, action_url = ?, icon_image = ?, icon_image_alt = ?, vrml_image = ?, statusmap_image = ?, have_2d_coords = ?, x_2d = ?, y_2d = ?, have_3d_coords = ?, x_3d = ?, y_3d = ?, z_3d = ?, importance = ?");
@@ -704,6 +710,8 @@ int ndo_write_hosts(int config_type)
         i++;
         tmp = tmp->next;
     }
+
+    mysql_query(mysql_connection, "UNLOCK TABLES");
 
     ndo_write_host_parenthosts(host_ids);
     ndo_write_host_contactgroups(host_ids);
@@ -947,6 +955,8 @@ int ndo_write_services(int config_type)
     object_ids = calloc(count, sizeof(int));
     service_ids = calloc(count, sizeof(int));
 
+    mysql_query(mysql_connection, "LOCK TABLES nagios_services WRITE");
+
     MYSQL_RESET_SQL();
 
     MYSQL_SET_SQL("INSERT INTO nagios_services SET instance_id = 1, config_type = ?, host_object_id = ?, service_object_id = ?, display_name = ?, check_command_object_id = ?, check_command_args = ?, eventhandler_command_object_id = ?, eventhandler_command_args = ?, check_timeperiod_object_id = ?, notification_timeperiod_object_id = ?, failure_prediction_options = '', check_interval = ?, retry_interval = ?, max_check_attempts = ?, first_notification_delay = ?, notification_interval = ?, notify_on_warning = ?, notify_on_unknown = ?, notify_on_critical = ?, notify_on_recovery = ?, notify_on_flapping = ?, notify_on_downtime = ?, stalk_on_ok = ?, stalk_on_warning = ?, stalk_on_unknown = ?, stalk_on_critical = ?, is_volatile = ?, flap_detection_enabled = ?, flap_detection_on_ok = ?, flap_detection_on_warning = ?, flap_detection_on_unknown = ?, flap_detection_on_critical = ?, low_flap_threshold = ?, high_flap_threshold = ?, process_performance_data = ?, freshness_checks_enabled = ?, freshness_threshold = ?, passive_checks_enabled = ?, event_handler_enabled = ?, active_checks_enabled = ?, retain_status_information = ?, retain_nonstatus_information = ?, notifications_enabled = ?, obsess_over_service = ?, failure_prediction_enabled = 0, notes = ?, notes_url = ?, action_url = ?, icon_image = ?, icon_image_alt = ?, importance = ? ON DUPLICATE KEY UPDATE instance_id = 1, config_type = ?, host_object_id = ?, service_object_id = ?, display_name = ?, check_command_object_id = ?, check_command_args = ?, eventhandler_command_object_id = ?, eventhandler_command_args = ?, check_timeperiod_object_id = ?, notification_timeperiod_object_id = ?, failure_prediction_options = '', check_interval = ?, retry_interval = ?, max_check_attempts = ?, first_notification_delay = ?, notification_interval = ?, notify_on_warning = ?, notify_on_unknown = ?, notify_on_critical = ?, notify_on_recovery = ?, notify_on_flapping = ?, notify_on_downtime = ?, stalk_on_ok = ?, stalk_on_warning = ?, stalk_on_unknown = ?, stalk_on_critical = ?, is_volatile = ?, flap_detection_enabled = ?, flap_detection_on_ok = ?, flap_detection_on_warning = ?, flap_detection_on_unknown = ?, flap_detection_on_critical = ?, low_flap_threshold = ?, high_flap_threshold = ?, process_performance_data = ?, freshness_checks_enabled = ?, freshness_threshold = ?, passive_checks_enabled = ?, event_handler_enabled = ?, active_checks_enabled = ?, retain_status_information = ?, retain_nonstatus_information = ?, notifications_enabled = ?, obsess_over_service = ?, failure_prediction_enabled = 0, notes = ?, notes_url = ?, action_url = ?, icon_image = ?, icon_image_alt = ?, importance = ?");
@@ -1094,6 +1104,8 @@ int ndo_write_services(int config_type)
         i++;
         tmp = tmp->next;
     }
+
+    mysql_query(mysql_connection, "UNLOCK TABLES");
 
     ndo_write_service_parentservices(service_ids);
     ndo_write_service_contactgroups(service_ids);
