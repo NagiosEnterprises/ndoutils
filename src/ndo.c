@@ -56,15 +56,18 @@ do { \
 } while (0)
 
 
-#define NDO_HANDLE_ERROR(err) \
+#define NDO_HANDLE_ERROR_STMT(err, stmt) \
 do { \
     if (ndo_return != 0) { \
-        snprintf(ndo_error_msg, 1023, "ndo_return = %d (%s)", ndo_return, mysql_stmt_error(ndo_stmt)); \
+        snprintf(ndo_error_msg, 1023, "ndo_return = %d (%s)", ndo_return, mysql_stmt_error(stmt)); \
         ndo_log(ndo_error_msg); \
         NDO_REPORT_ERROR(err); \
         return NDO_ERROR; \
     } \
 } while (0)
+
+
+#define NDO_HANDLE_ERROR(err) NDO_HANDLE_ERROR_STMT(err, ndo_stmt)
 
 
 /* built this for handling checking the broker data being sent, but based
@@ -831,16 +834,16 @@ int ndo_get_object_id_name1(int insert, int object_type, char * name1)
     ndo_object_result[0].buffer = &object_id;
 
     ndo_return = mysql_stmt_bind_param(ndo_stmt_object_get_name1, ndo_object_bind);
-    NDO_HANDLE_ERROR("Unable to bind parameters");
+    NDO_HANDLE_ERROR_STMT("Unable to bind parameters", ndo_stmt_object_get_name1);
 
     ndo_return = mysql_stmt_bind_result(ndo_stmt_object_get_name1, ndo_object_result);
-    NDO_HANDLE_ERROR("Unable to bind result parameters");
+    NDO_HANDLE_ERROR_STMT("Unable to bind result parameters", ndo_stmt_object_get_name1);
 
     ndo_return = mysql_stmt_execute(ndo_stmt_object_get_name1);
-    NDO_HANDLE_ERROR("Unable to execute statement");
+    NDO_HANDLE_ERROR_STMT("Unable to execute statement", ndo_stmt_object_get_name1);
 
     ndo_return = mysql_stmt_store_result(ndo_stmt_object_get_name1);
-    NDO_HANDLE_ERROR("Unable to store results");
+    NDO_HANDLE_ERROR_STMT("Unable to store results", ndo_stmt_object_get_name1);
 
     while (!mysql_stmt_fetch(ndo_stmt_object_get_name1)) {
         return object_id;
@@ -888,16 +891,16 @@ int ndo_get_object_id_name2(int insert, int object_type, char * name1, char * na
     ndo_object_result[0].buffer = &object_id;
 
     ndo_return = mysql_stmt_bind_param(ndo_stmt_object_get_name2, ndo_object_bind);
-    NDO_HANDLE_ERROR("Unable to bind parameters");
+    NDO_HANDLE_ERROR_STMT("Unable to bind parameters", ndo_stmt_object_get_name2);
 
     ndo_return = mysql_stmt_bind_result(ndo_stmt_object_get_name2, ndo_object_result);
-    NDO_HANDLE_ERROR("Unable to bind result parameters");
+    NDO_HANDLE_ERROR_STMT("Unable to bind result parameters", ndo_stmt_object_get_name2);
 
     ndo_return = mysql_stmt_execute(ndo_stmt_object_get_name2);
-    NDO_HANDLE_ERROR("Unable to execute statement");
+    NDO_HANDLE_ERROR_STMT("Unable to execute statement", ndo_stmt_object_get_name2);
 
     ndo_return = mysql_stmt_store_result(ndo_stmt_object_get_name2);
-    NDO_HANDLE_ERROR("Unable to store results");
+    NDO_HANDLE_ERROR_STMT("Unable to store results", ndo_stmt_object_get_name2);
 
     while (!mysql_stmt_fetch(ndo_stmt_object_get_name2)) {
         return object_id;
@@ -936,10 +939,10 @@ int ndo_insert_object_id_name1(int object_type, char * name1)
     ndo_object_bind[1].length = &(ndo_tmp_str_len[0]);
 
     ndo_return = mysql_stmt_bind_param(ndo_stmt_object_insert_name1, ndo_object_bind);
-    NDO_HANDLE_ERROR("Unable to bind parameters");
+    NDO_HANDLE_ERROR_STMT("Unable to bind parameters", ndo_stmt_object_insert_name1);
 
     ndo_return = mysql_stmt_execute(ndo_stmt_object_insert_name1);
-    NDO_HANDLE_ERROR("Unable to execute statement");
+    NDO_HANDLE_ERROR_STMT("Unable to execute statement", ndo_stmt_object_insert_name1);
 
     return mysql_insert_id(mysql_connection);
 }
@@ -974,10 +977,10 @@ int ndo_insert_object_id_name2(int object_type, char * name1, char * name2)
     ndo_object_bind[2].length = &(ndo_tmp_str_len[1]);
 
     ndo_return = mysql_stmt_bind_param(ndo_stmt_object_insert_name2, ndo_object_bind);
-    NDO_HANDLE_ERROR("Unable to bind parameters");
+    NDO_HANDLE_ERROR_STMT("Unable to bind parameters", ndo_stmt_object_insert_name2);
 
     ndo_return = mysql_stmt_execute(ndo_stmt_object_insert_name2);
-    NDO_HANDLE_ERROR("Unable to execute statement");
+    NDO_HANDLE_ERROR_STMT("Unable to execute statement", ndo_stmt_object_insert_name2);
 
     return mysql_insert_id(mysql_connection);
 }
