@@ -267,6 +267,8 @@ int ndo_handle_event_handler(int type, void * d)
     nebstruct_event_handler_data * data = d;
     int object_id = 0;
 
+    int command_object_id = 0;
+
     if (data->eventhandler_type == SERVICE_EVENTHANDLER || data->eventhandler_type == GLOBAL_SERVICE_EVENTHANDLER) {
         object_id = ndo_get_object_id_name2(TRUE, NDO_OBJECTTYPE_SERVICE, data->host_name, data->service_description);
     }
@@ -274,10 +276,12 @@ int ndo_handle_event_handler(int type, void * d)
         object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_HOST, data->host_name);
     }
 
+    command_object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_COMMAND, tmp->command_name);
+
     MYSQL_RESET_SQL();
     MYSQL_RESET_BIND();
 
-    MYSQL_SET_SQL("INSERT INTO nagios_eventhandlers SET instance_id = 1, start_time = FROM_UNIXTIME(?), start_time_usec = ?, end_time = FROM_UNIXTIME(?), end_time_usec = ?, eventhandler_type = ?, object_id = ?, state = ?, state_type = ?, command_object_id = (SELECT object_id FROM nagios_objects WHERE name1 = ? and objecttype_id = 12 LIMIT 1), command_args = ?, command_line = ? timeout = ?, early_timeout = ?, execution_time = ?, return_code = ?, output = ?, long_output = ? ON DUPLICATE KEY UPDATE instance_id = 1, start_time = FROM_UNIXTIME(?), start_time_usec = ?, end_time = FROM_UNIXTIME(?), end_time_usec = ?, eventhandler_type = ?, object_id = ?, state = ?, state_type = ?, command_object_id = (SELECT object_id FROM nagios_objects WHERE name1 = ? and objecttype_id = 12 LIMIT 1), command_args = ?, command_line = ? timeout = ?, early_timeout = ?, execution_time = ?, return_code = ?, output = ?, long_output = ?");
+    MYSQL_SET_SQL("INSERT INTO nagios_eventhandlers SET instance_id = 1, start_time = FROM_UNIXTIME(?), start_time_usec = ?, end_time = FROM_UNIXTIME(?), end_time_usec = ?, eventhandler_type = ?, object_id = ?, state = ?, state_type = ?, command_object_id = ?, command_args = ?, command_line = ?, timeout = ?, early_timeout = ?, execution_time = ?, return_code = ?, output = ?, long_output = ? ON DUPLICATE KEY UPDATE instance_id = 1, start_time = FROM_UNIXTIME(?), start_time_usec = ?, end_time = FROM_UNIXTIME(?), end_time_usec = ?, eventhandler_type = ?, object_id = ?, state = ?, state_type = ?, command_object_id = ?, command_args = ?, command_line = ?, timeout = ?, early_timeout = ?, execution_time = ?, return_code = ?, output = ?, long_output = ?");
     MYSQL_PREPARE();
 
     MYSQL_BIND_INT(data->start_time.tv_sec);
@@ -288,7 +292,7 @@ int ndo_handle_event_handler(int type, void * d)
     MYSQL_BIND_INT(object_id);
     MYSQL_BIND_INT(data->state);
     MYSQL_BIND_INT(data->state_type);
-    MYSQL_BIND_STR(data->command_name);
+    MYSQL_BIND_STR(command_object_id);
     MYSQL_BIND_STR(data->command_args);
     MYSQL_BIND_STR(data->command_line);
     MYSQL_BIND_INT(data->timeout);
@@ -306,7 +310,7 @@ int ndo_handle_event_handler(int type, void * d)
     MYSQL_BIND_INT(object_id);
     MYSQL_BIND_INT(data->state);
     MYSQL_BIND_INT(data->state_type);
-    MYSQL_BIND_STR(data->command_name);
+    MYSQL_BIND_STR(command_object_id);
     MYSQL_BIND_STR(data->command_args);
     MYSQL_BIND_STR(data->command_line);
     MYSQL_BIND_INT(data->timeout);
@@ -328,6 +332,8 @@ int ndo_handle_host_check(int type, void * d)
     nebstruct_host_check_data * data = d;
     int object_id = 0;
 
+    int command_object_id = 0;
+
     /* this is the only data we care about / need */
     if (type != NEBTYPE_HOSTCHECK_PROCESSED) {
         return NDO_OK;
@@ -335,11 +341,13 @@ int ndo_handle_host_check(int type, void * d)
 
     object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_HOST, data->host_name);
 
+    command_object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_COMMAND, data->command_name);
+
     MYSQL_RESET_SQL();
     MYSQL_RESET_BIND();
 
     // todo get rid of this sub query and use the object_id methods
-    MYSQL_SET_SQL("INSERT INTO nagios_hostchecks SET instance_id = 1, start_time = FROM_UNIXTIME(?), start_time_usec = ?, end_time = FROM_UNIXTIME(?), end_time_usec = ?, host_object_id = ?, check_type = ?, current_check_attempt = ?, max_check_attempts = ?, state = ?, state_type = ?, timeout = ?, early_timeout = ?, execution_time = ?, latency = ?, return_code = ?, output = ?, long_output = ?, perfdata = ?, command_object_id = (SELECT object_id FROM nagios_objects WHERE name1 = ? and objecttype_id = 12 LIMIT 1), command_args = ?, command_line = ? ON DUPLICATE KEY UPDATE instance_id = 1, start_time = FROM_UNIXTIME(?), start_time_usec = ?, end_time = FROM_UNIXTIME(?), end_time_usec = ?, host_object_id = ?, check_type = ?, current_check_attempt = ?, max_check_attempts = ?, state = ?, state_type = ?, timeout = ?, early_timeout = ?, execution_time = ?, latency = ?, return_code = ?, output = ?, long_output = ?, perfdata = ?");
+    MYSQL_SET_SQL("INSERT INTO nagios_hostchecks SET instance_id = 1, start_time = FROM_UNIXTIME(?), start_time_usec = ?, end_time = FROM_UNIXTIME(?), end_time_usec = ?, host_object_id = ?, check_type = ?, current_check_attempt = ?, max_check_attempts = ?, state = ?, state_type = ?, timeout = ?, early_timeout = ?, execution_time = ?, latency = ?, return_code = ?, output = ?, long_output = ?, perfdata = ?, command_object_id = ?, command_args = ?, command_line = ? ON DUPLICATE KEY UPDATE instance_id = 1, start_time = FROM_UNIXTIME(?), start_time_usec = ?, end_time = FROM_UNIXTIME(?), end_time_usec = ?, host_object_id = ?, check_type = ?, current_check_attempt = ?, max_check_attempts = ?, state = ?, state_type = ?, timeout = ?, early_timeout = ?, execution_time = ?, latency = ?, return_code = ?, output = ?, long_output = ?, perfdata = ?");
 
     MYSQL_BIND_INT(data->start_time.tv_sec);
     MYSQL_BIND_INT(data->start_time.tv_usec);
@@ -359,7 +367,7 @@ int ndo_handle_host_check(int type, void * d)
     MYSQL_BIND_STR(data->output);
     MYSQL_BIND_STR(data->long_output);
     MYSQL_BIND_STR(data->perf_data);
-    MYSQL_BIND_STR(data->command_name);
+    MYSQL_BIND_STR(command_object_id);
     MYSQL_BIND_STR(data->command_args);
     MYSQL_BIND_STR(data->command_line);
 
@@ -393,6 +401,8 @@ int ndo_handle_service_check(int type, void * d)
     nebstruct_service_check_data * data = d;
     int object_id = 0;
 
+    int command_object_id = 0;
+
     /* this is the only data we care about / need */
     if (type != NEBTYPE_SERVICECHECK_PROCESSED) {
         return NDO_OK;
@@ -400,11 +410,13 @@ int ndo_handle_service_check(int type, void * d)
 
     object_id = ndo_get_object_id_name2(TRUE, NDO_OBJECTTYPE_SERVICE, data->host_name, data->service_description);
 
+    command_object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_COMMAND, data->command_name);
+
     MYSQL_RESET_SQL();
     MYSQL_RESET_BIND();
 
     // todo get rid of this sub query and use the object_id methods
-    MYSQL_SET_SQL("INSERT INTO nagios_servicechecks SET instance_id = 1, start_time = FROM_UNIXTIME(?), start_time_usec = ?, end_time = FROM_UNIXTIME(?), end_time_usec = ?, service_object_id = ?, check_type = ?, current_check_attempt = ?, max_check_attempts = ?, state = ?, state_type = ?, timeout = ?, early_timeout = ?, execution_time = ?, latency = ?, return_code = ?, output = ?, long_output = ?, perfdata = ?, command_object_id = (SELECT object_id FROM nagios_objects WHERE name1 = ? and objecttype_id = 12 LIMIT 1), command_args = ?, command_line = ? ON DUPLICATE KEY UPDATE instance_id = 1, start_time = FROM_UNIXTIME(?), start_time_usec = ?, end_time = FROM_UNIXTIME(?), end_time_usec = ?, service_object_id = ?, check_type = ?, current_check_attempt = ?, max_check_attempts = ?, state = ?, state_type = ?, timeout = ?, early_timeout = ?, execution_time = ?, latency = ?, return_code = ?, output = ?, long_output = ?, perfdata = ?");
+    MYSQL_SET_SQL("INSERT INTO nagios_servicechecks SET instance_id = 1, start_time = FROM_UNIXTIME(?), start_time_usec = ?, end_time = FROM_UNIXTIME(?), end_time_usec = ?, service_object_id = ?, check_type = ?, current_check_attempt = ?, max_check_attempts = ?, state = ?, state_type = ?, timeout = ?, early_timeout = ?, execution_time = ?, latency = ?, return_code = ?, output = ?, long_output = ?, perfdata = ?, command_object_id = ?, command_args = ?, command_line = ? ON DUPLICATE KEY UPDATE instance_id = 1, start_time = FROM_UNIXTIME(?), start_time_usec = ?, end_time = FROM_UNIXTIME(?), end_time_usec = ?, service_object_id = ?, check_type = ?, current_check_attempt = ?, max_check_attempts = ?, state = ?, state_type = ?, timeout = ?, early_timeout = ?, execution_time = ?, latency = ?, return_code = ?, output = ?, long_output = ?, perfdata = ?");
     MYSQL_PREPARE();
 
     MYSQL_BIND_INT(data->start_time.tv_sec);
@@ -425,7 +437,7 @@ int ndo_handle_service_check(int type, void * d)
     MYSQL_BIND_STR(data->output);
     MYSQL_BIND_STR(data->long_output);
     MYSQL_BIND_STR(data->perf_data);
-    MYSQL_BIND_STR(data->command_name);
+    MYSQL_BIND_STR(command_object_id);
     MYSQL_BIND_STR(data->command_args);
     MYSQL_BIND_STR(data->command_line);
 
