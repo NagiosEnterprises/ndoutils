@@ -86,8 +86,45 @@ int ndo_get_object_id_name2(int insert, int object_type, char * name1, char * na
 int ndo_insert_object_id_name1(int object_type, char * name1);
 int ndo_insert_object_id_name2(int object_type, char * name1, char * name2);
 
+
+
+int ndo_write_commands(int config_type);
+
+int ndo_write_timeperiods(int config_type);
 int ndo_write_timeperiods(int config_type);
 int ndo_write_timeperiod_timeranges(int * timeperiod_ids);
+
+int ndo_write_contacts(int config_type);
+int ndo_write_contact_addresses(int * contact_ids);
+int ndo_write_contact_notificationcommands(int * contact_ids);
+int ndo_write_contact_notificationcommands_cmd(commandsmember * cmd, int notification_type, int * contact_ids, int i);
+
+int ndo_write_contactgroups(int config_type);
+int ndo_write_contactgroup_members(int * contactgroup_ids);
+
+int ndo_write_hosts(int config_type);
+int ndo_write_host_parenthosts(int * host_ids);
+int ndo_write_host_contactgroups(int * host_ids);
+int ndo_write_host_contacts(int * host_ids);
+
+int ndo_write_hostgroups(int config_type);
+int ndo_write_hostgroup_members(int * hostgroup_ids);
+
+int ndo_write_services(int config_type);
+int ndo_write_service_parentservices(int * service_ids);
+int ndo_write_service_contactgroups(int * service_ids);
+int ndo_write_service_contacts(int * service_ids);
+
+int ndo_write_servicegroups(int config_type);
+int ndo_write_servicegroup_members(int * servicegroup_ids);
+
+int ndo_write_hostescalations(int config_type);
+int ndo_write_hostescalation_contactgroups(int * hostescalation_ids);
+int ndo_write_hostescalation_contacts(int * hostescalation_ids);
+
+int ndo_write_serviceescalations(int config_type);
+int ndo_write_serviceescalation_contactgroups(int * serviceescalation_ids);
+int ndo_write_serviceescalation_contacts(int * serviceescalation_ids);
 
 MYSQL * mysql_connection;
 

@@ -42,7 +42,9 @@ hostgroup            * hostgroup_list;
 service              * service_list;
 servicegroup         * servicegroup_list;
 hostescalation       * hostescalation_list;
+hostescalation      ** hostescalation_ary;
 serviceescalation    * serviceescalation_list;
+serviceescalation   ** serviceescalation_ary;
 hostdependency       * hostdependency_list;
 servicedependency    * servicedependency_list;
 char                 * config_file;
@@ -50,6 +52,8 @@ sched_info             scheduling_info;
 char                 * global_host_event_handler;
 char                 * global_service_event_handler;
 int                  __nagios_object_structure_version;
+struct object_count    num_objects;
+
 
 #define NUM_SUITES 2
 
