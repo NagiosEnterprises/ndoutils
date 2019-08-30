@@ -29,6 +29,7 @@ gcovr --exclude="test.c" -r ..
 #include "../include/nagios/nebstructs.h"
 #include "../include/nagios/neberrors.h"
 #include "../include/nagios/broker.h"
+#include "../include/test.h"
 
 #include "nagios-stubs.c"
 
@@ -585,6 +586,8 @@ int main(int argc, char const * argv[])
     }
 
     free(config_file);
+
+    populate_all_objects();
 
     Suite * s_core = t_suite();
     Suite * s_handler = handler_suite();

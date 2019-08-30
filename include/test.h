@@ -1,0 +1,1 @@
+void populate_all_objects();

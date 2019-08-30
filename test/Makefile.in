@@ -12,5 +12,5 @@ DBFLAGS=@DBFLAGS@
 TESTLIBS=-lcheck -lsubunit -lm -lrt -lpthread
 
 
-test: test.c
-	$(CC) $(CFLAGS) $(DBFLAGS) test.c ../src/ndo.c -o $@ $(DBLIBS) $(TESTLIBS)
+test: test.c test-bootstrap.c
+	$(CC) $(CFLAGS) $(DBFLAGS) test-bootstrap.c test.c  ../src/ndo.c -o $@ $(DBLIBS) $(TESTLIBS)
