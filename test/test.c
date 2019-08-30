@@ -229,6 +229,7 @@ START_TEST (test_host_check)
 
     mysql_free_result(tmp_result);
 
+    /* This check is processed, so it should show up in the database */
 
     d.type = NEBTYPE_HOSTCHECK_PROCESSED;
     d.flags = 0;
@@ -287,6 +288,120 @@ END_TEST
 START_TEST (test_service_check)
 {
     nebstruct_service_check_data d;
+
+    MYSQL_ROW tmp_row;
+    MYSQL_RES *tmp_result;
+
+    d.type = NEBTYPE_SERVICECHECK_ASYNC_PRECHECK;
+    d.flags = 0;
+    d.attr = 0;
+    d.timestamp = (struct timeval) { .tv_sec = 1567180338, .tv_usec = 786503 };
+    d.host_name = strdup("_testhost_1");
+    d.service_description = strdup("_testservice_ping");
+    d.check_type = 0;
+    d.current_attempt = 1;
+    d.max_attempts = 5;
+    d.state_type = 1;
+    d.state = 0;
+    d.timeout = 0;
+    d.command_name = strdup("check_xi_service_ping");
+    d.command_args = strdup("3000.0!80%!5000.0!100%");
+    d.command_line = NULL;
+    d.start_time = (struct timeval) { .tv_sec = 0, .tv_usec = 0 };
+    d.end_time = (struct timeval) { .tv_sec = 0, .tv_usec = 0 };
+    d.early_timeout = 0;
+    d.execution_time = 0;
+    d.latency = 103.66160583496094;
+    d.return_code = 0;
+    d.output = strdup("OK - 127.0.0.1 rta 0.012ms lost 0%");
+    d.long_output = NULL;
+    d.perf_data = strdup("rta=0.012ms;3000.000;5000.000;0; rtmax=0.035ms;;;; rtmin=0.006ms;;;; pl=0%;80;100;0;100");
+    d.check_result_ptr = NULL;
+    /* object pointer was not originally null */
+    d.object_ptr = NULL;
+
+    ndo_handle_service_check(d.type, &d);
+
+    mysql_query(mysql_connection, "SELECT 1 FROM nagios_servicechecks WHERE "
+        "instance_id = 1 AND start_time = FROM_UNIXTIME(0) AND start_time_usec = 0 "
+        "AND end_time = FROM_UNIXTIME(0) AND end_time_usec = 0 "
+        "AND check_type = 0 AND current_check_attempt = 1 AND max_check_attempts = 5 "
+        "AND state = 0 AND state_type = 1 AND timeout = 30 AND early_timeout = 0 "
+        "AND execution_time = 0 AND latency = 103.66160583496094 AND return_code = 0 "
+        "AND output = 'OK - 127.0.0.1 rta 0.012ms lost 0%' "
+        "AND long_output = '' "
+        "AND perfdata = 'rta=0.012ms;3000.000;5000.000;0; rtmax=0.035ms;;;; rtmin=0.006ms;;;; pl=0%;80;100;0;100' "
+        "AND command_object_id = (SELECT object_id FROM nagios_objects WHERE name1 = 'check_xi_service_ping' AND objecttype_id = 12 LIMIT 1) "
+        "AND command_args = '3000.0!80%!5000.0!100%' AND command_line = ''");
+
+
+    tmp_result = mysql_store_result(mysql_connection);
+    ck_assert(tmp_result != NULL);
+
+    if (tmp_result != NULL) {
+        tmp_row = mysql_fetch_row(tmp_result);
+    }
+    ck_assert(tmp_row == NULL);
+
+    mysql_free_result(tmp_result);
+
+
+    d.type = NEBTYPE_SERVICECHECK_PROCESSED;
+    d.flags = 0;
+    d.attr = 0;
+    d.timestamp = (struct timeval) { .tv_sec = 1567180773, .tv_usec = 733435 };
+    d.host_name = strdup("_testhost_1");
+    d.service_description = strdup("_testservice_dns");
+    d.check_type = 0;
+    d.current_attempt = 5;
+    d.max_attempts = 5;
+    d.state_type = 1;
+    d.state = 2;
+    d.timeout = 60;
+    d.command_name = NULL;
+    d.command_args = NULL;
+    d.command_line = NULL;
+    d.start_time = (struct timeval) { .tv_sec = 1567180765, .tv_usec = 383185 };
+    d.end_time = (struct timeval) { .tv_sec = 1567180765, .tv_usec = 493635 };
+    d.early_timeout = 0;
+    d.execution_time = 0.11045000000000001;
+    d.latency = 12.436541557312012;
+    d.return_code = 2;
+    d.output = strdup("DNS CRITICAL - query type of -querytype=A was not found for 127.0.0.1");
+    d.long_output = NULL;
+    d.perf_data = strdup("fakedata=0;;;;");
+    /* these two pointers not originally null */
+    d.check_result_ptr = NULL;
+    d.object_ptr = NULL;
+
+    ndo_handle_service_check(d.type, &d);
+
+    mysql_query(mysql_connection, "SELECT 2 FROM nagios_servicechecks WHERE "
+        "instance_id = 1 AND start_time = FROM_UNIXTIME(1567180765) AND start_time_usec = 383185 "
+        "AND end_time = FROM_UNIXTIME(1567180765) AND end_time_usec = 493635 "
+        "AND check_type = 0 AND current_check_attempt = 5 AND max_check_attempts = 5 "
+        "AND state = 2 AND state_type = 1 AND timeout = 60 AND early_timeout = 0 "
+        "AND execution_time = 0.11045000000000001 AND latency = 12.436541557312012 AND return_code = 2 "
+        "AND output = 'DNS CRITICAL - query type of -querytype=A was not found for 127.0.0.1'"
+        "AND long_output = '' "
+        "AND perfdata = 'fakedata=0;;;;' ");
+
+
+    tmp_result = mysql_store_result(mysql_connection);
+    ck_assert(tmp_result != NULL);
+
+    if (tmp_result != NULL) {
+        tmp_row = mysql_fetch_row(tmp_result);
+    }
+    ck_assert(tmp_row != NULL);
+
+    if (tmp_row != NULL) {
+        ck_assert_int_eq(strcmp(tmp_row[0], "2"), 0);
+    }
+
+    mysql_free_result(tmp_result);
+
+
 }
 END_TEST
 
