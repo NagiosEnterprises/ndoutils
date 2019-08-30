@@ -348,6 +348,7 @@ int ndo_handle_host_check(int type, void * d)
 
     // todo get rid of this sub query and use the object_id methods
     MYSQL_SET_SQL("INSERT INTO nagios_hostchecks SET instance_id = 1, start_time = FROM_UNIXTIME(?), start_time_usec = ?, end_time = FROM_UNIXTIME(?), end_time_usec = ?, host_object_id = ?, check_type = ?, current_check_attempt = ?, max_check_attempts = ?, state = ?, state_type = ?, timeout = ?, early_timeout = ?, execution_time = ?, latency = ?, return_code = ?, output = ?, long_output = ?, perfdata = ?, command_object_id = ?, command_args = ?, command_line = ? ON DUPLICATE KEY UPDATE instance_id = 1, start_time = FROM_UNIXTIME(?), start_time_usec = ?, end_time = FROM_UNIXTIME(?), end_time_usec = ?, host_object_id = ?, check_type = ?, current_check_attempt = ?, max_check_attempts = ?, state = ?, state_type = ?, timeout = ?, early_timeout = ?, execution_time = ?, latency = ?, return_code = ?, output = ?, long_output = ?, perfdata = ?");
+    MYSQL_PREPARE();
 
     MYSQL_BIND_INT(data->start_time.tv_sec);
     MYSQL_BIND_INT(data->start_time.tv_usec);

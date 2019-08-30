@@ -174,6 +174,112 @@ END_TEST
 START_TEST (test_host_check)
 {
     nebstruct_host_check_data d;
+
+    MYSQL_ROW tmp_row;
+    MYSQL_RES *tmp_result;
+
+    /* NDO should ignore any HOSTCHECK broker messages which are not NEBTYPE_HOSTCHECK_PROCESSED */
+
+    d.type = NEBTYPE_HOSTCHECK_INITIATE;
+    d.flags = 0;
+    d.attr = 0;
+    d.timestamp = (struct timeval) { .tv_sec = 1567102596, .tv_usec = 116506 };
+    d.host_name = strdup("_testhost_01");
+    d.current_attempt = 1;
+    d.check_type = 0;
+    d.max_attempts = 5;
+    d.state_type = 1;
+    d.state = 0;
+    d.timeout = 30;
+    d.command_name = strdup("check_xi_host_ping");
+    d.command_args = strdup("3000.0!80%!5000.0!100%");
+    d.command_line = strdup("/usr/local/nagios/libexec/check_icmp -H 127.0.0.1 -w 3000.0,80%% -c 5000.0,100%% -p 5");
+    d.start_time = (struct timeval) { .tv_sec = 1567102578, .tv_usec = 740516 };
+    d.end_time = (struct timeval) { .tv_sec = 0, .tv_usec = 0 };
+    d.early_timeout = 0;
+    d.execution_time = 0;
+    d.latency = 17.001623153686523;
+    d.return_code = 0;
+    d.output = NULL;
+    d.long_output = NULL;
+    d.perf_data = NULL;
+    /* These two pointers were not originally null. However, the handler function doesn't use the pointers */
+    d.check_result_ptr = NULL;
+    d.object_ptr = NULL;
+
+    ndo_handle_host_check(d.type, &d);
+
+    mysql_query(mysql_connection, "SELECT 1 FROM nagios_hostchecks "
+        "WHERE instance_id = 1 AND start_time = FROM_UNIXTIME(1567102578) AND start_time_usec = 740516 "
+        "AND end_time = FROM_UNIXTIME(0) AND end_time_usec = 0 AND host_object_id = 0 AND check_type = 0 "
+        "AND current_check_attempt = 1 AND max_check_attempts = 5 AND state = 0 AND state_type = 1 "
+        "AND timeout = 30 AND early_timeout = 0 AND execution_time = 0 AND latency = 17.001623153686523 "
+        "AND return_code = 0 AND output = NULL AND long_output = NULL AND perfdata = NULL "
+        "AND command_args = '3000.0!80%%!5000.0!100%%' "
+        "AND command_line = '/usr/local/nagios/libexec/check_icmp -H 127.0.0.1 -w 3000.0,80%% -c 5000.0,100%% -p 5' ");
+
+
+    tmp_result = mysql_store_result(mysql_connection);
+    ck_assert(tmp_result != NULL);
+
+    if (tmp_result != NULL) {
+        tmp_row = mysql_fetch_row(tmp_result);
+    }
+    ck_assert(tmp_row == NULL);
+
+    mysql_free_result(tmp_result);
+
+
+    d.type = NEBTYPE_HOSTCHECK_PROCESSED;
+    d.flags = 0;
+    d.attr = 0;
+    d.timestamp = (struct timeval) { .tv_sec = 1567104929, .tv_usec = 252810 };
+    d.host_name = strdup("_testhost_912");
+    d.current_attempt = 1;
+    d.check_type = 0;
+    d.max_attempts = 5;
+    d.state_type = 1;
+    d.state = 0;
+    d.timeout = 30;
+    d.command_name = strdup("check_xi_host_ping");
+    d.command_args = strdup("3000.0!80%!5000.0!100%");
+    d.command_line = NULL;
+    d.start_time = (struct timeval) { .tv_sec = 1567104907, .tv_usec = 365285 };
+    d.end_time = (struct timeval) { .tv_sec = 1567104907, .tv_usec = 396672 };
+    d.early_timeout = 0;
+    d.execution_time = 0.031386999999999998;
+    d.latency = 13.030651092529297;
+    d.return_code = 0;
+    d.output = strdup("OK - 127.0.0.1 rta 0.037ms lost 0%%");
+    d.long_output = NULL;
+    d.perf_data = strdup("rta=0.037ms;3000.000;5000.000;0; rtmax=0.082ms;;;; rtmin=0.014ms;;;; pl=0%%;80;100;0;100");
+    d.check_result_ptr = NULL;
+    d.object_ptr = NULL;
+
+    ndo_handle_host_check(d.type, &d);
+
+    mysql_query(mysql_connection, "SELECT 2 FROM nagios_hostchecks "
+        "WHERE instance_id = 1 AND start_time = FROM_UNIXTIME(1567104907) AND start_time_usec = 365285 "
+        "AND end_time = FROM_UNIXTIME(1567104907) AND end_time_usec = 396672 AND check_type = 0 "
+        "AND current_check_attempt = 1 AND max_check_attempts = 5 AND state = 0 AND state_type = 1 "
+        "AND timeout = 30 AND early_timeout = 0 AND execution_time = 0.031386999999999998 AND latency = 13.030651092529297 "
+        "AND return_code = 0 AND output = 'OK - 127.0.0.1 rta 0.037ms lost 0%%' AND long_output = '' "
+        "AND perfdata = 'rta=0.037ms;3000.000;5000.000;0; rtmax=0.082ms;;;; rtmin=0.014ms;;;; pl=0%%;80;100;0;100' "
+        "AND command_args = '3000.0!80%!5000.0!100%' ");
+
+    tmp_result = mysql_store_result(mysql_connection);
+    ck_assert(tmp_result != NULL);
+
+    if (tmp_result != NULL) {
+        tmp_row = mysql_fetch_row(tmp_result);
+    }
+    ck_assert(tmp_row != NULL);
+
+    if (tmp_row != NULL) {
+        ck_assert_int_eq(strcmp(tmp_row[0], "2"), 0);
+    }
+    mysql_free_result(tmp_result);
+
 }
 END_TEST
 
