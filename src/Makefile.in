@@ -10,5 +10,5 @@ DBLIBS=@DBLIBS@
 DBFLAGS=@DBFLAGS@
 
 
-ndo.so:
+ndo.so: ndo.c ndo-handlers.c ndo-startup.c
 	$(CC) $(SHAREDFLAGS) $(CFLAGS) $(DBFLAGS) ndo.c -o $@ $(DBLIBS)
