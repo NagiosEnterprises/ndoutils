@@ -6,6 +6,7 @@ test/test
 *.gcda
 *.gcno
 test/coverage*
+coverage.info-file
 
 Makefile
 configure
@@ -15,3 +16,5 @@ config.log
 config.status
 
 include/config.h
+
+src/ndo.so
