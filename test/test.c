@@ -660,6 +660,232 @@ END_TEST
 START_TEST (test_downtime_data)
 {
     nebstruct_downtime_data d;
+
+    MYSQL_ROW tmp_row;
+    MYSQL_RES *tmp_result;
+
+    /* First, add a downtime */
+
+    d.type = NEBTYPE_DOWNTIME_LOAD;
+    d.flags = 0;
+    d.attr = 0;
+    d.timestamp = (struct timeval) { .tv_sec = 1567191724, .tv_usec = 684577 };
+    d.downtime_type = 2;
+    d.host_name = strdup("_testhost_1");
+    d.service_description = 0x0;
+    d.entry_time = 1567191710;
+    d.author_name = strdup("Nagios Admin");
+    d.comment_data = strdup("hey this host isnt rly going down but whatever");
+    d.start_time = 1567192501;
+    d.end_time = 1567193401;
+    d.fixed = 1;
+    d.duration = 900;
+    d.triggered_by = 0;
+    d.downtime_id = 1;
+    d.object_ptr = NULL;
+
+
+
+    d.type = NEBTYPE_DOWNTIME_ADD;
+    d.flags = 0;
+    d.attr = 0;
+    d.timestamp = (struct timeval) { .tv_sec = 1567191778, .tv_usec = 909038 };
+    d.downtime_type = 2;
+    d.host_name = strdup("_testhost_1");
+    d.service_description = 0x0;
+    d.entry_time = 1567191710;
+    d.author_name = strdup("Nagios Admin");
+    d.comment_data = strdup("this is a test comment for downtime");
+    d.start_time = 1567192501;
+    d.end_time = 1567193401;
+    d.fixed = 1;
+    d.duration = 900;
+    d.triggered_by = 0;
+    d.downtime_id = 1;
+    d.object_ptr = 0x0;
+
+    ndo_handle_downtime(d.type, &d);
+
+    /* Verify that the downtime was added to scheduleddowntime */
+    mysql_query(mysql_connection, "SELECT 1 FROM nagios_scheduleddowntime WHERE "
+        "instance_id = 1 AND downtime_type = 2 " /* AND object_id = ? "*/
+        "AND entry_time = FROM_UNIXTIME(1567191710) AND author_name = 'Nagios Admin' "
+        "AND comment_data = 'this is a test comment for downtime' AND internal_downtime_id = 1 "
+        "AND triggered_by_id = 0 AND is_fixed = 1 AND duration = 900 "
+        "AND scheduled_start_time = FROM_UNIXTIME(1567192501) AND scheduled_end_time = FROM_UNIXTIME(1567193401) ");
+
+    tmp_result = mysql_store_result(mysql_connection);
+    ck_assert(tmp_result != NULL);
+
+    if (tmp_result != NULL) {
+        tmp_row = mysql_fetch_row(tmp_result);
+    }
+    ck_assert(tmp_row != NULL);
+
+    if (tmp_row != NULL) {
+        ck_assert_int_eq(strcmp(tmp_row[0], "1"), 0);
+    }
+    mysql_free_result(tmp_result);
+
+    /* Verify that the exact same entry was added to downtimehistory */
+
+    mysql_query(mysql_connection, "SELECT 2 FROM nagios_downtimehistory WHERE "
+        "instance_id = 1 AND downtime_type = 2 " /* AND object_id = ? "*/
+        "AND entry_time = FROM_UNIXTIME(1567191710) AND author_name = 'Nagios Admin' "
+        "AND comment_data = 'this is a test comment for downtime' AND internal_downtime_id = 1 "
+        "AND triggered_by_id = 0 AND is_fixed = 1 AND duration = 900 "
+        "AND scheduled_start_time = FROM_UNIXTIME(1567192501) AND scheduled_end_time = FROM_UNIXTIME(1567193401) ");
+
+    tmp_result = mysql_store_result(mysql_connection);
+    ck_assert(tmp_result != NULL);
+
+    if (tmp_result != NULL) {
+        tmp_row = mysql_fetch_row(tmp_result);
+    }
+    ck_assert(tmp_row != NULL);
+
+    if (tmp_row != NULL) {
+        ck_assert_int_eq(strcmp(tmp_row[0], "2"), 0);
+    }
+    mysql_free_result(tmp_result);
+
+
+    /* Start the downtime */
+
+    d.type = NEBTYPE_DOWNTIME_START;
+    d.flags = 0;
+    d.attr = 0;
+    d.timestamp = (struct timeval) { .tv_sec = 1567192611, .tv_usec = 90214 };
+    d.downtime_type = 2;
+    d.host_name = strdup("_testhost_1");
+    d.service_description = NULL;
+    d.entry_time = 1567191710;
+    d.author_name = strdup("Nagios Admin");
+    d.comment_data = strdup("hey this host isnt rly going down but whatever");
+    d.start_time = 1567192501;
+    d.end_time = 1567193401;
+    d.fixed = 1;
+    d.duration = 900;
+    d.triggered_by = 0;
+    d.downtime_id = 1;
+    d.object_ptr = NULL;
+
+
+    ndo_handle_downtime(d.type, &d);
+
+    /* Verify that the same downtime above is present in downtimehistory and scheduleddowntime,
+     * but that actual_start_time, actual_start_time_usec, and was_started were updated */
+    mysql_query(mysql_connection, "SELECT 3 FROM nagios_scheduleddowntime WHERE "
+        "instance_id = 1 AND downtime_type = 2 " /* AND object_id = ? "*/
+        "AND entry_time = FROM_UNIXTIME(1567191710) AND author_name = 'Nagios Admin' "
+        "AND comment_data = 'this is a test comment for downtime' AND internal_downtime_id = 1 "
+        "AND triggered_by_id = 0 AND is_fixed = 1 AND duration = 900 "
+        "AND scheduled_start_time = FROM_UNIXTIME(1567192501) AND scheduled_end_time = FROM_UNIXTIME(1567193401) "
+        /* query is the same as "SELECT 1..." up until this line */
+        "AND actual_start_time = FROM_UNIXTIME(1567192611) AND actual_start_time_usec = 90214 AND was_started = 1 ");
+
+    tmp_result = mysql_store_result(mysql_connection);
+    ck_assert(tmp_result != NULL);
+
+    if (tmp_result != NULL) {
+        tmp_row = mysql_fetch_row(tmp_result);
+    }
+    ck_assert(tmp_row != NULL);
+
+    if (tmp_row != NULL) {
+        ck_assert_int_eq(strcmp(tmp_row[0], "3"), 0);
+    }
+    mysql_free_result(tmp_result);
+
+    /* Verify that the updated values are also in downtimehistory */
+
+    mysql_query(mysql_connection, "SELECT 4 FROM nagios_downtimehistory WHERE "
+        "instance_id = 1 AND downtime_type = 2 " /* AND object_id = ? "*/
+        "AND entry_time = FROM_UNIXTIME(1567191710) AND author_name = 'Nagios Admin' "
+        "AND comment_data = 'this is a test comment for downtime' AND internal_downtime_id = 1 "
+        "AND triggered_by_id = 0 AND is_fixed = 1 AND duration = 900 "
+        "AND scheduled_start_time = FROM_UNIXTIME(1567192501) AND scheduled_end_time = FROM_UNIXTIME(1567193401) "
+        /* query is the same as "SELECT 2..." up until this line */
+        "AND actual_start_time = FROM_UNIXTIME(1567192611) AND actual_start_time_usec = 90214 AND was_started = 1 ");
+
+    tmp_result = mysql_store_result(mysql_connection);
+    ck_assert(tmp_result != NULL);
+
+    if (tmp_result != NULL) {
+        tmp_row = mysql_fetch_row(tmp_result);
+    }
+    ck_assert(tmp_row != NULL);
+
+    if (tmp_row != NULL) {
+        ck_assert_int_eq(strcmp(tmp_row[0], "4"), 0);
+    }
+    mysql_free_result(tmp_result);
+
+
+    /* End the downtime */
+
+
+    d.type = NEBTYPE_DOWNTIME_STOP;
+    d.flags = 0;
+    d.attr = 1;
+    d.timestamp = (struct timeval) { .tv_sec = 1567521860, .tv_usec = 732623 };
+    d.downtime_type = 2;
+    d.host_name = strdup("_testhost_1");
+    d.service_description = NULL;
+    d.entry_time = 1567191710;
+    d.author_name = strdup("Nagios Admin");
+    d.comment_data = strdup("hey this host isnt rly going down but whatever");
+    d.start_time = 1567192501;
+    d.end_time = 1567193401;
+    d.fixed = 1;
+    d.duration = 900;
+    d.triggered_by = 0;
+    d.downtime_id = 1;
+    d.object_ptr = NULL;
+
+    ndo_handle_downtime(d.type, &d);
+
+    /* Verify that the downtime was deleted from scheduleddowntime */
+    mysql_query(mysql_connection, "SELECT 5 FROM nagios_scheduleddowntime WHERE "
+        "instance_id = 1 AND downtime_type = 2 " /* AND object_id = ? "*/
+        "AND entry_time = FROM_UNIXTIME(1567191710) AND author_name = 'Nagios Admin' "
+        "AND comment_data = 'this is a test comment for downtime' AND internal_downtime_id = 1 "
+        "AND triggered_by_id = 0 AND is_fixed = 1 AND duration = 900 "
+        "AND scheduled_start_time = FROM_UNIXTIME(1567192501) AND scheduled_end_time = FROM_UNIXTIME(1567193401) ");
+
+    tmp_result = mysql_store_result(mysql_connection);
+    ck_assert(tmp_result != NULL);
+
+    if (tmp_result != NULL) {
+        tmp_row = mysql_fetch_row(tmp_result);
+    }
+    ck_assert(tmp_row == NULL);
+
+    /* Verify that the the entry still exists in downtimehistory with updated actual_end_time, actual_end_time_usec, was_cancelled */
+
+    mysql_query(mysql_connection, "SELECT 6 FROM nagios_downtimehistory WHERE "
+        "instance_id = 1 AND downtime_type = 2 " /* AND object_id = ? "*/
+        "AND entry_time = FROM_UNIXTIME(1567191710) AND author_name = 'Nagios Admin' "
+        "AND comment_data = 'this is a test comment for downtime' AND internal_downtime_id = 1 "
+        "AND triggered_by_id = 0 AND is_fixed = 1 AND duration = 900 "
+        "AND scheduled_start_time = FROM_UNIXTIME(1567192501) AND scheduled_end_time = FROM_UNIXTIME(1567193401) "
+        "AND actual_start_time = FROM_UNIXTIME(1567192611) AND actual_start_time_usec = 90214 AND was_started = 1 "
+        /* query is the same as "SELECT 4..." up until this line */
+        "AND actual_end_time = FROM_UNIXTIME(1567521860) AND actual_end_time_usec = 732623 AND was_cancelled = 0 ");
+
+    tmp_result = mysql_store_result(mysql_connection);
+    ck_assert(tmp_result != NULL);
+
+    if (tmp_result != NULL) {
+        tmp_row = mysql_fetch_row(tmp_result);
+    }
+    ck_assert(tmp_row != NULL);
+
+    if (tmp_row != NULL) {
+        ck_assert_int_eq(strcmp(tmp_row[0], "6"), 0);
+    }
+    mysql_free_result(tmp_result);
+
 }
 END_TEST
 

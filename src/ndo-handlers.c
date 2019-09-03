@@ -587,7 +587,7 @@ int ndo_handle_downtime(int type, void * d)
         MYSQL_RESET_SQL();
         MYSQL_RESET_BIND();
 
-        MYSQL_SET_SQL("INSERT INTO nagios_scheduleddowntime SET instance_id = 1, downtime_type = ?, object_id = ?, entry_time = FROM_UNIXTIME(?), author_name = ?, comment_data = ?, internal_downtime_id = ?, triggered_by_id = ?, is_fixed = ?, duration = ?, scheduled_start_time = ?, scheduled_end_time = ? ON DUPLICATE KEY UPDATE instance_id = 1, downtime_type = ?, object_id = ?, entry_time = FROM_UNIXTIME(?), author_name = ?, comment_data = ?, internal_downtime_id = ?, triggered_by_id = ?, is_fixed = ?, duration = ?, scheduled_start_time = ?, scheduled_end_time = ?");
+        MYSQL_SET_SQL("INSERT INTO nagios_scheduleddowntime SET instance_id = 1, downtime_type = ?, object_id = ?, entry_time = FROM_UNIXTIME(?), author_name = ?, comment_data = ?, internal_downtime_id = ?, triggered_by_id = ?, is_fixed = ?, duration = ?, scheduled_start_time = FROM_UNIXTIME(?), scheduled_end_time = FROM_UNIXTIME(?) ON DUPLICATE KEY UPDATE instance_id = 1, downtime_type = ?, object_id = ?, entry_time = FROM_UNIXTIME(?), author_name = ?, comment_data = ?, internal_downtime_id = ?, triggered_by_id = ?, is_fixed = ?, duration = ?, scheduled_start_time = FROM_UNIXTIME(?), scheduled_end_time = FROM_UNIXTIME(?)");
         MYSQL_PREPARE();
 
         MYSQL_BIND_INT(data->downtime_type);
@@ -635,7 +635,7 @@ int ndo_handle_downtime(int type, void * d)
         MYSQL_RESET_SQL();
         MYSQL_RESET_BIND();
 
-        MYSQL_SET_SQL("UPDATE nagios_scheduleddowntime SET actual_start_time = ?, actual_start_time_usec = ?, was_started = 1 WHERE object_id = ? AND downtime_type = ? AND entry_time = FROM_UNIXTIME(?) AND scheduled_start_time = ? AND scheduled_end_time = ?");
+        MYSQL_SET_SQL("UPDATE nagios_scheduleddowntime SET actual_start_time = FROM_UNIXTIME(?), actual_start_time_usec = ?, was_started = 1 WHERE object_id = ? AND downtime_type = ? AND entry_time = FROM_UNIXTIME(?) AND scheduled_start_time = FROM_UNIXTIME(?) AND scheduled_end_time = FROM_UNIXTIME(?)");
         MYSQL_PREPARE();
 
         MYSQL_BIND_INT(data->timestamp.tv_sec);
@@ -651,10 +651,10 @@ int ndo_handle_downtime(int type, void * d)
 
         /* we just have to rename "scheduleddowntime" to "downtimehistory"
 
-            strlen("UPDATE nagios_downtimehistory") = 29
+            strlen("UPDATE nagios_downtimehistory  ") = 31
 
                            "UPDATE nagios_scheduleddowntime" */
-        strncpy(ndo_query, "UPDATE nagios_downtimehistory  ", 29);
+        strncpy(ndo_query, "UPDATE nagios_downtimehistory  ", 31);
 
         MYSQL_PREPARE();
 
@@ -673,7 +673,7 @@ int ndo_handle_downtime(int type, void * d)
         MYSQL_RESET_SQL();
         MYSQL_RESET_BIND();
 
-        MYSQL_SET_SQL("UPDATE nagios_downtimehistory SET actual_end_time = ?, actual_end_time_usec = ?, was_cancelled = ? WHERE object_id = ? AND downtime_type = ? AND entry_time = FROM_UNIXTIME(?) AND scheduled_start_time = ? AND scheduled_end_time = ?");
+        MYSQL_SET_SQL("UPDATE nagios_downtimehistory SET actual_end_time = FROM_UNIXTIME(?), actual_end_time_usec = ?, was_cancelled = ? WHERE object_id = ? AND downtime_type = ? AND entry_time = FROM_UNIXTIME(?) AND scheduled_start_time = FROM_UNIXTIME(?) AND scheduled_end_time = FROM_UNIXTIME(?)");
         MYSQL_PREPARE();
 
         MYSQL_BIND_INT(data->timestamp.tv_sec);
