@@ -411,7 +411,12 @@ int ndo_handle_service_check(int type, void * d)
 
     object_id = ndo_get_object_id_name2(TRUE, NDO_OBJECTTYPE_SERVICE, data->host_name, data->service_description);
 
-    command_object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_COMMAND, data->command_name);
+    if (data->command_name != NULL) {
+        /* Nagios Core appears to always pass NULL for its command arguments when brokering NEBTYPE_SERVICECHECK_PROCESSED.
+         * It's not clear why this was done, so we're working around it here for now.
+         */
+        command_object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_COMMAND, data->command_name);
+    }
 
     MYSQL_RESET_SQL();
     MYSQL_RESET_BIND();
