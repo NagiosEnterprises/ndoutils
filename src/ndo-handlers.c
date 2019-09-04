@@ -1055,7 +1055,7 @@ int ndo_handle_service_status(int type, void * d)
     MYSQL_BIND_STR(svc->check_command);
     MYSQL_BIND_DOUBLE(svc->check_interval);
     MYSQL_BIND_DOUBLE(svc->retry_interval);
-    MYSQL_BIND_INT(timeperiod_object_id); 
+    MYSQL_BIND_INT(timeperiod_object_id);
 
     MYSQL_BIND();
     MYSQL_EXECUTE();

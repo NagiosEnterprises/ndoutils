@@ -94,10 +94,8 @@ do { \
 /* Database varibles */
 
 #define MAX_SQL_BUFFER 4096
-#define MAX_SQL_BINDINGS 64
-#define MAX_SQL_RESULT_BINDINGS 16
+#define MAX_SQL_BINDINGS 400
 #define MAX_BIND_BUFFER 4096
-#define MAX_INSERT_VALUES 250
 
 int ndo_database_connected = FALSE;
 
@@ -111,10 +109,16 @@ char * ndo_db_name = NULL;
 
 MYSQL_STMT * ndo_stmt = NULL;
 MYSQL_BIND ndo_bind[MAX_SQL_BINDINGS];
-MYSQL_BIND ndo_result[MAX_SQL_RESULT_BINDINGS];
+MYSQL_BIND ndo_result[MAX_SQL_BINDINGS];
+
+MYSQL_STMT * ndo_stmt_new[NUM_WRITE_QUERIES];
+MYSQL_BIND    ndo_bind_new[NUM_WRITE_QUERIES][MAX_SQL_BINDINGS];
+int ndo_bind_new_i[NUM_WRITE_QUERIES];
+long ndo_tmp_str_len_new[NUM_WRITE_QUERIES][MAX_SQL_BINDINGS];
 
 int ndo_return = 0;
 char ndo_error_msg[1024] = { 0 };
+/*char ndo_query[NUM_QUERIES][MAX_SQL_BUFFER] = { 0 };*/
 char ndo_query[MAX_SQL_BUFFER] = { 0 };
 long ndo_tmp_str_len[MAX_SQL_BINDINGS] = { 0 };
 long ndo_result_tmp_str_len[MAX_SQL_BINDINGS] = { 0 };
@@ -123,6 +127,8 @@ int ndo_bind_i = 0;
 int ndo_result_i = 0;
 int ndo_last_handle_function = 0;
 
+int ndo_current_query = 0;
+
 /* 3 = objecttype_id, name1, name2 */
 MYSQL_BIND ndo_object_bind[3];
 MYSQL_BIND ndo_object_result[1];
@@ -130,6 +136,17 @@ MYSQL_STMT * ndo_stmt_object_get_name1 = NULL;
 MYSQL_STMT * ndo_stmt_object_get_name2 = NULL;
 MYSQL_STMT * ndo_stmt_object_insert_name1 = NULL;
 MYSQL_STMT * ndo_stmt_object_insert_name2 = NULL;
+
+
+
+MYSQL_BIND * ndo_startup_bindaaa[NUM_WRITE_QUERIES];
+MYSQL_BIND   ndo_bindaaa[NUM_HANDLER_QUERIES][MAX_SQL_BINDINGS];
+MYSQL_BIND   ndo_resultaaa[MAX_SQL_BINDINGS];
+MYSQL_STMT * ndo_stmtaaa[NUM_QUERIES] = { NULL };
+
+
+int ndo_max_object_insert_count = 200;
+
 
 MYSQL_BIND ndo_log_data_bind[5];
 MYSQL_STMT * ndo_stmt_log_data = NULL;
@@ -444,6 +461,14 @@ void ndo_process_config_line(char * line)
     /* configuration dumping */
     else if (!strcmp("config_dump_options", key)) {
         ndo_config_dump_options = atoi(val);
+    }
+
+    else if (!strcmp("max_object_insert_count", key)) {
+        ndo_max_object_insert_count = atoi(val);
+
+        if (ndo_max_object_insert_count > MAX_OBJECT_INSERT) {
+            ndo_max_object_insert_count = MAX_OBJECT_INSERT;
+        }
     }
 
     /* neb handlers */
