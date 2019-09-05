@@ -529,10 +529,7 @@ int ndo_write_hosts(int config_type)
     host * tmp = host_list;
     int i = 0;
 
-    int this_count = 0;
-
     int object_ids[MAX_OBJECT_INSERT] = { 0 };
-    int host_ids[MAX_OBJECT_INSERT] = { 0 };
 
     int host_options[MAX_OBJECT_INSERT][11] = { 0 };
     int check_command_id[MAX_OBJECT_INSERT] = { 0 };
@@ -559,9 +556,9 @@ int ndo_write_hosts(int config_type)
 
     while (tmp != NULL) {
 
-        strcat(query, query_values);
+        i++;
 
-        this_count++;
+        strcat(query, query_values);
 
         object_ids[i] = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_HOST, tmp->name);
 
@@ -659,33 +656,31 @@ int ndo_write_hosts(int config_type)
             memset(query + query_base_len, 0, MAX_SQL_BUFFER - query_base_len);
 
             ndo_bind_i = 0;
-            this_count = 0;
+            i = 0;
         }
 
-        i++;
         tmp = tmp->next;
     }
 
-    this_count = 0;
     tmp = host_list;
     i = 0;
 
     char parenthosts_query[MAX_SQL_BUFFER];
     char * parenthosts_query_base = "INSERT INTO nagios_host_parenthosts (instance_id, host_id, parent_host_object_id) VALUES ";
-    size_t parenthosts_query_base_len = strlen(query_base);
+    size_t parenthosts_query_base_len = strlen(parenthosts_query_base);
     char * parenthosts_query_values = "(1,(SELECT host_id FROM nagios_hosts WHERE host_object_id = (SELECT object_id FROM nagios_objects WHERE objecttype_id = 1 AND name1 = ?)),(SELECT object_id FROM nagios_objects WHERE objecttype_id = 1 AND name1 = ?)),";
     char * parenthosts_query_on_update = "ON DUPLICATE KEY UPDATE instance_id = VALUES(instance_id), host_id = VALUES(host_id), parent_host_object_id = VALUES(parent_host_object_id)";
 
     char contactgroups_query[MAX_SQL_BUFFER];
     char * contactgroups_query_base = "INSERT INTO nagios_host_contactgroups (instance_id, host_id, contactgroup_object_id) VALUES ";
-    size_t contactgroups_query_base_len = strlen(query_base);
+    size_t contactgroups_query_base_len = strlen(contactgroups_query_base);
     char * contactgroups_query_values = "(1,(SELECT host_id FROM nagios_hosts WHERE host_object_id = (SELECT object_id FROM nagios_objects WHERE objecttype_id = 1 AND name1 = ?)),(SELECT object_id FROM nagios_objects WHERE objecttype_id = 11 AND name1 = ?)),";
     char * contactgroups_query_on_update = "ON DUPLICATE KEY UPDATE instance_id = VALUES(instance_id), host_id = VALUES(host_id), contactgroup_object_id = VALUES(contactgroup_object_id)";
 
     char contacts_query[MAX_SQL_BUFFER];
     char * contacts_query_base = "INSERT INTO nagios_host_contacts (instance_id, host_id, contact_object_id) VALUES ";
-    size_t contacts_query_base_len = strlen(query_base);
-    char * contacts_query_values = "(1,(SELECT host_id FROM nagios_hosts WHERE host_object_id = (SELECT object_id FROM nagios_objects WHERE objecttype_id = 1 AND name1 = ?)),(SELECT object_id FROM nagios_objects WHERE objecttype_id = 11 AND name1 = ?)),";
+    size_t contacts_query_base_len = strlen(contacts_query_base);
+    char * contacts_query_values = "(1,(SELECT host_id FROM nagios_hosts WHERE host_object_id = (SELECT object_id FROM nagios_objects WHERE objecttype_id = 1 AND name1 = ?)),(SELECT object_id FROM nagios_objects WHERE objecttype_id = 10 AND name1 = ?)),";
     char * contacts_query_on_update = "ON DUPLICATE KEY UPDATE instance_id = VALUES(instance_id), host_id = VALUES(host_id), contact_object_id = VALUES(contact_object_id)";
 
     int parenthosts_count = 0;
@@ -708,6 +703,8 @@ int ndo_write_hosts(int config_type)
     strcpy(contacts_query, contacts_query_base);
 
     while (tmp != NULL) {
+
+        i++;
 
         parent = tmp->parent_hosts;
         while (parent != NULL) {
@@ -762,7 +759,7 @@ int ndo_write_hosts(int config_type)
             MYSQL_EXECUTE_NEW(WRITE_HOST_CONTACTGROUPS);
             memset(contactgroups_query + contactgroups_query_base_len, 0, MAX_SQL_BUFFER - contactgroups_query_base_len);
             contactgroups_count = 0;
-            ndo_bind_new_i[WRITE_HOST_CONTACTGROUPS] = 0;            
+            ndo_bind_new_i[WRITE_HOST_CONTACTGROUPS] = 0;
         }
 
         if (contacts_count > 0 && (contacts_count >= ndo_max_object_insert_count || tmp->next == NULL)) {
@@ -774,7 +771,6 @@ int ndo_write_hosts(int config_type)
             ndo_bind_new_i[WRITE_HOST_CONTACTS] = 0;
         }
 
-        i++;
         tmp = tmp->next;
     }
 
