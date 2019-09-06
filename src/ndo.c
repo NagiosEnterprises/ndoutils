@@ -93,7 +93,10 @@ do { \
 /**********************************************/
 /* Database varibles */
 
-#define MAX_SQL_BUFFER 4096
+/* any given query_values string (in startup funcs) is ~120 chars
+   and the query_base + query_on_update longest string (write_services) is ~4k
+   so we pad a bit and hope we never go over this */
+#define MAX_SQL_BUFFER ((MAX_OBJECT_INSERT * 150) + 8000)
 #define MAX_SQL_BINDINGS 400
 #define MAX_BIND_BUFFER 4096
 

@@ -642,7 +642,7 @@ int ndo_write_hosts(int config_type)
         MYSQL_BIND_INT(tmp->hourly_value);
 
         /* we need to finish the query and execute */
-        if (this_count >= ndo_max_object_insert_count || tmp->next == NULL) {
+        if (i >= ndo_max_object_insert_count || tmp->next == NULL) {
 
             strcpy(strrchr(query, ','), query_on_update);
 
