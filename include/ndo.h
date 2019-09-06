@@ -108,8 +108,9 @@ int write_to_log(char * buffer, unsigned long l, time_t * t);
 #define WRITE_SERVICEESCALATION_CONTACTS 26
 #define WRITE_HOSTDEPENDENCIES 27
 #define WRITE_SERVICEDEPENDENCIES 28
+#define WRITE_CUSTOMVARS 29
 
-#define NUM_WRITE_QUERIES 29
+#define NUM_WRITE_QUERIES 30
 
 #define GENERAL
 #define GET_NAME1
@@ -159,6 +160,7 @@ int ndo_get_object_id_name2(int insert, int object_type, char * name1, char * na
 int ndo_insert_object_id_name1(int object_type, char * name1);
 int ndo_insert_object_id_name2(int object_type, char * name1, char * name2);
 
+int send_subquery(char * query, size_t query_base_len, char * query_on_update, int stmt, int * counter);
 
 
 int ndo_write_commands(int config_type);
