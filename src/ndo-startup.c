@@ -770,11 +770,11 @@ int ndo_write_hosts(int config_type)
 
             strcat(var_query, var_query_values);
 
-            MYSQL_BIND_STR(tmp->name);
-            MYSQL_BIND_INT(config_type);
-            MYSQL_BIND_INT(var->has_been_modified);
-            MYSQL_BIND_STR(var->variable_name);
-            MYSQL_BIND_STR(var->variable_value);
+            MYSQL_BIND_NEW_STR(WRITE_CUSTOMVARS, tmp->name);
+            MYSQL_BIND_NEW_INT(WRITE_CUSTOMVARS, config_type);
+            MYSQL_BIND_NEW_INT(WRITE_CUSTOMVARS, var->has_been_modified);
+            MYSQL_BIND_NEW_STR(WRITE_CUSTOMVARS, var->variable_name);
+            MYSQL_BIND_NEW_STR(WRITE_CUSTOMVARS, var->variable_value);
 
             var = var->next;
             var_count++;
