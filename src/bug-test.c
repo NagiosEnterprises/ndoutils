@@ -1,5 +1,8 @@
-#define MAX_OBJECT_INSERT 10
-#define MAX_SQL_BUFFER ((MAX_OBJECT_INSERT * 150) + 8000)
+/*
+
+gcc -O0 -g3 $(mysql_config --cflags) bug-test.c $(mysql_config --libs)
+
+*/
 
 #define NSCORE 1
 
@@ -20,6 +23,11 @@
 #include <time.h>
 
 #include "../include/ndo.h"
+
+
+#undef MAX_OBJECT_INSERT
+#define MAX_OBJECT_INSERT (10+1)
+#define MAX_SQL_BUFFER ((MAX_OBJECT_INSERT * 150) + 8000)
 
 int ndo_max_object_insert_count = 10;
 
@@ -48,6 +56,8 @@ int send_subquery(char * query, size_t query_base_len, char * query_on_update, i
     MYSQL_BIND_NEW(stmt);
     MYSQL_EXECUTE_NEW(stmt);
 */
+
+    printf("sub query: [%s]\n", query);
 
     memset(query + query_base_len, 0, MAX_SQL_BUFFER - query_base_len);
 
@@ -83,7 +93,6 @@ int ndo_write_hosts(int config_type)
     char * query_on_update = " ON DUPLICATE KEY UPDATE instance_id = VALUES(instance_id), config_type = VALUES(config_type), host_object_id = VALUES(host_object_id), alias = VALUES(alias), display_name = VALUES(display_name), address = VALUES(address), check_command_object_id = VALUES(check_command_object_id), check_command_args = VALUES(check_command_args), eventhandler_command_object_id = VALUES(eventhandler_command_object_id), eventhandler_command_args = VALUES(eventhandler_command_args), check_timeperiod_object_id = VALUES(check_timeperiod_object_id), notification_timeperiod_object_id = VALUES(notification_timeperiod_object_id), failure_prediction_options = VALUES(failure_prediction_options), check_interval = VALUES(check_interval), retry_interval = VALUES(retry_interval), max_check_attempts = VALUES(max_check_attempts), first_notification_delay = VALUES(first_notification_delay), notification_interval = VALUES(notification_interval), notify_on_down = VALUES(notify_on_down), notify_on_unreachable = VALUES(notify_on_unreachable), notify_on_recovery = VALUES(notify_on_recovery), notify_on_flapping = VALUES(notify_on_flapping), notify_on_downtime = VALUES(notify_on_downtime), stalk_on_up = VALUES(stalk_on_up), stalk_on_down = VALUES(stalk_on_down), stalk_on_unreachable = VALUES(stalk_on_unreachable), flap_detection_enabled = VALUES(flap_detection_enabled), flap_detection_on_up = VALUES(flap_detection_on_up), flap_detection_on_down = VALUES(flap_detection_on_down), flap_detection_on_unreachable = VALUES(flap_detection_on_unreachable), low_flap_threshold = VALUES(low_flap_threshold), high_flap_threshold = VALUES(high_flap_threshold), process_performance_data = VALUES(process_performance_data), freshness_checks_enabled = VALUES(freshness_checks_enabled), freshness_threshold = VALUES(freshness_threshold), passive_checks_enabled = VALUES(passive_checks_enabled), event_handler_enabled = VALUES(event_handler_enabled), active_checks_enabled = VALUES(active_checks_enabled), retain_status_information = VALUES(retain_status_information), retain_nonstatus_information = VALUES(retain_nonstatus_information), notifications_enabled = VALUES(notifications_enabled), obsess_over_host = VALUES(obsess_over_host), failure_prediction_enabled = VALUES(failure_prediction_enabled), notes = VALUES(notes), notes_url = VALUES(notes_url), action_url = VALUES(action_url), icon_image = VALUES(icon_image), icon_image_alt = VALUES(icon_image_alt), vrml_image = VALUES(vrml_image), statusmap_image = VALUES(statusmap_image), have_2d_coords = VALUES(have_2d_coords), x_2d = VALUES(x_2d), y_2d = VALUES(y_2d), have_3d_coords = VALUES(have_3d_coords), x_3d = VALUES(x_3d), y_3d = VALUES(y_3d), z_3d = VALUES(z_3d), importance = VALUES(importance)";
 
     strcpy(query, query_base);
-
     /* MYSQL_RESET_BIND(); */
 
     while (tmp != NULL) {
@@ -91,9 +100,9 @@ int ndo_write_hosts(int config_type)
         i++;
 
         strcat(query, query_values);
-/*
+        /*
         object_ids[i] = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_HOST, tmp->name);
-*/
+        */
         check_command[i] = strtok(tmp->check_command, "!");
         check_command_args[i] = strtok(NULL, "\0");
         /*
@@ -108,6 +117,12 @@ int ndo_write_hosts(int config_type)
         check_timeperiod_id[i] = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_TIMEPERIOD, tmp->check_period);
         notification_timeperiod_id[i] = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_TIMEPERIOD, tmp->notification_period);
         */
+
+        object_ids[i] = 1;
+        check_command_id[i] = 1;
+        event_handler_id[i] = 1;
+        check_timeperiod_id[i] = 1;
+        notification_timeperiod_id[i] = 1;
 
         host_options[i][0] = flag_isset(tmp->notification_options, OPT_DOWN);
         host_options[i][1] = flag_isset(tmp->notification_options, OPT_UNREACHABLE);
@@ -188,6 +203,8 @@ int ndo_write_hosts(int config_type)
 
             /* MYSQL_BIND(); */
             /* MYSQL_EXECUTE(); */
+
+            printf("query: [%s]\n", query);
 
             memset(query + query_base_len, 0, MAX_SQL_BUFFER - query_base_len);
 
@@ -365,9 +382,9 @@ void add_hosts(int count)
         hst->check_period_ptr = check_period_ptr;
         hst->notification_period = "24x7";
         hst->notification_period_ptr = check_period_ptr;
-        hst->check_command = "check_command!args1!args2";
+        hst->check_command = strdup("check_command!args1!args2");
         hst->check_command_ptr = cmd_ptr;
-        hst->event_handler = "event_handler";
+        hst->event_handler = strdup("event_handler!args!args2");
         hst->event_handler_ptr = cmd_ptr;
         hst->notes = "notes";
         hst->notes_url = "notes_url";
@@ -506,7 +523,6 @@ void add_customvars(int count)
         var->variable_name = strdup(buf);
         var->variable_value = var->variable_name;
         var->has_been_modified = 0;
-        var->next = calloc(1, sizeof(* var));
 
         if (tmp == NULL) {
             customvars = var;
@@ -518,7 +534,6 @@ void add_customvars(int count)
         }
     }
 }
-
 
 
 void add_check_commands()
@@ -533,6 +548,7 @@ void add_check_commands()
     cmd_ptr = cmd;
 }
 
+
 void add_timeperiods()
 {
     timeperiod * tim = calloc(1, sizeof(* tim));
@@ -540,8 +556,6 @@ void add_timeperiods()
     tim->id = 0;
     tim->name = strdup("24x7");
     tim->alias = tim->name;
-/*    tim->days = NULL;
-    tim->exceptions = NULL;*/
     tim->exclusions = NULL;
     tim->next = NULL;
 
@@ -550,19 +564,106 @@ void add_timeperiods()
 }
 
 
-int main()
+void free_hosts()
 {
-    add_hosts(10);
-
     host * tmp = host_list;
+    host * next = NULL;
 
     while (tmp != NULL) {
+        next = tmp->next;
 
-        printf("%s\n", tmp->name);
+        free(tmp->name);
+        free(tmp->check_command);
+        free(tmp->event_handler);
 
-        tmp = tmp->next;
+        free(tmp);
+
+        tmp = next;
     }
+}
 
+
+void free_timeperiods()
+{
+    free(check_period_ptr->name);
+    free(check_period_ptr);
+}
+
+
+void free_check_commands()
+{
+    free(cmd_ptr->name);
+    free(cmd_ptr);
+}
+
+
+void free_customvars()
+{
+    customvariablesmember * tmp = customvars;
+    customvariablesmember * next = NULL;
+
+    while (tmp != NULL) {
+        next = tmp->next;
+
+        free(tmp->variable_name);
+        free(tmp);
+
+        tmp = next;
+    }
+}
+
+
+void free_contact_groups()
+{
+    contactgroupsmember * tmp = cg_list;
+    contactgroupsmember * next = NULL;
+
+    while (tmp != NULL) {
+        next = tmp->next;
+
+        free(tmp->group_ptr);
+        free(tmp->group_name);
+        free(tmp);
+
+        tmp = next;
+    }
+}
+
+
+void free_contacts()
+{
+    contactsmember * tmp = c_list;
+    contactsmember * next = NULL;
+
+    while (tmp != NULL) {
+        next = tmp->next;
+
+        free(tmp->contact_ptr);
+        free(tmp->contact_name);
+        free(tmp);
+
+        tmp = next;
+    }
+}
+
+
+int main()
+{
+    add_contacts(5);
+    add_contact_groups(5);
+    add_customvars(10);
+    add_check_commands();
+    add_timeperiods();
+    add_hosts(10);
+
+    ndo_write_hosts(0);
+
+    free_hosts();
+    free_timeperiods();
+    free_check_commands();
+    free_customvars();
+    free_contact_groups();
+    free_contacts();
 
     return 0;
 }
