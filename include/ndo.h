@@ -178,6 +178,7 @@ int ndo_write_contactgroups(int config_type);
 int ndo_write_contactgroup_members(int * contactgroup_ids);
 
 int ndo_write_hosts(int config_type);
+int ndo_write_hosts_objects(int config_type);
 int ndo_write_host_parenthosts(int * host_ids);
 int ndo_write_host_contactgroups(int * host_ids);
 int ndo_write_host_contacts(int * host_ids);
@@ -186,6 +187,7 @@ int ndo_write_hostgroups(int config_type);
 int ndo_write_hostgroup_members(int * hostgroup_ids);
 
 int ndo_write_services(int config_type);
+int ndo_write_services_objects(int config_type);
 int ndo_write_service_parentservices(int * service_ids);
 int ndo_write_service_contactgroups(int * service_ids);
 int ndo_write_service_contacts(int * service_ids);

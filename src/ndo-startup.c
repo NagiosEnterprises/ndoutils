@@ -556,8 +556,6 @@ int ndo_write_hosts(int config_type)
 
     while (tmp != NULL) {
 
-        i++;
-
         strcat(query, query_values);
 
         object_ids[i] = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_HOST, tmp->name);
@@ -641,6 +639,8 @@ int ndo_write_hosts(int config_type)
         MYSQL_BIND_FLOAT(tmp->z_3d);
         MYSQL_BIND_INT(tmp->hourly_value);
 
+        i++;
+
         /* we need to finish the query and execute */
         if (i >= ndo_max_object_insert_count || tmp->next == NULL) {
 
@@ -661,9 +661,20 @@ int ndo_write_hosts(int config_type)
 
         tmp = tmp->next;
     }
+}
 
-    tmp = host_list;
-    i = 0;
+int ndo_write_hosts_objects(int config_type)
+{
+    host * tmp = host_list;
+
+    int var_count = 0;
+    customvariablesmember * var = NULL;
+    int parenthosts_count = 0;
+    hostsmember * parent = NULL;
+    int contactgroups_count = 0;
+    contactgroupsmember * group = NULL;
+    int contacts_count = 0;
+    contactsmember * cnt = NULL;
 
     char parenthosts_query[MAX_SQL_BUFFER];
     char * parenthosts_query_base = "INSERT INTO nagios_host_parenthosts (instance_id, host_id, parent_host_object_id) VALUES ";
@@ -689,15 +700,6 @@ int ndo_write_hosts(int config_type)
     char * var_query_values = "(1,(SELECT object_id FROM nagios_objects WHERE objecttype_id = 1 AND name1 = ?),?,?,?,?),";
     char * var_query_on_update = " ON DUPLICATE KEY UPDATE instance_id = VALUES(instance_id), object_id = VALUES(object_id), config_type = VALUES(config_type), has_been_modified = VALUES(has_been_modified), varname = VALUES(varname), varvalue = VALUES(varvalue)";
 
-    int var_count = 0;
-    customvariablesmember * var = NULL;
-    int parenthosts_count = 0;
-    hostsmember * parent = NULL;
-    int contactgroups_count = 0;
-    contactgroupsmember * group = NULL;
-    int contacts_count = 0;
-    contactsmember * cnt = NULL;
-
     ndo_stmt_new[WRITE_HOST_PARENTHOSTS] = mysql_stmt_init(mysql_connection);
     ndo_stmt_new[WRITE_HOST_CONTACTGROUPS] = mysql_stmt_init(mysql_connection);
     ndo_stmt_new[WRITE_HOST_CONTACTS] = mysql_stmt_init(mysql_connection);
@@ -714,8 +716,6 @@ int ndo_write_hosts(int config_type)
     strcpy(var_query, var_query_base);
 
     while (tmp != NULL) {
-
-        i++;
 
         parent = tmp->parent_hosts;
         while (parent != NULL) {
@@ -735,7 +735,7 @@ int ndo_write_hosts(int config_type)
 
         group = tmp->contact_groups;
         while (group != NULL) {
-            
+
             strcat(contactgroups_query, contactgroups_query_values);
 
             MYSQL_BIND_NEW_STR(WRITE_HOST_CONTACTGROUPS, tmp->name);
@@ -1041,7 +1041,6 @@ int ndo_write_services(int config_type)
     int object_ids[MAX_OBJECT_INSERT] = { 0 };
     int host_object_id[MAX_OBJECT_INSERT] = { 0 };
 
-
     int service_options[MAX_OBJECT_INSERT][14] = { 0 };
     int check_command_id[MAX_OBJECT_INSERT] = { 0 };
     char * check_command[MAX_OBJECT_INSERT] = { NULL };
@@ -1066,8 +1065,6 @@ int ndo_write_services(int config_type)
     MYSQL_RESET_BIND();
 
     while (tmp != NULL) {
-
-        i++;
 
         strcat(query, query_values);
 
@@ -1150,6 +1147,8 @@ int ndo_write_services(int config_type)
         MYSQL_BIND_STR(tmp->icon_image_alt);
         MYSQL_BIND_INT(tmp->hourly_value);
 
+        i++;
+
         /* we need to finish the query and execute */
         if (i >= ndo_max_object_insert_count || tmp->next == NULL) {
 
@@ -1171,8 +1170,22 @@ int ndo_write_services(int config_type)
         tmp = tmp->next;
     }
 
-    tmp = service_list;
-    i = 0;
+    ndo_write_services_objects(config_type);
+}
+
+
+int ndo_write_services_objects(int config_type)
+{
+    service * tmp = service_list;
+
+    int parentservices_count = 0;
+    servicesmember * parent = NULL;
+    int contactgroups_count = 0;
+    contactgroupsmember * group = NULL;
+    int contacts_count = 0;
+    contactsmember * cnt = NULL;
+    int var_count = 0;
+    customvariablesmember * var = NULL;
 
     char parentservices_query[MAX_SQL_BUFFER];
     char * parentservices_query_base = "INSERT INTO nagios_service_parentservices (instance_id, service_id, parent_service_object_id) VALUES ";
@@ -1198,15 +1211,6 @@ int ndo_write_services(int config_type)
     char * var_query_values = "(1,(SELECT object_id FROM nagios_objects WHERE objecttype_id = 2 AND name1 = ? AND name2 = ?),?,?,?,?),";
     char * var_query_on_update = " ON DUPLICATE KEY UPDATE instance_id = VALUES(instance_id), object_id = VALUES(object_id), config_type = VALUES(config_type), has_been_modified = VALUES(has_been_modified), varname = VALUES(varname), varvalue = VALUES(varvalue)";
 
-    int parentservices_count = 0;
-    servicesmember * parent = NULL;
-    int contactgroups_count = 0;
-    contactgroupsmember * group = NULL;
-    int contacts_count = 0;
-    contactsmember * cnt = NULL;
-    int var_count = 0;
-    customvariablesmember * var = NULL;
-
     ndo_stmt_new[WRITE_SERVICE_PARENTSERVICES] = mysql_stmt_init(mysql_connection);
     ndo_stmt_new[WRITE_SERVICE_CONTACTGROUPS] = mysql_stmt_init(mysql_connection);
     ndo_stmt_new[WRITE_SERVICE_CONTACTS] = mysql_stmt_init(mysql_connection);
@@ -1223,8 +1227,6 @@ int ndo_write_services(int config_type)
     strcpy(var_query, var_query_base);
 
     while (tmp != NULL) {
-
-        i++;
 
         parent = tmp->parents;
         while (parent != NULL) {
@@ -1246,7 +1248,7 @@ int ndo_write_services(int config_type)
 
         group = tmp->contact_groups;
         while (group != NULL) {
-            
+
             strcat(contactgroups_query, contactgroups_query_values);
 
             MYSQL_BIND_NEW_STR(WRITE_SERVICE_CONTACTGROUPS, tmp->host_name);
