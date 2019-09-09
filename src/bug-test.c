@@ -654,7 +654,7 @@ int main()
     add_customvars(10);
     add_check_commands();
     add_timeperiods();
-    add_hosts(10);
+    add_hosts(20000);
 
     ndo_write_hosts(0);
 

@@ -469,8 +469,8 @@ void ndo_process_config_line(char * line)
     else if (!strcmp("max_object_insert_count", key)) {
         ndo_max_object_insert_count = atoi(val);
 
-        if (ndo_max_object_insert_count > MAX_OBJECT_INSERT) {
-            ndo_max_object_insert_count = MAX_OBJECT_INSERT;
+        if (ndo_max_object_insert_count > (MAX_OBJECT_INSERT - 1)) {
+            ndo_max_object_insert_count = MAX_OBJECT_INSERT - 1;
         }
     }
 

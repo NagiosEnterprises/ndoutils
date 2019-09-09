@@ -27,7 +27,7 @@
 #include <mysql.h>
 
 
-#define MAX_OBJECT_INSERT 500
+#define MAX_OBJECT_INSERT 10
 
 void ndo_log(char * buffer);
 int nebmodule_init(int flags, char * args, void * handle);
