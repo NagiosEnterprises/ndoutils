@@ -1,6 +1,61 @@
 #define MAX_OBJECT_INSERT 10
 #define MAX_SQL_BUFFER ((MAX_OBJECT_INSERT * 150) + 8000)
 
+#define NSCORE 1
+
+#include "../include/nagios/logging.h"
+#include "../include/nagios/nebstructs.h"
+#include "../include/nagios/nebmodules.h"
+#include "../include/nagios/nebcallbacks.h"
+#include "../include/nagios/broker.h"
+#include "../include/nagios/common.h"
+#include "../include/nagios/nagios.h"
+#include "../include/nagios/downtime.h"
+#include "../include/nagios/comments.h"
+#include "../include/nagios/macros.h"
+
+
+#include <stdio.h>
+#include <string.h>
+#include <time.h>
+
+#include "../include/ndo.h"
+
+int ndo_max_object_insert_count = 10;
+
+
+timeperiod * check_period_ptr = NULL;
+timeperiod * notification_period_ptr = NULL;
+command * cmd_ptr = NULL;
+
+contactsmember * c_list = NULL;
+contactgroupsmember * cg_list = NULL;
+customvariablesmember * customvars = NULL;
+
+
+
+int ndo_bind_new_i[NUM_QUERIES];
+int ndo_bind_i;
+
+host * host_list;
+
+int send_subquery(char * query, size_t query_base_len, char * query_on_update, int stmt, int * counter)
+{
+    strcpy(strrchr(query, ','), query_on_update);
+
+/*
+    MYSQL_PREPARE_NEW(stmt, query);
+    MYSQL_BIND_NEW(stmt);
+    MYSQL_EXECUTE_NEW(stmt);
+*/
+
+    memset(query + query_base_len, 0, MAX_SQL_BUFFER - query_base_len);
+
+    *counter = 0;
+    ndo_bind_new_i[stmt] = 0;
+}
+
+
 int ndo_write_hosts(int config_type)
 {
     host * tmp = host_list;
@@ -29,26 +84,30 @@ int ndo_write_hosts(int config_type)
 
     strcpy(query, query_base);
 
-    MYSQL_RESET_BIND();
+    /* MYSQL_RESET_BIND(); */
 
     while (tmp != NULL) {
 
         i++;
 
         strcat(query, query_values);
-
+/*
         object_ids[i] = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_HOST, tmp->name);
-
+*/
         check_command[i] = strtok(tmp->check_command, "!");
         check_command_args[i] = strtok(NULL, "\0");
+        /*
         check_command_id[i] = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_COMMAND, check_command[i]);
+        */
 
         event_handler[i] = strtok(tmp->event_handler, "!");
         event_handler_args[i] = strtok(NULL, "\0");
+        /*
         event_handler_id[i] = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_COMMAND, check_command[i]);
 
         check_timeperiod_id[i] = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_TIMEPERIOD, tmp->check_period);
         notification_timeperiod_id[i] = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_TIMEPERIOD, tmp->notification_period);
+        */
 
         host_options[i][0] = flag_isset(tmp->notification_options, OPT_DOWN);
         host_options[i][1] = flag_isset(tmp->notification_options, OPT_UNREACHABLE);
@@ -62,73 +121,73 @@ int ndo_write_hosts(int config_type)
         host_options[i][9] = flag_isset(tmp->flap_detection_options, OPT_DOWN);
         host_options[i][10] = flag_isset(tmp->flap_detection_options, OPT_UNREACHABLE);
 
-        MYSQL_BIND_INT(config_type);
-        MYSQL_BIND_INT(object_ids[i]);
-        MYSQL_BIND_STR(tmp->alias);
-        MYSQL_BIND_STR(tmp->display_name);
-        MYSQL_BIND_STR(tmp->address);
-        MYSQL_BIND_INT(check_command_id[i]);
-        MYSQL_BIND_STR(check_command_args[i]);
-        MYSQL_BIND_INT(event_handler_id[i]);
-        MYSQL_BIND_STR(event_handler_args[i]);
-        MYSQL_BIND_INT(check_timeperiod_id[i]);
-        MYSQL_BIND_INT(notification_timeperiod_id[i]);
-        MYSQL_BIND_FLOAT(tmp->check_interval);
-        MYSQL_BIND_FLOAT(tmp->retry_interval);
-        MYSQL_BIND_INT(tmp->max_attempts);
-        MYSQL_BIND_FLOAT(tmp->first_notification_delay);
-        MYSQL_BIND_FLOAT(tmp->notification_interval);
-        MYSQL_BIND_INT(host_options[i][0]);
-        MYSQL_BIND_INT(host_options[i][1]);
-        MYSQL_BIND_INT(host_options[i][2]);
-        MYSQL_BIND_INT(host_options[i][3]);
-        MYSQL_BIND_INT(host_options[i][4]);
-        MYSQL_BIND_INT(host_options[i][5]);
-        MYSQL_BIND_INT(host_options[i][6]);
-        MYSQL_BIND_INT(host_options[i][7]);
-        MYSQL_BIND_INT(tmp->flap_detection_enabled);
-        MYSQL_BIND_INT(host_options[i][8]);
-        MYSQL_BIND_INT(host_options[i][9]);
-        MYSQL_BIND_INT(host_options[i][10]);
-        MYSQL_BIND_DOUBLE(tmp->low_flap_threshold);
-        MYSQL_BIND_DOUBLE(tmp->high_flap_threshold);
-        MYSQL_BIND_INT(tmp->process_performance_data);
-        MYSQL_BIND_INT(tmp->check_freshness);
-        MYSQL_BIND_INT(tmp->freshness_threshold);
-        MYSQL_BIND_INT(tmp->accept_passive_checks);
-        MYSQL_BIND_INT(tmp->event_handler_enabled);
-        MYSQL_BIND_INT(tmp->checks_enabled);
-        MYSQL_BIND_INT(tmp->retain_status_information);
-        MYSQL_BIND_INT(tmp->retain_nonstatus_information);
-        MYSQL_BIND_INT(tmp->notifications_enabled);
-        MYSQL_BIND_INT(tmp->obsess);
-        MYSQL_BIND_STR(tmp->notes);
-        MYSQL_BIND_STR(tmp->notes_url);
-        MYSQL_BIND_STR(tmp->action_url);
-        MYSQL_BIND_STR(tmp->icon_image);
-        MYSQL_BIND_STR(tmp->icon_image_alt);
-        MYSQL_BIND_STR(tmp->vrml_image);
-        MYSQL_BIND_STR(tmp->statusmap_image);
-        MYSQL_BIND_INT(tmp->have_2d_coords);
-        MYSQL_BIND_INT(tmp->x_2d);
-        MYSQL_BIND_INT(tmp->y_2d);
-        MYSQL_BIND_INT(tmp->have_3d_coords);
-        MYSQL_BIND_FLOAT(tmp->x_3d);
-        MYSQL_BIND_FLOAT(tmp->y_3d);
-        MYSQL_BIND_FLOAT(tmp->z_3d);
-        MYSQL_BIND_INT(tmp->hourly_value);
+        /* MYSQL_BIND_INT(config_type); */
+        /* MYSQL_BIND_INT(object_ids[i]); */
+        /* MYSQL_BIND_STR(tmp->alias); */
+        /* MYSQL_BIND_STR(tmp->display_name); */
+        /* MYSQL_BIND_STR(tmp->address); */
+        /* MYSQL_BIND_INT(check_command_id[i]); */
+        /* MYSQL_BIND_STR(check_command_args[i]); */
+        /* MYSQL_BIND_INT(event_handler_id[i]); */
+        /* MYSQL_BIND_STR(event_handler_args[i]); */
+        /* MYSQL_BIND_INT(check_timeperiod_id[i]); */
+        /* MYSQL_BIND_INT(notification_timeperiod_id[i]); */
+        /* MYSQL_BIND_FLOAT(tmp->check_interval); */
+        /* MYSQL_BIND_FLOAT(tmp->retry_interval); */
+        /* MYSQL_BIND_INT(tmp->max_attempts); */
+        /* MYSQL_BIND_FLOAT(tmp->first_notification_delay); */
+        /* MYSQL_BIND_FLOAT(tmp->notification_interval); */
+        /* MYSQL_BIND_INT(host_options[i][0]); */
+        /* MYSQL_BIND_INT(host_options[i][1]); */
+        /* MYSQL_BIND_INT(host_options[i][2]); */
+        /* MYSQL_BIND_INT(host_options[i][3]); */
+        /* MYSQL_BIND_INT(host_options[i][4]); */
+        /* MYSQL_BIND_INT(host_options[i][5]); */
+        /* MYSQL_BIND_INT(host_options[i][6]); */
+        /* MYSQL_BIND_INT(host_options[i][7]); */
+        /* MYSQL_BIND_INT(tmp->flap_detection_enabled); */
+        /* MYSQL_BIND_INT(host_options[i][8]); */
+        /* MYSQL_BIND_INT(host_options[i][9]); */
+        /* MYSQL_BIND_INT(host_options[i][10]); */
+        /* MYSQL_BIND_DOUBLE(tmp->low_flap_threshold); */
+        /* MYSQL_BIND_DOUBLE(tmp->high_flap_threshold); */
+        /* MYSQL_BIND_INT(tmp->process_performance_data); */
+        /* MYSQL_BIND_INT(tmp->check_freshness); */
+        /* MYSQL_BIND_INT(tmp->freshness_threshold); */
+        /* MYSQL_BIND_INT(tmp->accept_passive_checks); */
+        /* MYSQL_BIND_INT(tmp->event_handler_enabled); */
+        /* MYSQL_BIND_INT(tmp->checks_enabled); */
+        /* MYSQL_BIND_INT(tmp->retain_status_information); */
+        /* MYSQL_BIND_INT(tmp->retain_nonstatus_information); */
+        /* MYSQL_BIND_INT(tmp->notifications_enabled); */
+        /* MYSQL_BIND_INT(tmp->obsess); */
+        /* MYSQL_BIND_STR(tmp->notes); */
+        /* MYSQL_BIND_STR(tmp->notes_url); */
+        /* MYSQL_BIND_STR(tmp->action_url); */
+        /* MYSQL_BIND_STR(tmp->icon_image); */
+        /* MYSQL_BIND_STR(tmp->icon_image_alt); */
+        /* MYSQL_BIND_STR(tmp->vrml_image); */
+        /* MYSQL_BIND_STR(tmp->statusmap_image); */
+        /* MYSQL_BIND_INT(tmp->have_2d_coords); */
+        /* MYSQL_BIND_INT(tmp->x_2d); */
+        /* MYSQL_BIND_INT(tmp->y_2d); */
+        /* MYSQL_BIND_INT(tmp->have_3d_coords); */
+        /* MYSQL_BIND_FLOAT(tmp->x_3d); */
+        /* MYSQL_BIND_FLOAT(tmp->y_3d); */
+        /* MYSQL_BIND_FLOAT(tmp->z_3d); */
+        /* MYSQL_BIND_INT(tmp->hourly_value); */
 
         /* we need to finish the query and execute */
         if (i >= ndo_max_object_insert_count || tmp->next == NULL) {
 
             strcpy(strrchr(query, ','), query_on_update);
 
-            MYSQL_RESET_SQL();
-            MYSQL_SET_SQL(query);
-            MYSQL_PREPARE();
+            /* MYSQL_RESET_SQL(); */
+            /* MYSQL_SET_SQL(query); */
+            /* MYSQL_PREPARE(); */
 
-            MYSQL_BIND();
-            MYSQL_EXECUTE();
+            /* MYSQL_BIND(); */
+            /* MYSQL_EXECUTE(); */
 
             memset(query + query_base_len, 0, MAX_SQL_BUFFER - query_base_len);
 
@@ -175,15 +234,15 @@ int ndo_write_hosts(int config_type)
     int contacts_count = 0;
     contactsmember * cnt = NULL;
 
-    ndo_stmt_new[WRITE_HOST_PARENTHOSTS] = mysql_stmt_init(mysql_connection);
-    ndo_stmt_new[WRITE_HOST_CONTACTGROUPS] = mysql_stmt_init(mysql_connection);
-    ndo_stmt_new[WRITE_HOST_CONTACTS] = mysql_stmt_init(mysql_connection);
-    ndo_stmt_new[WRITE_CUSTOMVARS] = mysql_stmt_init(mysql_connection);
+    /* ndo_stmt_new[WRITE_HOST_PARENTHOSTS] = /* mysql_stmt_init(mysql_connection); */
+    /* ndo_stmt_new[WRITE_HOST_CONTACTGROUPS] = /* mysql_stmt_init(mysql_connection); */
+    /* ndo_stmt_new[WRITE_HOST_CONTACTS] = /* mysql_stmt_init(mysql_connection); */
+    /* ndo_stmt_new[WRITE_CUSTOMVARS] = /* mysql_stmt_init(mysql_connection); */
 
-    MYSQL_RESET_BIND_NEW(WRITE_HOST_PARENTHOSTS);
-    MYSQL_RESET_BIND_NEW(WRITE_HOST_CONTACTGROUPS);
-    MYSQL_RESET_BIND_NEW(WRITE_HOST_CONTACTS);
-    MYSQL_RESET_BIND_NEW(WRITE_CUSTOMVARS);
+    /* MYSQL_RESET_BIND_NEW(WRITE_HOST_PARENTHOSTS); */
+    /* MYSQL_RESET_BIND_NEW(WRITE_HOST_CONTACTGROUPS); */
+    /* MYSQL_RESET_BIND_NEW(WRITE_HOST_CONTACTS); */
+    /* MYSQL_RESET_BIND_NEW(WRITE_CUSTOMVARS); */
 
     strcpy(parenthosts_query, parenthosts_query);
     strcpy(contactgroups_query, contactgroups_query_base);
@@ -199,8 +258,8 @@ int ndo_write_hosts(int config_type)
 
             strcat(parenthosts_query, parenthosts_query_values);
 
-            MYSQL_BIND_NEW_STR(WRITE_HOST_PARENTHOSTS, tmp->name);
-            MYSQL_BIND_NEW_STR(WRITE_HOST_PARENTHOSTS, parent->host_name);
+            /* MYSQL_BIND_NEW_STR(WRITE_HOST_PARENTHOSTS, tmp->name); */
+            /* MYSQL_BIND_NEW_STR(WRITE_HOST_PARENTHOSTS, parent->host_name); */
 
             parent = parent->next;
             parenthosts_count++;
@@ -215,8 +274,8 @@ int ndo_write_hosts(int config_type)
             
             strcat(contactgroups_query, contactgroups_query_values);
 
-            MYSQL_BIND_NEW_STR(WRITE_HOST_CONTACTGROUPS, tmp->name);
-            MYSQL_BIND_NEW_STR(WRITE_HOST_CONTACTGROUPS, group->group_name);
+            /* MYSQL_BIND_NEW_STR(WRITE_HOST_CONTACTGROUPS, tmp->name); */
+            /* MYSQL_BIND_NEW_STR(WRITE_HOST_CONTACTGROUPS, group->group_name); */
 
             group = group->next;
             contactgroups_count++;
@@ -231,8 +290,8 @@ int ndo_write_hosts(int config_type)
 
             strcat(contacts_query, contacts_query_values);
 
-            MYSQL_BIND_NEW_STR(WRITE_HOST_CONTACTS, tmp->name);
-            MYSQL_BIND_NEW_STR(WRITE_HOST_CONTACTS, cnt->contact_name);
+            /* MYSQL_BIND_NEW_STR(WRITE_HOST_CONTACTS, tmp->name); */
+            /* MYSQL_BIND_NEW_STR(WRITE_HOST_CONTACTS, cnt->contact_name); */
 
             cnt = cnt->next;
             contacts_count++;
@@ -247,11 +306,11 @@ int ndo_write_hosts(int config_type)
 
             strcat(var_query, var_query_values);
 
-            MYSQL_BIND_NEW_STR(WRITE_CUSTOMVARS, tmp->name);
-            MYSQL_BIND_NEW_INT(WRITE_CUSTOMVARS, config_type);
-            MYSQL_BIND_NEW_INT(WRITE_CUSTOMVARS, var->has_been_modified);
-            MYSQL_BIND_NEW_STR(WRITE_CUSTOMVARS, var->variable_name);
-            MYSQL_BIND_NEW_STR(WRITE_CUSTOMVARS, var->variable_value);
+            /* MYSQL_BIND_NEW_STR(WRITE_CUSTOMVARS, tmp->name); */
+            /* MYSQL_BIND_NEW_INT(WRITE_CUSTOMVARS, config_type); */
+            /* MYSQL_BIND_NEW_INT(WRITE_CUSTOMVARS, var->has_been_modified); */
+            /* MYSQL_BIND_NEW_STR(WRITE_CUSTOMVARS, var->variable_name); */
+            /* MYSQL_BIND_NEW_STR(WRITE_CUSTOMVARS, var->variable_value); */
 
             var = var->next;
             var_count++;
@@ -280,96 +339,230 @@ int ndo_write_hosts(int config_type)
         tmp = tmp->next;
     }
 /*
-    mysql_stmt_close(ndo_stmt_new[WRITE_HOST_PARENTHOSTS]);
-    mysql_stmt_close(ndo_stmt_new[WRITE_HOST_CONTACTGROUPS]);
-    mysql_stmt_close(ndo_stmt_new[WRITE_HOST_CONTACTS]);
-    mysql_stmt_close(ndo_stmt_new[WRITE_CUSTOMVARS]);
-*/
+    /* mysql_stmt_close(ndo_stmt_new[WRITE_HOST_PARENTHOSTS]); */
+    /* mysql_stmt_close(ndo_stmt_new[WRITE_HOST_CONTACTGROUPS]); */
+    /* mysql_stmt_close(ndo_stmt_new[WRITE_HOST_CONTACTS]); */
+    /* mysql_stmt_close(ndo_stmt_new[WRITE_CUSTOMVARS]); */
 }
 
-void add_host(char * name)
+void add_hosts(int count)
 {
-    host * hst = calloc(1, sizeof(* hst));
+    int i = 0;
+    host * tmp = NULL;
+    char buf[32];
 
-    hst->name = name;
-    hst->display_name = name;
-    hst->alias = name;
-    hst->address = "127.0.0.1";
-    hst->check_period = "24x7";
-    hst->check_period_ptr = check_period_ptr;
-    hst->notification_period = "24x7";
-    hst->notification_period_ptr = check_period_ptr;
-    hst->check_command = "check_command!args1!args2";
-    hst->check_command_ptr = cmd_ptr;
-    hst->event_handler = "event_handler";
-    hst->event_handler_ptr = cmd_ptr;
-    hst->notes = "notes";
-    hst->notes_url = "notes_url";
-    hst->action_url = "action_url";
-    hst->icon_image = "icon_image";
-    hst->icon_image_alt = "icon_image_alt";
-    hst->vrml_image = "vrml_image";
-    hst->statusmap_image = "statusmap_image";
-    hst->hourly_value = 0;
-    hst->max_attempts = 5;
-    hst->check_interval = 300;
-    hst->retry_interval = 60;
-    hst->notification_interval = 300;
-    hst->first_notification_delay = 0;
-    hst->notification_options = notification_options;
-    hst->flap_detection_enabled = 0;
-    hst->low_flap_threshold = 0;
-    hst->high_flap_threshold = 0;
-    hst->flap_detection_options = 0;
-    hst->stalking_options = 0;
-    hst->process_performance_data = 1;
-    hst->check_freshness = 0;
-    hst->freshness_threshold = 0;
-    hst->checks_enabled = 1;
-    hst->accept_passive_checks = 1;
-    hst->event_handler_enabled = 1;
-    hst->x_2d = 0;
-    hst->y_2d = 0;
-    hst->have_2d_coords = 1;
-    hst->x_3d = 0;
-    hst->y_3d = 0;
-    hst->z_3d = 0;
-    hst->have_3d_coords = 0;
-    hst->should_be_drawn = 1;
-    hst->obsess = 0;
-    hst->retain_status_information = 1;
-    hst->retain_nonstatus_information = 0;
-    hst->current_state = 0;
-    hst->last_state = 1;
-    hst->last_hard_state = 0;
-    hst->check_type = 0;
-    hst->should_be_scheduled = 1;
-    hst->current_attempt = 1;
-    hst->state_type = 1;
-    hst->acknowledgement_type = 0;
-    hst->notifications_enabled = 1;
-    hst->check_options = 1;
+    for (i = 0; i < count; i++) {
+
+        host * hst = calloc(1, sizeof(* hst));
+
+        sprintf(buf, "host%d", i);
+
+        hst->name = strdup(buf);
+        hst->display_name = hst->name;
+        hst->alias = hst->name;
+        hst->address = "127.0.0.1";
+        hst->check_period = "24x7";
+        hst->check_period_ptr = check_period_ptr;
+        hst->notification_period = "24x7";
+        hst->notification_period_ptr = check_period_ptr;
+        hst->check_command = "check_command!args1!args2";
+        hst->check_command_ptr = cmd_ptr;
+        hst->event_handler = "event_handler";
+        hst->event_handler_ptr = cmd_ptr;
+        hst->notes = "notes";
+        hst->notes_url = "notes_url";
+        hst->action_url = "action_url";
+        hst->icon_image = "icon_image";
+        hst->icon_image_alt = "icon_image_alt";
+        hst->vrml_image = "vrml_image";
+        hst->statusmap_image = "statusmap_image";
+        hst->hourly_value = 0;
+        hst->max_attempts = 5;
+        hst->check_interval = 300;
+        hst->retry_interval = 60;
+        hst->notification_interval = 300;
+        hst->first_notification_delay = 0;
+        hst->notification_options = 0;
+        hst->flap_detection_enabled = 0;
+        hst->low_flap_threshold = 0;
+        hst->high_flap_threshold = 0;
+        hst->flap_detection_options = 0;
+        hst->stalking_options = 0;
+        hst->process_performance_data = 1;
+        hst->check_freshness = 0;
+        hst->freshness_threshold = 0;
+        hst->checks_enabled = 1;
+        hst->accept_passive_checks = 1;
+        hst->event_handler_enabled = 1;
+        hst->x_2d = 0;
+        hst->y_2d = 0;
+        hst->have_2d_coords = 1;
+        hst->x_3d = 0;
+        hst->y_3d = 0;
+        hst->z_3d = 0;
+        hst->have_3d_coords = 0;
+        hst->should_be_drawn = 1;
+        hst->obsess = 0;
+        hst->retain_status_information = 1;
+        hst->retain_nonstatus_information = 0;
+        hst->current_state = 0;
+        hst->last_state = 1;
+        hst->last_hard_state = 0;
+        hst->check_type = 0;
+        hst->should_be_scheduled = 1;
+        hst->current_attempt = 1;
+        hst->state_type = 1;
+        hst->acknowledgement_type = 0;
+        hst->notifications_enabled = 1;
+        hst->check_options = 1;
+
+        hst->contact_groups = cg_list;
+        hst->contacts = c_list;
+        hst->custom_variables = customvars;
+
+        if (tmp == NULL) {
+            host_list = hst;
+            tmp = host_list;
+        }
+        else {
+            tmp->next = hst;
+            tmp = hst;
+        }
+    }
 }
 
-void add_check_command(char * name)
+
+void add_contacts(int count)
 {
-    check_command * cmd = calloc(1, sizeof(* cmd));
+    int i = 0;
+    contactsmember * tmp = NULL;
+    char buf[16];
+
+    for (i = 0; i < count; i++) {
+
+        contactsmember * mmb = calloc(1, sizeof(* mmb));
+        contact * c = calloc(1, sizeof(* c));
+
+        sprintf(buf, "contact%d", i);
+
+        mmb->contact_name = strdup(buf);
+        c->name = mmb->contact_name;
+        mmb->contact_ptr = c;
+
+        if (tmp == NULL) {
+            c_list = mmb;
+            tmp = c_list;
+        }
+        else {
+            tmp->next = mmb;
+            tmp = mmb;
+        }
+    }
+}
+
+
+void add_contact_groups(int count)
+{
+    int i = 0;
+    contactgroupsmember * tmp = NULL;
+    char buf[16];
+
+    for (i = 0; i < count; i++) {
+
+        contactgroupsmember * mmb = calloc(1, sizeof(* mmb));
+        contactgroup * cg = calloc(1, sizeof(* cg));
+
+        sprintf(buf, "contactgroup%d", i);
+
+        mmb->group_name = strdup(buf);
+        cg->group_name = mmb->group_name;
+        cg->alias = mmb->group_name;
+        mmb->group_ptr = cg;
+
+        if (tmp == NULL) {
+            cg_list = mmb;
+            tmp = cg_list;
+        }
+        else {
+            tmp->next = mmb;
+            tmp = mmb;
+        }
+    }
+}
+
+
+void add_customvars(int count)
+{
+    int i = 0;
+    customvariablesmember * tmp = NULL;
+    char buf[16];
+
+    for (i = 0; i < count; i++) {
+
+        customvariablesmember * var = calloc(1, sizeof(* var));
+
+        sprintf(buf, "var%d", i);
+
+        var->variable_name = strdup(buf);
+        var->variable_value = var->variable_name;
+        var->has_been_modified = 0;
+        var->next = calloc(1, sizeof(* var));
+
+        if (tmp == NULL) {
+            customvars = var;
+            tmp = customvars;
+        }
+        else {
+            tmp->next = var;
+            tmp = var;
+        }
+    }
+}
+
+
+
+void add_check_commands()
+{
+    command * cmd = calloc(1, sizeof(* cmd));
 
     cmd->id = 0;
-    cmd->name = name;
-    cmd->command_line = "command";
+    cmd->name = strdup("command");
+    cmd->command_line = cmd->name;
     cmd->next = NULL;
+
+    cmd_ptr = cmd;
 }
 
-void add_timeperiod(char * name)
+void add_timeperiods()
 {
     timeperiod * tim = calloc(1, sizeof(* tim));
 
     tim->id = 0;
-    tim->name = name;
-    tim->alias = name;
-    tim->timerange = NULL;
-    tim->daterange = NULL;
+    tim->name = strdup("24x7");
+    tim->alias = tim->name;
+/*    tim->days = NULL;
+    tim->exceptions = NULL;*/
     tim->exclusions = NULL;
     tim->next = NULL;
+
+    check_period_ptr = tim;
+    notification_period_ptr = tim;
+}
+
+
+int main()
+{
+    add_hosts(10);
+
+    host * tmp = host_list;
+
+    while (tmp != NULL) {
+
+        printf("%s\n", tmp->name);
+
+        tmp = tmp->next;
+    }
+
+
+    return 0;
 }
