@@ -28,3 +28,5 @@ system_command_data=1
 timed_event_data=1
 
 config_output_options=2
+
+max_object_insert_count=250

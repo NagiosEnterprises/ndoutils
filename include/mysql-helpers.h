@@ -172,3 +172,116 @@ do { \
     NDO_HANDLE_ERROR("Unable to execute statement"); \
 } while (0)
 
+
+#define MYSQL_SET_QUERY(query) \
+do { \
+    ndo_current_query = query; \
+} while (0)
+
+
+
+
+
+
+
+
+
+/****************************************************************/
+
+
+#define NDO_HANDLE_ERROR_NEW(_which, err) NDO_HANDLE_ERROR_STMT(err, ndo_stmt_new[_which])
+
+
+#define MYSQL_PREPARE_NEW(_which, _query) \
+do { \
+    ndo_return = mysql_stmt_prepare(ndo_stmt_new[_which], _query, strlen(_query)); \
+    NDO_HANDLE_ERROR_NEW(_which, "Unable to prepare statement"); \
+} while (0)
+
+
+#define MYSQL_EXECUTE_NEW(_which) \
+do { \
+    ndo_return = mysql_stmt_execute(ndo_stmt_new[_which]); \
+    NDO_HANDLE_ERROR_NEW(_which, "Unable to execute statement"); \
+} while (0)
+
+
+
+#define MYSQL_RESET_BIND_NEW(_which) \
+do { \
+    memset(ndo_bind_new[_which], 0, sizeof(ndo_bind_new[_which])); \
+    ndo_bind_new_i[_which] = 0; \
+} while(0)
+
+
+#define MYSQL_BIND_NEW(_which) \
+do { \
+    ndo_return = mysql_stmt_bind_param(ndo_stmt_new[_which], ndo_bind_new[_which]); \
+    NDO_HANDLE_ERROR_NEW(_which, "Unable to bind parameters"); \
+} while (0)
+
+
+#define MYSQL_BIND_NEW_INT(_which, _buffer) MYSQL_BIND_NEW_LONG(_which, _buffer)
+
+#define MYSQL_BIND_NEW_LONG(_which, _buffer) \
+do { \
+    ndo_bind_new[_which][ndo_bind_new_i[_which]].buffer_type = MYSQL_TYPE_LONG; \
+    ndo_bind_new[_which][ndo_bind_new_i[_which]].buffer      = &(_buffer); \
+    ndo_bind_new_i[_which]++; \
+} while (0)
+
+#define MYSQL_BIND_NEW_LONGLONG(_which, _buffer) \
+do { \
+    ndo_bind_new[_which][ndo_bind_new_i[_which]].buffer_type = MYSQL_TYPE_LONGLONG; \
+    ndo_bind_new[_which][ndo_bind_new_i[_which]].buffer      = &(_buffer); \
+    ndo_bind_new_i[_which]++; \
+} while (0)
+
+#define MYSQL_BIND_NEW_TINY(_which, _buffer) \
+do { \
+    ndo_bind_new[_which][ndo_bind_new_i[_which]].buffer_type = MYSQL_TYPE_TINY; \
+    ndo_bind_new[_which][ndo_bind_new_i[_which]].buffer      = &(_buffer); \
+    ndo_bind_new[_which]_i++; \
+} while (0)
+
+#define MYSQL_BIND_NEW_SHORT(_which, _buffer) \
+do { \
+    ndo_bind_new[_which][ndo_bind_new_i[_which]].buffer_type = MYSQL_TYPE_SHORT; \
+    ndo_bind_new[_which][ndo_bind_new_i[_which]].buffer      = &(_buffer); \
+    ndo_bind_new_i[_which]++; \
+} while (0)
+
+#define MYSQL_BIND_NEW_FLOAT(_which, _buffer) \
+do { \
+    ndo_bind_new[_which][ndo_bind_new_i[_which]].buffer_type = MYSQL_TYPE_FLOAT; \
+    ndo_bind_new[_which][ndo_bind_new_i[_which]].buffer      = &(_buffer); \
+    ndo_bind_new_i[_which]++; \
+} while (0)
+
+#define MYSQL_BIND_NEW_DOUBLE(_which, _buffer) \
+do { \
+    ndo_bind_new[_which][ndo_bind_new_i[_which]].buffer_type = MYSQL_TYPE_DOUBLE; \
+    ndo_bind_new[_which][ndo_bind_new_i[_which]].buffer      = &(_buffer); \
+    ndo_bind_new_i[_which]++; \
+} while (0)
+
+#define MYSQL_BIND_NEW_STR(_which, _buffer) \
+do { \
+\
+    ndo_bind_new[_which][ndo_bind_new_i[_which]].buffer_type   = MYSQL_TYPE_STRING; \
+    ndo_bind_new[_which][ndo_bind_new_i[_which]].buffer_length = MAX_BIND_BUFFER; \
+\
+    if (_buffer != NULL && strlen(_buffer) > 0) { \
+\
+        ndo_tmp_str_len_new[_which][ndo_bind_new_i[_which]]        = strlen(_buffer); \
+        ndo_bind_new[_which][ndo_bind_new_i[_which]].buffer        = _buffer; \
+    } \
+    else { \
+\
+        ndo_tmp_str_len_new[_which][ndo_bind_new_i[_which]]        = 0; \
+        ndo_bind_new[_which][ndo_bind_new_i[_which]].buffer        = ""; \
+    } \
+    ndo_bind_new[_which][ndo_bind_new_i[_which]].length        = &(ndo_tmp_str_len_new[_which][ndo_bind_new_i[_which]]); \
+    \
+    ndo_bind_new_i[_which]++; \
+} while (0)

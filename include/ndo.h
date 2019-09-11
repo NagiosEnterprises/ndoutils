@@ -26,6 +26,9 @@
 
 #include <mysql.h>
 
+
+#define MAX_OBJECT_INSERT 10
+
 void ndo_log(char * buffer);
 int nebmodule_init(int flags, char * args, void * handle);
 int nebmodule_deinit(int flags, int reason);
@@ -76,16 +79,88 @@ char * ndo_strip(char * s);
 
 int write_to_log(char * buffer, unsigned long l, time_t * t);
 
-#define GET_NAME1    0
-#define GET_NAME2    1
-#define INSERT_NAME1 2
-#define INSERT_NAME2 3
+#define WRITE_COMMANDS 0
+#define WRITE_TIMEPERIODS 1
+#define WRITE_TIMEPERIODS_A 2
+#define WRITE_TIMEPERIOD_TIMERANGES 3
+#define WRITE_CONTACTS 4
+#define WRITE_CONTACT_ADDRESSES 5
+#define WRITE_CONTACT_NOTIFICATIONCOMMANDS 6
+#define WRITE_CONTACTGROUPS 7
+#define WRITE_CONTACTGROUP_MEMBERS 8
+#define WRITE_HOSTS 9
+#define WRITE_HOST_PARENTHOSTS 10
+#define WRITE_HOST_CONTACTGROUPS 11
+#define WRITE_HOST_CONTACTS 12
+#define WRITE_HOSTGROUPS 13
+#define WRITE_HOSTGROUP_MEMBERS 14
+#define WRITE_SERVICES 15
+#define WRITE_SERVICE_PARENTSERVICES 16
+#define WRITE_SERVICE_CONTACTGROUPS 17
+#define WRITE_SERVICE_CONTACTS 18
+#define WRITE_SERVICEGROUPS 19
+#define WRITE_SERVICEGROUP_MEMBERS 20
+#define WRITE_HOSTESCALATIONS 21
+#define WRITE_HOSTESCALATION_CONTACTGROUPS 22
+#define WRITE_HOSTESCALATION_CONTACTS 23
+#define WRITE_SERVICEESCALATIONS 24
+#define WRITE_SERVICEESCALATION_CONTACTGROUPS 25
+#define WRITE_SERVICEESCALATION_CONTACTS 26
+#define WRITE_HOSTDEPENDENCIES 27
+#define WRITE_SERVICEDEPENDENCIES 28
+#define WRITE_CUSTOMVARS 29
+
+#define NUM_WRITE_QUERIES 30
+
+#define GENERAL
+#define GET_NAME1
+#define GET_NAME2
+#define INSERT_NAME1
+#define INSERT_NAME2
+
+#define HANDLE_PROCESS 
+#define HANDLE_PROCESS_SHUTDOWN
+#define HANDLE_TIMED_EVENT_ADD
+#define HANDLE_TIMED_EVENT_REMOVE
+#define HANDLE_TIMED_EVENT_EXECUTE
+#define HANDLE_LOG 
+#define HANDLE_SYSTEM_COMMAND 
+#define HANDLE_EVENT_HANDLER 
+#define HANDLE_NOTIFICATION 
+#define HANDLE_SERVICE_CHECK 
+#define HANDLE_HOST_CHECK 
+#define HANDLE_COMMENT_ADD
+#define HANDLE_COMMENT_HISTORY_ADD
+#define HANDLE_COMMENT_DELETE
+#define HANDLE_COMMENT_HISTORY_DELETE
+#define HANDLE_DOWNTIME_ADD 
+#define HANDLE_DOWNTIME_HISTORY_ADD
+#define HANDLE_DOWNTIME_START
+#define HANDLE_DOWNTIME_HISTORY_START
+#define HANDLE_DOWNTIME_DELETE
+#define HANDLE_DOWNTIME_HISTORY_DELETE
+#define HANDLE_FLAPPING 
+#define HANDLE_PROGRAM_STATUS 
+#define HANDLE_HOST_STATUS 
+#define HANDLE_SERVICE_STATUS 
+#define HANDLE_EXTERNAL_COMMAND 
+#define HANDLE_ACKNOWLEDGEMENT 
+#define HANDLE_STATE_CHANGE 
+#define HANDLE_CONTACT_STATUS 
+#define HANDLE_CONTACT_NOTIFICATION 
+#define HANDLE_CONTACT_NOTIFICATION_METHOD 
+
+#define NUM_HANDLER_QUERIES 20 
+
+#define NUM_QUERIES (NUM_HANDLER_QUERIES + NUM_WRITE_QUERIES)
+
 
 int ndo_get_object_id_name1(int insert, int object_type, char * name1);
 int ndo_get_object_id_name2(int insert, int object_type, char * name1, char * name2);
 int ndo_insert_object_id_name1(int object_type, char * name1);
 int ndo_insert_object_id_name2(int object_type, char * name1, char * name2);
 
+int send_subquery(int stmt, int * counter, char * query, char * query_on_update, size_t * query_len, size_t query_base_len, size_t query_on_update_len);
 
 
 int ndo_write_commands(int config_type);
@@ -103,6 +178,7 @@ int ndo_write_contactgroups(int config_type);
 int ndo_write_contactgroup_members(int * contactgroup_ids);
 
 int ndo_write_hosts(int config_type);
+int ndo_write_hosts_objects(int config_type);
 int ndo_write_host_parenthosts(int * host_ids);
 int ndo_write_host_contactgroups(int * host_ids);
 int ndo_write_host_contacts(int * host_ids);
@@ -111,6 +187,7 @@ int ndo_write_hostgroups(int config_type);
 int ndo_write_hostgroup_members(int * hostgroup_ids);
 
 int ndo_write_services(int config_type);
+int ndo_write_services_objects(int config_type);
 int ndo_write_service_parentservices(int * service_ids);
 int ndo_write_service_contactgroups(int * service_ids);
 int ndo_write_service_contacts(int * service_ids);
