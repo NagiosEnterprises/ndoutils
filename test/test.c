@@ -1296,6 +1296,51 @@ END_TEST
 START_TEST (test_contact_notification_data)
 {
     nebstruct_contact_notification_data d;
+
+    MYSQL_ROW tmp_row;
+    MYSQL_RES *tmp_result;
+
+    d.type = NEBTYPE_CONTACTNOTIFICATION_START;
+    d.flags = 0;
+    d.attr = 0;
+    d.timestamp = (struct timeval) { .tv_sec = 1568235242, .tv_usec = 587705 };
+    d.notification_type = 1;
+    d.start_time = (struct timeval) { .tv_sec = 1568235236, .tv_usec = 683676 };
+    d.end_time = (struct timeval) { .tv_sec = 0, .tv_usec = 0 };
+    d.host_name = strdup("_testhost_1");
+    d.service_description = strdup("_testservice_http");
+    d.contact_name = strdup("nagiosadmin");
+    d.reason_type = 0;
+    d.state = 0;
+    d.output = strdup("Return another status message");
+    d.ack_author = 0x0;
+    d.ack_data = 0x0;
+    d.escalated = 0;
+    d.object_ptr = &test_contact;
+    d.contact_ptr = &test_contact;
+
+    ndo_handle_contact_notification(d.type, &d);
+
+    mysql_query(mysql_connection, "SELECT 1 FROM nagios_contactnotifications WHERE "
+        "instance_id = 1 AND notification_id = 0 "
+        "AND start_time = FROM_UNIXTIME(1568235236) AND start_time_usec = 683676 "
+        "AND end_time = FROM_UNIXTIME(0) AND end_time_usec = 0 "
+        "AND contact_object_id = (SELECT object_id FROM nagios_objects WHERE objecttype_id = 10 AND name1 = 'nagiosadmin' AND name2 IS NULL LIMIT 1)");
+
+
+    tmp_result = mysql_store_result(mysql_connection);
+    ck_assert(tmp_result != NULL);
+
+    if (tmp_result != NULL) {
+        tmp_row = mysql_fetch_row(tmp_result);
+    }
+    ck_assert(tmp_row != NULL);
+
+    if (tmp_row != NULL) {
+        ck_assert_int_eq(strcmp(tmp_row[0], "1"), 0);
+    }
+    mysql_free_result(tmp_result);
+
 }
 END_TEST
 
