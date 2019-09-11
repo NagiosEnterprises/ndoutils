@@ -1197,6 +1197,98 @@ END_TEST
 START_TEST (test_notification_data)
 {
     nebstruct_notification_data d;
+
+    MYSQL_ROW tmp_row;
+    MYSQL_RES *tmp_result;
+
+    /* Create a service notification */
+    d.type = NEBTYPE_NOTIFICATION_START;
+    d.flags = 0;
+    d.attr = 0;
+    d.timestamp = (struct timeval) { .tv_sec = 1568228348, .tv_usec = 750099 };
+    d.notification_type = SERVICE_NOTIFICATION;
+    d.start_time = (struct timeval) { .tv_sec = 1568228312, .tv_usec = 479539 };
+    d.end_time = (struct timeval) { .tv_sec = 0, .tv_usec = 0 };
+    d.host_name = strdup("_testhost_1");
+    d.service_description = strdup("_testservice_http");
+    d.reason_type = 0;
+    d.state = 0;
+    d.output = strdup("Return some status message");
+    d.ack_author = NULL;
+    d.ack_data = NULL;
+    d.escalated = 0;
+    d.contacts_notified = 0;
+    d.object_ptr = &test_service;
+
+    ndo_handle_notification(d.type, &d);
+
+    mysql_query(mysql_connection, "SELECT 1 FROM nagios_notifications WHERE "
+        "instance_id = 1 AND start_time = FROM_UNIXTIME(1568228312) "
+        "AND start_time_usec = 479539 AND end_time = FROM_UNIXTIME(0) "
+        "AND end_time_usec = 0 AND notification_type = 1 "
+        "AND notification_reason = 0 AND object_id = (SELECT object_id FROM nagios_objects WHERE objecttype_id = 2 AND name1 = '_testhost_1' AND name2 = '_testservice_http' LIMIT 1) "
+        "AND state = 0 AND output = 'Return some status message' "
+        "AND long_output = 'Return some status message' AND escalated = 0 "
+        "AND contacts_notified = 0 ");
+
+    tmp_result = mysql_store_result(mysql_connection);
+    ck_assert(tmp_result != NULL);
+
+    if (tmp_result != NULL) {
+        tmp_row = mysql_fetch_row(tmp_result);
+    }
+    ck_assert(tmp_row != NULL);
+
+    if (tmp_row != NULL) {
+        ck_assert_int_eq(strcmp(tmp_row[0], "1"), 0);
+    }
+    mysql_free_result(tmp_result);
+
+
+    /* Create a host notification */
+    d.type = NEBTYPE_NOTIFICATION_START;
+    d.flags = 0;
+    d.attr = 0;
+    d.timestamp = (struct timeval) { .tv_sec = 1568228350, .tv_usec = 750101 };
+    d.notification_type = HOST_NOTIFICATION;
+    d.start_time = (struct timeval) { .tv_sec = 1568228314, .tv_usec = 479541 };
+    d.end_time = (struct timeval) { .tv_sec = 0, .tv_usec = 0 };
+    d.host_name = strdup("_testhost_1");
+    d.service_description = NULL;
+    d.reason_type = 0;
+    d.state = 0;
+    d.output = strdup("Return some other status message");
+    d.ack_author = NULL;
+    d.ack_data = NULL;
+    d.escalated = 0;
+    d.contacts_notified = 0;
+    d.object_ptr = &test_service;
+
+    ndo_handle_notification(d.type, &d);
+
+    mysql_query(mysql_connection, "SELECT 2 FROM nagios_notifications WHERE "
+        "instance_id = 1 AND start_time = FROM_UNIXTIME(1568228314) "
+        "AND start_time_usec = 479541 AND end_time = FROM_UNIXTIME(0) "
+        "AND end_time_usec = 0 AND notification_type = 0 "
+        "AND notification_reason = 0 AND object_id = (SELECT object_id FROM nagios_objects WHERE objecttype_id = 1 AND name1 = '_testhost_1' AND name2 IS NULL LIMIT 1) "
+        "AND state = 0 AND output = 'Return some other status message' "
+        "AND long_output = 'Return some other status message' AND escalated = 0 "
+        "AND contacts_notified = 0 ");
+
+    tmp_result = mysql_store_result(mysql_connection);
+    ck_assert(tmp_result != NULL);
+
+    if (tmp_result != NULL) {
+        tmp_row = mysql_fetch_row(tmp_result);
+    }
+    ck_assert(tmp_row != NULL);
+
+    if (tmp_row != NULL) {
+        ck_assert_int_eq(strcmp(tmp_row[0], "2"), 0);
+    }
+    mysql_free_result(tmp_result);
+
+
 }
 END_TEST
 
