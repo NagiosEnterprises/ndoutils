@@ -1348,6 +1348,51 @@ END_TEST
 START_TEST (test_contact_notification_method_data)
 {
     nebstruct_contact_notification_method_data d;
+
+    MYSQL_ROW tmp_row;
+    MYSQL_RES *tmp_result;
+
+    d.type = 604;
+    d.flags = 0;
+    d.attr = 0;
+    d.timestamp = (struct timeval) { .tv_sec = 1568237100, .tv_usec = 616343 };
+    d.notification_type = 1;
+    d.start_time = (struct timeval) { .tv_sec = 1568237093, .tv_usec = 608098 };
+    d.end_time = (struct timeval) { .tv_sec = 0, .tv_usec = 0 };
+    d.host_name = strdup("_testhost_1");
+    d.service_description = strdup("_testservice_http");
+    d.contact_name = strdup("nagiosadmin");
+    d.command_name = strdup(""); // This is probably a Core bug and will result in command_object_id of -1 below.
+    d.command_args = NULL;
+    d.reason_type = 0;
+    d.state = 0;
+    d.output = strdup("some output");
+    d.ack_author = NULL;
+    d.ack_data = NULL;
+    d.escalated = 0;
+    d.object_ptr = &test_service;
+    d.contact_ptr = &test_contact;
+
+    ndo_handle_contact_notification_method(d.type, &d);
+
+    mysql_query(mysql_connection, "SELECT 1 FROM nagios_contactnotificationmethods WHERE "
+        "instance_id = 1 AND contactnotification_id = 0 "
+        "AND start_time = FROM_UNIXTIME(1568237093) AND start_time_usec = 608098 "
+        "AND end_time = FROM_UNIXTIME(0) AND end_time_usec = 0 "
+        "AND command_object_id = -1 AND command_args = '' ");
+
+    tmp_result = mysql_store_result(mysql_connection);
+    ck_assert(tmp_result != NULL);
+
+    if (tmp_result != NULL) {
+        tmp_row = mysql_fetch_row(tmp_result);
+    }
+    ck_assert(tmp_row != NULL);
+
+    if (tmp_row != NULL) {
+        ck_assert_int_eq(strcmp(tmp_row[0], "1"), 0);
+    }
+    mysql_free_result(tmp_result);
 }
 END_TEST
 
