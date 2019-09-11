@@ -732,7 +732,7 @@ int ndo_handle_flapping(int type, void * d)
     MYSQL_RESET_SQL();
     MYSQL_RESET_BIND();
 
-    MYSQL_SET_SQL("INSERT INTO nagios_flappinghistory SET instance_id = 1, event_time = FROM_UNIXTIME(?), event_time_usec = ?, event_type = ?, reason_type = ?, flapping_type = ?, object_id = ?, percent_state_change = ?, low_threshold = ?, high_threshold = ?, comment_time = FROM_UNIXTIME(?) internal_comment_id = ? ON DUPLICATE KEY UPDATE instance_id = 1, event_time = FROM_UNIXTIME(?), event_time_usec = ?, event_type = ?, reason_type = ?, flapping_type = ?, object_id = ?, percent_state_change = ?, low_threshold = ?, high_threshold = ?, comment_time = FROM_UNIXTIME(?), internal_comment_id = ?");
+    MYSQL_SET_SQL("INSERT INTO nagios_flappinghistory SET instance_id = 1, event_time = FROM_UNIXTIME(?), event_time_usec = ?, event_type = ?, reason_type = ?, flapping_type = ?, object_id = ?, percent_state_change = ?, low_threshold = ?, high_threshold = ?, comment_time = FROM_UNIXTIME(?), internal_comment_id = ? ON DUPLICATE KEY UPDATE instance_id = 1, event_time = FROM_UNIXTIME(?), event_time_usec = ?, event_type = ?, reason_type = ?, flapping_type = ?, object_id = ?, percent_state_change = ?, low_threshold = ?, high_threshold = ?, comment_time = FROM_UNIXTIME(?), internal_comment_id = ?");
     MYSQL_PREPARE();
 
     MYSQL_BIND_INT(data->timestamp.tv_sec);

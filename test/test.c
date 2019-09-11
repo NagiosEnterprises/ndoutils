@@ -893,6 +893,86 @@ END_TEST
 START_TEST (test_flapping_data)
 {
     nebstruct_flapping_data d;
+
+    MYSQL_ROW tmp_row;
+    MYSQL_RES *tmp_result;
+
+    d.type = NEBTYPE_FLAPPING_START;
+    d.flags = 0;
+    d.attr = 0;
+    d.timestamp = (struct timeval) { .tv_sec = 1567539851, .tv_usec = 906317};
+    d.flapping_type = 1;
+    d.host_name = strdup("_testhost_1");
+    d.service_description = strdup("_testservice_http");
+    d.percent_change = 23.026315789473681;
+    d.high_threshold = 20;
+    d.low_threshold = 5;
+    d.comment_id = 0;
+    d.object_ptr = NULL;
+
+    ndo_handle_flapping(d.type, &d);
+
+    /* Verify that an entry is created for FLAPPING_START with services */
+    mysql_query(mysql_connection, "SELECT 1 FROM nagios_flappinghistory WHERE "
+        "instance_id = 1 AND event_time = FROM_UNIXTIME(1567539851) AND event_time_usec = 906317 "
+        "AND event_type = 1000 AND reason_type = 0 AND flapping_type = 1 "
+        "AND object_id = (SELECT object_id from nagios_objects WHERE objecttype_id = 2 AND name1 = '_testhost_1' AND name2 = '_testservice_http' LIMIT 1) "
+        "AND percent_state_change = 23.026315789473681 AND low_threshold = 5 "
+        "AND high_threshold = 20 AND comment_time = FROM_UNIXTIME(0) AND "
+        "internal_comment_id = 0 ");
+
+
+    tmp_result = mysql_store_result(mysql_connection);
+    ck_assert(tmp_result != NULL);
+
+    if (tmp_result != NULL) {
+        tmp_row = mysql_fetch_row(tmp_result);
+    }
+    ck_assert(tmp_row != NULL);
+
+    if (tmp_row != NULL) {
+        ck_assert_int_eq(strcmp(tmp_row[0], "1"), 0);
+    }
+    mysql_free_result(tmp_result);
+
+    /* Verify that an entry is created for FLAPPING_STOP with hosts */
+
+    d.type = NEBTYPE_FLAPPING_STOP;
+    d.flags = 0;
+    d.attr = 2;
+    d.timestamp = (struct timeval) { .tv_sec = 1567543077, .tv_usec = 95771 };
+    d.flapping_type = 0;
+    d.host_name = strdup("_testhost_1");
+    d.service_description = NULL;
+    d.percent_change = 23.35526315789474;
+    d.high_threshold = 0;
+    d.low_threshold = 0;
+    d.comment_id = 0;
+    d.object_ptr = NULL;
+
+    ndo_handle_flapping(d.type, &d);
+
+    mysql_query(mysql_connection, "SELECT 2 FROM nagios_flappinghistory WHERE "
+        "instance_id = 1 AND event_time = FROM_UNIXTIME(1567543077) AND event_time_usec = 95771 "
+        "AND event_type = 1001 AND reason_type = 2 AND flapping_type = 0 "
+        "AND object_id = (SELECT object_id from nagios_objects WHERE objecttype_id = 1 AND name1 = '_testhost_1' AND name2 IS NULL LIMIT 1) "
+        "AND percent_state_change = 23.35526315789474 AND low_threshold = 0 "
+        "AND high_threshold = 0 AND comment_time = FROM_UNIXTIME(0) AND "
+        "internal_comment_id = 0 ");
+
+    tmp_result = mysql_store_result(mysql_connection);
+    ck_assert(tmp_result != NULL);
+
+    if (tmp_result != NULL) {
+        tmp_row = mysql_fetch_row(tmp_result);
+    }
+    ck_assert(tmp_row != NULL);
+
+    if (tmp_row != NULL) {
+        ck_assert_int_eq(strcmp(tmp_row[0], "2"), 0);
+    }
+    mysql_free_result(tmp_result);
+
 }
 END_TEST
 
@@ -900,6 +980,61 @@ END_TEST
 START_TEST (test_program_status)
 {
     nebstruct_program_status_data d;
+
+    MYSQL_ROW tmp_row;
+    MYSQL_RES *tmp_result;
+
+    d.type = NEBTYPE_PROGRAMSTATUS_UPDATE;
+    d.flags = 0;
+    d.attr = 0;
+    d.timestamp = (struct timeval) { .tv_sec = 1567626021, .tv_usec = 823127 };
+    d.program_start = 1567542969;
+    d.pid = 107564;
+    d.daemon_mode = 0;
+    d.last_log_rotation = 1567573200;
+    d.notifications_enabled = 1;
+    d.active_service_checks_enabled = 1;
+    d.passive_service_checks_enabled = 1;
+    d.active_host_checks_enabled = 1;
+    d.passive_host_checks_enabled = 1;
+    d.event_handlers_enabled = 1;
+    d.flap_detection_enabled = 1;
+    d.process_performance_data = 0;
+    d.obsess_over_hosts = 0;
+    d.obsess_over_services = 0;
+    d.modified_host_attributes = 0;
+    d.modified_service_attributes = 0;
+    d.global_host_event_handler = NULL;
+    d.global_service_event_handler = NULL;
+
+    ndo_handle_program_status(d.type, &d);
+
+    mysql_query(mysql_connection, "SELECT 1 FROM nagios_programstatus WHERE "
+        "instance_id = 1 AND status_update_time = FROM_UNIXTIME(1567626021) "
+        "AND program_start_time = FROM_UNIXTIME(1567542969) AND is_currently_running = 1 "
+        "AND process_id = 107564 AND daemon_mode = 0 "
+        "AND last_command_check = FROM_UNIXTIME(0) AND last_log_rotation = FROM_UNIXTIME(1567573200) "
+        "AND notifications_enabled = 1 AND active_service_checks_enabled = 1 "
+        "AND passive_service_checks_enabled = 1 AND active_host_checks_enabled = 1 "
+        "AND passive_host_checks_enabled = 1 AND event_handlers_enabled = 1 "
+        "AND flap_detection_enabled = 1 AND failure_prediction_enabled = 0 "
+        "AND process_performance_data = 0 AND obsess_over_hosts = 0 "
+        "AND obsess_over_services = 0 AND modified_host_attributes = 0 "
+        "AND modified_service_attributes = 0 AND global_host_event_handler = '' AND global_service_event_handler = ''");
+
+    tmp_result = mysql_store_result(mysql_connection);
+    ck_assert(tmp_result != NULL);
+
+    if (tmp_result != NULL) {
+        tmp_row = mysql_fetch_row(tmp_result);
+    }
+    ck_assert(tmp_row != NULL);
+
+    if (tmp_row != NULL) {
+        ck_assert_int_eq(strcmp(tmp_row[0], "1"), 0);
+    }
+    mysql_free_result(tmp_result);
+
 }
 END_TEST
 
@@ -907,6 +1042,58 @@ END_TEST
 START_TEST (test_host_status)
 {
     nebstruct_host_status_data d;
+
+    MYSQL_ROW tmp_row;
+    MYSQL_RES *tmp_result;
+
+    /* also uses test_host global */
+
+    d.type = NEBTYPE_HOSTSTATUS_UPDATE;
+    d.flags = 0;
+    d.attr = 0;
+    d.timestamp = (struct timeval) { .tv_sec = 1567634416, .tv_usec = 981815 };
+    d.object_ptr = &test_host;
+
+    ndo_handle_host_status(d.type, &d);
+
+    mysql_query(mysql_connection, "SELECT 1 FROM nagios_hoststatus WHERE "
+        "instance_id = 1 AND host_object_id = (SELECT object_id FROM nagios_objects WHERE objecttype_id = 1 AND name1 = '_testhost_1' AND name2 IS NULL LIMIT 1) "
+        "AND status_update_time = FROM_UNIXTIME(1567634416) AND output = 'OK - 127.0.0.1 rta 0.012ms lost 0%' "
+        "AND long_output = '' AND perfdata = 'rta=0.012ms;3000.000;5000.000;0; rtmax=0.036ms;;;; rtmin=0.005ms;;;; pl=0%;80;100;0;100' "
+        "AND current_state = 0 AND has_been_checked = 1 AND should_be_scheduled = 1 "
+        "AND current_check_attempt = 1 AND max_check_attempts = 5 "
+        "AND last_check = FROM_UNIXTIME(1567626758) AND next_check = FROM_UNIXTIME(1567627058) "
+        "AND check_type = 0 AND last_state_change = FROM_UNIXTIME(1565516515) "
+        "AND last_hard_state_change = FROM_UNIXTIME(1565516515) AND last_hard_state = 0 "
+        "AND last_time_up = FROM_UNIXTIME(1567626758) AND last_time_down = FROM_UNIXTIME(0) "
+        "AND last_time_unreachable = FROM_UNIXTIME(0) AND state_type = 1 "
+        "AND last_notification = FROM_UNIXTIME(0) AND next_notification = FROM_UNIXTIME(0) "
+        "AND no_more_notifications = 0 AND notifications_enabled = 1 "
+        "AND problem_has_been_acknowledged = 0 AND acknowledgement_type = 0 "
+        "AND current_notification_number = 0 AND passive_checks_enabled = 1 "
+        "AND active_checks_enabled = 1 AND event_handler_enabled = 1 "
+        "AND flap_detection_enabled = 1 AND is_flapping = 0 "
+        "AND percent_state_change = 0 AND latency = 0.0019690000917762518 "
+        "AND execution_time = 0.0041120000000000002 AND scheduled_downtime_depth = 0 "
+        "AND failure_prediction_enabled = 0 AND process_performance_data = 1 "
+        "AND obsess_over_host = 1 AND modified_host_attributes = 0 "
+        "AND event_handler = '' AND check_command = 'check_xi_host_ping!3000.0!80%!5000.0!100%' "
+        "AND normal_check_interval = 5 AND retry_check_interval = 1 "
+        "AND check_timeperiod_object_id = (SELECT object_id FROM nagios_objects WHERE objecttype_id = 9 AND name1 = 'xi_timeperiod_24x7' AND name2 IS NULL LIMIT 1)");
+
+    tmp_result = mysql_store_result(mysql_connection);
+    ck_assert(tmp_result != NULL);
+
+    if (tmp_result != NULL) {
+        tmp_row = mysql_fetch_row(tmp_result);
+    }
+    ck_assert(tmp_row != NULL);
+
+    if (tmp_row != NULL) {
+        ck_assert_int_eq(strcmp(tmp_row[0], "1"), 0);
+    }
+    mysql_free_result(tmp_result);
+
 }
 END_TEST
 
@@ -914,6 +1101,56 @@ END_TEST
 START_TEST (test_service_status)
 {
     nebstruct_service_status_data d;
+
+    MYSQL_ROW tmp_row;
+    MYSQL_RES *tmp_result;
+
+    /* also uses test_host global */
+
+    d.type = NEBTYPE_SERVICESTATUS_UPDATE;
+    d.flags = 0;
+    d.attr = 0;
+    d.timestamp = (struct timeval) { .tv_sec = 1567709361, .tv_usec = 154555 };
+    d.object_ptr = &test_service;
+
+    ndo_handle_service_status(d.type, &d);
+
+    mysql_query(mysql_connection, "SELECT 1 FROM nagios_servicestatus WHERE "
+        "instance_id = 1 AND service_object_id = (SELECT object_id FROM nagios_objects WHERE objecttype_id = 2 AND name1 = '_testhost_1' AND name2 = '_testservice_http' LIMIT 1)"
+        "AND status_update_time = FROM_UNIXTIME(1567709361) AND output = 'This is not real output' "
+        "AND long_output = '' AND perfdata = '' AND current_state = 0 "
+        "AND has_been_checked = 1 AND should_be_scheduled = 1 "
+        "AND current_check_attempt = 1 AND max_check_attempts = 5 "
+        "AND last_check = FROM_UNIXTIME(1567709309) AND next_check = FROM_UNIXTIME(1567709609) "
+        "AND check_type = 0 AND last_state_change = FROM_UNIXTIME(1567621885) "
+        "AND last_hard_state_change = FROM_UNIXTIME(1567621885) AND last_hard_state = 0 "
+        "AND last_time_ok = FROM_UNIXTIME(1567630417) AND last_time_warning = FROM_UNIXTIME(1567542993) "
+        "AND last_time_unknown = FROM_UNIXTIME(0) AND last_time_critical = FROM_UNIXTIME(1567539221) "
+        "AND state_type = 1 AND last_notification = FROM_UNIXTIME(0) "
+        "AND next_notification = FROM_UNIXTIME(3600) AND no_more_notifications = 0 "
+        "AND notifications_enabled = 1 AND problem_has_been_acknowledged = 0 "
+        "AND acknowledgement_type = 0 AND current_notification_number = 0 "
+        "AND passive_checks_enabled = 1 AND active_checks_enabled = 1 "
+        "AND event_handler_enabled = 1 AND flap_detection_enabled = 0 "
+        "AND is_flapping = 0 AND percent_state_change = 0 AND latency = 0.0020620001014322042 "
+        "AND execution_time = 0.0032190000000000001 AND scheduled_downtime_depth = 0 "
+        "AND failure_prediction_enabled = 0 AND process_performance_data = 1 "
+        "AND obsess_over_service = 1 AND modified_service_attributes = 16 AND event_handler = '' "
+        "AND check_command = 'check_xi_service_http' AND normal_check_interval = 5 AND retry_check_interval = 1 "
+        "AND check_timeperiod_object_id = (SELECT object_id FROM nagios_objects WHERE objecttype_id = 9 AND name1 = 'xi_timeperiod_24x7' AND name2 IS NULL LIMIT 1) ");
+
+    tmp_result = mysql_store_result(mysql_connection);
+    ck_assert(tmp_result != NULL);
+
+    if (tmp_result != NULL) {
+        tmp_row = mysql_fetch_row(tmp_result);
+    }
+    ck_assert(tmp_row != NULL);
+
+    if (tmp_row != NULL) {
+        ck_assert_int_eq(strcmp(tmp_row[0], "1"), 0);
+    }
+    mysql_free_result(tmp_result);
 }
 END_TEST
 
