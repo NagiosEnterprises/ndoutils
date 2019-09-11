@@ -76,31 +76,42 @@ int ndo_table_genocide()
 }
 
 
+void timestamp_msg(char * msg)
+{
+    char buf[1024];
+    struct timeval tv;
+    gettimeofday(&tv, NULL);
+    sprintf(buf, "%ld.%06ld - %s", tv.tv_sec, tv.tv_usec, msg);
+    ndo_log(buf);
+}
+
+
 int ndo_write_active_objects()
 {
-    struct timeval tv;
-    char msg[1024];
-
-    gettimeofday(&tv, NULL);
-
-    sprintf(msg, "write_active_objects begin - %ld.%06ld", tv.tv_sec, tv.tv_usec);
-    ndo_log(msg);
+    timestamp_msg("BEGIN ndo_write_active_objects");
 
     ndo_write_commands(NDO_CONFIG_DUMP_ORIGINAL);
+    timestamp_msg(" > end ndo_write_commands");
     ndo_write_timeperiods(NDO_CONFIG_DUMP_ORIGINAL);
+    timestamp_msg(" > end ndo_write_timeperiods");
     ndo_write_contacts(NDO_CONFIG_DUMP_ORIGINAL);
+    timestamp_msg(" > end ndo_write_contacts");
     ndo_write_contactgroups(NDO_CONFIG_DUMP_ORIGINAL);
+    timestamp_msg(" > end ndo_write_contactgroups");
     ndo_write_hosts(NDO_CONFIG_DUMP_ORIGINAL);
+    timestamp_msg(" > end ndo_write_hosts");
     ndo_write_hostgroups(NDO_CONFIG_DUMP_ORIGINAL);
+    timestamp_msg(" > end ndo_write_hostgroups");
     ndo_write_services(NDO_CONFIG_DUMP_ORIGINAL);
+    timestamp_msg(" > end ndo_write_services");
     ndo_write_servicegroups(NDO_CONFIG_DUMP_ORIGINAL);
+    timestamp_msg(" > end ndo_write_servicegroups");
     ndo_write_hostescalations(NDO_CONFIG_DUMP_ORIGINAL);
+    timestamp_msg(" > end ndo_write_hostescalations");
     ndo_write_serviceescalations(NDO_CONFIG_DUMP_ORIGINAL);
+    timestamp_msg(" > end ndo_write_serviceescalations");
 
-    gettimeofday(&tv, NULL);
-
-    sprintf(msg, "write_active_objects end   - %ld.%06ld", tv.tv_sec, tv.tv_usec);
-    ndo_log(msg);
+    timestamp_msg("END ndo_write_active_objects");
 
     return NDO_OK;
 }
@@ -553,7 +564,7 @@ int ndo_write_hosts(int config_type)
     char * query_on_update = " ON DUPLICATE KEY UPDATE instance_id = VALUES(instance_id), config_type = VALUES(config_type), host_object_id = VALUES(host_object_id), alias = VALUES(alias), display_name = VALUES(display_name), address = VALUES(address), check_command_object_id = VALUES(check_command_object_id), check_command_args = VALUES(check_command_args), eventhandler_command_object_id = VALUES(eventhandler_command_object_id), eventhandler_command_args = VALUES(eventhandler_command_args), check_timeperiod_object_id = VALUES(check_timeperiod_object_id), notification_timeperiod_object_id = VALUES(notification_timeperiod_object_id), failure_prediction_options = VALUES(failure_prediction_options), check_interval = VALUES(check_interval), retry_interval = VALUES(retry_interval), max_check_attempts = VALUES(max_check_attempts), first_notification_delay = VALUES(first_notification_delay), notification_interval = VALUES(notification_interval), notify_on_down = VALUES(notify_on_down), notify_on_unreachable = VALUES(notify_on_unreachable), notify_on_recovery = VALUES(notify_on_recovery), notify_on_flapping = VALUES(notify_on_flapping), notify_on_downtime = VALUES(notify_on_downtime), stalk_on_up = VALUES(stalk_on_up), stalk_on_down = VALUES(stalk_on_down), stalk_on_unreachable = VALUES(stalk_on_unreachable), flap_detection_enabled = VALUES(flap_detection_enabled), flap_detection_on_up = VALUES(flap_detection_on_up), flap_detection_on_down = VALUES(flap_detection_on_down), flap_detection_on_unreachable = VALUES(flap_detection_on_unreachable), low_flap_threshold = VALUES(low_flap_threshold), high_flap_threshold = VALUES(high_flap_threshold), process_performance_data = VALUES(process_performance_data), freshness_checks_enabled = VALUES(freshness_checks_enabled), freshness_threshold = VALUES(freshness_threshold), passive_checks_enabled = VALUES(passive_checks_enabled), event_handler_enabled = VALUES(event_handler_enabled), active_checks_enabled = VALUES(active_checks_enabled), retain_status_information = VALUES(retain_status_information), retain_nonstatus_information = VALUES(retain_nonstatus_information), notifications_enabled = VALUES(notifications_enabled), obsess_over_host = VALUES(obsess_over_host), failure_prediction_enabled = VALUES(failure_prediction_enabled), notes = VALUES(notes), notes_url = VALUES(notes_url), action_url = VALUES(action_url), icon_image = VALUES(icon_image), icon_image_alt = VALUES(icon_image_alt), vrml_image = VALUES(vrml_image), statusmap_image = VALUES(statusmap_image), have_2d_coords = VALUES(have_2d_coords), x_2d = VALUES(x_2d), y_2d = VALUES(y_2d), have_3d_coords = VALUES(have_3d_coords), x_3d = VALUES(x_3d), y_3d = VALUES(y_3d), z_3d = VALUES(z_3d), importance = VALUES(importance)";
     size_t query_on_update_len = 2723; /* strlen(query_on_update); */
 
-    ndo_return = mysql_query(mysql_connection, "LOCK TABLES nagios_logentries WRITE, nagios_objects WRITE, nagios_hosts WRITE, nagios_host_parenthosts WRITE, nagios_host_contactgroups WRITE, nagios_host_contacts WRITE, nagios_customvariables WRITE");
+    ndo_return = mysql_query(mysql_connection, "LOCK TABLES nagios_logentries WRITE, nagios_objects WRITE, nagios_hosts WRITE");
     if (ndo_return != 0) {
         char msg[1024];
         snprintf(msg, 1023, "ret = %d, (%d) %s", ndo_return, mysql_errno(mysql_connection), mysql_error(mysql_connection));
@@ -675,15 +686,14 @@ int ndo_write_hosts(int config_type)
         tmp = tmp->next;
     }
 
-    ndo_write_hosts_objects(config_type);
-
     ndo_return = mysql_query(mysql_connection, "UNLOCK TABLES");
     if (ndo_return != 0) {
         char msg[1024];
         snprintf(msg, 1023, "ret = %d, (%d) %s", ndo_return, mysql_errno(mysql_connection), mysql_error(mysql_connection));
         ndo_log(msg);
-        return NDO_ERROR;
     }
+
+    ndo_write_hosts_objects(config_type);
 
     return NDO_OK;
 }
@@ -855,7 +865,17 @@ int send_subquery(int stmt, int * counter, char * query, char * query_on_update,
 {
     memcpy(query + (* query_len) - 1, query_on_update, query_on_update_len);
 
-    MYSQL_PREPARE_NEW(stmt, query);
+//    MYSQL_PREPARE_NEW(stmt, query);
+
+    ndo_return = mysql_stmt_prepare(ndo_stmt_new[stmt], query, strlen(query));
+
+    if (ndo_return != 0) {
+        ndo_log("UNABLE TO PREPARE:");
+        ndo_log(query);
+    }
+
+    NDO_HANDLE_ERROR_NEW(stmt, "Unable to prepare statement");
+
     MYSQL_BIND_NEW(stmt);
     MYSQL_EXECUTE_NEW(stmt);
 
@@ -1103,7 +1123,7 @@ int ndo_write_services(int config_type)
     char * query_on_update = " ON DUPLICATE KEY UPDATE instance_id = VALUES(instance_id), config_type = VALUES(config_type), host_object_id = VALUES(host_object_id), service_object_id = VALUES(service_object_id), display_name = VALUES(display_name), check_command_object_id = VALUES(check_command_object_id), check_command_args = VALUES(check_command_args), eventhandler_command_object_id = VALUES(eventhandler_command_object_id), eventhandler_command_args = VALUES(eventhandler_command_args), check_timeperiod_object_id = VALUES(check_timeperiod_object_id), notification_timeperiod_object_id = VALUES(notification_timeperiod_object_id), failure_prediction_options = VALUES(failure_prediction_options), check_interval = VALUES(check_interval), retry_interval = VALUES(retry_interval), max_check_attempts = VALUES(max_check_attempts), first_notification_delay = VALUES(first_notification_delay), notification_interval = VALUES(notification_interval), notify_on_warning = VALUES(notify_on_warning), notify_on_unknown = VALUES(notify_on_unknown), notify_on_critical = VALUES(notify_on_critical), notify_on_recovery = VALUES(notify_on_recovery), notify_on_flapping = VALUES(notify_on_flapping), notify_on_downtime = VALUES(notify_on_downtime), stalk_on_ok = VALUES(stalk_on_ok), stalk_on_warning = VALUES(stalk_on_warning), stalk_on_unknown = VALUES(stalk_on_unknown), stalk_on_critical = VALUES(stalk_on_critical), is_volatile = VALUES(is_volatile), flap_detection_enabled = VALUES(flap_detection_enabled), flap_detection_on_ok = VALUES(flap_detection_on_ok), flap_detection_on_warning = VALUES(flap_detection_on_warning), flap_detection_on_unknown = VALUES(flap_detection_on_unknown), flap_detection_on_critical = VALUES(flap_detection_on_critical), low_flap_threshold = VALUES(low_flap_threshold), high_flap_threshold = VALUES(high_flap_threshold), process_performance_data = VALUES(process_performance_data), freshness_checks_enabled = VALUES(freshness_checks_enabled), freshness_threshold = VALUES(freshness_threshold), passive_checks_enabled = VALUES(passive_checks_enabled), event_handler_enabled = VALUES(event_handler_enabled), active_checks_enabled = VALUES(active_checks_enabled), retain_status_information = VALUES(retain_status_information), retain_nonstatus_information = VALUES(retain_nonstatus_information), notifications_enabled = VALUES(notifications_enabled), obsess_over_service = VALUES(obsess_over_service), failure_prediction_enabled = VALUES(failure_prediction_enabled), notes = VALUES(notes), notes_url = VALUES(notes_url), action_url = VALUES(action_url), icon_image = VALUES(icon_image), icon_image_alt = VALUES(icon_image_alt), importance = VALUES(importance)";
     size_t query_on_update_len = 2653; /* strlen(query_on_update); */
 
-    ndo_return = mysql_query(mysql_connection, "LOCK TABLES nagios_logentries WRITE, nagios_objects WRITE, nagios_services WRITE, nagios_service_parentservices WRITE, nagios_service_contactgroups WRITE, nagios_service_contacts WRITE, nagios_customvariables WRITE");
+    ndo_return = mysql_query(mysql_connection, "LOCK TABLES nagios_logentries WRITE, nagios_objects WRITE, nagios_services WRITE");
     if (ndo_return != 0) {
         char msg[1024];
         snprintf(msg, 1023, "ret = %d, (%d) %s", ndo_return, mysql_errno(mysql_connection), mysql_error(mysql_connection));
@@ -1223,15 +1243,14 @@ int ndo_write_services(int config_type)
         tmp = tmp->next;
     }
 
-    ndo_write_services_objects(config_type);
-
     ndo_return = mysql_query(mysql_connection, "UNLOCK TABLES");
     if (ndo_return != 0) {
         char msg[1024];
         snprintf(msg, 1023, "ret = %d, (%d) %s", ndo_return, mysql_errno(mysql_connection), mysql_error(mysql_connection));
         ndo_log(msg);
-        return NDO_ERROR;
     }
+
+    ndo_write_services_objects(config_type);
 
     return NDO_OK;
 }
@@ -1375,6 +1394,7 @@ int ndo_write_services_objects(int config_type)
             var_count++;
 
             if (var_count >= ndo_max_object_insert_count) {
+                ndo_log(var_query);
                 send_subquery(WRITE_CUSTOMVARS, &var_count, var_query, var_query_on_update, &var_query_len, var_query_base_len, var_query_on_update_len);
             }
         }
@@ -1392,6 +1412,7 @@ int ndo_write_services_objects(int config_type)
         }
 
         if (var_count > 0 && (var_count >= ndo_max_object_insert_count || tmp->next == NULL)) {
+            ndo_log(var_query);
             send_subquery(WRITE_CUSTOMVARS, &var_count, var_query, var_query_on_update, &var_query_len, var_query_base_len, var_query_on_update_len);
         }
 
