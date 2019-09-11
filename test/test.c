@@ -1400,6 +1400,39 @@ END_TEST
 START_TEST (test_external_command)
 {
     nebstruct_external_command_data d;
+
+    MYSQL_ROW tmp_row;
+    MYSQL_RES *tmp_result;
+
+    d.type = NEBTYPE_EXTERNALCOMMAND_START;
+    d.flags = 0;
+    d.attr = 0;
+    d.timestamp = (struct timeval) { .tv_sec = 1568238575, .tv_usec = 842679 };
+    d.command_type = 1;
+    d.entry_time = 1568238569;
+    d.command_string = strdup("ADD_HOST_COMMENT");
+    d.command_args = strdup("_testhost_1;1;Nagios Admin; This is a comment");
+
+    ndo_handle_external_command(d.type, &d);
+
+    mysql_query(mysql_connection, "SELECT 1 FROM nagios_externalcommands WHERE "
+        "instance_id = 1 AND command_type = 1 "
+        " AND entry_time = FROM_UNIXTIME(1568238569) AND command_name = 'ADD_HOST_COMMENT'"
+        " AND command_args = '_testhost_1;1;Nagios Admin; This is a comment'");
+
+    tmp_result = mysql_store_result(mysql_connection);
+    ck_assert(tmp_result != NULL);
+
+    if (tmp_result != NULL) {
+        tmp_row = mysql_fetch_row(tmp_result);
+    }
+    ck_assert(tmp_row != NULL);
+
+    if (tmp_row != NULL) {
+        ck_assert_int_eq(strcmp(tmp_row[0], "1"), 0);
+    }
+    mysql_free_result(tmp_result);
+
 }
 END_TEST
 
