@@ -1158,7 +1158,38 @@ END_TEST
 
 START_TEST (test_contact_status)
 {
-    nebstruct_service_status_data d;
+    nebstruct_contact_status_data d;
+
+    MYSQL_ROW tmp_row;
+    MYSQL_RES *tmp_result;
+
+    d.type = NEBTYPE_CONTACTSTATUS_UPDATE;
+    d.flags = 0;
+    d.attr = 0;
+    d.timestamp = (struct timeval) { .tv_sec = 1568226545, .tv_usec = 362038 };
+    d.object_ptr = &test_contact;
+
+    ndo_handle_contact_status(d.type, &d);
+
+    mysql_query(mysql_connection, "SELECT 1 FROM nagios_contactstatus WHERE "
+        "instance_id = 1 AND contact_object_id = (SELECT object_id FROM nagios_objects WHERE objecttype_id = 10 AND name1 = 'nagiosadmin' AND name2 IS NULL LIMIT 1) "
+        "AND status_update_time = FROM_UNIXTIME(1568226545) AND host_notifications_enabled = 1 "
+        "AND service_notifications_enabled = 1 AND last_host_notification = FROM_UNIXTIME(1567525739) "
+        "AND last_service_notification = FROM_UNIXTIME(1567543267) AND modified_attributes = 0 "
+        "AND modified_host_attributes = 0 AND modified_service_attributes = 0 ");
+
+    tmp_result = mysql_store_result(mysql_connection);
+    ck_assert(tmp_result != NULL);
+
+    if (tmp_result != NULL) {
+        tmp_row = mysql_fetch_row(tmp_result);
+    }
+    ck_assert(tmp_row != NULL);
+
+    if (tmp_row != NULL) {
+        ck_assert_int_eq(strcmp(tmp_row[0], "1"), 0);
+    }
+    mysql_free_result(tmp_result);
 }
 END_TEST
 

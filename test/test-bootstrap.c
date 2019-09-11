@@ -264,6 +264,45 @@ struct service populate_service(timeperiod * tp, host * hst) {
     return the_service;
 }
 
+struct contact populate_contact(timeperiod * tp) {
+
+    mysql_query(mysql_connection, "INSERT INTO nagios_objects SET "
+        "instance_id = 1, objecttype_id = 10, name1 = 'nagiosadmin', name2 = NULL, is_active = 1");
+
+    struct contact the_contact = {
+        .id = 0,
+        .name = strdup("nagiosadmin"),
+        .alias = strdup("Nagios Admin"),
+        .email = strdup("nagios@localhost"),
+        .pager = NULL,
+        .address = {NULL, NULL, NULL, NULL, NULL, NULL},
+        .host_notification_commands = NULL, // Originally set to 0x6e07d0
+        .service_notification_commands = NULL, // Originally set to 0x6e0bf0
+        .host_notification_options = 6151,
+        .service_notification_options = 6159,
+        .minimum_value = 0,
+        .host_notification_period = strdup("24x7"),
+        .service_notification_period = strdup("24x7"),
+        .host_notifications_enabled = 1,
+        .service_notifications_enabled = 1,
+        .can_submit_commands = 1,
+        .retain_status_information = 1,
+        .retain_nonstatus_information = 1,
+        .custom_variables = NULL,
+        .last_host_notification = 1567525739,
+        .last_service_notification = 1567543267,
+        .modified_attributes = 0,
+        .modified_host_attributes = 0,
+        .modified_service_attributes = 0,
+        .host_notification_period_ptr = tp,
+        .service_notification_period_ptr = tp,
+        .contactgroups_ptr = NULL, // Originally set to 0x6f9690
+        .next = NULL,
+    };
+
+    return the_contact;
+}
+
 struct timeperiod populate_timeperiods() {
 
     mysql_query(mysql_connection, "INSERT INTO nagios_objects SET "
@@ -294,4 +333,5 @@ void populate_all_objects() {
 
     test_host = populate_hosts(&test_tp);
     test_service = populate_service(&test_tp, &test_host);
+    test_contact = populate_contact(&test_tp);
 }

@@ -7,6 +7,7 @@
 struct timeperiod test_tp;
 struct host test_host;
 struct service test_service;
+struct contact test_contact;
 
 void populate_all_objects();
 
