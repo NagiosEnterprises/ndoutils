@@ -1450,7 +1450,6 @@ START_TEST (test_acknowledgement_data)
 {
     nebstruct_acknowledgement_data d;
 
-
     MYSQL_ROW tmp_row;
     MYSQL_RES *tmp_result;
 
@@ -1537,6 +1536,92 @@ END_TEST
 START_TEST (test_statechange_data)
 {
     nebstruct_statechange_data d;
+
+    MYSQL_ROW tmp_row;
+    MYSQL_RES *tmp_result;
+
+    d.type = 1801;
+    d.flags = 0;
+    d.attr = 0;
+    d.timestamp = (struct timeval) { .tv_sec = 1568301129, .tv_usec = 715455 };
+    d.statechange_type = 0;
+    d.host_name = strdup("_testhost_1");
+    d.service_description = NULL;
+    d.state = 1;
+    d.state_type = 0;
+    d.current_attempt = 1;
+    d.max_attempts = 5;
+    d.output = strdup("not OK");
+    d.object_ptr = &test_host;
+    d.longoutput = NULL;
+
+    ndo_handle_state_change(d.type, &d);
+
+    mysql_query(mysql_connection, "SELECT 1 FROM nagios_statehistory WHERE "
+        "instance_id = 1 AND state_time = FROM_UNIXTIME(1568301129) "
+        "AND state_time_usec = 715455 AND object_id = (SELECT object_id from nagios_objects WHERE objecttype_id = 1 AND name1 = '_testhost_1' AND name2 IS NULL LIMIT 1) "
+        "AND state_change = 1 AND state = 1 "
+        "AND state_type = 0 AND current_check_attempt = 1 "
+        "AND max_check_attempts = 5 AND last_state = 0 "
+        "AND last_hard_state = 0 AND output = 'not OK' "
+        "AND long_output = ''");
+
+
+    tmp_result = mysql_store_result(mysql_connection);
+    ck_assert(tmp_result != NULL);
+
+    if (tmp_result != NULL) {
+        tmp_row = mysql_fetch_row(tmp_result);
+    }
+    ck_assert(tmp_row != NULL);
+
+    if (tmp_row != NULL) {
+        ck_assert_int_eq(strcmp(tmp_row[0], "1"), 0);
+    }
+    mysql_free_result(tmp_result);
+
+    d.type = 1801;
+    d.flags = 0;
+    d.attr = 0;
+    d.timestamp = (struct timeval) { .tv_sec = 1568301309, .tv_usec = 12692 };
+    d.statechange_type = 1;
+    d.host_name = strdup("_testhost_1");
+    d.service_description = strdup("_testservice_http");
+    d.state = 1;
+    d.state_type = 0;
+    d.current_attempt = 1;
+    d.max_attempts = 5;
+    d.output = strdup("not OK");
+    d.object_ptr = &test_service;
+    d.longoutput = NULL;
+
+    ndo_handle_state_change(d.type, &d);
+
+    mysql_query(mysql_connection, "SELECT 2 FROM nagios_statehistory WHERE "
+        "instance_id = 1 AND state_time = FROM_UNIXTIME(1568301309) "
+        "AND state_time_usec = 12692 AND object_id = (SELECT object_id FROM nagios_objects WHERE objecttype_id = 2 AND name1 = '_testhost_1' AND name2 = '_testservice_http' LIMIT 1) "
+        "AND state_change = 1 AND state = 1 "
+        "AND state_type = 0 AND current_check_attempt = 1 "
+        "AND max_check_attempts = 5 AND last_state = 0 "
+        "AND last_hard_state = 0 AND output = 'not OK' "
+        "AND long_output = ''");
+
+
+    tmp_result = mysql_store_result(mysql_connection);
+    ck_assert(tmp_result != NULL);
+
+    if (tmp_result != NULL) {
+        tmp_row = mysql_fetch_row(tmp_result);
+    }
+    ck_assert(tmp_row != NULL);
+
+    if (tmp_row != NULL) {
+        ck_assert_int_eq(strcmp(tmp_row[0], "2"), 0);
+    }
+    mysql_free_result(tmp_result);
+
+
+
 }
 END_TEST
 
