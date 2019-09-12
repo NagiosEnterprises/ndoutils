@@ -210,6 +210,104 @@ END_TEST
 START_TEST (test_event_handler)
 {
     nebstruct_event_handler_data d;
+
+    MYSQL_ROW tmp_row;
+    MYSQL_RES *tmp_result;
+
+    d.type = NEBTYPE_EVENTHANDLER_START;
+    d.flags = 0;
+    d.attr = 0;
+    d.timestamp = (struct timeval) { .tv_sec = 1568309570, .tv_usec = 315774 };
+    d.eventhandler_type = GLOBAL_SERVICE_EVENTHANDLER;
+    d.host_name = strdup("_testhost_1");
+    d.service_description = strdup("_testservice_http");
+    d.state_type = 1;
+    d.state = 0;
+    d.timeout = 30;
+    d.command_name = strdup("check_xi_host_ping");
+    d.command_args = NULL;
+    d.command_line = strdup("/usr/bin/echo fake global event handler command");
+    d.start_time = (struct timeval) { .tv_sec = 1568308620, .tv_usec = 5233 };
+    d.end_time = (struct timeval) { .tv_sec = 0, .tv_usec = 0 };
+    d.early_timeout = 0;
+    d.execution_time = 0;
+    d.return_code = 0;
+    d.output = NULL;
+    d.object_ptr = &test_service;
+
+    ndo_handle_event_handler(d.type, &d);
+
+    mysql_query(mysql_connection, "SELECT 1 FROM nagios_eventhandlers WHERE "
+        "instance_id = 1 AND start_time = FROM_UNIXTIME(1568308620) "
+        "AND start_time_usec = 5233 AND end_time = FROM_UNIXTIME(0) "
+        "AND end_time_usec = 0 AND eventhandler_type = 3 "
+        "AND object_id = (SELECT object_id from nagios_objects WHERE objecttype_id = 2 AND name1 = '_testhost_1' AND name2 = '_testservice_http' LIMIT 1) AND state = 0 "
+        "AND state_type = 1 AND command_object_id = (SELECT object_id FROM nagios_objects WHERE objecttype_id = 12 AND name1 = 'check_xi_host_ping' AND name2 IS NULL LIMIT 1) "
+        "AND command_args = '' AND command_line = '/usr/bin/echo fake global event handler command' "
+        "AND timeout = 30 AND early_timeout = 0 "
+        "AND execution_time = 0 AND return_code = 0 "
+        "AND output = '' AND long_output = '' ");
+
+    tmp_result = mysql_store_result(mysql_connection);
+    ck_assert(tmp_result != NULL);
+
+    if (tmp_result != NULL) {
+        tmp_row = mysql_fetch_row(tmp_result);
+    }
+    ck_assert(tmp_row != NULL);
+
+    if (tmp_row != NULL) {
+        ck_assert_int_eq(strcmp(tmp_row[0], "1"), 0);
+    }
+    mysql_free_result(tmp_result);
+
+    d.type = NEBTYPE_EVENTHANDLER_START;
+    d.flags = 0;
+    d.attr = 0;
+    d.timestamp = (struct timeval) { .tv_sec = 1568312563, .tv_usec = 952580 };
+    d.eventhandler_type = GLOBAL_HOST_EVENTHANDLER;
+    d.host_name = strdup("_testhost_1");
+    d.service_description = NULL;
+    d.state_type = 0;
+    d.state = 1;
+    d.timeout = 30;
+    d.command_name = strdup("check_xi_host_ping");
+    d.command_args = NULL;
+    d.command_line = strdup("/usr/bin/echo fake global event handler command");
+    d.start_time = (struct timeval) { .tv_sec = 1568312540, .tv_usec = 976228 };
+    d.end_time = (struct timeval) { .tv_sec = 0, .tv_usec = 0 };
+    d.early_timeout = 0;
+    d.execution_time = 0;
+    d.return_code = 0;
+    d.output = NULL;
+    d.object_ptr = &test_host;
+
+    ndo_handle_event_handler(d.type, &d);
+
+    mysql_query(mysql_connection, "SELECT 2 FROM nagios_eventhandlers WHERE "
+        "instance_id = 1 AND start_time = FROM_UNIXTIME(1568312540) "
+        "AND start_time_usec = 976228 AND end_time = FROM_UNIXTIME(0) "
+        "AND end_time_usec = 0 AND eventhandler_type = 2 "
+        "AND object_id = (SELECT object_id from nagios_objects WHERE objecttype_id = 1 AND name1 = '_testhost_1' AND name2 IS NULL LIMIT 1) AND state = 1 "
+        "AND state_type = 0 AND command_object_id = (SELECT object_id FROM nagios_objects WHERE objecttype_id = 12 AND name1 = 'check_xi_host_ping' AND name2 IS NULL LIMIT 1) "
+        "AND command_args = '' AND command_line = '/usr/bin/echo fake global event handler command' "
+        "AND timeout = 30 AND early_timeout = 0 "
+        "AND execution_time = 0 AND return_code = 0 "
+        "AND output = '' AND long_output = '' ");
+
+    tmp_result = mysql_store_result(mysql_connection);
+    ck_assert(tmp_result != NULL);
+
+    if (tmp_result != NULL) {
+        tmp_row = mysql_fetch_row(tmp_result);
+    }
+    ck_assert(tmp_row != NULL);
+
+    if (tmp_row != NULL) {
+        ck_assert_int_eq(strcmp(tmp_row[0], "2"), 0);
+    }
+    mysql_free_result(tmp_result);
+
 }
 END_TEST
 
