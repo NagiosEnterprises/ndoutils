@@ -157,9 +157,51 @@ START_TEST (test_log_data)
 END_TEST
 
 
+/* Note: This is no longer used in nagios by default.
+ * The data used for this is extremely suspect
+ */
 START_TEST (test_system_command)
 {
     nebstruct_system_command_data d;
+
+    MYSQL_ROW tmp_row;
+    MYSQL_RES *tmp_result;
+
+    d.type = 400;
+    d.flags = 0;
+    d.attr = 0;
+    d.timestamp = (struct timeval) { .tv_sec = 1568303762, .tv_usec = 517109 };
+    d.start_time = (struct timeval) { .tv_sec = 1568303746, .tv_usec = 165485 };
+    d.end_time = (struct timeval) { .tv_sec = 0, .tv_usec = 0 };
+    d.timeout = 5;
+    d.command_line = strdup("/usr/bin/echo fake_command");
+    d.early_timeout = 0;
+    d.execution_time = 0;
+    d.return_code = 0;
+    d.output = NULL;
+
+    ndo_handle_system_command(d.type, &d);
+
+    mysql_query(mysql_connection, "SELECT 1 FROM nagios_systemcommands WHERE "
+        "instance_id = 1 AND start_time = FROM_UNIXTIME(1568303746) "
+        "AND start_time_usec = 165485 AND end_time = FROM_UNIXTIME(0) "
+        "AND end_time_usec = 0 AND command_line = '/usr/bin/echo fake_command' "
+        "AND timeout = 5 AND early_timeout = 0 "
+        "AND execution_time = 0 AND return_code = 0 "
+        "AND output = '' AND long_output = '' ");
+
+    tmp_result = mysql_store_result(mysql_connection);
+    ck_assert(tmp_result != NULL);
+
+    if (tmp_result != NULL) {
+        tmp_row = mysql_fetch_row(tmp_result);
+    }
+    ck_assert(tmp_row != NULL);
+
+    if (tmp_row != NULL) {
+        ck_assert_int_eq(strcmp(tmp_row[0], "1"), 0);
+    }
+    mysql_free_result(tmp_result);
 
 }
 END_TEST
