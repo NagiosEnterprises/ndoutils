@@ -1440,6 +1440,8 @@ END_TEST
 START_TEST (test_retention_data)
 {
     nebstruct_retention_data d;
+
+    /* Retention handling function doesn't exist yet */
 }
 END_TEST
 
@@ -1447,6 +1449,87 @@ END_TEST
 START_TEST (test_acknowledgement_data)
 {
     nebstruct_acknowledgement_data d;
+
+
+    MYSQL_ROW tmp_row;
+    MYSQL_RES *tmp_result;
+
+    d.type = NEBTYPE_ACKNOWLEDGEMENT_ADD;
+    d.flags = 0;
+    d.attr = 0;
+    d.timestamp = (struct timeval) { .tv_sec = 1568299147, .tv_usec = 318748 };
+    d.acknowledgement_type = 1;
+    d.host_name = strdup("_testhost_1");
+    d.service_description = strdup("_testservice_http");
+    d.state = 1;
+    d.author_name = strdup("Nagios Admin");
+    d.comment_data = strdup(" this is an ack");
+    d.is_sticky = 0;
+    d.persistent_comment = 1;
+    d.notify_contacts = 0;
+    d.object_ptr = &test_service;
+
+    ndo_handle_acknowledgement(d.type, &d);
+
+    mysql_query(mysql_connection, "SELECT 1 FROM nagios_acknowledgements WHERE "
+        "instance_id = 1 AND entry_time = FROM_UNIXTIME(1568299147) "
+        "AND entry_time_usec = 318748 AND acknowledgement_type = 1 "
+        "AND object_id = (SELECT object_id FROM nagios_objects WHERE objecttype_id = 2 AND name1 = '_testhost_1' AND name2 = '_testservice_http' LIMIT 1) AND state = 1 "
+        "AND author_name = 'Nagios Admin' AND comment_data = ' this is an ack' "
+        "AND is_sticky = 0 AND persistent_comment = 1 "
+        "AND notify_contacts = 0 ");
+
+    tmp_result = mysql_store_result(mysql_connection);
+    ck_assert(tmp_result != NULL);
+
+    if (tmp_result != NULL) {
+        tmp_row = mysql_fetch_row(tmp_result);
+    }
+    ck_assert(tmp_row != NULL);
+
+    if (tmp_row != NULL) {
+        ck_assert_int_eq(strcmp(tmp_row[0], "1"), 0);
+    }
+    mysql_free_result(tmp_result);
+
+    d.type = NEBTYPE_ACKNOWLEDGEMENT_ADD;
+    d.flags = 0;
+    d.attr = 0;
+    d.timestamp = (struct timeval) { .tv_sec = 1568300150, .tv_usec = 797402 };
+    d.acknowledgement_type = 0;
+    d.host_name = strdup("_testhost_1");
+    d.service_description = NULL;
+    d.state = 1;
+    d.author_name = strdup("Nagios Admin");
+    d.comment_data = strdup(" this is a different ack");
+    d.is_sticky = 0;
+    d.persistent_comment = 1;
+    d.notify_contacts = 0;
+    d.object_ptr = &test_host;
+
+    ndo_handle_acknowledgement(d.type, &d);
+
+    mysql_query(mysql_connection, "SELECT 2 FROM nagios_acknowledgements WHERE "
+        "instance_id = 1 AND entry_time = FROM_UNIXTIME(1568300150) "
+        "AND entry_time_usec = 797402 AND acknowledgement_type = 0 "
+        "AND object_id = (SELECT object_id FROM nagios_objects WHERE objecttype_id = 1 AND name1 = '_testhost_1' AND name2 IS NULL LIMIT 1) AND state = 1 "
+        "AND author_name = 'Nagios Admin' AND comment_data = ' this is a different ack' "
+        "AND is_sticky = 0 AND persistent_comment = 1 "
+        "AND notify_contacts = 0 ");
+
+    tmp_result = mysql_store_result(mysql_connection);
+    ck_assert(tmp_result != NULL);
+
+    if (tmp_result != NULL) {
+        tmp_row = mysql_fetch_row(tmp_result);
+    }
+    ck_assert(tmp_row != NULL);
+
+    if (tmp_row != NULL) {
+        ck_assert_int_eq(strcmp(tmp_row[0], "2"), 0);
+    }
+    mysql_free_result(tmp_result);
+
 }
 END_TEST
 

@@ -1294,7 +1294,7 @@ int ndo_handle_acknowledgement(int type, void * d)
     MYSQL_RESET_BIND();
     MYSQL_RESET_SQL();
 
-    MYSQL_SET_SQL("INSERT INTO nagios_acknowledgement SET instance_id = 1, entry_time = FROM_UNIXTIME(?), entry_time_usec = ?, acknowledgement_type = ?, object_id = ?, state = ?, author_name = ?, comment_data = ?, is_sticky = ?, persistent_comment = ?, notify_contacts = ? ON DUPLICATE KEY UPDATE instance_id = 1, entry_time = FROM_UNIXTIME(?), entry_time_usec = ?, acknowledgement_type = ?, object_id = ?, state = ?, author_name = ?, comment_data = ?, is_sticky = ?, persistent_comment = ?, notify_contacts = ?");
+    MYSQL_SET_SQL("INSERT INTO nagios_acknowledgements SET instance_id = 1, entry_time = FROM_UNIXTIME(?), entry_time_usec = ?, acknowledgement_type = ?, object_id = ?, state = ?, author_name = ?, comment_data = ?, is_sticky = ?, persistent_comment = ?, notify_contacts = ? ON DUPLICATE KEY UPDATE instance_id = 1, entry_time = FROM_UNIXTIME(?), entry_time_usec = ?, acknowledgement_type = ?, object_id = ?, state = ?, author_name = ?, comment_data = ?, is_sticky = ?, persistent_comment = ?, notify_contacts = ?");
     MYSQL_PREPARE();
 
     MYSQL_BIND_INT(data->timestamp.tv_sec);
