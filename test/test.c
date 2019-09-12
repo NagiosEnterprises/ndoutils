@@ -805,28 +805,6 @@ START_TEST (test_downtime_data)
     MYSQL_ROW tmp_row;
     MYSQL_RES *tmp_result;
 
-    /* First, add a downtime */
-
-    d.type = NEBTYPE_DOWNTIME_LOAD;
-    d.flags = 0;
-    d.attr = 0;
-    d.timestamp = (struct timeval) { .tv_sec = 1567191724, .tv_usec = 684577 };
-    d.downtime_type = 2;
-    d.host_name = strdup("_testhost_1");
-    d.service_description = 0x0;
-    d.entry_time = 1567191710;
-    d.author_name = strdup("Nagios Admin");
-    d.comment_data = strdup("hey this host isnt rly going down but whatever");
-    d.start_time = 1567192501;
-    d.end_time = 1567193401;
-    d.fixed = 1;
-    d.duration = 900;
-    d.triggered_by = 0;
-    d.downtime_id = 1;
-    d.object_ptr = NULL;
-
-
-
     d.type = NEBTYPE_DOWNTIME_ADD;
     d.flags = 0;
     d.attr = 0;
@@ -968,7 +946,7 @@ START_TEST (test_downtime_data)
 
     d.type = NEBTYPE_DOWNTIME_STOP;
     d.flags = 0;
-    d.attr = 1;
+    d.attr = NEBATTR_DOWNTIME_STOP_NORMAL;
     d.timestamp = (struct timeval) { .tv_sec = 1567521860, .tv_usec = 732623 };
     d.downtime_type = 2;
     d.host_name = strdup("_testhost_1");
@@ -1026,6 +1004,73 @@ START_TEST (test_downtime_data)
         ck_assert_int_eq(strcmp(tmp_row[0], "6"), 0);
     }
     mysql_free_result(tmp_result);
+
+    /* Also test the cancelled downtime, since this is a separate branch for this handler */
+
+    d.type = NEBTYPE_DOWNTIME_ADD;
+    d.flags = 0;
+    d.attr = 0;
+    d.timestamp = (struct timeval) { .tv_sec = 1567521960, .tv_usec = 909038 };
+    d.downtime_type = 2;
+    d.host_name = strdup("_testhost_1");
+    d.service_description = NULL;
+    d.entry_time = 1567191810;
+    d.author_name = strdup("Nagios Admin");
+    d.comment_data = strdup("cancellable downtime");
+    d.start_time = 1567202501;
+    d.end_time = 1567203401;
+    d.fixed = 1;
+    d.duration = 900;
+    d.triggered_by = 0;
+    d.downtime_id = 5;
+    d.object_ptr = NULL;
+
+    ndo_handle_downtime(d.type, &d);
+
+
+    d.type = NEBTYPE_DOWNTIME_STOP;
+    d.flags = 0;
+    d.attr = NEBATTR_DOWNTIME_STOP_CANCELLED;
+    d.timestamp = (struct timeval) { .tv_sec = 1567522060, .tv_usec = 732623 };
+    d.downtime_type = 2;
+    d.host_name = strdup("_testhost_1");
+    d.service_description = NULL;
+    d.entry_time = 1567191810;
+    d.author_name = strdup("Nagios Admin");
+    d.comment_data = strdup("cancellable downtime");
+    d.start_time = 1567202501;
+    d.end_time = 1567203401;
+    d.fixed = 1;
+    d.duration = 900;
+    d.triggered_by = 0;
+    d.downtime_id = 5;
+    d.object_ptr = NULL;
+
+    ndo_handle_downtime(d.type, &d);
+
+    /* Verify that the the entry still exists in downtimehistory with updated was_cancelled */
+
+    mysql_query(mysql_connection, "SELECT 8 FROM nagios_downtimehistory WHERE "
+        "instance_id = 1 AND downtime_type = 2 " /* AND object_id = ? "*/
+        "AND entry_time = FROM_UNIXTIME(1567191810) AND author_name = 'Nagios Admin' "
+        "AND comment_data = 'cancellable downtime' AND internal_downtime_id = 5 "
+        "AND triggered_by_id = 0 AND is_fixed = 1 AND duration = 900 "
+        "AND scheduled_start_time = FROM_UNIXTIME(1567202501) AND scheduled_end_time = FROM_UNIXTIME(1567203401) "
+        "AND actual_end_time = FROM_UNIXTIME(1567522060) AND actual_end_time_usec = 732623 AND was_cancelled = 1 ");
+
+    tmp_result = mysql_store_result(mysql_connection);
+    ck_assert(tmp_result != NULL);
+
+    if (tmp_result != NULL) {
+        tmp_row = mysql_fetch_row(tmp_result);
+    }
+    ck_assert(tmp_row != NULL);
+
+    if (tmp_row != NULL) {
+        ck_assert_int_eq(strcmp(tmp_row[0], "8"), 0);
+    }
+    mysql_free_result(tmp_result);
+
 
 }
 END_TEST
