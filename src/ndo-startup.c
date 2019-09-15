@@ -138,32 +138,102 @@ int ndo_write_runtime_variables()
 int ndo_write_commands(int config_type)
 {
     command * tmp = command_list;
-    int object_id = 0;
+    int i = 0;
 
-    MYSQL_RESET_SQL();
+    int loops = 0;
+    int loop = 0;
+    int write_query = FALSE;
+    int dont_reset_query = FALSE;
 
-    MYSQL_SET_SQL("INSERT INTO nagios_commands SET instance_id = 1, object_id = ?, config_type = ?, command_line = ? ON DUPLICATE KEY UPDATE instance_id = 1, object_id = ?, config_type = ?, command_line = ?");
+    int object_ids[MAX_OBJECT_INSERT] = { 0 };
 
-    MYSQL_PREPARE();
+    char query[MAX_SQL_BUFFER] = { 0 };
+
+    char * query_base = "INSERT INTO nagios_commands (instance_id, object_id, config_type, command_line) ";
+    size_t query_base_len = 80; /* strlen(query_base); */
+    size_t query_len = query_base_len;
+
+    char * query_values = "(1,?,X,?),";
+    size_t query_values_len = 10; /* strlen(query_values); */
+
+    char * query_on_update = " ON DUPLICATE KEY UPDATE instance_id = VALUES(instance_id), object_id = VALUES(object_id), config_type = VALUES(config_type), command_line = VALUES(command_line)";
+    size_t query_on_update_len = 161; /* strlen(query_on_update); */
+
+    ndo_return = mysql_query(mysql_connection, "LOCK TABLES nagios_commands WRITE, nagios_objects WRITE");
+    if (ndo_return != 0) {
+        char msg[1024];
+        snprintf(msg, 1023, "ret = %d, (%d) %s", ndo_return, mysql_errno(mysql_connection), mysql_error(mysql_connection));
+        ndo_log(msg);
+        return NDO_ERROR;
+    }
+
+    strcpy(query, query_base);
+
+    loops = num_objects.commands / ndo_max_object_insert_count;
+
+    if (num_objects.commands % ndo_max_object_insert_count != 0) {
+        loops++;
+    }
+
+    /* if num commands is evenly divisible, we never need to write 
+       the query after the first time */
+    else {
+        dont_reset_query = TRUE;
+    }
+
+    write_query = TRUE;
+    loop = 1;
 
     while (tmp != NULL) {
 
-        object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_COMMAND, tmp->name);
+        if (write_query == TRUE) {
+            memcpy(query + query_len, query_values, query_values_len);
+            query_len += query_values_len;
+        }
 
-        MYSQL_RESET_BIND();
+        object_ids[i] = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_COMMAND, tmp->name);
 
-        MYSQL_BIND_INT(object_id);
+        MYSQL_BIND_INT(object_ids[i]);
         MYSQL_BIND_INT(config_type);
         MYSQL_BIND_STR(tmp->command_line);
 
-        MYSQL_BIND_INT(object_id);
-        MYSQL_BIND_INT(config_type);
-        MYSQL_BIND_STR(tmp->command_line);
+        i++;
 
-        MYSQL_BIND();
-        MYSQL_EXECUTE();
+        /* we need to finish the query and execute */
+        if (i >= ndo_max_object_insert_count || tmp->next == NULL) {
 
-        tmp = tmp->next;
+            if (write_query == TRUE) {
+                memcpy(query + query_len - 1, query_on_update, query_on_update_len);
+                query_len += query_on_update_len;
+            }
+
+            if (loop == 1 || loop == loops) {
+                ndo_return = mysql_stmt_prepare(ndo_stmt, query, query_len);
+                ndo_return = mysql_stmt_bind_param(ndo_stmt, ndo_bind);
+            }
+            ndo_return = mysql_stmt_execute(ndo_stmt);
+
+            ndo_bind_i = 0;
+            i = 0;
+            write_query = FALSE;
+
+            /* if we're on the second to last loop we reset to build the final query */
+            if (loop == loops - 1 && dont_reset_query == FALSE) {
+                memset(query + query_base_len, 0, MAX_SQL_BUFFER - query_base_len);
+                query_len = query_base_len;
+                write_query = TRUE;
+            }
+
+            loop++;
+        }
+    }
+
+    ndo_return = mysql_query(mysql_connection, "UNLOCK TABLES");
+    if (ndo_return != 0) {
+        char msg[1024];
+        snprintf(msg, 1023, "ret = %d, (%d) %s", ndo_return, mysql_errno(mysql_connection), mysql_error(mysql_connection));
+        ndo_log(msg);
+        return NDO_ERROR;
     }
 
     return NDO_OK;
@@ -264,22 +334,57 @@ int ndo_write_contacts(int config_type)
     int object_id = 0;
     int i = 0;
 
-    int * object_ids = NULL;
-    int * contact_ids = NULL;
+    int loops = 0;
+    int loop = 0;
+    int write_query = FALSE;
+    int dont_reset_query = FALSE;
+
+    size_t cur_pos = 0;
+
+    int object_ids[MAX_OBJECT_INSERT] = { 0 };
 
     int notify_options[11] = { 0 };
     int host_timeperiod_object_id = 0;
     int service_timeperiod_object_id = 0;
 
-    object_ids = calloc((size_t) num_objects.contacts, sizeof(int));
-    contact_ids = calloc((size_t) num_objects.contacts, sizeof(int));
+    char query[MAX_SQL_BUFFER] = { 0 };
 
-    MYSQL_SET_QUERY(WRITE_CONTACTS);
+    char * query_base = "INSERT INTO nagios_contacts (instance_id, config_type, contact_object_id, alias, email_address, pager_address, host_timeperiod_object_id, service_timeperiod_object_id, host_notifications_enabled, service_notifications_enabled, can_submit_commands, notify_service_recovery, notify_service_warning, notify_service_unknown, notify_service_critical, notify_service_flapping, notify_service_downtime, notify_host_recovery, notify_host_down, notify_host_unreachable, notify_host_flapping, notify_host_downtime, minimum_importance) VALUES ";
+    size_t query_base_len = 532; /* strlen(query_base); */
+    size_t query_len = query_base_len;
 
-    MYSQL_RESET_SQL();
+    char * query_values = "(1,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?),";
+    size_t query_values_len = 48; /* strlen(query_values); */
 
-    MYSQL_SET_SQL("INSERT INTO nagios_contacts SET instance_id = 1, config_type = ?, contact_object_id = ?, alias = ?, email_address = ?, pager_address = ?, host_timeperiod_object_id = ?, service_timeperiod_object_id = ?, host_notifications_enabled = ?, service_notifications_enabled = ?, can_submit_commands = ?, notify_service_recovery = ?, notify_service_warning = ?, notify_service_unknown = ?, notify_service_critical = ?, notify_service_flapping = ?, notify_service_downtime = ?, notify_host_recovery = ?, notify_host_down = ?, notify_host_unreachable = ?, notify_host_flapping = ?, notify_host_downtime = ?, minimum_importance = ? ON DUPLICATE KEY UPDATE instance_id = 1, config_type = ?, contact_object_id = ?, alias = ?, email_address = ?, pager_address = ?, host_timeperiod_object_id = ?, service_timeperiod_object_id = ?, host_notifications_enabled = ?, service_notifications_enabled = ?, can_submit_commands = ?, notify_service_recovery = ?, notify_service_warning = ?, notify_service_unknown = ?, notify_service_critical = ?, notify_service_flapping = ?, notify_service_downtime = ?, notify_host_recovery = ?, notify_host_down = ?, notify_host_unreachable = ?, notify_host_flapping = ?, notify_host_downtime = ?, minimum_importance = ?");
-    MYSQL_PREPARE();
+    char * query_on_duplicate = " ON DUPLICATE KEY UPDATE instance_id = VALUES(instance_id), config_type = VALUES(config_type), contact_object_id = VALUES(contact_object_id), alias = VALUES(alias), email_address = VALUES(email_address), pager_address = VALUES(pager_address), host_timeperiod_object_id = VALUES(host_timeperiod_object_id), service_timeperiod_object_id = VALUES(service_timeperiod_object_id), host_notifications_enabled = VALUES(host_notifications_enabled), service_notifications_enabled = VALUES(service_notifications_enabled), can_submit_commands = VALUES(can_submit_commands), notify_service_recovery = VALUES(notify_service_recovery), notify_service_warning = VALUES(notify_service_warning), notify_service_unknown = VALUES(notify_service_unknown), notify_service_critical = VALUES(notify_service_critical), notify_service_flapping = VALUES(notify_service_flapping), notify_service_downtime = VALUES(notify_service_downtime), notify_host_recovery = VALUES(notify_host_recovery), notify_host_down = VALUES(notify_host_down), notify_host_unreachable = VALUES(notify_host_unreachable), notify_host_flapping = VALUES(notify_host_flapping), notify_host_downtime = VALUES(notify_host_downtime), minimum_importance = VALUES(minimum_importance)";
+    size_t query_on_update_len = 1222; /* strlen(query_on_update); */
+
+    ndo_return = mysql_query(mysql_connection, "LOCK TABLES nagios_logentries WRITE, nagios_objects WRITE, nagios_contacts WRITE");
+    if (ndo_return != 0) {
+        char msg[1024];
+        snprintf(msg, 1023, "ret = %d, (%d) %s", ndo_return, mysql_errno(mysql_connection), mysql_error(mysql_connection));
+        ndo_log(msg);
+        return NDO_ERROR;
+    }
+
+    strcpy(query, query_base);
+
+    loops = num_objects.contacts / ndo_max_object_insert_count;
+
+    if (num_objects.contacts % ndo_max_object_insert_count != 0) {
+        loops++;
+    }
+
+    /* if num contacts is evenly divisible, we never need to write 
+       the query after the first time */
+    else {
+        dont_reset_query = TRUE;
+    }
+
+    write_query = TRUE;
+    loop = 1;
+
+    MYSQL_RESET_BIND();
 
     while (tmp != NULL) {
 
