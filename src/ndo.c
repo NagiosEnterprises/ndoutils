@@ -490,7 +490,7 @@ void ndo_process_config_line(char * line)
     /* should we check the contents of the nagios config directory
        before doing massive table operations in some cases? */
     else if (!strcmp("enable_startup_hash", key)) {
-        ndo_startup_check_enabled = TRUE;
+        ndo_startup_check_enabled = atoi(val);
     }
     else if (!strcmp("startup_hash_script_path", key)) {
         ndo_startup_hash_script_path = strdup(val);
