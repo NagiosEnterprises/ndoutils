@@ -138,102 +138,32 @@ int ndo_write_runtime_variables()
 int ndo_write_commands(int config_type)
 {
     command * tmp = command_list;
-    int i = 0;
+    int object_id = 0;
 
-    int loops = 0;
-    int loop = 0;
-    int write_query = FALSE;
-    int dont_reset_query = FALSE;
+    MYSQL_RESET_SQL();
 
-    int object_ids[MAX_OBJECT_INSERT] = { 0 };
+    MYSQL_SET_SQL("INSERT INTO nagios_commands SET instance_id = 1, object_id = ?, config_type = ?, command_line = ? ON DUPLICATE KEY UPDATE instance_id = 1, object_id = ?, config_type = ?, command_line = ?");
 
-    char query[MAX_SQL_BUFFER] = { 0 };
-
-    char * query_base = "INSERT INTO nagios_commands (instance_id, object_id, config_type, command_line) ";
-    size_t query_base_len = 80; /* strlen(query_base); */
-    size_t query_len = query_base_len;
-
-    char * query_values = "(1,?,X,?),";
-    size_t query_values_len = 10; /* strlen(query_values); */
-
-    char * query_on_update = " ON DUPLICATE KEY UPDATE instance_id = VALUES(instance_id), object_id = VALUES(object_id), config_type = VALUES(config_type), command_line = VALUES(command_line)";
-    size_t query_on_update_len = 161; /* strlen(query_on_update); */
-
-    ndo_return = mysql_query(mysql_connection, "LOCK TABLES nagios_commands WRITE, nagios_objects WRITE");
-    if (ndo_return != 0) {
-        char msg[1024];
-        snprintf(msg, 1023, "ret = %d, (%d) %s", ndo_return, mysql_errno(mysql_connection), mysql_error(mysql_connection));
-        ndo_log(msg);
-        return NDO_ERROR;
-    }
-
-    strcpy(query, query_base);
-
-    loops = num_objects.commands / ndo_max_object_insert_count;
-
-    if (num_objects.commands % ndo_max_object_insert_count != 0) {
-        loops++;
-    }
-
-    /* if num commands is evenly divisible, we never need to write 
-       the query after the first time */
-    else {
-        dont_reset_query = TRUE;
-    }
-
-    write_query = TRUE;
-    loop = 1;
+    MYSQL_PREPARE();
 
     while (tmp != NULL) {
 
-        if (write_query == TRUE) {
-            memcpy(query + query_len, query_values, query_values_len);
-            query_len += query_values_len;
-        }
+        object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_COMMAND, tmp->name);
 
-        object_ids[i] = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_COMMAND, tmp->name);
+        MYSQL_RESET_BIND();
 
-        MYSQL_BIND_INT(object_ids[i]);
+        MYSQL_BIND_INT(object_id);
         MYSQL_BIND_INT(config_type);
         MYSQL_BIND_STR(tmp->command_line);
 
-        i++;
+        MYSQL_BIND_INT(object_id);
+        MYSQL_BIND_INT(config_type);
+        MYSQL_BIND_STR(tmp->command_line);
 
-        /* we need to finish the query and execute */
-        if (i >= ndo_max_object_insert_count || tmp->next == NULL) {
+        MYSQL_BIND();
+        MYSQL_EXECUTE();
 
-            if (write_query == TRUE) {
-                memcpy(query + query_len - 1, query_on_update, query_on_update_len);
-                query_len += query_on_update_len;
-            }
-
-            if (loop == 1 || loop == loops) {
-                ndo_return = mysql_stmt_prepare(ndo_stmt, query, query_len);
-                ndo_return = mysql_stmt_bind_param(ndo_stmt, ndo_bind);
-            }
-            ndo_return = mysql_stmt_execute(ndo_stmt);
-
-            ndo_bind_i = 0;
-            i = 0;
-            write_query = FALSE;
-
-            /* if we're on the second to last loop we reset to build the final query */
-            if (loop == loops - 1 && dont_reset_query == FALSE) {
-                memset(query + query_base_len, 0, MAX_SQL_BUFFER - query_base_len);
-                query_len = query_base_len;
-                write_query = TRUE;
-            }
-
-            loop++;
-        }
-    }
-
-    ndo_return = mysql_query(mysql_connection, "UNLOCK TABLES");
-    if (ndo_return != 0) {
-        char msg[1024];
-        snprintf(msg, 1023, "ret = %d, (%d) %s", ndo_return, mysql_errno(mysql_connection), mysql_error(mysql_connection));
-        ndo_log(msg);
-        return NDO_ERROR;
+        tmp = tmp->next;
     }
 
     return NDO_OK;
