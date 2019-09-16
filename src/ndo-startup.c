@@ -175,9 +175,7 @@ int ndo_write_timeperiods(int config_type)
     size_t count = 0;
     int * timeperiod_ids = NULL;
 
-    COUNT_OBJECTS(tmp, timeperiod_list, count);
-
-    timeperiod_ids = calloc(count, sizeof(int));
+    timeperiod_ids = calloc(num_objects.timeperiods, sizeof(int));
 
     MYSQL_RESET_SQL();
 
@@ -573,9 +571,7 @@ int ndo_write_contactgroups(int config_type)
     size_t count = 0;
     int * contactgroup_ids = NULL;
 
-    COUNT_OBJECTS(tmp, contactgroup_list, count);
-
-    contactgroup_ids = calloc(count, sizeof(int));
+    contactgroup_ids = calloc(num_objects.contactgroups, sizeof(int));
 
     MYSQL_RESET_SQL();
 
@@ -1101,9 +1097,7 @@ int ndo_write_hostgroups(int config_type)
     size_t count = 0;
     int * hostgroup_ids = NULL;
 
-    COUNT_OBJECTS(tmp, hostgroup_list, count);
-
-    hostgroup_ids = calloc(count, sizeof(int));
+    hostgroup_ids = calloc(num_objects.hostgroups, sizeof(int));
 
     MYSQL_RESET_SQL();
 
@@ -1601,9 +1595,7 @@ int ndo_write_servicegroups(int config_type)
     size_t count = 0;
     int * servicegroup_ids = NULL;
 
-    COUNT_OBJECTS(tmp, servicegroup_list, count);
-
-    servicegroup_ids = calloc(count, sizeof(int));
+    servicegroup_ids = calloc(num_objects.servicegroups, sizeof(int));
 
     MYSQL_RESET_SQL();
 
