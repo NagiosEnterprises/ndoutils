@@ -142,19 +142,14 @@ int ndo_write_commands(int config_type)
 
     MYSQL_RESET_SQL();
 
-    MYSQL_SET_SQL("INSERT INTO nagios_commands SET instance_id = 1, object_id = ?, config_type = ?, command_line = ? ON DUPLICATE KEY UPDATE instance_id = 1, object_id = ?, config_type = ?, command_line = ?");
+    MYSQL_SET_SQL("INSERT INTO nagios_commands (instance_id, object_id, config_type, command_line) VALUES (1,?,?,?) ON DUPLICATE KEY UPDATE instance_id = VALUES(instance_id), object_id = VALUES(object_id), config_type = VALUES(config_type), command_line = VALUES(command_line)");
 
     MYSQL_PREPARE();
+    MYSQL_RESET_BIND();
 
     while (tmp != NULL) {
 
         object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_COMMAND, tmp->name);
-
-        MYSQL_RESET_BIND();
-
-        MYSQL_BIND_INT(object_id);
-        MYSQL_BIND_INT(config_type);
-        MYSQL_BIND_STR(tmp->command_line);
 
         MYSQL_BIND_INT(object_id);
         MYSQL_BIND_INT(config_type);
@@ -186,18 +181,14 @@ int ndo_write_timeperiods(int config_type)
 
     MYSQL_RESET_SQL();
 
-    MYSQL_SET_SQL("INSERT INTO nagios_timeperiods SET instance_id = 1, timeperiod_object_id = ?, config_type = ?, alias = ? ON DUPLICATE KEY UPDATE instance_id = 1, timeperiod_object_id = ?, config_type = ?, alias = ?");
+    MYSQL_SET_SQL("INSERT INTO nagios_timeperiods (instance_id, timeperiod_object_id, config_type, alias) VALUES (1,?,?,?) ON DUPLICATE KEY UPDATE instance_id = VALUES(instance_id), timeperiod_object_id = VALUES(timeperiod_object_id), config_type = VALUES(config_type), alias = VALUES(alias)");
+
     MYSQL_PREPARE();
+    MYSQL_RESET_BIND();
 
     while (tmp != NULL) {
 
         object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_TIMEPERIOD, tmp->name);
-
-        MYSQL_RESET_BIND();
-
-        MYSQL_BIND_INT(object_id);
-        MYSQL_BIND_INT(config_type);
-        MYSQL_BIND_STR(tmp->alias);
 
         MYSQL_BIND_INT(object_id);
         MYSQL_BIND_INT(config_type);
@@ -227,20 +218,15 @@ int ndo_write_timeperiod_timeranges(int * timeperiod_ids)
 
     MYSQL_RESET_SQL();
 
-    MYSQL_SET_SQL("INSERT INTO nagios_timeperiod_timeranges SET instance_id = 1, timeperiod_id = ?, day = ?, start_sec = ?, end_sec = ? ON DUPLICATE KEY UPDATE instance_id = 1, timeperiod_id = ?, day = ?, start_sec = ?, end_sec = ?");
+    MYSQL_SET_SQL("INSERT INTO nagios_timeperiod_timeranges (instance_id, timeperiod_id, day, start_sec, end_sec) VALUES (1,?,?,?,?) ON DUPLICATE KEY UPDATE instance_id = VALUES(instance_id), timeperiod_id = VALUES(timeperiod_id), day = VALUES(day), start_sec = VALUES(start_sec), end_sec = VALUES(end_sec)");
+
     MYSQL_PREPARE();
+    MYSQL_RESET_BIND();
 
     while (tmp != NULL) {
 
         for (day = 0; day < 7; day++) {
             for (range = tmp->days[day]; range != NULL; range = range->next) {
-
-                MYSQL_RESET_BIND();
-
-                MYSQL_BIND_INT(timeperiod_ids[i]);
-                MYSQL_BIND_INT(day);
-                MYSQL_BIND_INT(range->range_start);
-                MYSQL_BIND_INT(range->range_end);
 
                 MYSQL_BIND_INT(timeperiod_ids[i]);
                 MYSQL_BIND_INT(day);
@@ -593,18 +579,14 @@ int ndo_write_contactgroups(int config_type)
 
     MYSQL_RESET_SQL();
 
-    MYSQL_SET_SQL("INSERT INTO nagios_contactgroups SET instance_id = 1, contactgroup_object_id = ?, config_type = ?, alias = ? ON DUPLICATE KEY UPDATE instance_id = 1, contactgroup_object_id = ?, config_type = ?, alias = ?");
+    MYSQL_SET_SQL("INSERT INTO nagios_contactgroups (instance_id, contactgroup_object_id, config_type, alias) VALUES (1,?,?,?) ON DUPLICATE KEY UPDATE instance_id = VALUES(instance_id), contactgroup_object_id = VALUES(contactgroup_object_id), config_type = VALUES(config_type), alias = VALUES(alias)");
+
     MYSQL_PREPARE();
+    MYSQL_RESET_BIND();
 
     while (tmp != NULL) {
 
         object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_CONTACTGROUP, tmp->group_name);
-
-        MYSQL_RESET_BIND();
-
-        MYSQL_BIND_INT(object_id);
-        MYSQL_BIND_INT(config_type);
-        MYSQL_BIND_STR(tmp->alias);
 
         MYSQL_BIND_INT(object_id);
         MYSQL_BIND_INT(config_type);
@@ -633,8 +615,10 @@ int ndo_write_contactgroup_members(int * contactgroup_ids)
 
     MYSQL_RESET_SQL();
 
-    MYSQL_SET_SQL("INSERT INTO nagios_contactgroup_members SET instance_id = 1, contactgroup_id = ?, contact_object_id = ? ON DUPLICATE KEY UPDATE instance_id = 1, contactgroup_id = ?, contact_object_id = ?");
+    MYSQL_SET_SQL("INSERT INTO nagios_contactgroup_members (instance_id, contactgroup_id, contact_object_id) VALUES (1,?,?) ON DUPLICATE KEY UPDATE instance_id = VALUES(instance_id), contactgroup_id = VALUES(contactgroup_id), contact_object_id = VALUES(contact_object_id)");
+
     MYSQL_PREPARE();
+    MYSQL_RESET_BIND();
 
     while (tmp != NULL) {
 
@@ -643,11 +627,6 @@ int ndo_write_contactgroup_members(int * contactgroup_ids)
         while (member != NULL) {
 
             object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_CONTACT, member->contact_name);
-
-            MYSQL_RESET_BIND();
-
-            MYSQL_BIND_INT(contactgroup_ids[i]);
-            MYSQL_BIND_INT(object_id);
 
             MYSQL_BIND_INT(contactgroup_ids[i]);
             MYSQL_BIND_INT(object_id);
@@ -1128,18 +1107,14 @@ int ndo_write_hostgroups(int config_type)
 
     MYSQL_RESET_SQL();
 
-    MYSQL_SET_SQL("INSERT INTO nagios_hostgroups SET instance_id = 1, hostgroup_object_id = ?, config_type = ?, alias = ? ON DUPLICATE KEY UPDATE instance_id = 1, hostgroup_object_id = ?,config_type = ?, alias = ?");
+    MYSQL_SET_SQL("INSERT INTO nagios_hostgroups (instance_id, hostgroup_object_id, config_type, alias) VALUES (1,?,?,?) ON DUPLICATE KEY UPDATE instance_id = VALUES(instance_id), hostgroup_object_id = VALUES(hostgroup_object_id), config_type = VALUES(config_type), alias = VALUES(alias)");
+
     MYSQL_PREPARE();
+    MYSQL_RESET_BIND();
 
     while (tmp != NULL) {
 
         object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_HOSTGROUP, tmp->group_name);
-
-        MYSQL_RESET_BIND();
-
-        MYSQL_BIND_INT(object_id);
-        MYSQL_BIND_INT(config_type);
-        MYSQL_BIND_STR(tmp->alias);
 
         MYSQL_BIND_INT(object_id);
         MYSQL_BIND_INT(config_type);
@@ -1168,8 +1143,10 @@ int ndo_write_hostgroup_members(int * hostgroup_ids)
 
     MYSQL_RESET_SQL();
 
-    MYSQL_SET_SQL("INSERT INTO nagios_hostgroup_members SET instance_id = 1, hostgroup_id = ?, host_object_id = ? ON DUPLICATE KEY UPDATE instance_id = 1, hostgroup_id = ?, host_object_id = ?");
+    MYSQL_SET_SQL("INSERT INTO nagios_hostgroup_members (instance_id, hostgroup_id, host_object_id) VALUES (1,?,?) ON DUPLICATE KEY UPDATE instance_id = VALUES(instance_id), hostgroup_id = VALUES(hostgroup_id), host_object_id = VALUES(host_object_id)");
+
     MYSQL_PREPARE();
+    MYSQL_RESET_BIND();
 
     while (tmp != NULL) {
 
@@ -1178,11 +1155,6 @@ int ndo_write_hostgroup_members(int * hostgroup_ids)
         while (member != NULL) {
 
             object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_HOST, member->host_name);
-
-            MYSQL_RESET_BIND();
-
-            MYSQL_BIND_INT(hostgroup_ids[i]);
-            MYSQL_BIND_INT(object_id);
 
             MYSQL_BIND_INT(hostgroup_ids[i]);
             MYSQL_BIND_INT(object_id);
@@ -1635,18 +1607,14 @@ int ndo_write_servicegroups(int config_type)
 
     MYSQL_RESET_SQL();
 
-    MYSQL_SET_SQL("INSERT INTO nagios_servicegroups SET instance_id = 1, servicegroup_object_id = ?, config_type = ?, alias = ? ON DUPLICATE KEY UPDATE instance_id = 1, servicegroup_object_id = ?,config_type = ?, alias = ?");
+    MYSQL_SET_SQL("INSERT INTO nagios_servicegroups (instance_id, servicegroup_object_id, config_type, alias) VALUES (1,?,?,?) ON DUPLICATE KEY UPDATE instance_id = VALUES(instance_id), servicegroup_object_id = VALUES(servicegroup_object_id), config_type = VALUES(config_type), alias = VALUES(alias)");
+
     MYSQL_PREPARE();
+    MYSQL_RESET_BIND();
 
     while (tmp != NULL) {
 
         object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_SERVICEGROUP, tmp->group_name);
-
-        MYSQL_RESET_BIND();
-
-        MYSQL_BIND_INT(object_id);
-        MYSQL_BIND_INT(config_type);
-        MYSQL_BIND_STR(tmp->alias);
 
         MYSQL_BIND_INT(object_id);
         MYSQL_BIND_INT(config_type);
@@ -1675,8 +1643,10 @@ int ndo_write_servicegroup_members(int * servicegroup_ids)
 
     MYSQL_RESET_SQL();
 
-    MYSQL_SET_SQL("INSERT INTO nagios_servicegroup_members SET instance_id = 1, servicegroup_id = ?, service_object_id = ? ON DUPLICATE KEY UPDATE instance_id = 1, servicegroup_id = ?, service_object_id = ?");
+    MYSQL_SET_SQL("INSERT INTO nagios_servicegroup_members (instance_id, servicegroup_id, service_object_id) VALUES (1,?,?) ON DUPLICATE KEY UPDATE instance_id = VALUES(instance_id), servicegroup_id = VALUES(servicegroup_id), service_object_id = VALUES(service_object_id)");
+
     MYSQL_PREPARE();
+    MYSQL_RESET_BIND();
 
     while (tmp != NULL) {
 
@@ -1685,11 +1655,6 @@ int ndo_write_servicegroup_members(int * servicegroup_ids)
         while (member != NULL) {
 
             object_id = ndo_get_object_id_name2(TRUE, NDO_OBJECTTYPE_SERVICE, member->host_name, member->service_description);
-
-            MYSQL_RESET_BIND();
-
-            MYSQL_BIND_INT(servicegroup_ids[i]);
-            MYSQL_BIND_INT(object_id);
 
             MYSQL_BIND_INT(servicegroup_ids[i]);
             MYSQL_BIND_INT(object_id);
@@ -1701,40 +1666,6 @@ int ndo_write_servicegroup_members(int * servicegroup_ids)
         }
 
         i++;
-        tmp = tmp->next;
-    }
-}
-
-
-int ndo_save_customvariables(int object_id, int config_type, customvariablesmember * vars)
-{
-    customvariablesmember * tmp = vars;
-
-    MYSQL_RESET_SQL();
-
-    MYSQL_SET_SQL("INSERT INTO nagios_customvariables SET instance_id = 1, object_id = ?, config_type = ?, has_been_modified = ?, varname = ?, varvalue = ? ON DUPLICATE KEY UPDATE instance_id = 1, object_id = ?, config_type = ?, has_been_modified = ?, varname = ?, varvalue = ?");
-    MYSQL_PREPARE();
-
-    while (tmp != NULL) {
-
-        // todo - probably don't need to reset each time for 1 prepared stmt
-        MYSQL_RESET_BIND();
-
-        MYSQL_BIND_INT(object_id);
-        MYSQL_BIND_INT(config_type);
-        MYSQL_BIND_INT(tmp->has_been_modified);
-        MYSQL_BIND_STR(tmp->variable_name);
-        MYSQL_BIND_STR(tmp->variable_value);
-
-        MYSQL_BIND_INT(object_id);
-        MYSQL_BIND_INT(config_type);
-        MYSQL_BIND_INT(tmp->has_been_modified);
-        MYSQL_BIND_STR(tmp->variable_name);
-        MYSQL_BIND_STR(tmp->variable_value);
-
-        MYSQL_BIND();
-        MYSQL_EXECUTE();
-
         tmp = tmp->next;
     }
 }
@@ -1755,8 +1686,10 @@ int ndo_write_hostescalations(int config_type)
 
     MYSQL_RESET_SQL();
 
-    MYSQL_SET_SQL("INSERT INTO nagios_hostescalations SET instance_id = 1, config_type = ?, host_object_id = ?, timeperiod_object_id = ?, first_notification = ?, last_notification = ?, notification_interval = ?, escalate_on_recovery = ?, escalate_on_down = ?, escalate_on_unreachable = ? ON DUPLICATE KEY UPDATE instance_id = 1, config_type = ?, host_object_id = ?, timeperiod_object_id = ?, first_notification = ?, last_notification = ?, notification_interval = ?, escalate_on_recovery = ?, escalate_on_down = ?, escalate_on_unreachable = ?");
+    MYSQL_SET_SQL("INSERT INTO nagios_hostescalations (instance_id, config_type, host_object_id, timeperiod_object_id, first_notification, last_notification, notification_interval, escalate_on_recovery, escalate_on_down, escalate_on_unreachable) VALUES (1,?,?,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE instance_id = VALUES(instance_id), config_type = VALUES(config_type), host_object_id = VALUES(host_object_id), timeperiod_object_id = VALUES(timeperiod_object_id), first_notification = VALUES(first_notification), last_notification = VALUES(last_notification), notification_interval = VALUES(notification_interval), escalate_on_recovery = VALUES(escalate_on_recovery), escalate_on_down = VALUES(escalate_on_down), escalate_on_unreachable = VALUES(escalate_on_unreachable)");
+
     MYSQL_PREPARE();
+    MYSQL_RESET_BIND();
 
     for (i = 0; i < num_objects.hostescalations; i++) {
 
@@ -1765,21 +1698,9 @@ int ndo_write_hostescalations(int config_type)
         host_object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_HOST, tmp->host_name);
         timeperiod_object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_TIMEPERIOD, tmp->escalation_period);
 
-        MYSQL_RESET_BIND();
-
         hostescalation_options[0] = flag_isset(tmp->escalation_options, OPT_RECOVERY);
         hostescalation_options[1] = flag_isset(tmp->escalation_options, OPT_DOWN);
         hostescalation_options[2] = flag_isset(tmp->escalation_options, OPT_UNREACHABLE);
-
-        MYSQL_BIND_INT(config_type);
-        MYSQL_BIND_INT(host_object_id);
-        MYSQL_BIND_INT(timeperiod_object_id);
-        MYSQL_BIND_INT(tmp->first_notification);
-        MYSQL_BIND_INT(tmp->last_notification);
-        MYSQL_BIND_FLOAT(tmp->notification_interval);
-        MYSQL_BIND_INT(hostescalation_options[0]);
-        MYSQL_BIND_INT(hostescalation_options[1]);
-        MYSQL_BIND_INT(hostescalation_options[2]);
 
         MYSQL_BIND_INT(config_type);
         MYSQL_BIND_INT(host_object_id);
@@ -1811,8 +1732,10 @@ int ndo_write_hostescalation_contactgroups(int * hostescalation_ids)
 
     MYSQL_RESET_SQL();
 
-    MYSQL_SET_SQL("INSERT INTO nagios_hostescalation_contactgroups SET instance_id = 1, hostescalation_id = ?, contactgroup_object_id = ? ON DUPLICATE KEY UPDATE instance_id = 1, hostescalation_id = ?, contactgroup_object_id = ?");
+    MYSQL_SET_SQL("INSERT INTO nagios_hostescalation_contactgroups (instance_id, hostescalation_id, contactgroup_object_id) VALUES (1,?,?) ON DUPLICATE KEY UPDATE instance_id = VALUES(instance_id), hostescalation_id = VALUES(hostescalation_id), contactgroup_object_id = VALUES(contactgroup_object_id)");
+
     MYSQL_PREPARE();
+    MYSQL_RESET_BIND();
 
     for (i = 0; i < num_objects.hostescalations; i++) {
 
@@ -1823,11 +1746,6 @@ int ndo_write_hostescalation_contactgroups(int * hostescalation_ids)
         while (group != NULL) {
 
             object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_CONTACTGROUP, group->group_name);
-
-            MYSQL_RESET_BIND();
-
-            MYSQL_BIND_INT(hostescalation_ids[i]);
-            MYSQL_BIND_INT(object_id);
 
             MYSQL_BIND_INT(hostescalation_ids[i]);
             MYSQL_BIND_INT(object_id);
@@ -1850,8 +1768,10 @@ int ndo_write_hostescalation_contacts(int * hostescalation_ids)
 
     MYSQL_RESET_SQL();
 
-    MYSQL_SET_SQL("INSERT INTO nagios_hostescalation_contacts SET instance_id = 1, hostescalation_id = ?, contact_object_id = ? ON DUPLICATE KEY UPDATE instance_id = 1, hostescalation_id = ?, contact_object_id = ?");
+    MYSQL_SET_SQL("INSERT INTO nagios_hostescalation_contacts (instance_id, hostescalation_id, contact_object_id) VALUES (1,?,?) ON DUPLICATE KEY UPDATE instance_id = VALUES(instance_id), hostescalation_id = VALUES(hostescalation_id), contact_object_id = VALUES(contact_object_id)");
+
     MYSQL_PREPARE();
+    MYSQL_RESET_BIND();
 
     for (i = 0; i < num_objects.hostescalations; i++) {
 
@@ -1862,11 +1782,6 @@ int ndo_write_hostescalation_contacts(int * hostescalation_ids)
         while (cnt != NULL) {
 
             object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_CONTACT, cnt->contact_name);
-
-            MYSQL_RESET_BIND();
-
-            MYSQL_BIND_INT(hostescalation_ids[i]);
-            MYSQL_BIND_INT(object_id);
 
             MYSQL_BIND_INT(hostescalation_ids[i]);
             MYSQL_BIND_INT(object_id);
@@ -1896,8 +1811,10 @@ int ndo_write_serviceescalations(int config_type)
 
     MYSQL_RESET_SQL();
 
-    MYSQL_SET_SQL("INSERT INTO nagios_serviceescalations SET instance_id = 1, config_type = ?, service_object_id = ?, timeperiod_object_id = ?, first_notification = ?, last_notification = ?, notification_interval = ?, escalate_on_recovery = ?, escalate_on_warning = ?, escalate_on_unknown = ?, escalate_on_critical = ? ON DUPLICATE KEY UPDATE instance_id = 1, config_type = ?, service_object_id = ?, timeperiod_object_id = ?, first_notification = ?, last_notification = ?, notification_interval = ?, escalate_on_recovery = ?, escalate_on_warning = ?, escalate_on_unknown = ?, escalate_on_critical = ?");
+    MYSQL_SET_SQL("INSERT INTO nagios_serviceescalations (instance_id, config_type, service_object_id, timeperiod_object_id, first_notification, last_notification, notification_interval, escalate_on_recovery, escalate_on_warning, escalate_on_unknown, escalate_on_critical) VALUES (1,?,?,?,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE instance_id = VALUES(instance_id), config_type = VALUES(config_type), service_object_id = VALUES(service_object_id), timeperiod_object_id = VALUES(timeperiod_object_id), first_notification = VALUES(first_notification), last_notification = VALUES(last_notification), notification_interval = VALUES(notification_interval), escalate_on_recovery = VALUES(escalate_on_recovery), escalate_on_warning = VALUES(escalate_on_warning), escalate_on_unknown = VALUES(escalate_on_unknown), escalate_on_critical = VALUES(escalate_on_critical)");
+
     MYSQL_PREPARE();
+    MYSQL_RESET_BIND();
 
     for (i = 0; i < num_objects.serviceescalations; i++) {
 
@@ -1906,23 +1823,10 @@ int ndo_write_serviceescalations(int config_type)
         service_object_id = ndo_get_object_id_name2(TRUE, NDO_OBJECTTYPE_SERVICE, tmp->host_name, tmp->description);
         timeperiod_object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_TIMEPERIOD, tmp->escalation_period);
 
-        MYSQL_RESET_BIND();
-
         serviceescalation_options[0] = flag_isset(tmp->escalation_options, OPT_RECOVERY);
         serviceescalation_options[1] = flag_isset(tmp->escalation_options, OPT_WARNING);
         serviceescalation_options[2] = flag_isset(tmp->escalation_options, OPT_UNKNOWN);
         serviceescalation_options[3] = flag_isset(tmp->escalation_options, OPT_CRITICAL);
-
-        MYSQL_BIND_INT(config_type);
-        MYSQL_BIND_INT(service_object_id);
-        MYSQL_BIND_INT(timeperiod_object_id);
-        MYSQL_BIND_INT(tmp->first_notification);
-        MYSQL_BIND_INT(tmp->last_notification);
-        MYSQL_BIND_FLOAT(tmp->notification_interval);
-        MYSQL_BIND_INT(serviceescalation_options[0]);
-        MYSQL_BIND_INT(serviceescalation_options[1]);
-        MYSQL_BIND_INT(serviceescalation_options[2]);
-        MYSQL_BIND_INT(serviceescalation_options[3]);
 
         MYSQL_BIND_INT(config_type);
         MYSQL_BIND_INT(service_object_id);
@@ -1955,8 +1859,10 @@ int ndo_write_serviceescalation_contactgroups(int * serviceescalation_ids)
 
     MYSQL_RESET_SQL();
 
-    MYSQL_SET_SQL("INSERT INTO nagios_serviceescalation_contactgroups SET instance_id = 1, serviceescalation_id = ?, contactgroup_object_id = ? ON DUPLICATE KEY UPDATE instance_id = 1, serviceescalation_id = ?, contactgroup_object_id = ?");
+    MYSQL_SET_SQL("INSERT INTO nagios_serviceescalation_contactgroups (instance_id, serviceescalation_id, contactgroup_object_id) VALUES (1,?,?) ON DUPLICATE KEY UPDATE instance_id = VALUES(instance_id), serviceescalation_id = VALUES(serviceescalation_id), contactgroup_object_id = VALUES(contactgroup_object_id)");
+
     MYSQL_PREPARE();
+    MYSQL_RESET_BIND();
 
     for (i = 0; i < num_objects.serviceescalations; i++) {
 
@@ -1967,11 +1873,6 @@ int ndo_write_serviceescalation_contactgroups(int * serviceescalation_ids)
         while (group != NULL) {
 
             object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_CONTACTGROUP, group->group_name);
-
-            MYSQL_RESET_BIND();
-
-            MYSQL_BIND_INT(serviceescalation_ids[i]);
-            MYSQL_BIND_INT(object_id);
 
             MYSQL_BIND_INT(serviceescalation_ids[i]);
             MYSQL_BIND_INT(object_id);
@@ -1994,8 +1895,10 @@ int ndo_write_serviceescalation_contacts(int * serviceescalation_ids)
 
     MYSQL_RESET_SQL();
 
-    MYSQL_SET_SQL("INSERT INTO nagios_serviceescalation_contacts SET instance_id = 1, serviceescalation_id = ?, contact_object_id = ? ON DUPLICATE KEY UPDATE instance_id = 1, serviceescalation_id = ?, contact_object_id = ?");
+    MYSQL_SET_SQL("INSERT INTO nagios_serviceescalation_contacts (instance_id, serviceescalation_id, contact_object_id) VALUES (1,?,?) ON DUPLICATE KEY UPDATE instance_id = VALUES(instance_id), serviceescalation_id = VALUES(serviceescalation_id), contact_object_id = VALUES(contact_object_id)");
+
     MYSQL_PREPARE();
+    MYSQL_RESET_BIND();
 
     for (i = 0; i < num_objects.serviceescalations; i++) {
 
@@ -2006,11 +1909,6 @@ int ndo_write_serviceescalation_contacts(int * serviceescalation_ids)
         while (cnt != NULL) {
 
             object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_CONTACT, cnt->contact_name);
-
-            MYSQL_RESET_BIND();
-
-            MYSQL_BIND_INT(serviceescalation_ids[i]);
-            MYSQL_BIND_INT(object_id);
 
             MYSQL_BIND_INT(serviceescalation_ids[i]);
             MYSQL_BIND_INT(object_id);
@@ -2036,8 +1934,10 @@ int ndo_write_hostdependencies(int config_type)
 
     MYSQL_RESET_SQL();
 
-    MYSQL_SET_SQL("INSERT INTO nagios_hostdependencies SET instance_id = 1, config_type = ?, host_object_id = ?, dependent_host_object_id = ?, dependency_type = ?, inherits_parent = ?, timeperiod_object_id = ?, fail_on_up = ?, fail_on_down = ?, fail_on_unreachable = ? ON DUPLICATE KEY UPDATE instance_id = 1, config_type = ?, host_object_id = ?, dependent_host_object_id = ?, dependency_type = ?, inherits_parent = ?, timeperiod_object_id = ?, fail_on_up = ?, fail_on_down = ?, fail_on_unreachable = ?");
+    MYSQL_SET_SQL("INSERT INTO nagios_hostdependencies (instance_id, config_type, host_object_id, dependent_host_object_id, dependency_type, inherits_parent, timeperiod_object_id, fail_on_up, fail_on_down, fail_on_unreachable) VALUES (1,?,?,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE instance_id = VALUES(instance_id), config_type = VALUES(config_type), host_object_id = VALUES(host_object_id), dependent_host_object_id = VALUES(dependent_host_object_id), dependency_type = VALUES(dependency_type), inherits_parent = VALUES(inherits_parent), timeperiod_object_id = VALUES(timeperiod_object_id), fail_on_up = VALUES(fail_on_up), fail_on_down = VALUES(fail_on_down), fail_on_unreachable = VALUES(fail_on_unreachable)");
+
     MYSQL_PREPARE();
+    MYSQL_RESET_BIND();
 
     for (i = 0; i < num_objects.hostdependencies; i++) {
 
@@ -2047,21 +1947,9 @@ int ndo_write_hostdependencies(int config_type)
         dependent_host_object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_HOST, tmp->dependent_host_name);
         timeperiod_object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_TIMEPERIOD, tmp->dependency_period);
 
-        MYSQL_RESET_BIND();
-
         hostdependency_options[0] = flag_isset(tmp->failure_options, OPT_UP);
         hostdependency_options[1] = flag_isset(tmp->failure_options, OPT_DOWN);
         hostdependency_options[2] = flag_isset(tmp->failure_options, OPT_UNREACHABLE);
-
-        MYSQL_BIND_INT(config_type);
-        MYSQL_BIND_INT(host_object_id);
-        MYSQL_BIND_INT(dependent_host_object_id);
-        MYSQL_BIND_INT(tmp->dependency_type);
-        MYSQL_BIND_INT(tmp->inherits_parent);
-        MYSQL_BIND_INT(timeperiod_object_id);
-        MYSQL_BIND_INT(hostdependency_options[0]);
-        MYSQL_BIND_INT(hostdependency_options[1]);
-        MYSQL_BIND_INT(hostdependency_options[2]);
 
         MYSQL_BIND_INT(config_type);
         MYSQL_BIND_INT(host_object_id);
@@ -2091,8 +1979,10 @@ int ndo_write_servicedependencies(int config_type)
 
     MYSQL_RESET_SQL();
 
-    MYSQL_SET_SQL("INSERT INTO nagios_servicedependencies SET instance_id = 1, config_type = ?, service_object_id = ?, dependent_service_object_id = ?, dependency_type = ?, inherits_parent = ?, timeperiod_object_id = ?, fail_on_up = ?, fail_on_down = ?, fail_on_unreachable = ? ON DUPLICATE KEY UPDATE instance_id = 1, config_type = ?, service_object_id = ?, dependent_service_object_id = ?, dependency_type = ?, inherits_parent = ?, timeperiod_object_id = ?, fail_on_up = ?, fail_on_down = ?, fail_on_unreachable = ?");
+    MYSQL_SET_SQL("INSERT INTO nagios_servicedependencies (instance_id, config_type, service_object_id, dependent_service_object_id, dependency_type, inherits_parent, timeperiod_object_id, fail_on_ok, fail_on_warning, fail_on_unknown, fail_on_critical) VALUES (1,?,?,?,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE instance_id = VALUES(instance_id), config_type = VALUES(config_type), service_object_id = VALUES(service_object_id), dependent_service_object_id = VALUES(dependent_service_object_id), dependency_type = VALUES(dependency_type), inherits_parent = VALUES(inherits_parent), timeperiod_object_id = VALUES(timeperiod_object_id), fail_on_ok = VALUES(fail_on_ok), fail_on_warning = VALUES(fail_on_warning), fail_on_unknown = VALUES(fail_on_unknown), fail_on_critical = VALUES(fail_on_critical)");
+
     MYSQL_PREPARE();
+    MYSQL_RESET_BIND();
 
     for (i = 0; i < num_objects.servicedependencies; i++) {
 
@@ -2102,23 +1992,10 @@ int ndo_write_servicedependencies(int config_type)
         dependent_service_object_id = ndo_get_object_id_name2(TRUE, NDO_OBJECTTYPE_SERVICE, tmp->dependent_host_name, tmp->dependent_service_description);
         timeperiod_object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_TIMEPERIOD, tmp->dependency_period);
 
-        MYSQL_RESET_BIND();
-
         servicedependency_options[0] = flag_isset(tmp->failure_options, OPT_OK);
         servicedependency_options[1] = flag_isset(tmp->failure_options, OPT_WARNING);
         servicedependency_options[2] = flag_isset(tmp->failure_options, OPT_UNKNOWN);
         servicedependency_options[3] = flag_isset(tmp->failure_options, OPT_CRITICAL);
-
-        MYSQL_BIND_INT(config_type);
-        MYSQL_BIND_INT(service_object_id);
-        MYSQL_BIND_INT(dependent_service_object_id);
-        MYSQL_BIND_INT(tmp->dependency_type);
-        MYSQL_BIND_INT(tmp->inherits_parent);
-        MYSQL_BIND_INT(timeperiod_object_id);
-        MYSQL_BIND_INT(servicedependency_options[0]);
-        MYSQL_BIND_INT(servicedependency_options[1]);
-        MYSQL_BIND_INT(servicedependency_options[2]);
-        MYSQL_BIND_INT(servicedependency_options[3]);
 
         MYSQL_BIND_INT(config_type);
         MYSQL_BIND_INT(service_object_id);

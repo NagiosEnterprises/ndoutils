@@ -74,7 +74,6 @@ int ndo_write_config_files();
 int ndo_write_config(int type);
 int ndo_write_runtime_variables();
 
-int ndo_save_customvariables(int object_id, int config_type, customvariablesmember * vars);
 
 void ndo_process_config_line(char * line);
 int ndo_process_config_file();
@@ -206,28 +205,6 @@ int ndo_write_hostdependencies(int config_type);
 int ndo_write_servicedependencies(int config_type);
 
 MYSQL * mysql_connection;
-
-
-#define COUNT_OBJECTS(objvar, listvar, countvar) \
-do { \
-    while (objvar != NULL) { \
-        countvar++; \
-        objvar = objvar->next; \
-    } \
-    objvar = listvar; \
-} while (0)
-
-
-
-
-#define SAVE_CUSTOMVARIABLES(objvar, objidvar, objtype, customvars, i) \
-do { \
-    while (objvar != NULL) { \
-        ndo_save_customvariables(objidvar[i], objtype, customvars); \
-        i++; \
-        objvar = objvar->next; \
-    } \
-} while(0)
 
 
 
