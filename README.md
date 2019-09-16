@@ -48,6 +48,27 @@ As we get closer to alpha, more documentation will be provided regarding contrib
 
 ## Contributing
 
+If you wish to help out with this branch before it makes it to pre-alpha:
+
+* **First, you must Have a sane build environment**
+
+Then, getting everything built and installed should be rather easy:
+
+1. `git clone https://github.com/NagiosEnterprises/ndoutils.git`
+1. `git checkout ndo-3` (checkout the right branch)
+1. `autoconf` (generate configure and makefiles)
+1. `./configure --enable-testing` (if you're helping, you should enable debugging)
+1. `make inittest` (this initializes the database with user `ndo`, pass `ndo`, and database `ndo`)
+1. `make ndo.so` (compile the neb module)
+1. `cp src/ndo.so /usr/local/nagios/bin/` (copy compiled neb module to nagios space)
+1. `cp config/ndo.cfg-sample /usr/local/nagios/etc/ndo.cfg` (copy over new config)
+1. `echo "broker_module=/usr/local/nagios/bin/ndo.so /usr/local/nagios/etc/ndo.cfg"` (enable the broker module and point to new config)
+1. `sed -i 's/^broker_module.*ndomod.cfg.*/#&/' /usr/local/nagios/etc/nagios.cfg` (this gets rid of any previous ndo configs)
+
+Then, from there - you can either create Issues or Pull Requests - or if you have a question you can reach us at devteam@nagios.com.
+
+You can also read some of the [development notes in src/README.md](https://github.com/NagiosEnterprises/ndoutils/blob/ndo-3/src/README.md).
+
 This is mainly here for posterity and our own development teams sake, but when adding functions/conditionals/etc. that reference the broker data (e.g.: log data, host status data, etc) - the preference is to keep each list in the same order. That order is officially based off the order of the broker functions from `nagioscore/base/broker.c`:
 
 1. `program_state`

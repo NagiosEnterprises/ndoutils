@@ -331,7 +331,6 @@ int ndo_write_timeperiod_timeranges(int * timeperiod_ids)
 int ndo_write_contacts(int config_type)
 {
     contact * tmp = contact_list;
-    int object_id = 0;
     int i = 0;
 
     int loops = 0;
@@ -342,10 +341,10 @@ int ndo_write_contacts(int config_type)
     size_t cur_pos = 0;
 
     int object_ids[MAX_OBJECT_INSERT] = { 0 };
+    int host_timeperiod_object_id[MAX_OBJECT_INSERT] = { 0 };
+    int service_timeperiod_object_id[MAX_OBJECT_INSERT] = { 0 };
 
     int notify_options[11] = { 0 };
-    int host_timeperiod_object_id = 0;
-    int service_timeperiod_object_id = 0;
 
     char query[MAX_SQL_BUFFER] = { 0 };
 
@@ -353,10 +352,10 @@ int ndo_write_contacts(int config_type)
     size_t query_base_len = 532; /* strlen(query_base); */
     size_t query_len = query_base_len;
 
-    char * query_values = "(1,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?),";
+    char * query_values = "(1,?,?,?,?,?,?,?,X,X,X,X,X,X,X,X,X,X,X,X,X,X,?),";
     size_t query_values_len = 48; /* strlen(query_values); */
 
-    char * query_on_duplicate = " ON DUPLICATE KEY UPDATE instance_id = VALUES(instance_id), config_type = VALUES(config_type), contact_object_id = VALUES(contact_object_id), alias = VALUES(alias), email_address = VALUES(email_address), pager_address = VALUES(pager_address), host_timeperiod_object_id = VALUES(host_timeperiod_object_id), service_timeperiod_object_id = VALUES(service_timeperiod_object_id), host_notifications_enabled = VALUES(host_notifications_enabled), service_notifications_enabled = VALUES(service_notifications_enabled), can_submit_commands = VALUES(can_submit_commands), notify_service_recovery = VALUES(notify_service_recovery), notify_service_warning = VALUES(notify_service_warning), notify_service_unknown = VALUES(notify_service_unknown), notify_service_critical = VALUES(notify_service_critical), notify_service_flapping = VALUES(notify_service_flapping), notify_service_downtime = VALUES(notify_service_downtime), notify_host_recovery = VALUES(notify_host_recovery), notify_host_down = VALUES(notify_host_down), notify_host_unreachable = VALUES(notify_host_unreachable), notify_host_flapping = VALUES(notify_host_flapping), notify_host_downtime = VALUES(notify_host_downtime), minimum_importance = VALUES(minimum_importance)";
+    char * query_on_update = " ON DUPLICATE KEY UPDATE instance_id = VALUES(instance_id), config_type = VALUES(config_type), contact_object_id = VALUES(contact_object_id), alias = VALUES(alias), email_address = VALUES(email_address), pager_address = VALUES(pager_address), host_timeperiod_object_id = VALUES(host_timeperiod_object_id), service_timeperiod_object_id = VALUES(service_timeperiod_object_id), host_notifications_enabled = VALUES(host_notifications_enabled), service_notifications_enabled = VALUES(service_notifications_enabled), can_submit_commands = VALUES(can_submit_commands), notify_service_recovery = VALUES(notify_service_recovery), notify_service_warning = VALUES(notify_service_warning), notify_service_unknown = VALUES(notify_service_unknown), notify_service_critical = VALUES(notify_service_critical), notify_service_flapping = VALUES(notify_service_flapping), notify_service_downtime = VALUES(notify_service_downtime), notify_host_recovery = VALUES(notify_host_recovery), notify_host_down = VALUES(notify_host_down), notify_host_unreachable = VALUES(notify_host_unreachable), notify_host_flapping = VALUES(notify_host_flapping), notify_host_downtime = VALUES(notify_host_downtime), minimum_importance = VALUES(minimum_importance)";
     size_t query_on_update_len = 1222; /* strlen(query_on_update); */
 
     ndo_return = mysql_query(mysql_connection, "LOCK TABLES nagios_logentries WRITE, nagios_objects WRITE, nagios_contacts WRITE");
@@ -388,14 +387,20 @@ int ndo_write_contacts(int config_type)
 
     while (tmp != NULL) {
 
-        object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_CONTACT, tmp->name);
-        object_ids[i] = object_id;
+        if (write_query == TRUE) {
+            memcpy(query + query_len, query_values, query_values_len);
+            query_len += query_values_len;
+        }
+        /* put our "cursor" at the beginning of whichever query_values we are at
+           specifically at the '(' character of current values section */
+        cur_pos = query_base_len + (i * query_values_len);
 
-        host_timeperiod_object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_TIMEPERIOD, tmp->host_notification_period);
-        service_timeperiod_object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_TIMEPERIOD, tmp->service_notification_period);
+        object_ids[i] = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_CONTACT, tmp->name);
 
-        MYSQL_RESET_BIND();
+        host_timeperiod_object_id[i] = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_TIMEPERIOD, tmp->host_notification_period);
+        service_timeperiod_object_id[i] = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_TIMEPERIOD, tmp->service_notification_period);
 
+        /*
         notify_options[0] = flag_isset(tmp->service_notification_options, OPT_RECOVERY);
         notify_options[1] = flag_isset(tmp->service_notification_options, OPT_WARNING);
         notify_options[2] = flag_isset(tmp->service_notification_options, OPT_UNKNOWN);
@@ -407,17 +412,39 @@ int ndo_write_contacts(int config_type)
         notify_options[8] = flag_isset(tmp->host_notification_options, OPT_UNREACHABLE);
         notify_options[9] = flag_isset(tmp->host_notification_options, OPT_FLAPPING);
         notify_options[10] = flag_isset(tmp->host_notification_options, OPT_DOWNTIME);
+        */
 
         MYSQL_BIND_INT(config_type);
-        MYSQL_BIND_INT(object_id);
+        MYSQL_BIND_INT(object_ids[i]);
         MYSQL_BIND_STR(tmp->alias);
         MYSQL_BIND_STR(tmp->email);
         MYSQL_BIND_STR(tmp->pager);
-        MYSQL_BIND_INT(host_timeperiod_object_id);
-        MYSQL_BIND_INT(service_timeperiod_object_id);
+        MYSQL_BIND_INT(host_timeperiod_object_id[i]);
+        MYSQL_BIND_INT(service_timeperiod_object_id[i]);
+
+        UPDATE_QUERY_X_POS(query, cur_pos, 17, tmp->host_notifications_enabled);
+        UPDATE_QUERY_X_POS(query, cur_pos, 19, tmp->service_notifications_enabled);
+        UPDATE_QUERY_X_POS(query, cur_pos, 21, tmp->can_submit_commands);
+
+        /*
         MYSQL_BIND_INT(tmp->host_notifications_enabled);
         MYSQL_BIND_INT(tmp->service_notifications_enabled);
         MYSQL_BIND_INT(tmp->can_submit_commands);
+        */
+
+        UPDATE_QUERY_X_POS(query, cur_pos, 17, flag_isset(tmp->service_notification_options, OPT_RECOVERY));
+        UPDATE_QUERY_X_POS(query, cur_pos, 19, flag_isset(tmp->service_notification_options, OPT_WARNING));
+        UPDATE_QUERY_X_POS(query, cur_pos, 21, flag_isset(tmp->service_notification_options, OPT_UNKNOWN));
+        UPDATE_QUERY_X_POS(query, cur_pos, 23, flag_isset(tmp->service_notification_options, OPT_CRITICAL));
+        UPDATE_QUERY_X_POS(query, cur_pos, 25, flag_isset(tmp->service_notification_options, OPT_FLAPPING));
+        UPDATE_QUERY_X_POS(query, cur_pos, 27, flag_isset(tmp->service_notification_options, OPT_DOWNTIME));
+        UPDATE_QUERY_X_POS(query, cur_pos, 29, flag_isset(tmp->host_notification_options, OPT_RECOVERY));
+        UPDATE_QUERY_X_POS(query, cur_pos, 31, flag_isset(tmp->host_notification_options, OPT_DOWN));
+        UPDATE_QUERY_X_POS(query, cur_pos, 33, flag_isset(tmp->host_notification_options, OPT_UNREACHABLE));
+        UPDATE_QUERY_X_POS(query, cur_pos, 35, flag_isset(tmp->host_notification_options, OPT_FLAPPING));
+        UPDATE_QUERY_X_POS(query, cur_pos, 37, flag_isset(tmp->host_notification_options, OPT_DOWNTIME));
+
+        /*
         MYSQL_BIND_INT(notify_options[0]);
         MYSQL_BIND_INT(notify_options[1]);
         MYSQL_BIND_INT(notify_options[2]);
@@ -429,128 +456,195 @@ int ndo_write_contacts(int config_type)
         MYSQL_BIND_INT(notify_options[8]);
         MYSQL_BIND_INT(notify_options[9]);
         MYSQL_BIND_INT(notify_options[10]);
+        */
+
         MYSQL_BIND_INT(tmp->minimum_value);
 
-        MYSQL_BIND_INT(config_type);
-        MYSQL_BIND_INT(object_id);
-        MYSQL_BIND_STR(tmp->alias);
-        MYSQL_BIND_STR(tmp->email);
-        MYSQL_BIND_STR(tmp->pager);
-        MYSQL_BIND_INT(host_timeperiod_object_id);
-        MYSQL_BIND_INT(service_timeperiod_object_id);
-        MYSQL_BIND_INT(tmp->host_notifications_enabled);
-        MYSQL_BIND_INT(tmp->service_notifications_enabled);
-        MYSQL_BIND_INT(tmp->can_submit_commands);
-        MYSQL_BIND_INT(notify_options[0]);
-        MYSQL_BIND_INT(notify_options[1]);
-        MYSQL_BIND_INT(notify_options[2]);
-        MYSQL_BIND_INT(notify_options[3]);
-        MYSQL_BIND_INT(notify_options[4]);
-        MYSQL_BIND_INT(notify_options[5]);
-        MYSQL_BIND_INT(notify_options[6]);
-        MYSQL_BIND_INT(notify_options[7]);
-        MYSQL_BIND_INT(notify_options[8]);
-        MYSQL_BIND_INT(notify_options[9]);
-        MYSQL_BIND_INT(notify_options[10]);
-        MYSQL_BIND_INT(tmp->minimum_value);
-
-        MYSQL_BIND();
-        MYSQL_EXECUTE();
-
-        contact_ids[i] = mysql_insert_id(mysql_connection);
         i++;
+
+        /* we need to finish the query and execute */
+        if (i >= ndo_max_object_insert_count || tmp->next == NULL) {
+
+            if (write_query == TRUE) {
+                memcpy(query + query_len - 1, query_on_update, query_on_update_len);
+                query_len += query_on_update_len;
+            }
+
+            if (loop == 1 || loop == loops) {
+                ndo_return = mysql_stmt_prepare(ndo_stmt, query, query_len);
+                ndo_return = mysql_stmt_bind_param(ndo_stmt, ndo_bind);
+            }
+            ndo_return = mysql_stmt_execute(ndo_stmt);
+
+            ndo_bind_i = 0;
+            i = 0;
+            write_query = FALSE;
+
+            /* if we're on the second to last loop we reset to build the final query */
+            if (loop == loops - 1 && dont_reset_query == FALSE) {
+                memset(query + query_base_len, 0, MAX_SQL_BUFFER - query_base_len);
+                query_len = query_base_len;
+                write_query = TRUE;
+            }
+
+            loop++;
+        }
+
         tmp = tmp->next;
     }
 
-    ndo_write_contact_addresses(contact_ids);
-    ndo_write_contact_notificationcommands(contact_ids);
-    SAVE_CUSTOMVARIABLES(tmp, object_ids, NDO_OBJECTTYPE_CONTACT, tmp->custom_variables, i);
+    ndo_return = mysql_query(mysql_connection, "UNLOCK TABLES");
+    if (ndo_return != 0) {
+        char msg[1024];
+        snprintf(msg, 1023, "ret = %d, (%d) %s", ndo_return, mysql_errno(mysql_connection), mysql_error(mysql_connection));
+        ndo_log(msg);
+    }
 
-    free(contact_ids);
-    free(object_ids);
+    ndo_write_contact_objects(config_type);
+
+    return NDO_OK;
 }
 
 
-int ndo_write_contact_addresses(int * contact_ids)
+int ndo_write_contact_objects(int config_type)
 {
     contact * tmp = contact_list;
-    int i = 0;
 
     int address_number = 0;
+    commandsmember * cmd = NULL;
+    customvariablesmember * var = NULL;
 
-    MYSQL_RESET_SQL();
+    int host_notification_command_type = NDO_DATA_HOSTNOTIFICATIONCOMMAND;
+    int service_notification_command_type = NDO_DATA_SERVICENOTIFICATIONCOMMAND;
 
-    MYSQL_SET_SQL("INSERT INTO nagios_contact_addresses SET instance_id = 1, contact_id = ?, address_number = ?, address = ? ON DUPLICATE KEY UPDATE instance_id = 1, contact_id = ?, address_number = ?, address = ?");
-    MYSQL_PREPARE();
+    int addresses_count = 0;
+    char addresses_query[MAX_SQL_BUFFER] = { 0 };
+    char * addresses_query_base = "INSERT INTO nagios_contact_addresses (instance_id, contact_id, address_number, address) VALUES ";
+    size_t addresses_query_base_len = 95; /* strlen(addresses_query_base); */
+    size_t addresses_query_len = addresses_query_base_len;
+    char * addresses_query_values = "(1,(SELECT object_id FROM nagios_objects WHERE objecttype_id = 10 AND name1 = ?),?,?),";
+    size_t addresses_query_values_len = 86; /* strlen(addresses_query_values); */
+    char * addresses_query_on_update = " ON DUPLICATE KEY UPDATE instance_id = VALUES(instance_id), contact_id = VALUES(contact_id), address_number = VALUES(address_number), address = VALUES(address)";
+    size_t addresses_query_on_update_len = 159; /* strlen(var_query_on_update); */
+
+    int notificationcommands_count = 0;
+    char notificationcommands_query[MAX_SQL_BUFFER] = { 0 };
+    char * notificationcommands_query_base = "INSERT INTO nagios_contact_notificationcommands (instance_id, contact_id, notification_type, command_object_id) VALUES ";
+    size_t notificationcommands_query_base_len = 119; /* strlen(notificationcommands_query_base); */
+    size_t notificationcommands_query_len = notificationcommands_query_base_len;
+    char * notificationcommands_query_values = "(1,(SELECT object_id FROM nagios_objects WHERE objecttype_id = 10 AND name1 = ?),?,(SELECT object_id FROM nagios_objects WHERE objecttype_id = 12 AND name1 = ?)),";
+    size_t notificationcommands_query_values_len = 162; /* strlen(notificationcommands_query_values); */
+    char * notificationcommands_query_on_update = " ON DUPLICATE KEY UPDATE instance_id = VALUES(instance_id), contact_id = VALUES(contact_id), notification_type = VALUES(notification_type), command_object_id = VALUES(command_object_id)";
+    size_t notificationcommands_query_on_update_len = 185; /* strlen(var_query_on_update); */
+
+    int var_count = 0;
+    char var_query[MAX_SQL_BUFFER] = { 0 };
+    char * var_query_base = "INSERT INTO nagios_customvariables (instance_id, object_id, config_type, has_been_modified, varname, varvalue) VALUES ";
+    size_t var_query_base_len = 118; /* strlen(var_query_base); */
+    size_t var_query_len = var_query_base_len;
+    char * var_query_values = "(1,(SELECT object_id FROM nagios_objects WHERE objecttype_id = 1 AND name1 = ?),?,?,?,?),";
+    size_t var_query_values_len = 89; /* strlen(var_query_values); */
+    char * var_query_on_update = " ON DUPLICATE KEY UPDATE instance_id = VALUES(instance_id), object_id = VALUES(object_id), config_type = VALUES(config_type), has_been_modified = VALUES(has_been_modified), varname = VALUES(varname), varvalue = VALUES(varvalue)";
+    size_t var_query_on_update_len = 227; /* strlen(var_query_on_update); */
+
+    ndo_stmt_new[WRITE_CONTACT_ADDRESSES] = mysql_stmt_init(mysql_connection);
+    ndo_stmt_new[WRITE_CONTACT_NOTIFICATIONCOMMANDS] = mysql_stmt_init(mysql_connection);
+    ndo_stmt_new[WRITE_CUSTOMVARS] = mysql_stmt_init(mysql_connection);
+
+    MYSQL_RESET_BIND_NEW(WRITE_CONTACT_ADDRESSES);
+    MYSQL_RESET_BIND_NEW(WRITE_CONTACT_NOTIFICATIONCOMMANDS);
+    MYSQL_RESET_BIND_NEW(WRITE_CUSTOMVARS);
+
+    strcpy(addresses_query, addresses_query_base);
+    strcpy(notificationcommands_query, notificationcommands_query_base);
+    strcpy(var_query, var_query_base);
 
     while (tmp != NULL) {
 
         for (address_number = 1; address_number < (MAX_CONTACT_ADDRESSES + 1); address_number++) {
 
-            MYSQL_RESET_BIND();
+            strcpy(addresses_query + addresses_query_len, addresses_query_values);
+            addresses_query_len += addresses_query_values_len;
 
-            MYSQL_BIND_INT(contact_ids[i]);
-            MYSQL_BIND_INT(address_number);
-            MYSQL_BIND_STR(tmp->address[address_number - 1]);
+            MYSQL_BIND_NEW_STR(WRITE_CONTACT_ADDRESSES, tmp->name);
+            MYSQL_BIND_NEW_INT(WRITE_CONTACT_ADDRESSES, address_number);
+            MYSQL_BIND_NEW_STR(WRITE_CONTACT_ADDRESSES, tmp->address[address_number - 1]);
 
-            MYSQL_BIND_INT(contact_ids[i]);
-            MYSQL_BIND_INT(address_number);
-            MYSQL_BIND_STR(tmp->address[address_number - 1]);
+            addresses_count++;
 
-            MYSQL_BIND();
-            MYSQL_EXECUTE();
+            if (addresses_count >= ndo_max_object_insert_count) {
+                send_subquery(WRITE_CONTACT_ADDRESSES, &addresses_count, addresses_query, addresses_query_on_update, &addresses_query_len, addresses_query_base_len, addresses_query_on_update_len);
+            }
         }
 
-        i++;
-        tmp = tmp->next;        
+        cmd = tmp->host_notification_commands;
+        while (cmd != NULL) {
+
+            MYSQL_BIND_NEW_STR(WRITE_CONTACT_NOTIFICATIONCOMMANDS, tmp->name);
+            MYSQL_BIND_NEW_INT(WRITE_CONTACT_NOTIFICATIONCOMMANDS, host_notification_command_type);
+            MYSQL_BIND_NEW_STR(WRITE_CONTACT_NOTIFICATIONCOMMANDS, cmd->command);
+
+            cmd = cmd->next;
+            notificationcommands_count++;
+
+            if (notificationcommands_count >= ndo_max_object_insert_count) {
+                send_subquery(WRITE_CONTACT_NOTIFICATIONCOMMANDS, &notificationcommands_count, notificationcommands_query, notificationcommands_query_on_update, &notificationcommands_query_len, notificationcommands_query_base_len, notificationcommands_query_on_update_len);
+            }
+        }
+
+        cmd = tmp->service_notification_commands;
+        while (cmd != NULL) {
+
+            MYSQL_BIND_NEW_STR(WRITE_CONTACT_NOTIFICATIONCOMMANDS, tmp->name);
+            MYSQL_BIND_NEW_INT(WRITE_CONTACT_NOTIFICATIONCOMMANDS, service_notification_command_type);
+            MYSQL_BIND_NEW_STR(WRITE_CONTACT_NOTIFICATIONCOMMANDS, cmd->command);
+
+            cmd = cmd->next;
+            notificationcommands_count++;
+
+            if (notificationcommands_count >= ndo_max_object_insert_count) {
+                send_subquery(WRITE_CONTACT_NOTIFICATIONCOMMANDS, &notificationcommands_count, notificationcommands_query, notificationcommands_query_on_update, &notificationcommands_query_len, notificationcommands_query_base_len, notificationcommands_query_on_update_len);
+            }
+        }
+
+        var = tmp->custom_variables;
+        while (var != NULL) {
+
+            strcpy(var_query + var_query_len, var_query_values);
+            var_query_len += var_query_values_len;
+
+            MYSQL_BIND_NEW_STR(WRITE_CUSTOMVARS, tmp->name);
+            MYSQL_BIND_NEW_INT(WRITE_CUSTOMVARS, config_type);
+            MYSQL_BIND_NEW_INT(WRITE_CUSTOMVARS, var->has_been_modified);
+            MYSQL_BIND_NEW_STR(WRITE_CUSTOMVARS, var->variable_name);
+            MYSQL_BIND_NEW_STR(WRITE_CUSTOMVARS, var->variable_value);
+
+            var = var->next;
+            var_count++;
+
+            if (var_count >= ndo_max_object_insert_count) {
+                send_subquery(WRITE_CUSTOMVARS, &var_count, var_query, var_query_on_update, &var_query_len, var_query_base_len, var_query_on_update_len);
+            }
+        }
+
+        if (addresses_count > 0 && (addresses_count >= ndo_max_object_insert_count || tmp->next == NULL)) {
+            send_subquery(WRITE_CONTACT_ADDRESSES, &addresses_count, addresses_query, addresses_query_on_update, &addresses_query_len, addresses_query_base_len, addresses_query_on_update_len);
+        }
+
+        if (notificationcommands_count > 0 && (notificationcommands_count >= ndo_max_object_insert_count || tmp->next == NULL)) {
+            send_subquery(WRITE_CONTACT_NOTIFICATIONCOMMANDS, &notificationcommands_count, notificationcommands_query, notificationcommands_query_on_update, &notificationcommands_query_len, notificationcommands_query_base_len, notificationcommands_query_on_update_len);
+        }
+
+        if (var_count > 0 && (var_count >= ndo_max_object_insert_count || tmp->next == NULL)) {
+            send_subquery(WRITE_CUSTOMVARS, &var_count, var_query, var_query_on_update, &var_query_len, var_query_base_len, var_query_on_update_len);
+        }
+
+        tmp = tmp->next;
     }
-}
 
-
-int ndo_write_contact_notificationcommands(int * contact_ids)
-{
-    contact * tmp = contact_list;
-    commandsmember * cmd = NULL;
-    int object_id = 0;
-    int i = 0;
-
-    MYSQL_RESET_SQL();
-
-    MYSQL_SET_SQL("INSERT INTO nagios_contact_notificationcommands SET instance_id = 1, contact_id = ?, notification_type = ?, command_object_id = ? ON DUPLICATE KEY UPDATE instance_id = 1, contact_id = ?, notification_type = ?, command_object_id = ?");
-    MYSQL_PREPARE();
-
-    while (tmp != NULL) {
-
-        ndo_write_contact_notificationcommands_cmd(tmp->host_notification_commands, NDO_DATA_HOSTNOTIFICATIONCOMMAND, contact_ids, i);
-        ndo_write_contact_notificationcommands_cmd(tmp->service_notification_commands, NDO_DATA_SERVICENOTIFICATIONCOMMAND, contact_ids, i);
-
-        i++;
-        tmp = tmp->next;        
-    }
-}
-
-
-int ndo_write_contact_notificationcommands_cmd(commandsmember * cmd, int notification_type, int * contact_ids, int i)
-{
-    int object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_COMMAND, cmd->command);
-
-    while (cmd != NULL) {
-
-        MYSQL_RESET_BIND();
-
-        MYSQL_BIND_INT(contact_ids[i]);
-        MYSQL_BIND_INT(notification_type);
-        MYSQL_BIND_INT(object_id);
-
-        MYSQL_BIND_INT(contact_ids[i]);
-        MYSQL_BIND_INT(notification_type);
-        MYSQL_BIND_INT(object_id);
-
-        MYSQL_BIND();
-        MYSQL_EXECUTE();
-
-        cmd = cmd->next;
-    }
+    mysql_stmt_close(ndo_stmt_new[WRITE_CONTACT_ADDRESSES]);
+    mysql_stmt_close(ndo_stmt_new[WRITE_CONTACT_NOTIFICATIONCOMMANDS]);
+    mysql_stmt_close(ndo_stmt_new[WRITE_CUSTOMVARS]);
 }
 
 
@@ -638,9 +732,6 @@ int ndo_write_contactgroup_members(int * contactgroup_ids)
         tmp = tmp->next;
     }
 }
-
-
-#define UPDATE_QUERY_X_POS(_query, _cursor, _xpos, _cond) _query[_cursor + _xpos] = (_cond ? '1' : '0')
 
 
 int ndo_write_hosts(int config_type)
@@ -1091,126 +1182,6 @@ int send_subquery(int stmt, int * counter, char * query, char * query_on_update,
     * query_len = query_base_len;
     * counter = 0;
     ndo_bind_new_i[stmt] = 0;
-}
-
-
-int ndo_write_host_parenthosts(int * host_ids)
-{
-    host * tmp = host_list;
-    hostsmember * parent = NULL;
-    int object_id = 0;
-    int i = 0;
-
-    MYSQL_RESET_SQL();
-
-    MYSQL_SET_SQL("INSERT INTO nagios_host_parenthosts SET instance_id = 1, host_id = ?, parent_host_object_id = ? ON DUPLICATE KEY UPDATE instance_id = 1, host_id = ?, parent_host_object_id = ?");
-    MYSQL_PREPARE();
-
-    while (tmp != NULL) {
-
-        parent = tmp->parent_hosts;
-
-        while (parent != NULL) {
-
-            object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_HOST, parent->host_name);
-
-            MYSQL_RESET_BIND();
-
-            MYSQL_BIND_INT(host_ids[i]);
-            MYSQL_BIND_INT(object_id);
-
-            MYSQL_BIND_INT(host_ids[i]);
-            MYSQL_BIND_INT(object_id);
-
-            MYSQL_BIND();
-            MYSQL_EXECUTE();
-
-            parent = parent->next;
-        }
-
-        i++;
-        tmp = tmp->next;
-    }
-}
-
-
-int ndo_write_host_contactgroups(int * host_ids)
-{
-    host * tmp = host_list;
-    contactgroupsmember * group = NULL;
-    int object_id = 0;
-    int i = 0;
-
-    MYSQL_RESET_SQL();
-
-    MYSQL_SET_SQL("INSERT INTO nagios_host_contactgroups SET instance_id = 1, host_id = ?, contactgroup_object_id = ? ON DUPLICATE KEY UPDATE instance_id = 1, host_id = ?, contactgroup_object_id = ?");
-    MYSQL_PREPARE();
-
-    while (tmp != NULL) {
-
-        group = tmp->contact_groups;
-
-        while (group != NULL) {
-
-            object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_CONTACTGROUP, group->group_name);
-
-            MYSQL_RESET_BIND();
-
-            MYSQL_BIND_INT(host_ids[i]);
-            MYSQL_BIND_INT(object_id);
-
-            MYSQL_BIND_INT(host_ids[i]);
-            MYSQL_BIND_INT(object_id);
-
-            MYSQL_BIND();
-            MYSQL_EXECUTE();
-
-            group = group->next;
-        }
-
-        i++;
-        tmp = tmp->next;
-    }
-}
-
-
-int ndo_write_host_contacts(int * host_ids)
-{
-    host * tmp = host_list;
-    contactsmember * cnt = NULL;
-    int object_id = 0;
-    int i = 0;
-
-    MYSQL_RESET_SQL();
-
-    MYSQL_SET_SQL("INSERT INTO nagios_host_contacts SET instance_id = 1, host_id = ?, contact_object_id = ? ON DUPLICATE KEY UPDATE instance_id = 1, host_id = ?, contact_object_id = ?");
-    MYSQL_PREPARE();
-
-    while (tmp != NULL) {
-
-        cnt = tmp->contacts;
-
-        while (cnt != NULL) {
-
-            object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_CONTACT, cnt->contact_name);
-
-            MYSQL_RESET_BIND();
-
-            MYSQL_BIND_INT(host_ids[i]);
-            MYSQL_BIND_INT(object_id);
-
-            MYSQL_BIND_INT(host_ids[i]);
-            MYSQL_BIND_INT(object_id);
-
-            MYSQL_BIND();
-            MYSQL_EXECUTE();
-
-            cnt = cnt->next;
-        }
-
-        i++;
-        tmp = tmp->next;
-    }
 }
 
 
@@ -1718,126 +1689,6 @@ int ndo_write_services_objects(int config_type)
     mysql_stmt_close(ndo_stmt_new[WRITE_SERVICE_CONTACTGROUPS]);
     mysql_stmt_close(ndo_stmt_new[WRITE_SERVICE_CONTACTS]);
     mysql_stmt_close(ndo_stmt_new[WRITE_CUSTOMVARS]);
-}
-
-
-int ndo_write_service_parentservices(int * service_ids)
-{
-    service * tmp = service_list;
-    servicesmember * parent = NULL;
-    int object_id = 0;
-    int i = 0;
-
-    MYSQL_RESET_SQL();
-
-    MYSQL_SET_SQL("INSERT INTO nagios_service_parentservices SET instance_id = 1, service_id = ?, parent_service_object_id = ? ON DUPLICATE KEY UPDATE instance_id = 1, service_id = ?, parent_service_object_id = ?");
-    MYSQL_PREPARE();
-
-    while (tmp != NULL) {
-
-        parent = tmp->parents;
-
-        while (parent != NULL) {
-
-            object_id = ndo_get_object_id_name2(TRUE, NDO_OBJECTTYPE_SERVICE, parent->host_name, parent->service_description);
-
-            MYSQL_RESET_BIND();
-
-            MYSQL_BIND_INT(service_ids[i]);
-            MYSQL_BIND_INT(object_id);
-
-            MYSQL_BIND_INT(service_ids[i]);
-            MYSQL_BIND_INT(object_id);
-
-            MYSQL_BIND();
-            MYSQL_EXECUTE();
-
-            parent = parent->next;
-        }
-
-        i++;
-        tmp = tmp->next;
-    }
-}
-
-
-int ndo_write_service_contactgroups(int * service_ids)
-{
-    service * tmp = service_list;
-    contactgroupsmember * group = NULL;
-    int object_id = 0;
-    int i = 0;
-
-    MYSQL_RESET_SQL();
-
-    MYSQL_SET_SQL("INSERT INTO nagios_service_contactgroups SET instance_id = 1, service_id = ?, contactgroup_object_id = ? ON DUPLICATE KEY UPDATE instance_id = 1, service_id = ?, contactgroup_object_id = ?");
-    MYSQL_PREPARE();
-
-    while (tmp != NULL) {
-
-        group = tmp->contact_groups;
-
-        while (group != NULL) {
-
-            object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_CONTACTGROUP, group->group_name);
-
-            MYSQL_RESET_BIND();
-
-            MYSQL_BIND_INT(service_ids[i]);
-            MYSQL_BIND_INT(object_id);
-
-            MYSQL_BIND_INT(service_ids[i]);
-            MYSQL_BIND_INT(object_id);
-
-            MYSQL_BIND();
-            MYSQL_EXECUTE();
-
-            group = group->next;
-        }
-
-        i++;
-        tmp = tmp->next;
-    }
-}
-
-
-int ndo_write_service_contacts(int * service_ids)
-{
-    service * tmp = service_list;
-    contactsmember * cnt = NULL;
-    int object_id = 0;
-    int i = 0;
-
-    MYSQL_RESET_SQL();
-
-    MYSQL_SET_SQL("INSERT INTO nagios_service_contacts SET instance_id = 1, service_id = ?, contact_object_id = ? ON DUPLICATE KEY UPDATE instance_id = 1, service_id = ?, contact_object_id = ?");
-    MYSQL_PREPARE();
-
-    while (tmp != NULL) {
-
-        cnt = tmp->contacts;
-
-        while (cnt != NULL) {
-
-            object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_CONTACT, cnt->contact_name);
-
-            MYSQL_RESET_BIND();
-
-            MYSQL_BIND_INT(service_ids[i]);
-            MYSQL_BIND_INT(object_id);
-
-            MYSQL_BIND_INT(service_ids[i]);
-            MYSQL_BIND_INT(object_id);
-
-            MYSQL_BIND();
-            MYSQL_EXECUTE();
-
-            cnt = cnt->next;
-        }
-
-        i++;
-        tmp = tmp->next;
-    }
 }
 
 

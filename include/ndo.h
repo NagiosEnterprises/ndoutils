@@ -29,6 +29,10 @@
 
 #define MAX_OBJECT_INSERT 10
 
+
+#define UPDATE_QUERY_X_POS(_query, _cursor, _xpos, _cond) _query[_cursor + _xpos] = (_cond ? '1' : '0')
+
+
 void ndo_log(char * buffer);
 int nebmodule_init(int flags, char * args, void * handle);
 int nebmodule_deinit(int flags, int reason);
@@ -155,6 +159,8 @@ int write_to_log(char * buffer, unsigned long l, time_t * t);
 #define NUM_QUERIES (NUM_HANDLER_QUERIES + NUM_WRITE_QUERIES)
 
 
+void ndo_calculate_startup_hash();
+
 int ndo_get_object_id_name1(int insert, int object_type, char * name1);
 int ndo_get_object_id_name2(int insert, int object_type, char * name1, char * name2);
 int ndo_insert_object_id_name1(int object_type, char * name1);
@@ -170,27 +176,19 @@ int ndo_write_timeperiods(int config_type);
 int ndo_write_timeperiod_timeranges(int * timeperiod_ids);
 
 int ndo_write_contacts(int config_type);
-int ndo_write_contact_addresses(int * contact_ids);
-int ndo_write_contact_notificationcommands(int * contact_ids);
-int ndo_write_contact_notificationcommands_cmd(commandsmember * cmd, int notification_type, int * contact_ids, int i);
+int ndo_write_contact_objects(int config_type);
 
 int ndo_write_contactgroups(int config_type);
 int ndo_write_contactgroup_members(int * contactgroup_ids);
 
 int ndo_write_hosts(int config_type);
 int ndo_write_hosts_objects(int config_type);
-int ndo_write_host_parenthosts(int * host_ids);
-int ndo_write_host_contactgroups(int * host_ids);
-int ndo_write_host_contacts(int * host_ids);
 
 int ndo_write_hostgroups(int config_type);
 int ndo_write_hostgroup_members(int * hostgroup_ids);
 
 int ndo_write_services(int config_type);
 int ndo_write_services_objects(int config_type);
-int ndo_write_service_parentservices(int * service_ids);
-int ndo_write_service_contactgroups(int * service_ids);
-int ndo_write_service_contacts(int * service_ids);
 
 int ndo_write_servicegroups(int config_type);
 int ndo_write_servicegroup_members(int * servicegroup_ids);

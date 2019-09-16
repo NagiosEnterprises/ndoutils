@@ -150,6 +150,11 @@ MYSQL_STMT * ndo_stmtaaa[NUM_QUERIES] = { NULL };
 
 int ndo_max_object_insert_count = 200;
 
+#define DEFAULT_STARTUP_HASH_SCRIPT_PATH "/usr/local/nagios/bin/ndo-startup-hash.sh"
+int ndo_startup_check_enabled = FALSE;
+char * ndo_startup_hash_script_path = NULL;
+int ndo_startup_skip_writing_objects = FALSE;
+
 
 MYSQL_BIND ndo_log_data_bind[5];
 MYSQL_STMT * ndo_stmt_log_data = NULL;
@@ -205,6 +210,10 @@ int nebmodule_init(int flags, char * args, void * handle)
         return NDO_ERROR;
     }
 
+    if (ndo_startup_check_enabled == TRUE) {
+        ndo_calculate_startup_hash();
+    }
+
     return NDO_OK;
 }
 
@@ -222,6 +231,8 @@ int nebmodule_deinit(int flags, int reason)
     free(ndo_db_pass);
     free(ndo_db_name);
     free(ndo_db_host);
+
+    free(ndo_startup_hash_script_path);
 
     ndo_log("NDO - Shutdown complete");
 
@@ -466,12 +477,23 @@ void ndo_process_config_line(char * line)
         ndo_config_dump_options = atoi(val);
     }
 
+    /* determine the maximum amount of objects to send to mysql
+       in a single bulk insert statement */
     else if (!strcmp("max_object_insert_count", key)) {
         ndo_max_object_insert_count = atoi(val);
 
         if (ndo_max_object_insert_count > (MAX_OBJECT_INSERT - 1)) {
             ndo_max_object_insert_count = MAX_OBJECT_INSERT - 1;
         }
+    }
+
+    /* should we check the contents of the nagios config directory
+       before doing massive table operations in some cases? */
+    else if (!strcmp("enable_startup_hash", key)) {
+        ndo_startup_check_enabled = TRUE;
+    }
+    else if (!strcmp("startup_hash_script_path", key)) {
+        ndo_startup_hash_script_path = strdup(val);
     }
 
     /* neb handlers */
@@ -836,6 +858,33 @@ int ndo_deregister_callbacks()
 
     ndo_log("Callbacks deregistered");
     return NDO_OK;
+}
+
+
+void ndo_calculate_startup_hash()
+{
+    int result = 0;
+    int early_timeout = FALSE;
+    double exectime = 0.0;
+    char * output = NULL;
+
+    if (ndo_startup_hash_script_path == NULL) {
+        ndo_startup_hash_script_path = strdup(DEFAULT_STARTUP_HASH_SCRIPT_PATH);
+    }
+
+    result = my_system_r(NULL, ndo_startup_hash_script_path, 0, &early_timeout, &exectime, &output, 0);
+
+    /* 0 ret code means that the new hash of the directory matches
+       the old hash of the directory */
+    if (result == 0) {
+        ndo_startup_skip_writing_objects = TRUE;
+    }
+
+    else if (result == 2) {
+        char msg[1024] = { 0 };
+        snprintf(msg, 1023, "Bad permissions on hashfile in (%s)", ndo_startup_hash_script_path);
+        ndo_log(msg);
+    }
 }
 
 

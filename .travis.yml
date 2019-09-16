@@ -114,7 +114,7 @@ before_install:
 
 script:
   - autoconf
-  - ./configure --enable-coverage --enable-debugging
+  - ./configure --enable-testing
   - sed -i 's/-p -e/-e/' Makefile
   - make inittest
   - NDO_CONFIG_FILE=./config/ndo.cfg-sample make memtest

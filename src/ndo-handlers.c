@@ -12,17 +12,21 @@ int ndo_handle_process(int type, void * d)
 
     case NEBTYPE_PROCESS_PRELAUNCH:
 
-        ndo_table_genocide();
-        ndo_set_all_objects_inactive();
+        if (ndo_startup_skip_writing_objects != TRUE) {
+            ndo_table_genocide();
+            ndo_set_all_objects_inactive();
+        }
 
         break;
 
 
     case NEBTYPE_PROCESS_START:
 
-        ndo_write_active_objects();
-        ndo_write_config_files();
-        ndo_write_config(NDO_CONFIG_DUMP_ORIGINAL);
+        if (ndo_startup_skip_writing_objects != TRUE) {
+            ndo_write_active_objects();
+            ndo_write_config_files();
+            ndo_write_config(NDO_CONFIG_DUMP_ORIGINAL);
+        }
 
         break;
 
