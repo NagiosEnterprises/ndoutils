@@ -877,6 +877,7 @@ void ndo_calculate_startup_hash()
     /* 0 ret code means that the new hash of the directory matches
        the old hash of the directory */
     if (result == 0) {
+        ndo_log("Startup hashes match - SKIPPING OBJECT TRUNCATION/RE-INSERTION");
         ndo_startup_skip_writing_objects = TRUE;
     }
 
