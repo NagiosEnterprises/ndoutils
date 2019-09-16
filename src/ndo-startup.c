@@ -799,8 +799,6 @@ int ndo_write_hosts(int config_type)
 
     while (tmp != NULL) {
 
-        char buffer[20];
-
         if (write_query == TRUE) {
             memcpy(query + query_len, query_values, query_values_len);
             query_len += query_values_len;
