@@ -41,3 +41,8 @@ nagios_comment * find_host_comment(unsigned long l)
     nagios_comment * comment = malloc(sizeof(nagios_comment));
     return comment;
 }
+
+int my_system_r(nagios_macros *mac, char *cmd, int timeout, int *early_timeout, double *exectime, char **output, int max_output_length)
+{
+    return my_system_r_output;
+}

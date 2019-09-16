@@ -31,6 +31,7 @@ gcovr --exclude="test.c" -r ..
 #include "../include/nagios/broker.h"
 #include "../include/test.h"
 
+int my_system_r_output = 0;
 #include "nagios-stubs.c"
 
 /**** NAGIOS VARIABLES ****/
