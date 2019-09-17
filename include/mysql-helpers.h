@@ -3,7 +3,7 @@
 do { \
     memset(ndo_bind, 0, sizeof(ndo_bind)); \
     ndo_bind_i = 0; \
-} while(0)
+} while (0)
 
 
 #define MYSQL_BIND() \
@@ -211,7 +211,7 @@ do { \
 do { \
     memset(ndo_bind_new[_which], 0, sizeof(ndo_bind_new[_which])); \
     ndo_bind_new_i[_which] = 0; \
-} while(0)
+} while (0)
 
 
 #define MYSQL_BIND_NEW(_which) \
