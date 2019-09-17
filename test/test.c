@@ -122,13 +122,169 @@ Suite * t_suite(void)
 START_TEST (test_program_state)
 {
     nebstruct_process_data d;
+
+    MYSQL_ROW tmp_row;
+    MYSQL_RES *tmp_result;
+
+    /* Run NEBTYPE_PROCESS_PRELAUNCH */
+
+    d.type = NEBTYPE_PROCESS_PRELAUNCH;
+    d.flags = 0;
+    d.attr = 0;
+    d.timestamp = (struct timeval) { .tv_sec = 1568324497, .tv_usec = 393922 };
+    ndo_handle_process(d.type, &d);
+
+    /* Objects should not exist in most tables */
+    /* Note: test suit's db_name should ALWAYS be 'ndo' */
+    mysql_query(mysql_connection, "SELECT 1 FROM information_schema.TABLES WHERE "
+        "TABLE_ROWS > 0 AND TABLE_SCHEMA = 'ndo' AND "
+        "TABLE_NAME IN ('nagios_programstatus', "
+            "'nagios_hoststatus', "
+            "'nagios_servicestatus', "
+            "'nagios_contactstatus', "
+            "'nagios_timedeventqueue', "
+            "'nagios_comments', "
+            "'nagios_scheduleddowntime', "
+            "'nagios_runtimevariables', "
+            "'nagios_customvariablestatus', "
+            "'nagios_configfiles', "
+            "'nagios_configfilevariables', "
+            "'nagios_customvariables', "
+            "'nagios_commands', "
+            "'nagios_timeperiods', "
+            "'nagios_timeperiod_timeranges', "
+            "'nagios_contactgroups', "
+            "'nagios_contactgroup_members', "
+            "'nagios_hostgroups', "
+            "'nagios_servicegroups', "
+            "'nagios_servicegroup_members', "
+            "'nagios_hostescalations', "
+            "'nagios_hostescalation_contacts', "
+            "'nagios_serviceescalations', "
+            "'nagios_serviceescalation_contacts', "
+            "'nagios_hostdependencies', "
+            "'nagios_servicedependencies', "
+            "'nagios_contacts', "
+            "'nagios_contact_addresses', "
+            "'nagios_contact_notificationcommands', "
+            "'nagios_hosts', "
+            "'nagios_host_parenthosts', "
+            "'nagios_host_contacts', "
+            "'nagios_services', "
+            "'nagios_service_parentservices', "
+            "'nagios_service_contacts', "
+            "'nagios_service_contactgroups', "
+            "'nagios_host_contactgroups', "
+            "'nagios_hostescalation_contactgroups', "
+            "'nagios_serviceescalation_contactgroups' ) ");
+
+    tmp_result = mysql_store_result(mysql_connection);
+    ck_assert(tmp_result != NULL);
+
+    if (tmp_result != NULL) {
+        tmp_row = mysql_fetch_row(tmp_result);
+    }
+    ck_assert(tmp_row == NULL);
+
+    /* Objects in nagios_objects should not be active */
+    mysql_query(mysql_connection, "SELECT 2 FROM nagios_objects WHERE is_active = 1");
+
+    tmp_result = mysql_store_result(mysql_connection);
+    ck_assert(tmp_result != NULL);
+
+    if (tmp_result != NULL) {
+        tmp_row = mysql_fetch_row(tmp_result);
+    }
+    ck_assert(tmp_row == NULL);
+
+    mysql_query(mysql_connection, "SELECT 3 FROM nagios_processevents WHERE "
+        "instance_id = 1 AND event_type = 104 AND "
+        "event_time = FROM_UNIXTIME(1568324497) AND event_time_usec = 393922 AND "
+        "program_name = 'Nagios' ");
+
+    tmp_result = mysql_store_result(mysql_connection);
+    ck_assert(tmp_result != NULL);
+    if (tmp_result != NULL){
+        tmp_row = mysql_fetch_row(tmp_result);
+    }
+
+    ck_assert(tmp_row != NULL);
+
+    if (tmp_row != NULL) {
+        ck_assert_int_eq(strcmp(tmp_row[0], "3"), 0);
+    }
+
+
+    /* NEBTYPE_PROCESS_START's unique actions only affect ndo-startup -- skipping for now. */
+
+    /* NEBTYPE_PROCESS_EVENTLOOPSTART's unique actions are currently stubs -- skipping for now */
+
+    /* NEBTYPE_PROCESS_RESTART goes in a separate test - 
+     * it modifies database tables that haven't been initialized yet */
+
 }
 END_TEST
+
+
+START_TEST (test_program_state_end)
+{
+
+    nebstruct_process_data d;
+
+    MYSQL_ROW tmp_row;
+    MYSQL_RES *tmp_result;
+
+    d.type = NEBTYPE_PROCESS_RESTART;
+    d.flags = 0;
+    d.attr = 0;
+    d.timestamp = (struct timeval) { .tv_sec = 1568735696, .tv_usec = 896836 };
+    ndo_handle_process(d.type, &d);
+
+    mysql_query(mysql_connection, "SELECT 4 FROM nagios_processevents WHERE "
+        "instance_id = 1 AND event_type = 102 AND "
+        "event_time = FROM_UNIXTIME(1568735696) AND event_time_usec = 896836 AND "
+        "program_name = 'Nagios' ");
+
+    tmp_result = mysql_store_result(mysql_connection);
+    ck_assert(tmp_result != NULL);
+    if (tmp_result != NULL){
+        tmp_row = mysql_fetch_row(tmp_result);
+    }
+
+    ck_assert(tmp_row != NULL);
+
+    if (tmp_row != NULL) {
+        ck_assert_int_eq(strcmp(tmp_row[0], "4"), 0);
+    }
+
+    mysql_query(mysql_connection, "SELECT 5 FROM nagios_programstatus WHERE "
+        "program_end_time = FROM_UNIXTIME(1568735696) AND is_currently_running = 0");
+
+    tmp_result = mysql_store_result(mysql_connection);
+    ck_assert(tmp_result != NULL);
+    if (tmp_result != NULL){
+        tmp_row = mysql_fetch_row(tmp_result);
+    }
+
+    ck_assert(tmp_row != NULL);
+
+    if (tmp_row != NULL) {
+        ck_assert_int_eq(strcmp(tmp_row[0], "5"), 0);
+    }
+}
+END_TEST
+
 
 
 START_TEST (test_timed_event)
 {
     nebstruct_timed_event_data d;
+
+    /* I haven't been able to capture any events that would create entries in nagios_timedeventqueue,
+     * though I've captured several that would remove them if they existed. This test is getting skipped for now,
+     * as it's unlikely that this table is ever used.
+     */
+
 }
 END_TEST
 
@@ -1841,6 +1997,7 @@ Suite * handler_suite(void)
     tcase_add_test(tc_handler, test_retention_data);
     tcase_add_test(tc_handler, test_acknowledgement_data);
     tcase_add_test(tc_handler, test_statechange_data);
+    tcase_add_test(tc_handler, test_program_state_end);
 
     suite_add_tcase(suite, tc_handler);
 
