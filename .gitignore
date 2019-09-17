@@ -18,3 +18,8 @@ config.status
 include/config.h
 
 src/ndo.so
+
+expanded/*
+expanded/*/*
+src/ndo-expanded.c
+src/expanded-tmp.c

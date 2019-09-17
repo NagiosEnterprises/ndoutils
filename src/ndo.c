@@ -141,6 +141,14 @@ MYSQL_STMT * ndo_stmt_object_insert_name1 = NULL;
 MYSQL_STMT * ndo_stmt_object_insert_name2 = NULL;
 
 
+char active_objects_query[MAX_SQL_BUFFER] = { 0 };
+int active_objects_count = 0;
+int active_objects_max_params = 0;
+int active_objects_i = 0;
+MYSQL_BIND * active_objects_bind = NULL;
+int * active_objects_object_ids = NULL;
+int active_objects_run = 0;
+
 
 MYSQL_BIND * ndo_startup_bindaaa[NUM_WRITE_QUERIES];
 MYSQL_BIND   ndo_bindaaa[NUM_HANDLER_QUERIES][MAX_SQL_BINDINGS];

@@ -23,7 +23,11 @@ int ndo_handle_process(int type, void * d)
     case NEBTYPE_PROCESS_START:
 
         if (ndo_startup_skip_writing_objects != TRUE) {
-            ndo_write_active_objects();
+
+            ndo_begin_active_objects(active_objects_run);
+            ndo_write_object_config(NDO_CONFIG_DUMP_ORIGINAL);
+            ndo_end_active_objects();
+
             ndo_write_config_files();
             ndo_write_config(NDO_CONFIG_DUMP_ORIGINAL);
         }
@@ -33,7 +37,9 @@ int ndo_handle_process(int type, void * d)
 
     case NEBTYPE_PROCESS_EVENTLOOPSTART:
 
-        ndo_write_runtime_variables();
+        if (ndo_startup_skip_writing_objects != TRUE) {
+            ndo_write_runtime_variables();
+        }
 
         break;
 
