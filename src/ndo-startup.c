@@ -76,55 +76,25 @@ int ndo_table_genocide()
 }
 
 
-void timestamp_msg(char * msg)
-{
-    char buf[1024];
-    struct timeval tv;
-    gettimeofday(&tv, NULL);
-    sprintf(buf, "%ld.%06ld - %s", tv.tv_sec, tv.tv_usec, msg);
-    ndo_log(buf);
-}
-
-
-int ndo_write_active_objects()
-{
-    timestamp_msg("BEGIN ndo_write_active_objects");
-
-    ndo_write_commands(NDO_CONFIG_DUMP_ORIGINAL);
-    timestamp_msg(" > end ndo_write_commands");
-    ndo_write_timeperiods(NDO_CONFIG_DUMP_ORIGINAL);
-    timestamp_msg(" > end ndo_write_timeperiods");
-    ndo_write_contacts(NDO_CONFIG_DUMP_ORIGINAL);
-    timestamp_msg(" > end ndo_write_contacts");
-    ndo_write_contactgroups(NDO_CONFIG_DUMP_ORIGINAL);
-    timestamp_msg(" > end ndo_write_contactgroups");
-    ndo_write_hosts(NDO_CONFIG_DUMP_ORIGINAL);
-    timestamp_msg(" > end ndo_write_hosts");
-    ndo_write_hostgroups(NDO_CONFIG_DUMP_ORIGINAL);
-    timestamp_msg(" > end ndo_write_hostgroups");
-    ndo_write_services(NDO_CONFIG_DUMP_ORIGINAL);
-    timestamp_msg(" > end ndo_write_services");
-    ndo_write_servicegroups(NDO_CONFIG_DUMP_ORIGINAL);
-    timestamp_msg(" > end ndo_write_servicegroups");
-    ndo_write_hostescalations(NDO_CONFIG_DUMP_ORIGINAL);
-    timestamp_msg(" > end ndo_write_hostescalations");
-    ndo_write_serviceescalations(NDO_CONFIG_DUMP_ORIGINAL);
-    timestamp_msg(" > end ndo_write_serviceescalations");
-
-    timestamp_msg("END ndo_write_active_objects");
-
-    return NDO_OK;
-}
-
-
 int ndo_write_config_files()
 {
     return NDO_OK;
 }
 
 
-int ndo_write_object_config(int type)
+int ndo_write_object_config(int config_type)
 {
+    ndo_write_commands(config_type);
+    ndo_write_timeperiods(config_type);
+    ndo_write_contacts(config_type);
+    ndo_write_contactgroups(config_type);
+    ndo_write_hosts(config_type);
+    ndo_write_hostgroups(config_type);
+    ndo_write_services(config_type);
+    ndo_write_servicegroups(config_type);
+    ndo_write_hostescalations(config_type);
+    ndo_write_serviceescalations(config_type);
+
     return NDO_OK;
 }
 
@@ -132,6 +102,107 @@ int ndo_write_object_config(int type)
 int ndo_write_runtime_variables()
 {
     return NDO_OK;
+}
+
+
+int ndo_begin_active_objects(int run_count)
+{
+    char * active_objects_query_base = "UPDATE nagios_objects SET is_active = 1 WHERE object_id IN (";
+    size_t active_objects_query_base_len = 60; /* strlen(active_objects_query_base); */
+    
+    active_objects_count = 0;
+    active_objects_i = 0;
+
+    if (run_count == 0) {
+        ndo_stmt_new[WRITE_ACTIVE_OBJECTS] = mysql_stmt_init(mysql_connection);
+        MYSQL_RESET_BIND_NEW(WRITE_CONTACT_ADDRESSES);
+
+        active_objects_max_params = (MAX_SQL_BUFFER - 1 - active_objects_query_base_len) / 2;
+
+        if (active_objects_max_params < 0) {
+            ndo_log("Something is very very wrong with MAX_SQL_BUFFER and/or active_objects_query_base_len");
+            return NDO_ERROR;
+        }
+
+        /* 65536 is the absolute max params we can bind (mysql official docs) */
+        if (active_objects_max_params > 65536) {
+            active_objects_max_params = 65536;
+        }
+    }
+
+    /* from here, everytime that ndo_set_object_active is called, we cat
+        "?," to the string, and once it's done, we overwrite the final "," with ")" */
+
+    if (run_count > 0) {
+        memset(active_objects_query, 0, sizeof(active_objects_query));
+    }
+    strcpy(active_objects_query, active_objects_query_base);
+
+    /* only set up the bind array once */
+    if (run_count == 0) {
+        active_objects_bind = calloc(active_objects_max_params, sizeof(MYSQL_BIND));
+        active_objects_object_ids = calloc(active_objects_max_params, sizeof(int));
+        if (active_objects_bind == NULL || active_objects_object_ids == NULL) {
+            char msg[1024];
+            snprintf(msg, 1023, "Unable to allocate (%d) MYSQL_BINDs/ints", active_objects_max_params);
+            ndo_log(msg);
+            return NDO_ERROR;
+        }
+    }
+
+    return NDO_OK;
+}
+
+
+int ndo_end_active_objects()
+{
+    free(active_objects_bind);
+    mysql_stmt_close(ndo_stmt_new[WRITE_ACTIVE_OBJECTS]);
+}
+
+
+int ndo_set_object_active(int object_id, int config_type, void * next)
+{
+    if (config_type != NDO_CONFIG_DUMP_ORIGINAL) {
+        return NDO_OK;
+    }
+
+    active_objects_object_ids[active_objects_i] = object_id;
+
+    active_objects_bind[active_objects_i].buffer_type = MYSQL_TYPE_LONG;
+    active_objects_bind[active_objects_i].buffer = &(active_objects_object_ids[active_objects_i]);
+
+    strcat(active_objects_query, "?,");
+
+    active_objects_i++;
+
+    if (active_objects_i >= active_objects_max_params || next == NULL) {
+
+        /* update last comma to a ) */
+        char * last_comma = strrchr(active_objects_query, ',');
+        * last_comma = ')';
+
+        ndo_return = mysql_stmt_prepare(ndo_stmt_new[WRITE_ACTIVE_OBJECTS], active_objects_query, strlen(active_objects_query));
+        if (ndo_return != 0) {
+            snprintf(ndo_error_msg, 1023, "Unable to prepare: ndo_return = %d (%s)", ndo_return, mysql_stmt_error(ndo_stmt_new[WRITE_ACTIVE_OBJECTS]));
+            ndo_log(ndo_error_msg);
+        }
+
+        ndo_return = mysql_stmt_bind_param(ndo_stmt_new[WRITE_ACTIVE_OBJECTS], active_objects_bind);
+        if (ndo_return != 0) {
+            snprintf(ndo_error_msg, 1023, "Unable to bind parameters: ndo_return = %d (%s)", ndo_return, mysql_stmt_error(ndo_stmt_new[WRITE_ACTIVE_OBJECTS]));
+            ndo_log(ndo_error_msg);
+        }
+
+        ndo_return = mysql_stmt_execute(ndo_stmt_new[WRITE_ACTIVE_OBJECTS]);
+        if (ndo_return != 0) {
+            snprintf(ndo_error_msg, 1023, "Unable to execute: ndo_return = %d (%s)", ndo_return, mysql_stmt_error(ndo_stmt_new[WRITE_ACTIVE_OBJECTS]));
+            ndo_log(ndo_error_msg);
+        }
+
+        active_objects_run++;
+        ndo_begin_active_objects(active_objects_run);
+    }
 }
 
 
@@ -150,6 +221,7 @@ int ndo_write_commands(int config_type)
     while (tmp != NULL) {
 
         object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_COMMAND, tmp->name);
+        ndo_set_object_active(object_id, config_type, tmp->next);
 
         MYSQL_BIND_INT(object_id);
         MYSQL_BIND_INT(config_type);
@@ -187,6 +259,7 @@ int ndo_write_timeperiods(int config_type)
     while (tmp != NULL) {
 
         object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_TIMEPERIOD, tmp->name);
+        ndo_set_object_active(object_id, config_type, tmp->next);
 
         MYSQL_BIND_INT(object_id);
         MYSQL_BIND_INT(config_type);
@@ -310,6 +383,7 @@ int ndo_write_contacts(int config_type)
         cur_pos = query_base_len + (i * query_values_len);
 
         object_ids[i] = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_CONTACT, tmp->name);
+        ndo_set_object_active(object_ids[i], config_type, tmp->next);
 
         host_timeperiod_object_id[i] = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_TIMEPERIOD, tmp->host_notification_period);
         service_timeperiod_object_id[i] = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_TIMEPERIOD, tmp->service_notification_period);
@@ -583,6 +657,7 @@ int ndo_write_contactgroups(int config_type)
     while (tmp != NULL) {
 
         object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_CONTACTGROUP, tmp->group_name);
+        ndo_set_object_active(object_id, config_type, tmp->next);
 
         MYSQL_BIND_INT(object_id);
         MYSQL_BIND_INT(config_type);
@@ -713,6 +788,7 @@ int ndo_write_hosts(int config_type)
         cur_pos = query_base_len + (i * query_values_len);
 
         object_ids[i] = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_HOST, tmp->name);
+        ndo_set_object_active(object_ids[i], config_type, tmp->next);
 
         check_command[i] = strtok(tmp->check_command, "!");
         if (check_command[i] == NULL) {
@@ -1109,6 +1185,7 @@ int ndo_write_hostgroups(int config_type)
     while (tmp != NULL) {
 
         object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_HOSTGROUP, tmp->group_name);
+        ndo_set_object_active(object_id, config_type, tmp->next);
 
         MYSQL_BIND_INT(object_id);
         MYSQL_BIND_INT(config_type);
@@ -1241,6 +1318,7 @@ int ndo_write_services(int config_type)
 
         object_ids[i] = ndo_get_object_id_name2(TRUE, NDO_OBJECTTYPE_SERVICE, tmp->host_name, tmp->description);
         host_object_id[i] = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_HOST, tmp->host_name);
+        ndo_set_object_active(object_ids[i], config_type, tmp->next);
 
         check_command[i] = strtok(tmp->check_command, "!");
         if (check_command[i] == NULL) {
@@ -1607,6 +1685,7 @@ int ndo_write_servicegroups(int config_type)
     while (tmp != NULL) {
 
         object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_SERVICEGROUP, tmp->group_name);
+        ndo_set_object_active(object_id, config_type, tmp->next);
 
         MYSQL_BIND_INT(object_id);
         MYSQL_BIND_INT(config_type);

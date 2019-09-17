@@ -69,7 +69,10 @@ int ndo_handle_retention(int type, void * d);
 
 int ndo_table_genocide();
 int ndo_set_all_objects_inactive();
-int ndo_write_active_objects();
+int ndo_begin_active_objects(int run_count);
+int ndo_end_active_objects();
+int ndo_set_object_active(int object_id, int config_type, void * next);
+
 int ndo_write_config_files();
 int ndo_write_config(int type);
 int ndo_write_runtime_variables();
@@ -112,8 +115,9 @@ int write_to_log(char * buffer, unsigned long l, time_t * t);
 #define WRITE_HOSTDEPENDENCIES 27
 #define WRITE_SERVICEDEPENDENCIES 28
 #define WRITE_CUSTOMVARS 29
+#define WRITE_ACTIVE_OBJECTS 30
 
-#define NUM_WRITE_QUERIES 30
+#define NUM_WRITE_QUERIES 31
 
 #define GENERAL
 #define GET_NAME1
