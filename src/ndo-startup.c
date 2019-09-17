@@ -530,8 +530,8 @@ int ndo_write_contact_objects(int config_type)
     char * var_query_base = "INSERT INTO nagios_customvariables (instance_id, object_id, config_type, has_been_modified, varname, varvalue) VALUES ";
     size_t var_query_base_len = 118; /* strlen(var_query_base); */
     size_t var_query_len = var_query_base_len;
-    char * var_query_values = "(1,(SELECT object_id FROM nagios_objects WHERE objecttype_id = 1 AND name1 = ?),?,?,?,?),";
-    size_t var_query_values_len = 89; /* strlen(var_query_values); */
+    char * var_query_values = "(1,(SELECT object_id FROM nagios_objects WHERE objecttype_id = 10 AND name1 = ?),?,?,?,?),";
+    size_t var_query_values_len = 90; /* strlen(var_query_values); */
     char * var_query_on_update = " ON DUPLICATE KEY UPDATE instance_id = VALUES(instance_id), object_id = VALUES(object_id), config_type = VALUES(config_type), has_been_modified = VALUES(has_been_modified), varname = VALUES(varname), varvalue = VALUES(varvalue)";
     size_t var_query_on_update_len = 227; /* strlen(var_query_on_update); */
 
@@ -568,6 +568,9 @@ int ndo_write_contact_objects(int config_type)
         cmd = tmp->host_notification_commands;
         while (cmd != NULL) {
 
+            strcpy(notificationcommands_query + notificationcommands_query_len, notificationcommands_query_values);
+            notificationcommands_query_len += notificationcommands_query_values_len;
+
             MYSQL_BIND_NEW_STR(WRITE_CONTACT_NOTIFICATIONCOMMANDS, tmp->name);
             MYSQL_BIND_NEW_INT(WRITE_CONTACT_NOTIFICATIONCOMMANDS, host_notification_command_type);
             MYSQL_BIND_NEW_STR(WRITE_CONTACT_NOTIFICATIONCOMMANDS, cmd->command);
@@ -582,6 +585,9 @@ int ndo_write_contact_objects(int config_type)
 
         cmd = tmp->service_notification_commands;
         while (cmd != NULL) {
+
+            strcpy(notificationcommands_query + notificationcommands_query_len, notificationcommands_query_values);
+            notificationcommands_query_len += notificationcommands_query_values_len;
 
             MYSQL_BIND_NEW_STR(WRITE_CONTACT_NOTIFICATIONCOMMANDS, tmp->name);
             MYSQL_BIND_NEW_INT(WRITE_CONTACT_NOTIFICATIONCOMMANDS, service_notification_command_type);
