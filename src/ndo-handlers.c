@@ -638,6 +638,8 @@ int ndo_handle_flapping(int type, void * d)
         comment_time = comment->entry_time;
     }
 
+    if (comment) { free(comment); }
+
     MYSQL_RESET_SQL();
     MYSQL_RESET_BIND();
 

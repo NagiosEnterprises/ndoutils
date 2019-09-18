@@ -63,7 +63,7 @@ struct host populate_hosts(timeperiod * tp) {
         .freshness_threshold = 0,
         .process_performance_data = 1,
         .checks_enabled = 1,
-        .check_source = strdup("Core Worker 107565"),
+        .check_source = "Core Worker 107565",
         .accept_passive_checks = 1,
         .event_handler_enabled = 1,
         .retain_status_information = 1,
@@ -148,6 +148,19 @@ struct host populate_hosts(timeperiod * tp) {
     return the_host;
 }
 
+void free_host(struct host the_host) {
+
+    free(the_host.name);
+    free(the_host.display_name);
+    free(the_host.alias);
+    free(the_host.address);
+    free(the_host.check_command);
+    free(the_host.notification_period);
+    free(the_host.check_period);
+    free(the_host.plugin_output);
+    free(the_host.perf_data);
+}
+
 struct service populate_service(timeperiod * tp, host * hst) {
     mysql_query(mysql_connection, "INSERT INTO nagios_objects SET "
         "instance_id = 1, objecttype_id = 2, name1 = '_testhost_1', name2 = '_testservice_ping', is_active = 1");
@@ -189,7 +202,7 @@ struct service populate_service(timeperiod * tp, host * hst) {
         .accept_passive_checks = 1, 
         .event_handler_enabled = 1, 
         .checks_enabled = 1, 
-        .check_source = strdup("Core Worker 107566"), 
+        .check_source = "Core Worker 107566", 
         .retain_status_information = 1, 
         .retain_nonstatus_information = 1, 
         .notifications_enabled = 1, 
@@ -264,6 +277,17 @@ struct service populate_service(timeperiod * tp, host * hst) {
     return the_service;
 }
 
+void free_service(struct service the_service) {
+
+    free(the_service.host_name);
+    free(the_service.description);
+    free(the_service.display_name);
+    free(the_service.check_command);
+    free(the_service.notification_period);
+    free(the_service.check_period);
+    free(the_service.plugin_output);
+}
+
 struct contact populate_contact(timeperiod * tp) {
 
     mysql_query(mysql_connection, "INSERT INTO nagios_objects SET "
@@ -303,6 +327,15 @@ struct contact populate_contact(timeperiod * tp) {
     return the_contact;
 }
 
+void free_contact(struct contact the_contact) {
+
+    free(the_contact.name);
+    free(the_contact.alias);
+    free(the_contact.email);
+    free(the_contact.host_notification_period);
+    free(the_contact.service_notification_period);
+}
+
 struct timeperiod populate_timeperiods() {
 
     mysql_query(mysql_connection, "INSERT INTO nagios_objects SET "
@@ -326,6 +359,13 @@ struct timeperiod populate_timeperiods() {
     return the_timeperiod;
 }
 
+void free_timeperiods(struct timeperiod the_timeperiod) {
+
+    free(the_timeperiod.name);
+    free(the_timeperiod.alias);
+    free(the_timeperiod.days[0]);
+}
+
 void populate_all_objects() {
     populate_commands();
 
@@ -334,4 +374,11 @@ void populate_all_objects() {
     test_host = populate_hosts(&test_tp);
     test_service = populate_service(&test_tp, &test_host);
     test_contact = populate_contact(&test_tp);
+}
+
+void free_all_objects() {
+    free_timeperiods(test_tp);
+    free_contact(test_contact);
+    free_service(test_service);
+    free_host(test_host);
 }

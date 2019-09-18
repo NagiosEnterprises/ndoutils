@@ -186,6 +186,8 @@ START_TEST (test_program_state)
     }
     ck_assert(tmp_row == NULL);
 
+    mysql_free_result(tmp_result);
+
     /* Objects in nagios_objects should not be active */
     mysql_query(mysql_connection, "SELECT 2 FROM nagios_objects WHERE is_active = 1");
 
@@ -196,6 +198,8 @@ START_TEST (test_program_state)
         tmp_row = mysql_fetch_row(tmp_result);
     }
     ck_assert(tmp_row == NULL);
+
+    mysql_free_result(tmp_result);
 
     mysql_query(mysql_connection, "SELECT 3 FROM nagios_processevents WHERE "
         "instance_id = 1 AND event_type = 104 AND "
@@ -214,7 +218,7 @@ START_TEST (test_program_state)
         ck_assert_int_eq(strcmp(tmp_row[0], "3"), 0);
     }
 
-
+    mysql_free_result(tmp_result);
     /* NEBTYPE_PROCESS_START's unique actions only affect ndo-startup -- skipping for now. */
 
     /* NEBTYPE_PROCESS_EVENTLOOPSTART's unique actions are currently stubs -- skipping for now */
@@ -256,6 +260,7 @@ START_TEST (test_program_state_end)
     if (tmp_row != NULL) {
         ck_assert_int_eq(strcmp(tmp_row[0], "4"), 0);
     }
+    mysql_free_result(tmp_result);
 
     mysql_query(mysql_connection, "SELECT 5 FROM nagios_programstatus WHERE "
         "program_end_time = FROM_UNIXTIME(1568735696) AND is_currently_running = 0");
@@ -271,6 +276,7 @@ START_TEST (test_program_state_end)
     if (tmp_row != NULL) {
         ck_assert_int_eq(strcmp(tmp_row[0], "5"), 0);
     }
+    mysql_free_result(tmp_result);
 }
 END_TEST
 
@@ -359,6 +365,8 @@ START_TEST (test_system_command)
     }
     mysql_free_result(tmp_result);
 
+    free(d.command_line);
+
 }
 END_TEST
 
@@ -417,6 +425,11 @@ START_TEST (test_event_handler)
     }
     mysql_free_result(tmp_result);
 
+    free(d.host_name);
+    free(d.service_description);
+    free(d.command_name);
+    free(d.command_line);
+
     d.type = NEBTYPE_EVENTHANDLER_START;
     d.flags = 0;
     d.attr = 0;
@@ -463,6 +476,10 @@ START_TEST (test_event_handler)
         ck_assert_int_eq(strcmp(tmp_row[0], "2"), 0);
     }
     mysql_free_result(tmp_result);
+
+    free(d.host_name);
+    free(d.command_name);
+    free(d.command_line);
 
 }
 END_TEST
@@ -526,6 +543,11 @@ START_TEST (test_host_check)
 
     mysql_free_result(tmp_result);
 
+    free(d.host_name);
+    free(d.command_name);
+    free(d.command_args);
+    free(d.command_line);
+
     /* This check is processed, so it should show up in the database */
 
     d.type = NEBTYPE_HOSTCHECK_PROCESSED;
@@ -577,6 +599,12 @@ START_TEST (test_host_check)
         ck_assert_int_eq(strcmp(tmp_row[0], "2"), 0);
     }
     mysql_free_result(tmp_result);
+
+    free(d.host_name);
+    free(d.command_name);
+    free(d.command_args);
+    free(d.output);
+    free(d.perf_data);
 
 }
 END_TEST
@@ -642,6 +670,13 @@ START_TEST (test_service_check)
 
     mysql_free_result(tmp_result);
 
+    free(d.host_name);
+    free(d.service_description);
+    free(d.command_name);
+    free(d.command_args);
+    free(d.output);
+    free(d.perf_data);
+
 
     d.type = NEBTYPE_SERVICECHECK_PROCESSED;
     d.flags = 0;
@@ -697,6 +732,11 @@ START_TEST (test_service_check)
     }
 
     mysql_free_result(tmp_result);
+
+    free(d.host_name);
+    free(d.service_description);
+    free(d.output);
+    free(d.perf_data);
 
 
 }
@@ -754,6 +794,10 @@ START_TEST (test_comment_data)
         ck_assert_int_eq(strcmp(tmp_row[0], "1"), 0);
     }
     mysql_free_result(tmp_result);
+
+    free(d_add_host.host_name);
+    free(d_add_host.author_name);
+    free(d_add_host.comment_data);
 
     /* Verify that the comment shows in comments */
     mysql_query(mysql_connection, "SELECT 2 FROM nagios_comments "
@@ -814,6 +858,10 @@ START_TEST (test_comment_data)
         ck_assert_int_eq(strcmp(tmp_row[0], "3"), 0);
     }
     mysql_free_result(tmp_result);
+
+    free(d_delete_host.host_name);
+    free(d_delete_host.author_name);
+    free(d_delete_host.comment_data);
 
     /* Comment should be deleted from comments table */
     mysql_query(mysql_connection, "SELECT 4 FROM nagios_comments "
@@ -896,6 +944,11 @@ START_TEST (test_comment_data)
     }
     mysql_free_result(tmp_result);
 
+    free(d_add_service.host_name);
+    free(d_add_service.service_description);
+    free(d_add_service.author_name);
+    free(d_add_service.comment_data);
+
     /* Now, delete the comment */
 
     d_delete_service.type = NEBTYPE_COMMENT_DELETE;
@@ -949,7 +1002,10 @@ START_TEST (test_comment_data)
 
     mysql_free_result(tmp_result);
 
-
+    free(d_delete_service.host_name);
+    free(d_delete_service.service_description);
+    free(d_delete_service.author_name);
+    free(d_delete_service.comment_data);
 }
 END_TEST
 
@@ -1001,6 +1057,10 @@ START_TEST (test_downtime_data)
         ck_assert_int_eq(strcmp(tmp_row[0], "1"), 0);
     }
     mysql_free_result(tmp_result);
+
+    free(d.host_name);
+    free(d.author_name);
+    free(d.comment_data);
 
     /* Verify that the exact same entry was added to downtimehistory */
 
@@ -1096,6 +1156,9 @@ START_TEST (test_downtime_data)
     }
     mysql_free_result(tmp_result);
 
+    free(d.host_name);
+    free(d.author_name);
+    free(d.comment_data);
 
     /* End the downtime */
 
@@ -1135,6 +1198,7 @@ START_TEST (test_downtime_data)
         tmp_row = mysql_fetch_row(tmp_result);
     }
     ck_assert(tmp_row == NULL);
+    mysql_free_result(tmp_result);
 
     /* Verify that the the entry still exists in downtimehistory with updated actual_end_time, actual_end_time_usec, was_cancelled */
 
@@ -1161,6 +1225,10 @@ START_TEST (test_downtime_data)
     }
     mysql_free_result(tmp_result);
 
+    free(d.host_name);
+    free(d.author_name);
+    free(d.comment_data);
+
     /* Also test the cancelled downtime, since this is a separate branch for this handler */
 
     d.type = NEBTYPE_DOWNTIME_ADD;
@@ -1183,6 +1251,9 @@ START_TEST (test_downtime_data)
 
     ndo_handle_downtime(d.type, &d);
 
+    free(d.host_name);
+    free(d.author_name);
+    free(d.comment_data);
 
     d.type = NEBTYPE_DOWNTIME_STOP;
     d.flags = 0;
@@ -1227,7 +1298,9 @@ START_TEST (test_downtime_data)
     }
     mysql_free_result(tmp_result);
 
-
+    free(d.host_name);
+    free(d.author_name);
+    free(d.comment_data);
 }
 END_TEST
 
@@ -1277,6 +1350,9 @@ START_TEST (test_flapping_data)
     }
     mysql_free_result(tmp_result);
 
+    free(d.host_name);
+    free(d.service_description);
+
     /* Verify that an entry is created for FLAPPING_STOP with hosts */
 
     d.type = NEBTYPE_FLAPPING_STOP;
@@ -1314,6 +1390,8 @@ START_TEST (test_flapping_data)
         ck_assert_int_eq(strcmp(tmp_row[0], "2"), 0);
     }
     mysql_free_result(tmp_result);
+
+    free(d.host_name);
 
 }
 END_TEST
@@ -1585,6 +1663,9 @@ START_TEST (test_notification_data)
     }
     mysql_free_result(tmp_result);
 
+    free(d.host_name);
+    free(d.service_description);
+    free(d.output);
 
     /* Create a host notification */
     d.type = NEBTYPE_NOTIFICATION_START;
@@ -1629,6 +1710,8 @@ START_TEST (test_notification_data)
     }
     mysql_free_result(tmp_result);
 
+    free(d.host_name);
+    free(d.output);
 
 }
 END_TEST
@@ -1682,6 +1765,10 @@ START_TEST (test_contact_notification_data)
     }
     mysql_free_result(tmp_result);
 
+    free(d.host_name);
+    free(d.service_description);
+    free(d.contact_name);
+    free(d.output);
 }
 END_TEST
 
@@ -1734,6 +1821,12 @@ START_TEST (test_contact_notification_method_data)
         ck_assert_int_eq(strcmp(tmp_row[0], "1"), 0);
     }
     mysql_free_result(tmp_result);
+
+    free(d.host_name);
+    free(d.service_description);
+    free(d.contact_name);
+    free(d.command_name);
+    free(d.output);
 }
 END_TEST
 
@@ -1774,6 +1867,8 @@ START_TEST (test_external_command)
     }
     mysql_free_result(tmp_result);
 
+    free(d.command_string);
+    free(d.command_args);
 }
 END_TEST
 
@@ -1832,6 +1927,11 @@ START_TEST (test_acknowledgement_data)
     }
     mysql_free_result(tmp_result);
 
+    free(d.host_name);
+    free(d.service_description);
+    free(d.author_name);
+    free(d.comment_data);
+
     d.type = NEBTYPE_ACKNOWLEDGEMENT_ADD;
     d.flags = 0;
     d.attr = 0;
@@ -1869,6 +1969,10 @@ START_TEST (test_acknowledgement_data)
         ck_assert_int_eq(strcmp(tmp_row[0], "2"), 0);
     }
     mysql_free_result(tmp_result);
+
+    free(d.host_name);
+    free(d.author_name);
+    free(d.comment_data);
 
 }
 END_TEST
@@ -1921,6 +2025,9 @@ START_TEST (test_statechange_data)
     }
     mysql_free_result(tmp_result);
 
+    free(d.host_name);
+    free(d.output);
+
     d.type = 1801;
     d.flags = 0;
     d.attr = 0;
@@ -1961,7 +2068,9 @@ START_TEST (test_statechange_data)
     }
     mysql_free_result(tmp_result);
 
-
+    free(d.host_name);
+    free(d.service_description);
+    free(d.output);
 
 }
 END_TEST
@@ -2057,6 +2166,8 @@ int main(int argc, char const * argv[])
 
         srunner_free(runner[i]);
     }
+
+    free_all_objects();
 
 
     printf("%s\n", "************************");
