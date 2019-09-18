@@ -29,6 +29,8 @@
 
 #define MAX_OBJECT_INSERT 10
 
+#define STRLIT_LEN(s) ( (sizeof(s) / sizeof(s[0])) - 1 )
+
 
 #define UPDATE_QUERY_X_POS(_query, _cursor, _xpos, _cond) _query[_cursor + _xpos] = (_cond ? '1' : '0')
 
