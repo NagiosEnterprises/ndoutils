@@ -39,6 +39,7 @@ void ndo_log(char * buffer);
 int nebmodule_init(int flags, char * args, void * handle);
 int nebmodule_deinit(int flags, int reason);
 int ndo_process_arguments(char * args);
+int ndo_initialize_mysql_connection();
 int ndo_initialize_database();
 int ndo_initialize_prepared_statements();
 void ndo_disconnect_database();
