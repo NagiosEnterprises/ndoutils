@@ -203,6 +203,10 @@ int nebmodule_init(int flags, char * args, void * handle)
         return NDO_ERROR;
     }
 
+    /* this needs to happen before we process the config file so that
+       mysql options are valid for the upcoming session */
+    ndo_initialize_mysql_connection();
+
     result = ndo_process_config_file();
     if (result != NDO_OK) {
         return NDO_ERROR;
@@ -596,8 +600,19 @@ void ndo_process_config_line(char * line)
         }
     }
 
+    /* mysql options */
+    else if (!strcmp("mysql.charset", key)) {
+        mysql_options(mysql_connection, MYSQL_SET_CHARSET_NAME, val);
+    }
+
     free(key);
     free(val);
+}
+
+
+int ndo_initialize_mysql_connection()
+{
+    mysql_connection = mysql_init(NULL);
 }
 
 
@@ -663,7 +678,6 @@ int ndo_initialize_database()
 
         int reconnect = 1;
         MYSQL * connected = NULL;
-        mysql_connection = mysql_init(NULL);
 
         if (mysql_connection == NULL) {
             ndo_log("Unable to initialize mysql connection");
