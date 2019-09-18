@@ -10,5 +10,6 @@ struct service test_service;
 struct contact test_contact;
 
 void populate_all_objects();
+void free_all_objects();
 
 #endif
