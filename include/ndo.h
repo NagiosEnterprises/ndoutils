@@ -22,9 +22,17 @@
 #   define FALSE 0
 #endif
 
+#include "../include/config.h"
 #include "../include/nagios/objects.h"
 
 #include <mysql.h>
+
+
+#ifdef DEBUG
+# define trace ndo_debug msg
+#else
+# define trace (void)0
+#endif
 
 
 #define MAX_OBJECT_INSERT 10
@@ -36,6 +44,7 @@
 
 
 void ndo_log(char * buffer);
+void ndo_debug(const char * fmt, ...);
 int nebmodule_init(int flags, char * args, void * handle);
 int nebmodule_deinit(int flags, int reason);
 int ndo_process_arguments(char * args);

@@ -1,0 +1,8 @@
+#ifndef NDO_CONFIG_H
+#define NDO_CONFIG_H
+
+
+#undef DEBUG
+
+
+#endif

@@ -41,6 +41,8 @@ if test "x$enable_testing" != "x" ; then
     AC_CHECK_HEADERS([check.h], [], [AC_MSG_ERROR(Can't locate libcheck headers)])
     AC_CHECK_LIB(subunit, subunit_test_start)
     AC_SUBST(tests_enabled, [enabled])
+
+    AC_DEFINE_UNQUOTED(DEBUG)
 else
     AC_SUBST(tests_enabled, [disabled])
 fi

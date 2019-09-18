@@ -189,6 +189,15 @@ void ndo_log(char * buffer)
 }
 
 
+void ndo_debug(const char * fmt, ...)
+{
+    va_list ap;
+    va_start(ap, fmt);
+    vfprintf(stderr, fmt, ap);
+    va_end(ap);
+}
+
+
 int nebmodule_init(int flags, char * args, void * handle)
 {
     int result = NDO_ERROR;
