@@ -770,6 +770,7 @@ void ndo_disconnect_database()
     mysql_stmt_close(ndo_stmt_object_get_name2);
     mysql_stmt_close(ndo_stmt_object_insert_name1);
     mysql_stmt_close(ndo_stmt_object_insert_name2);
+    mysql_stmt_close(ndo_stmt_log_data);
 
     if (ndo_database_connected == TRUE) {
         mysql_close(mysql_connection);

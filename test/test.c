@@ -1198,6 +1198,7 @@ START_TEST (test_downtime_data)
         tmp_row = mysql_fetch_row(tmp_result);
     }
     ck_assert(tmp_row == NULL);
+    mysql_free_result(tmp_result);
 
     /* Verify that the the entry still exists in downtimehistory with updated actual_end_time, actual_end_time_usec, was_cancelled */
 
