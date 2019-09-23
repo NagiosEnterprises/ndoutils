@@ -3,6 +3,8 @@
 
 int ndo_handle_process(int type, void * d)
 {
+    trace_handler(process);
+
     nebstruct_process_data * data = d;
     char * program_version = get_program_version();
     char * program_mod_date = get_program_modification_date();
@@ -77,11 +79,16 @@ int ndo_handle_process(int type, void * d)
 
     MYSQL_BIND();
     MYSQL_EXECUTE();
+
+    trace_func_end();
+    return NDO_OK;
 }
 
 
 int ndo_handle_timed_event(int type, void * d)
 {
+    trace_handler(timed_event);
+
     nebstruct_timed_event_data * data = d;
 
     int object_id = 0;
@@ -166,12 +173,15 @@ int ndo_handle_timed_event(int type, void * d)
         MYSQL_EXECUTE();
     }
 
+    trace_func_end();
     return NDO_OK;
 }
 
 
 int ndo_handle_log(int type, void * d)
 {
+    trace_handler_nolog(log);
+
     nebstruct_log_data * data = d;
 
     /* this particular function is a bit weird because it starts passing
@@ -220,12 +230,15 @@ int ndo_handle_log(int type, void * d)
         return NDO_ERROR;
     }
 
+    trace_func_end_nolog();
     return NDO_OK;
 }
 
 
 int ndo_handle_system_command(int type, void * d)
 {
+    trace_handler(system_command);
+
     nebstruct_system_command_data * data = d;
 
     MYSQL_RESET_SQL();
@@ -249,12 +262,15 @@ int ndo_handle_system_command(int type, void * d)
     MYSQL_BIND();
     MYSQL_EXECUTE();
 
+    trace_func_end();
     return NDO_OK;
 }
 
 
 int ndo_handle_event_handler(int type, void * d)
 {
+    trace_handler(event_handler);
+
     nebstruct_event_handler_data * data = d;
     int object_id = 0;
 
@@ -296,12 +312,15 @@ int ndo_handle_event_handler(int type, void * d)
     MYSQL_BIND();
     MYSQL_EXECUTE();
 
+    trace_func_end();
     return NDO_OK;
 }
 
 
 int ndo_handle_host_check(int type, void * d)
 {
+    trace_handler(host_check);
+
     nebstruct_host_check_data * data = d;
     int object_id = 0;
 
@@ -347,11 +366,14 @@ int ndo_handle_host_check(int type, void * d)
     MYSQL_BIND();
     MYSQL_EXECUTE();
 
+    trace_func_end();
     return NDO_OK;
 }
 
 int ndo_handle_service_check(int type, void * d)
 {
+    trace_handler(service_check);
+
     nebstruct_service_check_data * data = d;
     int object_id = 0;
 
@@ -402,12 +424,15 @@ int ndo_handle_service_check(int type, void * d)
     MYSQL_BIND();
     MYSQL_EXECUTE();
 
+    trace_func_end();
     return NDO_OK;
 }
 
 
 int ndo_handle_comment(int type, void * d)
 {
+    trace_handler(comment);
+
     nebstruct_comment_data * data = d;
     int object_id = 0;
 
@@ -487,12 +512,15 @@ int ndo_handle_comment(int type, void * d)
         MYSQL_EXECUTE();
     }
 
+    trace_func_end();
     return NDO_OK;
 }
 
 
 int ndo_handle_downtime(int type, void * d)
 {
+    trace_handler(downtime);
+
     nebstruct_downtime_data * data = d;
     int object_id = 0;
 
@@ -615,11 +643,16 @@ int ndo_handle_downtime(int type, void * d)
         MYSQL_BIND();
         MYSQL_EXECUTE();
     }
+
+    trace_func_end();
+    return NDO_OK;
 }
 
 
 int ndo_handle_flapping(int type, void * d)
 {
+    trace_handler(flapping);
+
     nebstruct_flapping_data * data = d;
     int object_id = 0;
     nagios_comment * comment = NULL;
@@ -660,11 +693,16 @@ int ndo_handle_flapping(int type, void * d)
 
     MYSQL_BIND();
     MYSQL_EXECUTE();
+
+    trace_func_end();
+    return NDO_OK;
 }
 
 
 int ndo_handle_program_status(int type, void * d)
 {
+    trace_handler(program_status);
+
     nebstruct_program_status_data * data = d;
 
     MYSQL_RESET_SQL();
@@ -695,11 +733,16 @@ int ndo_handle_program_status(int type, void * d)
 
     MYSQL_BIND();
     MYSQL_EXECUTE();
+
+    trace_func_end();
+    return NDO_OK;
 }
 
 
 int ndo_handle_host_status(int type, void * d)
 {
+    trace_handler(host_status);
+
     nebstruct_host_status_data * data = d;
     int host_object_id        = 0;
     int timeperiod_object_id  = 0;
@@ -770,11 +813,16 @@ int ndo_handle_host_status(int type, void * d)
 
     MYSQL_BIND();
     MYSQL_EXECUTE();
+
+    trace_func_end();
+    return NDO_OK;
 }
 
 
 int ndo_handle_service_status(int type, void * d)
 {
+    trace_handler(service_status);
+
     nebstruct_service_status_data * data = d;
 
     int service_object_id     = 0;
@@ -847,11 +895,16 @@ int ndo_handle_service_status(int type, void * d)
 
     MYSQL_BIND();
     MYSQL_EXECUTE();
+
+    trace_func_end();
+    return NDO_OK;
 }
 
 
 int ndo_handle_contact_status(int type, void * d)
 {
+    trace_handler(contact_status);
+
     nebstruct_contact_status_data * data = d;
 
     int contact_object_id     = 0;
@@ -884,11 +937,16 @@ int ndo_handle_contact_status(int type, void * d)
 
     MYSQL_BIND();
     MYSQL_EXECUTE();
+
+    trace_func_end();
+    return NDO_OK;
 }
 
 
 int ndo_handle_notification(int type, void * d)
 {
+    trace_handler(notification);
+
     nebstruct_notification_data * data = d;
     int object_id = 0;
 
@@ -929,12 +987,15 @@ int ndo_handle_notification(int type, void * d)
        then notified (and that data also brokered) */
     ndo_last_notification_id = mysql_insert_id(mysql_connection);
 
+    trace_func_end();
     return NDO_OK;
 }
 
 
 int ndo_handle_contact_notification(int type, void * d)
 {
+    trace_handler(contact_notification);
+
     nebstruct_contact_notification_data * data = d;
 
     int contact_object_id     = 0;
@@ -967,11 +1028,16 @@ int ndo_handle_contact_notification(int type, void * d)
 
     MYSQL_BIND();
     MYSQL_EXECUTE();
+
+    trace_func_end();
+    return NDO_OK;
 }
 
 
 int ndo_handle_contact_notification_method(int type, void * d)
 {
+    trace_handler(contact_notification_method);
+
     nebstruct_contact_notification_method_data * data = d;
 
     int command_object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_COMMAND, data->command_name);
@@ -992,11 +1058,16 @@ int ndo_handle_contact_notification_method(int type, void * d)
 
     MYSQL_BIND();
     MYSQL_EXECUTE();
+
+    trace_func_end();
+    return NDO_OK;
 }
 
 
 int ndo_handle_external_command(int type, void * d)
 {
+    trace_handler(external_command);
+
     nebstruct_external_command_data * data = d;
 
     if (data->type != NEBTYPE_EXTERNALCOMMAND_START) {
@@ -1016,11 +1087,16 @@ int ndo_handle_external_command(int type, void * d)
 
     MYSQL_BIND();
     MYSQL_EXECUTE();
+
+    trace_func_end();
+    return NDO_OK;
 }
 
 
 int ndo_handle_acknowledgement(int type, void * d)
 {
+    trace_handler(acknowledgement);
+
     nebstruct_acknowledgement_data * data = d;
 
     int object_id = 0;
@@ -1051,11 +1127,16 @@ int ndo_handle_acknowledgement(int type, void * d)
 
     MYSQL_BIND();
     MYSQL_EXECUTE();
+
+    trace_func_end();
+    return NDO_OK;
 }
 
 
 int ndo_handle_state_change(int type, void * d)
 {
+    trace_handler(statechange);
+
     nebstruct_statechange_data * data = d;
 
     int object_id = 0;
@@ -1105,16 +1186,22 @@ int ndo_handle_state_change(int type, void * d)
 
     MYSQL_BIND();
     MYSQL_EXECUTE();
+
+    trace_func_end();
+    return NDO_OK;
 }
 
 
 int ndo_handle_retention(int type, void * d)
 {
+    trace_handler(retention);
+
     nebstruct_retention_data * data = d;
 
     if (data->type == NEBTYPE_RETENTIONDATA_ENDLOAD) {
         ndo_write_config(NDO_CONFIG_DUMP_RETAINED);
     }
 
+    trace_func_end();
     return NDO_OK;
 }

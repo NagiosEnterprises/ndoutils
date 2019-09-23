@@ -29,10 +29,21 @@
 
 
 #ifdef DEBUG
-# define trace ndo_debug msg
+# define TRACE(fmt, ...) ndo_debug(TRUE, fmt, __VA_ARGS__)
+# define TRACE_NOLOG(fmt, ...) ndo_debug(FALSE, fmt, __VA_ARGS__)
 #else
-# define trace (void)0
+# define TRACE(fmt, ...) (void)0
+# define TRACE_NOLOG(fmt, ...) (void)0
 #endif
+
+#define trace(fmt, ...) TRACE("%s():%d - " fmt, __func__, __LINE__, __VA_ARGS__)
+#define trace_nolog(fmt, ...) TRACE_NOLOG("%s():%d - " fmt, __func__, __LINE__, __VA_ARGS__)
+#define trace_func_begin() trace("%s", "begin function (void args)")
+#define trace_func_begin_nolog() trace_nolog("%s", "begin function (void args)")
+#define trace_func_end() trace("%s", "end function")
+#define trace_func_end_nolog() trace_nolog("%s", "end function")
+#define trace_handler(_struct) trace("type=%d, data(type=%d,f=%d,a=%d,t=%ld.%06ld)", type, ((nebstruct_## _struct ##_data *)d)->type, ((nebstruct_## _struct ##_data *)d)->flags, ((nebstruct_## _struct ##_data *)d)->attr, ((nebstruct_## _struct ##_data *)d)->timestamp.tv_sec, ((nebstruct_## _struct ##_data *)d)->timestamp.tv_usec)
+#define trace_handler_nolog(_struct) trace_nolog("type=%d, data(type=%d,f=%d,a=%d,t=%ld.%06ld)", type, ((nebstruct_## _struct ##_data *)d)->type, ((nebstruct_## _struct ##_data *)d)->flags, ((nebstruct_## _struct ##_data *)d)->attr, ((nebstruct_## _struct ##_data *)d)->timestamp.tv_sec, ((nebstruct_## _struct ##_data *)d)->timestamp.tv_usec)
 
 
 #define MAX_OBJECT_INSERT 10
@@ -44,7 +55,7 @@
 
 
 void ndo_log(char * buffer);
-void ndo_debug(const char * fmt, ...);
+void ndo_debug(int write_to_log, const char * fmt, ...);
 int nebmodule_init(int flags, char * args, void * handle);
 int nebmodule_deinit(int flags, int reason);
 int ndo_process_arguments(char * args);
