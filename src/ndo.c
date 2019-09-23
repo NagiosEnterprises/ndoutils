@@ -67,27 +67,67 @@ do { \
 } while (0)
 
 
-#define NDO_HANDLE_ERROR(err) NDO_HANDLE_ERROR_STMT(err, ndo_stmt)
-
-
-/* built this for handling checking the broker data being sent, but based
-   on reviewing `nagioscore/base/broker.c` - i don't think these checks
-   are actually necessary. leaving it here in case someone finds it useful */
-#define NDO_HANDLE_INVALID_BROKER_DATA(_ptr, _type_var, _type) \
-\
+#define NDO_HANDLE_ERROR_BIND_STMT(stmt, bind) \
 do { \
-\
-    if (_ptr == NULL) { \
-        NDO_REPORT_ERROR("Broker data pointer is null"); \
-        return NDO_OK; \
+    if (ndo_return != 0) { \
+        int ndo_mysql_errno = *mysql_stmt_error(stmt); \
+        if (ndo_mysql_errno == CR_SERVER_GONE_ERROR || ndo_mysql_errno == CR_SERVER_LOST) { \
+            sleep(1); \
+            if (ndo_initialize_database() == NDO_OK) { \
+                ndo_return = mysql_stmt_bind_param(stmt, bind); \
+            } \
+        } \
+        if (ndo_return != 0) { \
+            snprintf(ndo_error_msg, 1023, "ndo_return = %d (%s)", ndo_return, mysql_stmt_error(stmt)); \
+            ndo_log(ndo_error_msg); \
+            NDO_REPORT_ERROR("Unable to bind parameters"); \
+            return NDO_ERROR; \
+        } \
     } \
-\
-    if (_type_var != _type) { \
-        NDO_REPORT_ERROR("Broker type doesn't meet expectations"); \
-        return NDO_OK; \
-    } \
-\
 } while (0)
+
+
+#define NDO_HANDLE_ERROR_EXECUTE_STMT(stmt) \
+do { \
+    if (ndo_return != 0) { \
+        int ndo_mysql_errno = *mysql_stmt_error(stmt); \
+        if (ndo_mysql_errno == CR_SERVER_GONE_ERROR || ndo_mysql_errno == CR_SERVER_LOST) { \
+            sleep(1); \
+            if (ndo_initialize_database() == NDO_OK) { \
+                ndo_return = mysql_stmt_execute(stmt); \
+            } \
+        } \
+        if (ndo_return != 0) { \
+            snprintf(ndo_error_msg, 1023, "ndo_return = %d (%s)", ndo_return, mysql_stmt_error(stmt)); \
+            ndo_log(ndo_error_msg); \
+            NDO_REPORT_ERROR("Unable to execute statement"); \
+            return NDO_ERROR; \
+        } \
+    } \
+} while (0)
+
+
+#define NDO_HANDLE_ERROR_PREPARE_STMT(stmt, query) \
+do { \
+    if (ndo_return != 0) { \
+        int ndo_mysql_errno = *mysql_stmt_error(stmt); \
+        if (ndo_mysql_errno == CR_SERVER_GONE_ERROR || ndo_mysql_errno == CR_SERVER_LOST) { \
+            sleep(1); \
+            if (ndo_initialize_database() == NDO_OK) { \
+                ndo_return = mysql_stmt_prepare(stmt, query, strlen(query)); \
+            } \
+        } \
+        if (ndo_return != 0) { \
+            snprintf(ndo_error_msg, 1023, "ndo_return = %d (%s)", ndo_return, mysql_stmt_error(stmt)); \
+            ndo_log(ndo_error_msg); \
+            NDO_REPORT_ERROR("Unable to prepare statement"); \
+            return NDO_ERROR; \
+        } \
+    } \
+} while (0)
+
+
+#define NDO_HANDLE_ERROR(err) NDO_HANDLE_ERROR_STMT(err, ndo_stmt)
 
 
 /**********************************************/
@@ -108,6 +148,15 @@ char * ndo_db_socket = NULL;
 char * ndo_db_user = NULL;
 char * ndo_db_pass = NULL;
 char * ndo_db_name = NULL;
+
+typedef struct ndo_stmt_data {
+    char * query;
+    MYSQL_STMT * stmt;
+    MYSQL_BIND * bind;
+    MYSQL_BIND * result;
+    long * strlen;
+    long * result_strlen;
+} ndo_stmt_data;
 
 
 MYSQL_STMT * ndo_stmt = NULL;
@@ -766,13 +815,34 @@ int ndo_initialize_prepared_statements()
 {
     trace_func_begin();
 
+    if (ndo_stmt != NULL) {
+        mysql_stmt_close(ndo_stmt);
+    }
     ndo_stmt = mysql_stmt_init(mysql_connection);
 
+    if (ndo_stmt_object_get_name1 != NULL) {
+        mysql_stmt_close(ndo_stmt_object_get_name1);
+    }
     ndo_stmt_object_get_name1 = mysql_stmt_init(mysql_connection);
+
+    if (ndo_stmt_object_get_name2 != NULL) {
+        mysql_stmt_close(ndo_stmt_object_get_name2);
+    }
     ndo_stmt_object_get_name2 = mysql_stmt_init(mysql_connection);
+
+    if (ndo_stmt_object_insert_name1 != NULL) {
+        mysql_stmt_close(ndo_stmt_object_insert_name1);
+    }
     ndo_stmt_object_insert_name1 = mysql_stmt_init(mysql_connection);
+
+    if (ndo_stmt_object_insert_name2 != NULL) {
+        mysql_stmt_close(ndo_stmt_object_insert_name2);
+    }
     ndo_stmt_object_insert_name2 = mysql_stmt_init(mysql_connection);
 
+    if (ndo_stmt_log_data != NULL) {
+        mysql_stmt_close(ndo_stmt_log_data);
+    }
     ndo_stmt_log_data = mysql_stmt_init(mysql_connection);
 
     if (   ndo_stmt == NULL

@@ -9,7 +9,7 @@ do { \
 #define MYSQL_BIND() \
 do { \
     ndo_return = mysql_stmt_bind_param(ndo_stmt, ndo_bind); \
-    NDO_HANDLE_ERROR("Unable to bind parameters"); \
+    NDO_HANDLE_ERROR_BIND_STMT(ndo_stmt, ndo_bind); \
 } while (0)
 
 
@@ -162,14 +162,14 @@ do { \
 #define MYSQL_PREPARE() \
 do { \
     ndo_return = mysql_stmt_prepare(ndo_stmt, ndo_query, strlen(ndo_query)); \
-    NDO_HANDLE_ERROR("Unable to prepare statement"); \
+    NDO_HANDLE_ERROR_PREPARE_STMT(ndo_stmt, ndo_query); \
 } while (0)
 
 
 #define MYSQL_EXECUTE() \
 do { \
     ndo_return = mysql_stmt_execute(ndo_stmt); \
-    NDO_HANDLE_ERROR("Unable to execute statement"); \
+    NDO_HANDLE_ERROR_EXECUTE_STMT(ndo_stmt); \
 } while (0)
 
 
@@ -195,14 +195,14 @@ do { \
 #define MYSQL_PREPARE_NEW(_which, _query) \
 do { \
     ndo_return = mysql_stmt_prepare(ndo_stmt_new[_which], _query, strlen(_query)); \
-    NDO_HANDLE_ERROR_NEW(_which, "Unable to prepare statement"); \
+    NDO_HANDLE_ERROR_PREPARE_STMT(ndo_stmt_new[_which], _query); \
 } while (0)
 
 
 #define MYSQL_EXECUTE_NEW(_which) \
 do { \
     ndo_return = mysql_stmt_execute(ndo_stmt_new[_which]); \
-    NDO_HANDLE_ERROR_NEW(_which, "Unable to execute statement"); \
+    NDO_HANDLE_ERROR_EXECUTE_STMT(ndo_stmt_new[_which]); \
 } while (0)
 
 
@@ -217,7 +217,7 @@ do { \
 #define MYSQL_BIND_NEW(_which) \
 do { \
     ndo_return = mysql_stmt_bind_param(ndo_stmt_new[_which], ndo_bind_new[_which]); \
-    NDO_HANDLE_ERROR_NEW(_which, "Unable to bind parameters"); \
+    NDO_HANDLE_ERROR_BIND_STMT(ndo_stmt_new[_which], ndo_bind_new[_which]); \
 } while (0)
 
 

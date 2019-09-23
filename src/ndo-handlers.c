@@ -180,7 +180,7 @@ int ndo_handle_timed_event(int type, void * d)
 
 int ndo_handle_log(int type, void * d)
 {
-    trace_handler_nolog(log);
+    /* trace_handler_nolog(log); */
 
     nebstruct_log_data * data = d;
 
@@ -230,7 +230,7 @@ int ndo_handle_log(int type, void * d)
         return NDO_ERROR;
     }
 
-    trace_func_end_nolog();
+    /* trace_func_end_nolog(); */
     return NDO_OK;
 }
 
