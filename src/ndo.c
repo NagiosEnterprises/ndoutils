@@ -137,7 +137,7 @@ do { \
    and the query_base + query_on_update longest string (write_services) is ~4k
    so we pad a bit and hope we never go over this */
 #define MAX_SQL_BUFFER ((MAX_OBJECT_INSERT * 150) + 8000)
-#define MAX_SQL_BINDINGS 400
+#define MAX_SQL_BINDINGS 600
 #define MAX_BIND_BUFFER 4096
 
 int ndo_database_connected = FALSE;
@@ -149,15 +149,8 @@ char * ndo_db_user = NULL;
 char * ndo_db_pass = NULL;
 char * ndo_db_name = NULL;
 
-typedef struct ndo_stmt_data {
-    char * query;
-    MYSQL_STMT * stmt;
-    MYSQL_BIND * bind;
-    MYSQL_BIND * result;
-    long * strlen;
-    long * result_strlen;
-} ndo_stmt_data;
 
+ndo_query_data * ndo_sql = NULL;
 
 MYSQL_STMT * ndo_stmt = NULL;
 MYSQL_BIND ndo_bind[MAX_SQL_BINDINGS];

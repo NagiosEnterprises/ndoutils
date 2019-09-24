@@ -285,3 +285,50 @@ do { \
     \
     ndo_bind_new_i[_which]++; \
 } while (0)
+
+
+#define _MYSQL_BIND_NUMERICAL(type, bind, i, var) \
+do { \
+    bind.buffer_type = type; \
+    bind.buffer = &(var); \
+    i++; \
+} while (0)
+
+#define _MYSQL_BIND_STR(bind, i, var, len_var, len) \
+do { \
+    bind.buffer_type = MYSQL_TYPE_STRING; \
+    bind.buffer_length = MAX_BIND_BUFFER; \
+    if (var != NULL && len > 0) { \
+        len_var = len; \
+        bind.buffer = var; \
+    } else { \
+        len_var = 0; \
+        bind.buffer = ""; \
+    } \
+    bind.length = &(len_var); \
+    i++; \
+} while (0)
+
+#define _MYSQL_BIND_LONG(bind, i, var) _MYSQL_BIND_NUMERICAL(MYSQL_TYPE_LONG, bind, i, var)
+#define _MYSQL_BIND_INT(bind, i, var) _MYSQL_BIND_LONG(bind, i, var)
+#define _MYSQL_BIND_DOUBLE(bind, i, var) _MYSQL_BIND_NUMERICAL(MYSQL_TYPE_DOUBLE, bind, i, var)
+#define _MYSQL_BIND_FLOAT(bind, i, var) _MYSQL_BIND_NUMERICAL(MYSQL_TYPE_FLOAT, bind, i, var)
+#define _MYSQL_BIND_SHORT(bind, i, var) _MYSQL_BIND_NUMERICAL(MYSQL_TYPE_SHORT, bind, i, var)
+#define _MYSQL_BIND_TINY(bind, i, var) _MYSQL_BIND_NUMERICAL(MYSQL_TYPE_TINY, bind, i, var)
+#define _MYSQL_BIND_LONGLONG(bind, i, var) _MYSQL_BIND_NUMERICAL(MYSQL_TYPE_LONGLONG, bind, i, var)
+
+#define WRITE_BIND_LONG(stmt, var) _MYSQL_BIND_LONG(ndo_write_bind[stmt][ndo_write_i[stmt]], ndo_write_i[stmt], var)
+#define WRITE_BIND_INT(stmt, var) WRITE_BIND_LONG(stmt, var)
+#define WRITE_BIND_DOUBLE(stmt, var) _MYSQL_BIND_DOUBLE(ndo_write_bind[stmt][ndo_write_i[stmt]], ndo_write_i[stmt], var)
+#define WRITE_BIND_FLOAT(stmt, var) _MYSQL_BIND_FLOAT(ndo_write_bind[stmt][ndo_write_i[stmt]], ndo_write_i[stmt], var)
+#define WRITE_BIND_SHORT(stmt, var) _MYSQL_BIND_SHORT(ndo_write_bind[stmt][ndo_write_i[stmt]], ndo_write_i[stmt], var)
+#define WRITE_BIND_TINY(stmt, var) _MYSQL_BIND_TINY(ndo_write_bind[stmt][ndo_write_i[stmt]], ndo_write_i[stmt], var)
+#define WRITE_BIND_LONGLONG(stmt, var) _MYSQL_BIND_LONGLONG(ndo_write_bind[stmt][ndo_write_i[stmt]], ndo_write_i[stmt], var)
+
+#define MYSQL_BIND_LONG(stmt, var) _MYSQL_BIND_LONG(ndo_sql[stmt].bind[ndo_sql[stmt].bind_i], ndo_sql[stmt].bind_i, var)
+#define MYSQL_BIND_INT(stmt, var) MYSQL_BIND_LONG(stmt, var)
+#define MYSQL_BIND_DOUBLE(stmt, var) _MYSQL_BIND_DOUBLE(ndo_sql[stmt].bind[ndo_sql[stmt].bind_i], ndo_sql[stmt].bind_i, var)
+#define MYSQL_BIND_FLOAT(stmt, var) _MYSQL_BIND_FLOAT(ndo_sql[stmt].bind[ndo_sql[stmt].bind_i], ndo_sql[stmt].bind_i, var)
+#define MYSQL_BIND_SHORT(stmt, var) _MYSQL_BIND_SHORT(ndo_sql[stmt].bind[ndo_sql[stmt].bind_i], ndo_sql[stmt].bind_i, var)
+#define MYSQL_BIND_TINY(stmt, var) _MYSQL_BIND_TINY(ndo_sql[stmt].bind[ndo_sql[stmt].bind_i], ndo_sql[stmt].bind_i, var)
+#define MYSQL_BIND_LONGLONG(stmt, var) _MYSQL_BIND_LONGLONG(ndo_sql[stmt].bind[ndo_sql[stmt].bind_i], ndo_sql[stmt].bind_i, var)
