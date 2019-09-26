@@ -45,6 +45,11 @@
 #define trace_handler(_struct) trace("type=%d, data(type=%d,f=%d,a=%d,t=%ld.%06ld)", type, ((nebstruct_## _struct ##_data *)d)->type, ((nebstruct_## _struct ##_data *)d)->flags, ((nebstruct_## _struct ##_data *)d)->attr, ((nebstruct_## _struct ##_data *)d)->timestamp.tv_sec, ((nebstruct_## _struct ##_data *)d)->timestamp.tv_usec)
 #define trace_handler_nolog(_struct) trace_nolog("type=%d, data(type=%d,f=%d,a=%d,t=%ld.%06ld)", type, ((nebstruct_## _struct ##_data *)d)->type, ((nebstruct_## _struct ##_data *)d)->flags, ((nebstruct_## _struct ##_data *)d)->attr, ((nebstruct_## _struct ##_data *)d)->timestamp.tv_sec, ((nebstruct_## _struct ##_data *)d)->timestamp.tv_usec)
 
+#define NDO_REPORT_ERROR(err) \
+do { \
+    snprintf(ndo_error_msg, 1023, "%s(%s:%d): %s", __func__, __FILE__, __LINE__, err); \
+    ndo_log(ndo_error_msg); \
+} while (0)
 
 #define MAX_OBJECT_INSERT 10
 

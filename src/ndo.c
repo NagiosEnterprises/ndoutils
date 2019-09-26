@@ -49,85 +49,6 @@ extern int                  __nagios_object_structure_version;
 
 extern struct object_count    num_objects;
 
-#define NDO_REPORT_ERROR(err) \
-do { \
-    snprintf(ndo_error_msg, 1023, "%s(%s:%d): %s", __func__, __FILE__, __LINE__, err); \
-    ndo_log(ndo_error_msg); \
-} while (0)
-
-
-#define NDO_HANDLE_ERROR_STMT(err, stmt) \
-do { \
-    if (ndo_return != 0) { \
-        snprintf(ndo_error_msg, 1023, "ndo_return = %d (%s)", ndo_return, mysql_stmt_error(stmt)); \
-        ndo_log(ndo_error_msg); \
-        NDO_REPORT_ERROR(err); \
-        return NDO_ERROR; \
-    } \
-} while (0)
-
-
-#define NDO_HANDLE_ERROR_BIND_STMT(stmt, bind) \
-do { \
-    if (ndo_return != 0) { \
-        int ndo_mysql_errno = *mysql_stmt_error(stmt); \
-        if (ndo_mysql_errno == CR_SERVER_GONE_ERROR || ndo_mysql_errno == CR_SERVER_LOST) { \
-            sleep(1); \
-            if (ndo_initialize_database() == NDO_OK) { \
-                ndo_return = mysql_stmt_bind_param(stmt, bind); \
-            } \
-        } \
-        if (ndo_return != 0) { \
-            snprintf(ndo_error_msg, 1023, "ndo_return = %d (%s)", ndo_return, mysql_stmt_error(stmt)); \
-            ndo_log(ndo_error_msg); \
-            NDO_REPORT_ERROR("Unable to bind parameters"); \
-            return NDO_ERROR; \
-        } \
-    } \
-} while (0)
-
-
-#define NDO_HANDLE_ERROR_EXECUTE_STMT(stmt) \
-do { \
-    if (ndo_return != 0) { \
-        int ndo_mysql_errno = *mysql_stmt_error(stmt); \
-        if (ndo_mysql_errno == CR_SERVER_GONE_ERROR || ndo_mysql_errno == CR_SERVER_LOST) { \
-            sleep(1); \
-            if (ndo_initialize_database() == NDO_OK) { \
-                ndo_return = mysql_stmt_execute(stmt); \
-            } \
-        } \
-        if (ndo_return != 0) { \
-            snprintf(ndo_error_msg, 1023, "ndo_return = %d (%s)", ndo_return, mysql_stmt_error(stmt)); \
-            ndo_log(ndo_error_msg); \
-            NDO_REPORT_ERROR("Unable to execute statement"); \
-            return NDO_ERROR; \
-        } \
-    } \
-} while (0)
-
-
-#define NDO_HANDLE_ERROR_PREPARE_STMT(stmt, query) \
-do { \
-    if (ndo_return != 0) { \
-        int ndo_mysql_errno = *mysql_stmt_error(stmt); \
-        if (ndo_mysql_errno == CR_SERVER_GONE_ERROR || ndo_mysql_errno == CR_SERVER_LOST) { \
-            sleep(1); \
-            if (ndo_initialize_database() == NDO_OK) { \
-                ndo_return = mysql_stmt_prepare(stmt, query, strlen(query)); \
-            } \
-        } \
-        if (ndo_return != 0) { \
-            snprintf(ndo_error_msg, 1023, "ndo_return = %d (%s)", ndo_return, mysql_stmt_error(stmt)); \
-            ndo_log(ndo_error_msg); \
-            NDO_REPORT_ERROR("Unable to prepare statement"); \
-            return NDO_ERROR; \
-        } \
-    } \
-} while (0)
-
-
-#define NDO_HANDLE_ERROR(err) NDO_HANDLE_ERROR_STMT(err, ndo_stmt)
 
 
 /**********************************************/
@@ -808,67 +729,6 @@ int ndo_initialize_prepared_statements()
 {
     trace_func_begin();
 
-    if (ndo_stmt != NULL) {
-        mysql_stmt_close(ndo_stmt);
-    }
-    ndo_stmt = mysql_stmt_init(mysql_connection);
-
-    if (ndo_stmt_object_get_name1 != NULL) {
-        mysql_stmt_close(ndo_stmt_object_get_name1);
-    }
-    ndo_stmt_object_get_name1 = mysql_stmt_init(mysql_connection);
-
-    if (ndo_stmt_object_get_name2 != NULL) {
-        mysql_stmt_close(ndo_stmt_object_get_name2);
-    }
-    ndo_stmt_object_get_name2 = mysql_stmt_init(mysql_connection);
-
-    if (ndo_stmt_object_insert_name1 != NULL) {
-        mysql_stmt_close(ndo_stmt_object_insert_name1);
-    }
-    ndo_stmt_object_insert_name1 = mysql_stmt_init(mysql_connection);
-
-    if (ndo_stmt_object_insert_name2 != NULL) {
-        mysql_stmt_close(ndo_stmt_object_insert_name2);
-    }
-    ndo_stmt_object_insert_name2 = mysql_stmt_init(mysql_connection);
-
-    if (ndo_stmt_log_data != NULL) {
-        mysql_stmt_close(ndo_stmt_log_data);
-    }
-    ndo_stmt_log_data = mysql_stmt_init(mysql_connection);
-
-    if (   ndo_stmt == NULL
-        || ndo_stmt_object_get_name1 == NULL
-        || ndo_stmt_object_get_name2 == NULL
-        || ndo_stmt_object_insert_name1 == NULL
-        || ndo_stmt_object_insert_name2 == NULL
-        || ndo_stmt_log_data == NULL) {
-
-        ndo_log("Unable to initialize prepared statements");
-    }
-
-    /* also let's initialize the queries that we re-use constantly */
-
-    strncpy(ndo_query, "SELECT object_id FROM nagios_objects WHERE objecttype_id = ? AND name1 = ? AND name2 IS NULL", MAX_SQL_BUFFER);
-    ndo_return = mysql_stmt_prepare(ndo_stmt_object_get_name1, ndo_query, strlen(ndo_query));
-    // todo
-
-    strncpy(ndo_query, "SELECT object_id FROM nagios_objects WHERE objecttype_id = ? AND name1 = ? AND name2 = ?", MAX_SQL_BUFFER);
-    ndo_return = mysql_stmt_prepare(ndo_stmt_object_get_name2, ndo_query, strlen(ndo_query));
-    // todo
-
-    strncpy(ndo_query, "INSERT INTO nagios_objects SET objecttype_id = ?, name1 = ? ON DUPLICATE KEY UPDATE is_active = 1", MAX_SQL_BUFFER);
-    ndo_return = mysql_stmt_prepare(ndo_stmt_object_insert_name1, ndo_query, strlen(ndo_query));
-    // todo
-
-    strncpy(ndo_query, "INSERT INTO nagios_objects SET objecttype_id = ?, name1 = ?, name2 = ? ON DUPLICATE KEY UPDATE is_active = 1", MAX_SQL_BUFFER);
-    ndo_return = mysql_stmt_prepare(ndo_stmt_object_insert_name2, ndo_query, strlen(ndo_query));
-    // todo
-
-    strncpy(ndo_query, "INSERT INTO nagios_logentries SET instance_id = 1, logentry_time = FROM_UNIXTIME(?), entry_time = FROM_UNIXTIME(?), entry_time_usec = ?, logentry_type = ?, logentry_data = ?, realtime_data = 1, inferred_data_extracted = 1", MAX_SQL_BUFFER);
-    ndo_return = mysql_stmt_prepare(ndo_stmt_log_data, ndo_query, strlen(ndo_query));
-    // todo
 
     trace_func_end();
     return NDO_OK;
@@ -1046,36 +906,22 @@ int ndo_get_object_id_name1(int insert, int object_type, char * name1)
 
     int object_id = 0;
 
-    ndo_tmp_str_len[0] = strlen(name1);
+    MYSQL_RESET_BIND(GET_OBJECT_ID_NAME1);
+    MYSQL_RESET_RESULT(GET_OBJECT_ID_NAME1);
 
-    ndo_object_bind[0].buffer_type = MYSQL_TYPE_LONG;
-    ndo_object_bind[0].buffer = &(object_type);
+    MYSQL_BIND_INT(GET_OBJECT_ID_NAME1, object_type);
+    MYSQL_BIND_STR(GET_OBJECT_ID_NAME1, name1);
 
-    ndo_object_bind[1].buffer_type = MYSQL_TYPE_STRING;
-    ndo_object_bind[1].buffer_length = MAX_BIND_BUFFER;
-    ndo_object_bind[1].buffer = name1;
-    ndo_object_bind[1].length = &(ndo_tmp_str_len[0]);
+    MYSQL_RESULT_INT(GET_OBJECT_ID_NAME1, object_id);
 
-    ndo_object_result[0].buffer_type = MYSQL_TYPE_LONG;
-    ndo_object_result[0].buffer = &object_id;
+    MYSQL_BIND(GET_OBJECT_ID_NAME1);
+    MYSQL_BIND_RESULT(GET_OBJECT_ID_NAME1);
+    MYSQL_EXECUTE(GET_OBJECT_ID_NAME1);
+    MYSQL_STORE_RESULT(GET_OBJECT_ID_NAME1);
 
-    ndo_return = mysql_stmt_bind_param(ndo_stmt_object_get_name1, ndo_object_bind);
-    NDO_HANDLE_ERROR_STMT("Unable to bind parameters", ndo_stmt_object_get_name1);
-
-    ndo_return = mysql_stmt_bind_result(ndo_stmt_object_get_name1, ndo_object_result);
-    NDO_HANDLE_ERROR_STMT("Unable to bind result parameters", ndo_stmt_object_get_name1);
-
-    ndo_return = mysql_stmt_execute(ndo_stmt_object_get_name1);
-    NDO_HANDLE_ERROR_STMT("Unable to execute statement", ndo_stmt_object_get_name1);
-
-    ndo_return = mysql_stmt_store_result(ndo_stmt_object_get_name1);
-    NDO_HANDLE_ERROR_STMT("Unable to store results", ndo_stmt_object_get_name1);
-
-    while (!mysql_stmt_fetch(ndo_stmt_object_get_name1)) {
+    while (!MYSQL_FETCH(GET_OBJECT_ID_NAME1)) {
         return object_id;
     }
-
-    /* if we made it this far it means nothing exists in the database yet */
 
     if (insert == TRUE) {
         return ndo_insert_object_id_name1(object_type, name1);
@@ -1100,38 +946,20 @@ int ndo_get_object_id_name2(int insert, int object_type, char * name1, char * na
 
     int object_id = 0;
 
-    ndo_tmp_str_len[0] = strlen(name1);
-    ndo_tmp_str_len[1] = strlen(name2);
+    MYSQL_RESET_BIND(GET_OBJECT_ID_NAME2);
+    MYSQL_RESET_RESULT(GET_OBJECT_ID_NAME2);
 
-    ndo_object_bind[0].buffer_type = MYSQL_TYPE_LONG;
-    ndo_object_bind[0].buffer = &(object_type);
+    MYSQL_BIND_INT(GET_OBJECT_ID_NAME2, object_type);
+    MYSQL_BIND_STR(GET_OBJECT_ID_NAME2, name1);
 
-    ndo_object_bind[1].buffer_type = MYSQL_TYPE_STRING;
-    ndo_object_bind[1].buffer_length = MAX_BIND_BUFFER;
-    ndo_object_bind[1].buffer = name1;
-    ndo_object_bind[1].length = &(ndo_tmp_str_len[0]);
+    MYSQL_RESULT_INT(GET_OBJECT_ID_NAME2, object_id);
 
-    ndo_object_bind[2].buffer_type = MYSQL_TYPE_STRING;
-    ndo_object_bind[2].buffer_length = MAX_BIND_BUFFER;
-    ndo_object_bind[2].buffer = name2;
-    ndo_object_bind[2].length = &(ndo_tmp_str_len[1]);
+    MYSQL_BIND(GET_OBJECT_ID_NAME2);
+    MYSQL_BIND_RESULT(GET_OBJECT_ID_NAME2);
+    MYSQL_EXECUTE(GET_OBJECT_ID_NAME2);
+    MYSQL_STORE_RESULT(GET_OBJECT_ID_NAME2);
 
-    ndo_object_result[0].buffer_type = MYSQL_TYPE_LONG;
-    ndo_object_result[0].buffer = &object_id;
-
-    ndo_return = mysql_stmt_bind_param(ndo_stmt_object_get_name2, ndo_object_bind);
-    NDO_HANDLE_ERROR_STMT("Unable to bind parameters", ndo_stmt_object_get_name2);
-
-    ndo_return = mysql_stmt_bind_result(ndo_stmt_object_get_name2, ndo_object_result);
-    NDO_HANDLE_ERROR_STMT("Unable to bind result parameters", ndo_stmt_object_get_name2);
-
-    ndo_return = mysql_stmt_execute(ndo_stmt_object_get_name2);
-    NDO_HANDLE_ERROR_STMT("Unable to execute statement", ndo_stmt_object_get_name2);
-
-    ndo_return = mysql_stmt_store_result(ndo_stmt_object_get_name2);
-    NDO_HANDLE_ERROR_STMT("Unable to store results", ndo_stmt_object_get_name2);
-
-    while (!mysql_stmt_fetch(ndo_stmt_object_get_name2)) {
+    while (!MYSQL_FETCH(GET_OBJECT_ID_NAME2)) {
         return object_id;
     }
 
@@ -1160,21 +988,14 @@ int ndo_insert_object_id_name1(int object_type, char * name1)
 
     int object_id = 0;
 
-    ndo_tmp_str_len[0] = strlen(name1);
+    MYSQL_RESET_BIND(INSERT_OBJECT_ID_NAME1);
+    MYSQL_RESET_RESULT(INSERT_OBJECT_ID_NAME1);
 
-    ndo_object_bind[0].buffer_type = MYSQL_TYPE_LONG;
-    ndo_object_bind[0].buffer = &(object_type);
+    MYSQL_BIND_INT(INSERT_OBJECT_ID_NAME1, object_type);
+    MYSQL_BIND_STR(INSERT_OBJECT_ID_NAME1, name1);
 
-    ndo_object_bind[1].buffer_type = MYSQL_TYPE_STRING;
-    ndo_object_bind[1].buffer_length = MAX_BIND_BUFFER;
-    ndo_object_bind[1].buffer = name1;
-    ndo_object_bind[1].length = &(ndo_tmp_str_len[0]);
-
-    ndo_return = mysql_stmt_bind_param(ndo_stmt_object_insert_name1, ndo_object_bind);
-    NDO_HANDLE_ERROR_STMT("Unable to bind parameters", ndo_stmt_object_insert_name1);
-
-    ndo_return = mysql_stmt_execute(ndo_stmt_object_insert_name1);
-    NDO_HANDLE_ERROR_STMT("Unable to execute statement", ndo_stmt_object_insert_name1);
+    MYSQL_BIND(INSERT_OBJECT_ID_NAME1);
+    MYSQL_EXECUTE(INSERT_OBJECT_ID_NAME1);
 
     trace_func_end();
     return mysql_insert_id(mysql_connection);
@@ -1195,27 +1016,15 @@ int ndo_insert_object_id_name2(int object_type, char * name1, char * name2)
 
     int object_id = 0;
 
-    ndo_tmp_str_len[0] = strlen(name1);
-    ndo_tmp_str_len[1] = strlen(name2);
+    MYSQL_RESET_BIND(INSERT_OBJECT_ID_NAME2);
+    MYSQL_RESET_RESULT(INSERT_OBJECT_ID_NAME2);
 
-    ndo_object_bind[0].buffer_type = MYSQL_TYPE_LONG;
-    ndo_object_bind[0].buffer = &(object_type);
+    MYSQL_BIND_INT(INSERT_OBJECT_ID_NAME2, object_type);
+    MYSQL_BIND_STR(INSERT_OBJECT_ID_NAME2, name1);
+    MYSQL_BIND_STR(INSERT_OBJECT_ID_NAME2, name2);
 
-    ndo_object_bind[1].buffer_type = MYSQL_TYPE_STRING;
-    ndo_object_bind[1].buffer_length = MAX_BIND_BUFFER;
-    ndo_object_bind[1].buffer = name1;
-    ndo_object_bind[1].length = &(ndo_tmp_str_len[0]);
-
-    ndo_object_bind[2].buffer_type = MYSQL_TYPE_STRING;
-    ndo_object_bind[2].buffer_length = MAX_BIND_BUFFER;
-    ndo_object_bind[2].buffer = name2;
-    ndo_object_bind[2].length = &(ndo_tmp_str_len[1]);
-
-    ndo_return = mysql_stmt_bind_param(ndo_stmt_object_insert_name2, ndo_object_bind);
-    NDO_HANDLE_ERROR_STMT("Unable to bind parameters", ndo_stmt_object_insert_name2);
-
-    ndo_return = mysql_stmt_execute(ndo_stmt_object_insert_name2);
-    NDO_HANDLE_ERROR_STMT("Unable to execute statement", ndo_stmt_object_insert_name2);
+    MYSQL_BIND(INSERT_OBJECT_ID_NAME2);
+    MYSQL_EXECUTE(INSERT_OBJECT_ID_NAME2);
 
     trace_func_end();
     return mysql_insert_id(mysql_connection);

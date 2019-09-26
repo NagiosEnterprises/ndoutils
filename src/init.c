@@ -143,6 +143,8 @@ int initialize_stmt_data()
         ndo_sql[i].result_i = 0;
     }
 
+    ndo_sql[GENERIC].query = calloc(MAX_SQL_BUFFER, sizeof(char));
+
     ndo_sql[GET_OBJECT_ID_NAME1].query = strdup("SELECT object_id FROM nagios_objects WHERE objecttype_id = ? AND name1 = ? AND name2 IS NULL");
     ndo_sql[GET_OBJECT_ID_NAME2].query = strdup("SELECT object_id FROM nagios_objects WHERE objecttype_id = ? AND name1 = ? AND name2 = ?");
     ndo_sql[INSERT_OBJECT_ID_NAME1].query = strdup("INSERT INTO nagios_objects (objecttype_id, name1) VALUES (?,?) ON DUPLICATE KEY UPDATE is_active = 1");
@@ -184,6 +186,21 @@ int initialize_stmt_data()
         if (ndo_sql[i].query == NULL) {
             char msg[256] = { 0 };
             snprintf(msg, 255, "Unable to allocate memory for query (%d)", i);
+            ndo_log(msg);
+            errors++;
+        }
+    }
+
+    if (errors > 0) {
+        return NDO_ERROR;
+    }
+
+    /* now prepare each statement - we start at one since GENERIC doesn't
+       have a query at this point */
+    for (i = 1; i < NUM_QUERIES; i++) {
+        if (mysql_prepare_statement(ndo_sql[i].stmt, ndo_sql[i].query, strlen(ndo_sql[i].query))) {
+            char msg[256] = { 0 };
+            snprintf(msg, 255, "Unable to prepare statement for query (%d)", i);
             ndo_log(msg);
             errors++;
         }

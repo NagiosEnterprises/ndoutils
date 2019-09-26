@@ -1,311 +1,101 @@
 
-#define MYSQL_RESET_BIND() \
+/* error reporting / handling */
+
+/*
+    we use a global for returning from mysql functions so that we can standardize
+    how errors are handled
+
+    this is the same reason that almost any function utilizing the helper
+    macros defined below have int return types
+*/
+
+#define NDO_HANDLE_ERROR_STMT(err, stmt) \
 do { \
-    memset(ndo_bind, 0, sizeof(ndo_bind)); \
-    ndo_bind_i = 0; \
-} while (0)
-
-
-#define MYSQL_BIND() \
-do { \
-    ndo_return = mysql_stmt_bind_param(ndo_stmt, ndo_bind); \
-    NDO_HANDLE_ERROR_BIND_STMT(ndo_stmt, ndo_bind); \
-} while (0)
-
-
-#define MYSQL_BIND_INT(_buffer) MYSQL_BIND_LONG(_buffer)
-
-#define MYSQL_BIND_LONG(_buffer) \
-do { \
-    ndo_bind[ndo_bind_i].buffer_type = MYSQL_TYPE_LONG; \
-    ndo_bind[ndo_bind_i].buffer      = &(_buffer); \
-    ndo_bind_i++; \
-} while (0)
-
-#define MYSQL_BIND_LONGLONG(_buffer) \
-do { \
-    ndo_bind[ndo_bind_i].buffer_type = MYSQL_TYPE_LONGLONG; \
-    ndo_bind[ndo_bind_i].buffer      = &(_buffer); \
-    ndo_bind_i++; \
-} while (0)
-
-#define MYSQL_BIND_TINY(_buffer) \
-do { \
-    ndo_bind[ndo_bind_i].buffer_type = MYSQL_TYPE_TINY; \
-    ndo_bind[ndo_bind_i].buffer      = &(_buffer); \
-    ndo_bind_i++; \
-} while (0)
-
-#define MYSQL_BIND_SHORT(_buffer) \
-do { \
-    ndo_bind[ndo_bind_i].buffer_type = MYSQL_TYPE_SHORT; \
-    ndo_bind[ndo_bind_i].buffer      = &(_buffer); \
-    ndo_bind_i++; \
-} while (0)
-
-#define MYSQL_BIND_FLOAT(_buffer) \
-do { \
-    ndo_bind[ndo_bind_i].buffer_type = MYSQL_TYPE_FLOAT; \
-    ndo_bind[ndo_bind_i].buffer      = &(_buffer); \
-    ndo_bind_i++; \
-} while (0)
-
-#define MYSQL_BIND_DOUBLE(_buffer) \
-do { \
-    ndo_bind[ndo_bind_i].buffer_type = MYSQL_TYPE_DOUBLE; \
-    ndo_bind[ndo_bind_i].buffer      = &(_buffer); \
-    ndo_bind_i++; \
-} while (0)
-
-#define MYSQL_BIND_STR(_buffer) \
-do { \
-\
-    ndo_bind[ndo_bind_i].buffer_type   = MYSQL_TYPE_STRING; \
-    ndo_bind[ndo_bind_i].buffer_length = MAX_BIND_BUFFER; \
-\
-    if (_buffer != NULL && strlen(_buffer) > 0) { \
-\
-        ndo_tmp_str_len[ndo_bind_i]        = strlen(_buffer); \
-        ndo_bind[ndo_bind_i].buffer        = _buffer; \
+    if (ndo_return != 0) { \
+        snprintf(ndo_error_msg, 1023, "ndo_return = %d (%s)", ndo_return, mysql_stmt_error(stmt)); \
+        ndo_log(ndo_error_msg); \
+        NDO_REPORT_ERROR(err); \
+        return NDO_ERROR; \
     } \
-    else { \
-\
-        ndo_tmp_str_len[ndo_bind_i]        = 0; \
-        ndo_bind[ndo_bind_i].buffer        = ""; \
+} while (0)
+
+#define NDO_HANDLE_ERROR_BIND_STMT(stmt, bind) \
+do { \
+    if (ndo_return != 0) { \
+        int ndo_mysql_errno = *mysql_stmt_error(stmt); \
+        if (ndo_mysql_errno == CR_SERVER_GONE_ERROR || ndo_mysql_errno == CR_SERVER_LOST) { \
+            sleep(1); \
+            if (ndo_initialize_database() == NDO_OK) { \
+                ndo_return = mysql_stmt_bind_param(stmt, bind); \
+            } \
+        } \
+        NDO_HANDLE_ERROR_STMT("Unable to bind parameters", stmt); \
     } \
-    ndo_bind[ndo_bind_i].length        = &(ndo_tmp_str_len[ndo_bind_i]); \
-    \
-    ndo_bind_i++; \
 } while (0)
 
-
-
-
-#define MYSQL_RESET_RESULT() \
+#define NDO_HANDLE_ERROR_RESULT_STMT(stmt, result) \
 do { \
-    memset(ndo_result, 0, sizeof(ndo_result)); \
-    ndo_result_i = 0; \
-} while (0)
-
-
-#define MYSQL_RESULT_BIND() \
-do { \
-    ndo_return = mysql_stmt_bind_result(ndo_stmt, ndo_result); \
-    NDO_HANDLE_ERROR("Unable to bind result parameters"); \
-} while (0)
-
-
-#define MYSQL_BIND_RESULT_INT(_buffer) MYSQL_BIND_RESULT_LONG(_buffer)
-
-#define MYSQL_BIND_RESULT_LONG(_buffer) \
-do { \
-    ndo_result[ndo_result_i].buffer_type = MYSQL_TYPE_LONG; \
-    ndo_result[ndo_result_i].buffer      = &(_buffer); \
-    ndo_result_i++; \
-} while (0)
-
-#define MYSQL_BIND_RESULT_LONGLONG(_buffer) \
-do { \
-    ndo_result[ndo_result_i].buffer_type = MYSQL_TYPE_LONGLONG; \
-    ndo_result[ndo_result_i].buffer      = &(_buffer); \
-    ndo_result_i++; \
-} while (0)
-
-#define MYSQL_BIND_RESULT_TINY(_buffer) \
-do { \
-    ndo_result[ndo_result_i].buffer_type = MYSQL_TYPE_TINY; \
-    ndo_result[ndo_result_i].buffer      = &(_buffer); \
-    ndo_result_i++; \
-} while (0)
-
-#define MYSQL_BIND_RESULT_SHORT(_buffer) \
-do { \
-    ndo_result[ndo_result_i].buffer_type = MYSQL_TYPE_SHORT; \
-    ndo_result[ndo_result_i].buffer      = &(_buffer); \
-    ndo_result_i++; \
-} while (0)
-
-#define MYSQL_BIND_RESULT_FLOAT(_buffer) \
-do { \
-    ndo_result[ndo_result_i].buffer_type = MYSQL_TYPE_FLOAT; \
-    ndo_result[ndo_result_i].buffer      = &(_buffer); \
-    ndo_result_i++; \
-} while (0)
-
-#define MYSQL_BIND_RESULT_DOUBLE(_buffer) \
-do { \
-    ndo_result[ndo_result_i].buffer_type = MYSQL_TYPE_DOUBLE; \
-    ndo_result[ndo_result_i].buffer      = &(_buffer); \
-    ndo_result_i++; \
-} while (0)
-
-#define MYSQL_BIND_RESULT_STR(_buffer) \
-do { \
-    ndo_tmp_str_len[ndo_result_i]        = strlen(_buffer); \
-    \
-    ndo_result[ndo_result_i].buffer_type   = MYSQL_TYPE_STRING; \
-    ndo_result[ndo_result_i].buffer_length = MAX_BIND_RESULT_BUFFER; \
-    ndo_result[ndo_result_i].buffer        = _buffer; \
-    ndo_result[ndo_result_i].length        = &(ndo_result_tmp_str_len[ndo_result_i]); \
-    \
-    ndo_result_i++; \
-} while (0)
-
-
-
-#define MYSQL_RESET_SQL() memset(ndo_query, 0, sizeof(ndo_query))
-
-
-#define MYSQL_SET_SQL(_buffer) strncpy(ndo_query, _buffer, MAX_SQL_BUFFER)
-
-
-#define MYSQL_PREPARE() \
-do { \
-    ndo_return = mysql_stmt_prepare(ndo_stmt, ndo_query, strlen(ndo_query)); \
-    NDO_HANDLE_ERROR_PREPARE_STMT(ndo_stmt, ndo_query); \
-} while (0)
-
-
-#define MYSQL_EXECUTE() \
-do { \
-    ndo_return = mysql_stmt_execute(ndo_stmt); \
-    NDO_HANDLE_ERROR_EXECUTE_STMT(ndo_stmt); \
-} while (0)
-
-
-#define MYSQL_SET_QUERY(query) \
-do { \
-    ndo_current_query = query; \
-} while (0)
-
-
-
-
-
-
-
-
-
-/****************************************************************/
-
-
-#define NDO_HANDLE_ERROR_NEW(_which, err) NDO_HANDLE_ERROR_STMT(err, ndo_stmt_new[_which])
-
-
-#define MYSQL_PREPARE_NEW(_which, _query) \
-do { \
-    ndo_return = mysql_stmt_prepare(ndo_stmt_new[_which], _query, strlen(_query)); \
-    NDO_HANDLE_ERROR_PREPARE_STMT(ndo_stmt_new[_which], _query); \
-} while (0)
-
-
-#define MYSQL_EXECUTE_NEW(_which) \
-do { \
-    ndo_return = mysql_stmt_execute(ndo_stmt_new[_which]); \
-    NDO_HANDLE_ERROR_EXECUTE_STMT(ndo_stmt_new[_which]); \
-} while (0)
-
-
-
-#define MYSQL_RESET_BIND_NEW(_which) \
-do { \
-    memset(ndo_bind_new[_which], 0, sizeof(ndo_bind_new[_which])); \
-    ndo_bind_new_i[_which] = 0; \
-} while (0)
-
-
-#define MYSQL_BIND_NEW(_which) \
-do { \
-    ndo_return = mysql_stmt_bind_param(ndo_stmt_new[_which], ndo_bind_new[_which]); \
-    NDO_HANDLE_ERROR_BIND_STMT(ndo_stmt_new[_which], ndo_bind_new[_which]); \
-} while (0)
-
-
-#define MYSQL_BIND_NEW_INT(_which, _buffer) MYSQL_BIND_NEW_LONG(_which, _buffer)
-
-#define MYSQL_BIND_NEW_LONG(_which, _buffer) \
-do { \
-    ndo_bind_new[_which][ndo_bind_new_i[_which]].buffer_type = MYSQL_TYPE_LONG; \
-    ndo_bind_new[_which][ndo_bind_new_i[_which]].buffer      = &(_buffer); \
-    ndo_bind_new_i[_which]++; \
-} while (0)
-
-#define MYSQL_BIND_NEW_LONGLONG(_which, _buffer) \
-do { \
-    ndo_bind_new[_which][ndo_bind_new_i[_which]].buffer_type = MYSQL_TYPE_LONGLONG; \
-    ndo_bind_new[_which][ndo_bind_new_i[_which]].buffer      = &(_buffer); \
-    ndo_bind_new_i[_which]++; \
-} while (0)
-
-#define MYSQL_BIND_NEW_TINY(_which, _buffer) \
-do { \
-    ndo_bind_new[_which][ndo_bind_new_i[_which]].buffer_type = MYSQL_TYPE_TINY; \
-    ndo_bind_new[_which][ndo_bind_new_i[_which]].buffer      = &(_buffer); \
-    ndo_bind_new[_which]_i++; \
-} while (0)
-
-#define MYSQL_BIND_NEW_SHORT(_which, _buffer) \
-do { \
-    ndo_bind_new[_which][ndo_bind_new_i[_which]].buffer_type = MYSQL_TYPE_SHORT; \
-    ndo_bind_new[_which][ndo_bind_new_i[_which]].buffer      = &(_buffer); \
-    ndo_bind_new_i[_which]++; \
-} while (0)
-
-#define MYSQL_BIND_NEW_FLOAT(_which, _buffer) \
-do { \
-    ndo_bind_new[_which][ndo_bind_new_i[_which]].buffer_type = MYSQL_TYPE_FLOAT; \
-    ndo_bind_new[_which][ndo_bind_new_i[_which]].buffer      = &(_buffer); \
-    ndo_bind_new_i[_which]++; \
-} while (0)
-
-#define MYSQL_BIND_NEW_DOUBLE(_which, _buffer) \
-do { \
-    ndo_bind_new[_which][ndo_bind_new_i[_which]].buffer_type = MYSQL_TYPE_DOUBLE; \
-    ndo_bind_new[_which][ndo_bind_new_i[_which]].buffer      = &(_buffer); \
-    ndo_bind_new_i[_which]++; \
-} while (0)
-
-#define MYSQL_BIND_NEW_STR(_which, _buffer) \
-do { \
-\
-    ndo_bind_new[_which][ndo_bind_new_i[_which]].buffer_type   = MYSQL_TYPE_STRING; \
-    ndo_bind_new[_which][ndo_bind_new_i[_which]].buffer_length = MAX_BIND_BUFFER; \
-\
-    if (_buffer != NULL && strlen(_buffer) > 0) { \
-\
-        ndo_tmp_str_len_new[_which][ndo_bind_new_i[_which]]        = strlen(_buffer); \
-        ndo_bind_new[_which][ndo_bind_new_i[_which]].buffer        = _buffer; \
+    if (ndo_return != 0) { \
+        int ndo_mysql_errno = *mysql_stmt_error(stmt); \
+        if (ndo_mysql_errno == CR_SERVER_GONE_ERROR || ndo_mysql_errno == CR_SERVER_LOST) { \
+            sleep(1); \
+            if (ndo_initialize_database() == NDO_OK) { \
+                ndo_return = mysql_stmt_bind_result(stmt, result); \
+            } \
+        } \
+        NDO_HANDLE_ERROR_STMT("Unable to bind results", stmt); \
     } \
-    else { \
-\
-        ndo_tmp_str_len_new[_which][ndo_bind_new_i[_which]]        = 0; \
-        ndo_bind_new[_which][ndo_bind_new_i[_which]].buffer        = ""; \
-    } \
-    ndo_bind_new[_which][ndo_bind_new_i[_which]].length        = &(ndo_tmp_str_len_new[_which][ndo_bind_new_i[_which]]); \
-    \
-    ndo_bind_new_i[_which]++; \
 } while (0)
 
+#define NDO_HANDLE_ERROR_STORE_STMT(stmt) \
+do { \
+    if (ndo_return != 0) { \
+        int ndo_mysql_errno = *mysql_stmt_error(stmt); \
+        if (ndo_mysql_errno == CR_SERVER_GONE_ERROR || ndo_mysql_errno == CR_SERVER_LOST) { \
+            sleep(1); \
+            if (ndo_initialize_database() == NDO_OK) { \
+                ndo_return = mysql_stmt_store_result(stmt); \
+            } \
+        } \
+        NDO_HANDLE_ERROR_STMT("Unable to store results", stmt); \
+    } \
+} while (0)
+
+#define NDO_HANDLE_ERROR_EXECUTE_STMT(stmt) \
+do { \
+    if (ndo_return != 0) { \
+        int ndo_mysql_errno = *mysql_stmt_error(stmt); \
+        if (ndo_mysql_errno == CR_SERVER_GONE_ERROR || ndo_mysql_errno == CR_SERVER_LOST) { \
+            sleep(1); \
+            if (ndo_initialize_database() == NDO_OK) { \
+                ndo_return = mysql_stmt_execute(stmt); \
+            } \
+        } \
+        NDO_HANDLE_ERROR_STMT("Unable to execute statement", stmt); \
+    } \
+} while (0)
+
+#define NDO_HANDLE_ERROR_PREPARE_STMT(stmt, query) \
+do { \
+    if (ndo_return != 0) { \
+        int ndo_mysql_errno = *mysql_stmt_error(stmt); \
+        if (ndo_mysql_errno == CR_SERVER_GONE_ERROR || ndo_mysql_errno == CR_SERVER_LOST) { \
+            sleep(1); \
+            if (ndo_initialize_database() == NDO_OK) { \
+                ndo_return = mysql_stmt_prepare(stmt, query, strlen(query)); \
+            } \
+        } \
+        NDO_HANDLE_ERROR_STMT("Unable to prepare statement", stmt); \
+    } \
+} while (0)
+
+
+/* mysql generic helpers */
 
 #define _MYSQL_BIND_NUMERICAL(type, bind, i, var) \
 do { \
     bind.buffer_type = type; \
     bind.buffer = &(var); \
-    i++; \
-} while (0)
-
-#define _MYSQL_BIND_STR(bind, i, var, len_var, len) \
-do { \
-    bind.buffer_type = MYSQL_TYPE_STRING; \
-    bind.buffer_length = MAX_BIND_BUFFER; \
-    if (var != NULL && len > 0) { \
-        len_var = len; \
-        bind.buffer = var; \
-    } else { \
-        len_var = 0; \
-        bind.buffer = ""; \
-    } \
-    bind.length = &(len_var); \
     i++; \
 } while (0)
 
@@ -317,6 +107,66 @@ do { \
 #define _MYSQL_BIND_TINY(bind, i, var) _MYSQL_BIND_NUMERICAL(MYSQL_TYPE_TINY, bind, i, var)
 #define _MYSQL_BIND_LONGLONG(bind, i, var) _MYSQL_BIND_NUMERICAL(MYSQL_TYPE_LONGLONG, bind, i, var)
 
+#define _MYSQL_BIND_STR(bind, i, var, len_var, len) \
+do { \
+    bind.buffer_type = MYSQL_TYPE_STRING; \
+    bind.buffer_length = MAX_BIND_BUFFER; \
+    if (var != NULL) { \
+        len_var = len; \
+        bind.buffer = var; \
+    } else { \
+        len_var = 0; \
+        bind.buffer = ""; \
+    } \
+    bind.length = &(len_var); \
+    i++; \
+} while (0)
+
+
+#define _MYSQL_RESET_BIND(bind, size, i) \
+do { \
+    memset(bind, 0, size); \
+    i = 0; \
+} while (0)
+
+#define _MYSQL_BIND(stmt, bind) \
+do { \
+    ndo_return = mysql_stmt_bind_param(stmt, bind); \
+    NDO_HANDLE_ERROR_BIND_STMT(stmt, bind); \
+} while (0)
+
+#define _MYSQL_BIND_RESULT(stmt, result) \
+do { \
+    ndo_return = mysql_stmt_bind_result(stmt, result); \
+    NDO_HANDLE_ERROR_RESULT_STMT(stmt, result); \
+} while (0)
+
+#define _MYSQL_STORE_RESULT(stmt) \
+do { \
+    ndo_return = mysql_stmt_store_result(stmt); \
+    NDO_HANDLE_ERROR_STORE_STMT(stmt); \
+} while (0)
+
+#define _MYSQL_PREPARE(stmt, query) \
+do { \
+    ndo_return = mysql_stmt_prepare(stmt, query, strlen(query)); \
+    NDO_HANDLE_ERROR_PREPARE_STMT(stmt, query); \
+} while (0)
+
+#define _MYSQL_EXECUTE(stmt) \
+do { \
+    ndo_return = mysql_stmt_execute(stmt); \
+    NDO_HANDLE_ERROR_EXECUTE_STMT(stmt); \
+} while (0)
+
+
+/* startup/writing mysql helpers */
+
+/*
+    all of these queries and statements, etc. are contained in the 
+    ndo_write_* family of global vars
+*/
+
 #define WRITE_BIND_LONG(stmt, var) _MYSQL_BIND_LONG(ndo_write_bind[stmt][ndo_write_i[stmt]], ndo_write_i[stmt], var)
 #define WRITE_BIND_INT(stmt, var) WRITE_BIND_LONG(stmt, var)
 #define WRITE_BIND_DOUBLE(stmt, var) _MYSQL_BIND_DOUBLE(ndo_write_bind[stmt][ndo_write_i[stmt]], ndo_write_i[stmt], var)
@@ -324,6 +174,22 @@ do { \
 #define WRITE_BIND_SHORT(stmt, var) _MYSQL_BIND_SHORT(ndo_write_bind[stmt][ndo_write_i[stmt]], ndo_write_i[stmt], var)
 #define WRITE_BIND_TINY(stmt, var) _MYSQL_BIND_TINY(ndo_write_bind[stmt][ndo_write_i[stmt]], ndo_write_i[stmt], var)
 #define WRITE_BIND_LONGLONG(stmt, var) _MYSQL_BIND_LONGLONG(ndo_write_bind[stmt][ndo_write_i[stmt]], ndo_write_i[stmt], var)
+#define WRITE_BIND_STR(stmt, var) _MYSQL_BIND_STR(ndo_write_bind[stmt][ndo_write_i[stmt]], ndo_write_i[stmt], ndo_write_tmp_len[stmt][ndo_write_i[stmt]], strlen(var))
+
+#define WRITE_RESET_SQL() memset(ndo_query, 0, sizeof(ndo_query))
+#define WRITE_SET_SQL(query) strcpy(ndo_query, query)
+#define WRITE_RESET_BIND(stmt) _MYSQL_RESET_BIND(ndo_write_bind[stmt][ndo_write_i[stmt]], sizeof(ndo_write_bind[stmt]), ndo_write_i[stmt])
+#define WRITE_BIND(stmt) _MYSQL_BIND(ndo_write_stmt[stmt], ndo_write_bind[stmt])
+#define WRITE_PREPARE(stmt) _MYSQL_PREPARE(ndo_write_stmt[stmt], ndo_query)
+#define WRITE_EXECUTE(stmt) _MYSQL_EXECUTE(ndo_write_stmt[stmt])
+
+
+/* handler and miscellaneous function mysql helpers */
+
+/*
+    all of these revolve around the usage of the ndo_sql global,
+    which is a ndo_query_data struct
+*/
 
 #define MYSQL_BIND_LONG(stmt, var) _MYSQL_BIND_LONG(ndo_sql[stmt].bind[ndo_sql[stmt].bind_i], ndo_sql[stmt].bind_i, var)
 #define MYSQL_BIND_INT(stmt, var) MYSQL_BIND_LONG(stmt, var)
@@ -332,3 +198,24 @@ do { \
 #define MYSQL_BIND_SHORT(stmt, var) _MYSQL_BIND_SHORT(ndo_sql[stmt].bind[ndo_sql[stmt].bind_i], ndo_sql[stmt].bind_i, var)
 #define MYSQL_BIND_TINY(stmt, var) _MYSQL_BIND_TINY(ndo_sql[stmt].bind[ndo_sql[stmt].bind_i], ndo_sql[stmt].bind_i, var)
 #define MYSQL_BIND_LONGLONG(stmt, var) _MYSQL_BIND_LONGLONG(ndo_sql[stmt].bind[ndo_sql[stmt].bind_i], ndo_sql[stmt].bind_i, var)
+#define MYSQL_BIND_STR(stmt, var) _MYSQL_BIND_STR(ndo_sql[stmt].bind[ndo_sql[stmt].bind_i], ndo_sql[stmt].bind_i, var, ndo_sql[stmt].strlen, strlen(var))
+
+#define MYSQL_RESULT_LONG(stmt, var) _MYSQL_BIND_LONG(ndo_sql[stmt].result[ndo_sql[stmt].result_i], ndo_sql[stmt].result_i, var)
+#define MYSQL_RESULT_INT(stmt, var) _MYSQL_BIND_LONG(stmt, var)
+
+/* #define MYSQL_RESET_BIND(stmt) memset(ndo_sql[stmt].bind, 0, (sizeof(MYSQL_BIND) * num_bindings[stmt])) */
+#define MYSQL_RESET_BIND(stmt) ndo_sql[stmt].bind_i = 0
+#define MYSQL_BIND(_stmt) _MYSQL_BIND(ndo_sql[_stmt].stmt, ndo_sql[_stmt].bind)
+#define MYSQL_RESET_RESULT(stmt) ndo_sql[stmt].result_i = 0
+#define MYSQL_BIND_RESULT(_stmt) _MYSQL_BIND_RESULT(ndo_sql[_stmt].stmt, ndo_sql[_stmt].result)
+#define MYSQL_STORE_RESULT(_stmt) _MYSQL_STORE_RESULT(ndo_sql[_stmt].stmt)
+#define MYSQL_FETCH(_stmt) mysql_stmt_fetch(ndo_sql[_stmt].stmt)
+#define MYSQL_EXECUTE(_stmt) _MYSQL_EXECUTE(ndo_sql[_stmt].stmt)
+
+/*
+    these only work for the GENERIC ndo_sql data, as everything is else is set
+    and prepared already
+*/
+
+#define MYSQL_RESET_SQL() memset(ndo_sql[GENERIC].query, 0, MAX_SQL_BUFFER)
+#define MYSQL_SET_SQL(_query) strcpy(ndo_sql[GENERIC].query, _query)
