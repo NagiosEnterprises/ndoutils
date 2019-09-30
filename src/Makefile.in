@@ -1,7 +1,7 @@
 
 CC=@CC@
 
-CFLAGS=@CFLAGS@
+CFLAGS=@CFLAGS@ -fdiagnostics-color=always
 
 SHAREDFLAGS=-fPIC -shared
 
