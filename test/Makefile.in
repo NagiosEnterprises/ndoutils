@@ -1,7 +1,10 @@
 
 CC=@CC@
 
-CFLAGS=@CFLAGS@ -fdiagnostics-color=always
+CFLAGS=@CFLAGS@
+
+# for local development
+#CFLAGS=$(CFLAGS) -fdiagnostics-color=always
 
 SHAREDFLAGS=@SHAREDFLAGS@
 
