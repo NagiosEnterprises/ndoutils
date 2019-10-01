@@ -19,6 +19,7 @@ expanded:
 	@mkdir -p ../expanded/include
 	@cat ../include/mysql-helpers.h | sed '/^do/d' | sed '/^} while (0)/d' > ../expanded/include/mysql-helpers.h
 	@cat ../include/ndo.h | grep -v "mysql.h" | grep -v "include/nagios" > ../expanded/include/ndo.h
+	@cp ../include/config.h ../expanded/include/config.h
 	@cat ndo.c | grep -v "include/nagios" | grep -v "errmsg.h" > ../expanded/src/ndo.c
 	@sed -i '/^do {/d;/^} while/d' ../expanded/src/ndo.c
 	@cp ndo-*.c ../expanded/src/
