@@ -4,6 +4,7 @@ db_name=ndo
 db_host=localhost
 db_port=3306
 #db_socket=/var/lib/mysql.sock
+db_max_reconnect_attempts=5
 
 acknowledgement_data=1
 comment_data=1
