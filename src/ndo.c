@@ -1034,6 +1034,8 @@ int ndo_write_config(int type)
 
 void initialize_bindings_array()
 {
+    trace_func_begin();
+
     num_bindings[GENERIC] = 50 * MAX_OBJECT_INSERT;
     num_bindings[GET_OBJECT_ID_NAME1] = 2;
     num_bindings[GET_OBJECT_ID_NAME2] = 3;
@@ -1073,11 +1075,15 @@ void initialize_bindings_array()
 
     num_result_bindings[GET_OBJECT_ID_NAME1] = 1;
     num_result_bindings[GET_OBJECT_ID_NAME2] = 1;
+
+    trace_func_end();
 }
 
 
 int initialize_stmt_data()
 {
+    trace_func_begin();
+
     int i = 0;
     int errors = 0;
 
@@ -1131,6 +1137,9 @@ int initialize_stmt_data()
     ndo_sql[HANDLE_EVENT_HANDLER].query = strdup("INSERT INTO nagios_eventhandlers (instance_id, start_time, start_time_usec, end_time, end_time_usec, eventhandler_type, object_id, state, state_type, command_object_id, command_args, command_line, timeout, early_timeout, execution_time, return_code, output, long_output) VALUES (1,FROM_UNIXTIME(?),?,FROM_UNIXTIME(?),?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE instance_id = VALUES(instance_id), start_time = VALUES(start_time), start_time_usec = VALUES(start_time_usec), end_time = VALUES(end_time), end_time_usec = VALUES(end_time_usec), eventhandler_type = VALUES(eventhandler_type), object_id = VALUES(object_id), state = VALUES(state), state_type = VALUES(state_type), command_object_id = VALUES(command_object_id), command_args = VALUES(command_args), command_line = VALUES(command_line), timeout = VALUES(timeout), early_timeout = VALUES(early_timeout), execution_time = VALUES(execution_time), return_code = VALUES(return_code), output = VALUES(output), long_output = VALUES(long_output)");
     ndo_sql[HANDLE_HOST_CHECK].query = strdup("INSERT INTO nagios_hostchecks (instance_id, start_time, start_time_usec, end_time, end_time_usec, host_object_id, check_type, current_check_attempt, max_check_attempts, state, state_type, timeout, early_timeout, execution_time, latency, return_code, output, long_output, perfdata, command_object_id, command_args, command_line) VALUES (1,FROM_UNIXTIME(?),?,FROM_UNIXTIME(?),?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE instance_id = VALUES(instance_id), start_time = VALUES(start_time), start_time_usec = VALUES(start_time_usec), end_time = VALUES(end_time), end_time_usec = VALUES(end_time_usec), host_object_id = VALUES(host_object_id), check_type = VALUES(check_type), current_check_attempt = VALUES(current_check_attempt), max_check_attempts = VALUES(max_check_attempts), state = VALUES(state), state_type = VALUES(state_type), timeout = VALUES(timeout), early_timeout = VALUES(early_timeout), execution_time = VALUES(execution_time), latency = VALUES(latency), return_code = VALUES(return_code), output = VALUES(output), long_output = VALUES(long_output), perfdata = VALUES(perfdata), command_object_id = VALUES(command_object_id), command_args = VALUES(command_args), command_line = VALUES(command_line)");
     ndo_sql[HANDLE_SERVICE_CHECK].query = strdup("INSERT INTO nagios_servicechecks (instance_id, start_time, start_time_usec, end_time, end_time_usec, service_object_id, check_type, current_check_attempt, max_check_attempts, state, state_type, timeout, early_timeout, execution_time, latency, return_code, output, long_output, perfdata, command_object_id, command_args, command_line) VALUES (1,FROM_UNIXTIME(?),?,FROM_UNIXTIME(?),?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE instance_id = VALUES(instance_id), start_time = VALUES(start_time), start_time_usec = VALUES(start_time_usec), end_time = VALUES(end_time), end_time_usec = VALUES(end_time_usec), service_object_id = VALUES(service_object_id), check_type = VALUES(check_type), current_check_attempt = VALUES(current_check_attempt), max_check_attempts = VALUES(max_check_attempts), state = VALUES(state), state_type = VALUES(state_type), timeout = VALUES(timeout), early_timeout = VALUES(early_timeout), execution_time = VALUES(execution_time), latency = VALUES(latency), return_code = VALUES(return_code), output = VALUES(output), long_output = VALUES(long_output), perfdata = VALUES(perfdata), command_object_id = VALUES(command_object_id), command_args = VALUES(command_args), command_line = VALUES(command_line)");
+    num_bindings[HANDLE_COMMENT_DELETE] = 2;
+    num_bindings[HANDLE_COMMENT_HISTORY_DELETE] = 4;
+
     ndo_sql[HANDLE_COMMENT_ADD].query = strdup("INSERT INTO nagios_comments (instance_id, comment_type, entry_type, object_id, comment_time, internal_comment_id, author_name, comment_data, is_persistent, comment_source, expires, expiration_time, entry_time, entry_time_usec) VALUES (1,?,?,?,FROM_UNIXTIME(?),?,?,?,?,?,?,FROM_UNIXTIME(?),FROM_UNIXTIME(?),?) ON DUPLICATE KEY UPDATE instance_id = VALUES(instance_id), comment_type = VALUES(comment_type), entry_type = VALUES(entry_type), object_id = VALUES(object_id), comment_time = VALUES(comment_time), internal_comment_id = VALUES(internal_comment_id), author_name = VALUES(author_name), comment_data = VALUES(comment_data), is_persistent = VALUES(is_persistent), comment_source = VALUES(comment_source), expires = VALUES(expires), expiration_time = VALUES(expiration_time), entry_time = VALUES(entry_time), entry_time_usec = VALUES(entry_time_usec)");
     ndo_sql[HANDLE_COMMENT_HISTORY_ADD].query = strdup("INSERT INTO nagios_commenthistory (instance_id, comment_type, entry_type, object_id, comment_time, internal_comment_id, author_name, comment_data, is_persistent, comment_source, expires, expiration_time, entry_time, entry_time_usec) VALUES (1,?,?,?,FROM_UNIXTIME(?),?,?,?,?,?,?,FROM_UNIXTIME(?),FROM_UNIXTIME(?),?) ON DUPLICATE KEY UPDATE instance_id = VALUES(instance_id), comment_type = VALUES(comment_type), entry_type = VALUES(entry_type), object_id = VALUES(object_id), comment_time = VALUES(comment_time), internal_comment_id = VALUES(internal_comment_id), author_name = VALUES(author_name), comment_data = VALUES(comment_data), is_persistent = VALUES(is_persistent), comment_source = VALUES(comment_source), expires = VALUES(expires), expiration_time = VALUES(expiration_time), entry_time = VALUES(entry_time), entry_time_usec = VALUES(entry_time_usec)");
     ndo_sql[HANDLE_COMMENT_DELETE].query = strdup("DELETE FROM nagios_comments WHERE comment_time = FROM_UNIXTIME(?) AND internal_comment_id = ?");
@@ -1164,6 +1173,7 @@ int initialize_stmt_data()
     }
 
     if (errors > 0) {
+        ndo_log("errors1");
         return NDO_ERROR;
     }
 
@@ -1179,8 +1189,12 @@ int initialize_stmt_data()
     }
 
     if (errors > 0) {
+        ndo_log("errors2");
         return NDO_ERROR;
     }
+
+    trace_func_end();
+    return NDO_OK;
 }
 
 
@@ -1189,6 +1203,8 @@ int initialize_stmt_data()
 
 int deinitialize_stmt_data()
 {
+    trace_func_begin();
+
     int i = 0;
     int errors = 0;
 
@@ -1204,7 +1220,25 @@ int deinitialize_stmt_data()
         if (ndo_sql[i].query != NULL) {
             free(ndo_sql[i].query);
         }
+
+        if (ndo_sql[i].bind != NULL) {
+            free(ndo_sql[i].bind);
+        }
+
+        if (ndo_sql[i].strlen != NULL) {
+            free(ndo_sql[i].strlen);
+        }
+
+        if (ndo_sql[i].result != NULL) {
+            free(ndo_sql[i].result);
+        }
+
+        if (ndo_sql[i].result_strlen != NULL) {
+            free(ndo_sql[i].result_strlen);
+        }
     }
 
     free(ndo_sql);
+
+    trace_func_end();
 }

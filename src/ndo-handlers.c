@@ -427,24 +427,24 @@ int ndo_handle_comment(int type, void * d)
 
     if (data->type == NEBTYPE_COMMENT_DELETE) {
 
-        MYSQL_RESET_BIND(HANDLE_COMMENT_DELETE);
-
-        MYSQL_BIND_INT(HANDLE_COMMENT_DELETE, data->timestamp.tv_sec);
-        MYSQL_BIND_INT(HANDLE_COMMENT_DELETE, data->timestamp.tv_usec);
-        MYSQL_BIND_INT(HANDLE_COMMENT_DELETE, data->entry_time);
-        MYSQL_BIND_INT(HANDLE_COMMENT_DELETE, data->comment_id);
-
-        MYSQL_BIND(HANDLE_COMMENT_DELETE);
-        MYSQL_EXECUTE(HANDLE_COMMENT_DELETE);
-
-
         MYSQL_RESET_BIND(HANDLE_COMMENT_HISTORY_DELETE);
 
+        MYSQL_BIND_INT(HANDLE_COMMENT_HISTORY_DELETE, data->timestamp.tv_sec);
+        MYSQL_BIND_INT(HANDLE_COMMENT_HISTORY_DELETE, data->timestamp.tv_usec);
         MYSQL_BIND_INT(HANDLE_COMMENT_HISTORY_DELETE, data->entry_time);
         MYSQL_BIND_INT(HANDLE_COMMENT_HISTORY_DELETE, data->comment_id);
 
         MYSQL_BIND(HANDLE_COMMENT_HISTORY_DELETE);
         MYSQL_EXECUTE(HANDLE_COMMENT_HISTORY_DELETE);
+
+
+        MYSQL_RESET_BIND(HANDLE_COMMENT_DELETE);
+
+        MYSQL_BIND_INT(HANDLE_COMMENT_DELETE, data->entry_time);
+        MYSQL_BIND_INT(HANDLE_COMMENT_DELETE, data->comment_id);
+
+        MYSQL_BIND(HANDLE_COMMENT_DELETE);
+        MYSQL_EXECUTE(HANDLE_COMMENT_DELETE);
     }
 
     trace_func_end();
@@ -542,33 +542,33 @@ int ndo_handle_downtime(int type, void * d)
             cancelled = 1;
         }
 
-        MYSQL_RESET_BIND(HANDLE_DOWNTIME_STOP);
-
-        MYSQL_BIND_INT(HANDLE_DOWNTIME_STOP, data->timestamp.tv_sec);
-        MYSQL_BIND_INT(HANDLE_DOWNTIME_STOP, data->timestamp.tv_usec);
-        MYSQL_BIND_INT(HANDLE_DOWNTIME_STOP, cancelled);
-        MYSQL_BIND_INT(HANDLE_DOWNTIME_STOP, object_id);
-        MYSQL_BIND_INT(HANDLE_DOWNTIME_STOP, data->downtime_type);
-        MYSQL_BIND_INT(HANDLE_DOWNTIME_STOP, data->entry_time);
-        MYSQL_BIND_INT(HANDLE_DOWNTIME_STOP, data->start_time);
-        MYSQL_BIND_INT(HANDLE_DOWNTIME_STOP, data->end_time);
-
-        MYSQL_BIND(HANDLE_DOWNTIME_STOP);
-        MYSQL_EXECUTE(HANDLE_DOWNTIME_STOP);
-    }
-
-    if (data->type == NEBTYPE_DOWNTIME_STOP || data->type == NEBTYPE_DOWNTIME_DELETE) {
-
         MYSQL_RESET_BIND(HANDLE_DOWNTIME_HISTORY_STOP);
 
-        MYSQL_BIND_INT(HANDLE_DOWNTIME_HISTORY_STOP, data->downtime_type);
+        MYSQL_BIND_INT(HANDLE_DOWNTIME_HISTORY_STOP, data->timestamp.tv_sec);
+        MYSQL_BIND_INT(HANDLE_DOWNTIME_HISTORY_STOP, data->timestamp.tv_usec);
+        MYSQL_BIND_INT(HANDLE_DOWNTIME_HISTORY_STOP, cancelled);
         MYSQL_BIND_INT(HANDLE_DOWNTIME_HISTORY_STOP, object_id);
+        MYSQL_BIND_INT(HANDLE_DOWNTIME_HISTORY_STOP, data->downtime_type);
         MYSQL_BIND_INT(HANDLE_DOWNTIME_HISTORY_STOP, data->entry_time);
         MYSQL_BIND_INT(HANDLE_DOWNTIME_HISTORY_STOP, data->start_time);
         MYSQL_BIND_INT(HANDLE_DOWNTIME_HISTORY_STOP, data->end_time);
 
         MYSQL_BIND(HANDLE_DOWNTIME_HISTORY_STOP);
         MYSQL_EXECUTE(HANDLE_DOWNTIME_HISTORY_STOP);
+    }
+
+    if (data->type == NEBTYPE_DOWNTIME_STOP || data->type == NEBTYPE_DOWNTIME_DELETE) {
+
+        MYSQL_RESET_BIND(HANDLE_DOWNTIME_STOP);
+
+        MYSQL_BIND_INT(HANDLE_DOWNTIME_STOP, data->downtime_type);
+        MYSQL_BIND_INT(HANDLE_DOWNTIME_STOP, object_id);
+        MYSQL_BIND_INT(HANDLE_DOWNTIME_STOP, data->entry_time);
+        MYSQL_BIND_INT(HANDLE_DOWNTIME_STOP, data->start_time);
+        MYSQL_BIND_INT(HANDLE_DOWNTIME_STOP, data->end_time);
+
+        MYSQL_BIND(HANDLE_DOWNTIME_STOP);
+        MYSQL_EXECUTE(HANDLE_DOWNTIME_STOP);
     }
 
     trace_func_end();
