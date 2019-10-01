@@ -19,6 +19,7 @@
 #include <string.h>
 #include <errmsg.h>
 #include <time.h>
+#include <stdarg.h>
 
 NEB_API_VERSION(CURRENT_NEB_API_VERSION)
 
