@@ -149,9 +149,11 @@ void ndo_debug(int write_to_log, const char * fmt, ...)
 
     printf("%s\n", buffer);
 
+#ifndef TESTING
     if (write_to_log == TRUE) {
         ndo_log(buffer);
     }
+#endif
 }
 
 

@@ -11,6 +11,8 @@ DBFLAGS=@DBFLAGS@
 
 TESTLIBS=-lcheck -lsubunit -lm -lrt -lpthread
 
+DEFINITIONS=-DTESTING
+
 
 test: test.c test-bootstrap.c ../src/ndo.c
-	$(CC) $(CFLAGS) $(DBFLAGS) $^ -o $@ $(DBLIBS) $(TESTLIBS)
+	$(CC) $(CFLAGS) $(DBFLAGS) $^ -o $@ $(DEFINITIONS) $(DBLIBS) $(TESTLIBS)
