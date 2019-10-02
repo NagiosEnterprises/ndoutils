@@ -2,6 +2,13 @@
 VALGRIND_OPTS=--leak-check=full --show-leak-kinds=all --track-origins=yes
 TESTDB=ndo
 
+INSTALL=@INSTALL@
+INSTALL_OPTS=@INSTALL_OPTS@
+BINDIR=@BINDIR@
+CFGDIR=@CFGDIR@
+NAGIOSCFG=@NAGIOSCFG@
+
+
 
 .PHONY: all test clean distclean
 
@@ -14,8 +21,14 @@ none:
 	@echo "    make clean"
 	@echo "    make distclean"
 	@echo ""
+	@echo "Installation targets:"
+	@echo ""
+	@echo "	   make install"
+	@echo "	   install-config"
+	@echo "	   install-broker-line"
+	@echo ""
 	@echo "Testing targets:"
-	@echo "(./configure --enable-debugging --enable-coverage)"
+	@echo "(./configure --enable-testing)"
 	@echo ""
 	@echo "    make inittest"
 	@echo "    make test"
@@ -30,17 +43,39 @@ ndo.so: src/ndo.c src/ndo-handlers.c src/ndo-startup.c
 	cd src/ && $(MAKE) $@
 
 
-ndo.o:
-	cd src/ && $(MAKE) $@
-
-
 all: ndo.so
+
+
+install: ndo.so
+	$(INSTALL) -m 774 $(INSTALL_OPTS) src/ndo.so $(BINDIR)/ndo.so
+	@echo "Shared module ndo.so installed"
+
+
+install-config:
+	$(INSTALL) -m 644 $(INSTALL_OPTS) config/ndo.cfg-sample $(CFGDIR)/ndo.cfg
+	@echo "Configuration file installed"
+
+
+install-broker-line:
+	@if test -f $(NAGIOSCFG); then \
+		commentMessage="# Commented out by NDO 'make install-broker-line' on $$(date)"; \
+		@sed -i "s/.*broker_module.*ndomod.o.*/$$commentMessage\n#&" $(NAGIOSCFG); \
+		@echo "# Added by NDO 'make install-broker-line' on $$(date)" >> $(NAGIOSCFG); \
+		@echo "broker_module=$(BINDIR)/ndo.so $(CFGDIR)/ndo.cfg" >> $(NAGIOSCFG); \
+		@echo "$(NAGIOSCFG) configured to use NDO"
+	else \
+		@echo "No Nagios configuration file found!"; \
+		@echo "Specify this file with ./configure --with-nagios-config=/path/to/file"; \
+	fi
+
 
 test-enabled:
 	cd test/ && $(MAKE) test
 
+
 test-disabled:
 	@echo "Testing disabled. Please run ./configure --enable-testing"
+
 
 test:
 	$(MAKE) test-@tests_enabled@
