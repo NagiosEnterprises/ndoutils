@@ -1746,7 +1746,7 @@ START_TEST (test_contact_notification_data)
     ndo_handle_contact_notification(d.type, &d);
 
     mysql_query(mysql_connection, "SELECT 1 FROM nagios_contactnotifications WHERE "
-        "instance_id = 1 AND notification_id = 0 "
+        "instance_id = 1 "
         "AND start_time = FROM_UNIXTIME(1568235236) AND start_time_usec = 683676 "
         "AND end_time = FROM_UNIXTIME(0) AND end_time_usec = 0 "
         "AND contact_object_id = (SELECT object_id FROM nagios_objects WHERE objecttype_id = 10 AND name1 = 'nagiosadmin' AND name2 IS NULL LIMIT 1)");
@@ -1804,7 +1804,7 @@ START_TEST (test_contact_notification_method_data)
     ndo_handle_contact_notification_method(d.type, &d);
 
     mysql_query(mysql_connection, "SELECT 1 FROM nagios_contactnotificationmethods WHERE "
-        "instance_id = 1 AND contactnotification_id = 0 "
+        "instance_id = 1 AND contactnotification_id = 1 "
         "AND start_time = FROM_UNIXTIME(1568237093) AND start_time_usec = 608098 "
         "AND end_time = FROM_UNIXTIME(0) AND end_time_usec = 0 "
         "AND command_object_id = -1 AND command_args = '' ");
