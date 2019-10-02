@@ -479,7 +479,6 @@ int ndo_write_contacts(int config_type)
 
             if (loop == 1 || loop == loops) {
                 _MYSQL_PREPARE(ndo_write_stmt[WRITE_CONTACTS], query);
-                WRITE_PREPARE(WRITE_CONTACTS);
             }
             WRITE_EXECUTE(WRITE_CONTACTS);
 
@@ -948,7 +947,6 @@ int ndo_write_hosts(int config_type)
 
             if (loop == 1 || loop == loops) {
                 _MYSQL_PREPARE(ndo_write_stmt[WRITE_HOSTS], query);
-                WRITE_PREPARE(WRITE_HOSTS);
             }
             WRITE_EXECUTE(WRITE_HOSTS);
 
@@ -1425,7 +1423,6 @@ int ndo_write_services(int config_type)
 
             if (loop == 1 || loop == loops) {
                 _MYSQL_PREPARE(ndo_write_stmt[WRITE_SERVICES], query);
-                WRITE_PREPARE(WRITE_SERVICES);
             }
             WRITE_EXECUTE(WRITE_SERVICES);
 
