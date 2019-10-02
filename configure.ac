@@ -72,6 +72,8 @@ AC_ARG_WITH(
     bin_dir=/usr/local/nagios/bin/
 )
 
+# remove any trailing /
+bin_dir=$(echo $bin_dir | sed 's|/*$||')
 BINDIR="$bin_dir"
 AC_SUBST(BINDIR)
 
@@ -88,6 +90,8 @@ AC_ARG_WITH(
     cfg_dir=/usr/local/nagios/etc/
 )
 
+# remove any trailing /
+cfg_dir=$(echo $cfg_dir | sed 's|/*$||')
 CFGDIR="$cfg_dir"
 AC_SUBST(CFGDIR)
 

@@ -59,10 +59,12 @@ install-config:
 install-broker-line:
 	@if test -f $(NAGIOSCFG); then \
 		commentMessage="# Commented out by NDO 'make install-broker-line' on $$(date)"; \
-		@sed -i "s/.*broker_module.*ndomod.o.*/$$commentMessage\n#&" $(NAGIOSCFG); \
-		@echo "# Added by NDO 'make install-broker-line' on $$(date)" >> $(NAGIOSCFG); \
-		@echo "broker_module=$(BINDIR)/ndo.so $(CFGDIR)/ndo.cfg" >> $(NAGIOSCFG); \
-		@echo "$(NAGIOSCFG) configured to use NDO"
+		sed -i "s/.*broker_module.*ndomod.o.*/$$commentMessage\n#&/" $(NAGIOSCFG); \
+		sed -i "s/.*broker_module.*ndo.so.*/$$commentMessage\n#&/" $(NAGIOSCFG); \
+		echo "" >> $(NAGIOSCFG); \
+		echo "# Added by NDO 'make install-broker-line' on $$(date)" >> $(NAGIOSCFG); \
+		echo "broker_module=$(BINDIR)/ndo.so $(CFGDIR)/ndo.cfg" >> $(NAGIOSCFG); \
+		echo "$(NAGIOSCFG) configured to use NDO"; \
 	else \
 		@echo "No Nagios configuration file found!"; \
 		@echo "Specify this file with ./configure --with-nagios-config=/path/to/file"; \
