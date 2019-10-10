@@ -53,7 +53,7 @@ do { \
     ndo_log(ndo_error_msg); \
 } while (0)
 
-#define MAX_OBJECT_INSERT 10
+#define MAX_OBJECT_INSERT 100
 
 #define STRLIT_LEN(s) ( (sizeof(s) / sizeof(s[0])) - 1 )
 
@@ -67,8 +67,8 @@ typedef struct ndo_query_data {
     MYSQL_STMT * stmt;
     MYSQL_BIND * bind;
     MYSQL_BIND * result;
-    long * strlen;
-    long * result_strlen;
+    unsigned long * strlen;
+    unsigned long * result_strlen;
     int bind_i;
     int result_i;
 } ndo_query_data;
@@ -172,8 +172,9 @@ int write_to_log(char * buffer, unsigned long l, time_t * t);
 #define HANDLE_EXTERNAL_COMMAND 33
 #define HANDLE_ACKNOWLEDGEMENT 34
 #define HANDLE_STATE_CHANGE 35
+#define HANDLE_OBJECT_WRITING 36
 
-#define NUM_QUERIES 36
+#define NUM_QUERIES 37
 
 #define WRITE_ACTIVE_OBJECTS 0
 #define WRITE_CUSTOMVARS 1

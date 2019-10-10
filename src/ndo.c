@@ -78,9 +78,10 @@ int ndo_db_max_reconnect_attempts = 5;
 ndo_query_data * ndo_sql = NULL;
 
 MYSQL_STMT * ndo_write_stmt[NUM_WRITE_QUERIES];
-MYSQL_BIND ndo_write_bind[NUM_WRITE_QUERIES][MAX_OBJECT_INSERT];
+MYSQL_BIND ndo_write_bind[NUM_WRITE_QUERIES][MAX_SQL_BINDINGS];
+char ndo_write_query[MAX_SQL_BUFFER] = { 0 };
 int ndo_write_i[NUM_WRITE_QUERIES] = { 0 };
-long ndo_write_tmp_len[NUM_WRITE_QUERIES][MAX_OBJECT_INSERT];
+unsigned long ndo_write_tmp_len[NUM_WRITE_QUERIES][MAX_OBJECT_INSERT];
 
 int num_result_bindings[NUM_QUERIES] = { 0 };
 
@@ -88,36 +89,21 @@ int num_bindings[NUM_QUERIES] = { 0 };
 
 int ndo_return = 0;
 char ndo_error_msg[1024] = { 0 };
-/*char ndo_query[NUM_QUERIES][MAX_SQL_BUFFER] = { 0 };*/
-char ndo_query[MAX_SQL_BUFFER] = { 0 };
-long ndo_tmp_str_len[MAX_SQL_BINDINGS] = { 0 };
-long ndo_result_tmp_str_len[MAX_SQL_BINDINGS] = { 0 };
 
 int ndo_bind_i = 0;
 int ndo_result_i = 0;
-int ndo_last_handle_function = 0;
 
 
-
-char active_objects_query[MAX_SQL_BUFFER] = { 0 };
-int active_objects_count = 0;
-int active_objects_max_params = 0;
-int active_objects_i = 0;
-MYSQL_BIND * active_objects_bind = NULL;
-int * active_objects_object_ids = NULL;
-int active_objects_run = 0;
 
 int ndo_max_object_insert_count = 200;
+
+int ndo_writing_object_configuration = FALSE;
 
 #define DEFAULT_STARTUP_HASH_SCRIPT_PATH "/usr/local/nagios/bin/ndo-startup-hash.sh"
 int ndo_startup_check_enabled = FALSE;
 char * ndo_startup_hash_script_path = NULL;
 int ndo_startup_skip_writing_objects = FALSE;
 
-
-MYSQL_BIND ndo_log_data_bind[5];
-MYSQL_STMT * ndo_stmt_log_data = NULL;
-int ndo_log_data_return = 0;
 
 void * ndo_handle = NULL;
 int ndo_process_options = 0;
@@ -149,12 +135,6 @@ void ndo_debug(int write_to_log, const char * fmt, ...)
     va_end(ap);
 
     printf("%s\n", buffer);
-
-#ifndef TESTING
-    if (write_to_log == TRUE) {
-        ndo_log(buffer);
-    }
-#endif
 }
 
 
@@ -613,6 +593,7 @@ int ndo_initialize_mysql_connection()
     trace_func_begin();
     mysql_connection = mysql_init(NULL);
     trace_func_end();
+    return NDO_OK;
 }
 
 
@@ -919,7 +900,7 @@ int ndo_get_object_id_name1(int insert, int object_type, char * name1)
         return NDO_ERROR;
     }
 
-    int object_id = 0;
+    int object_id = NDO_ERROR;
 
     MYSQL_RESET_BIND(GET_OBJECT_ID_NAME1);
     MYSQL_RESET_RESULT(GET_OBJECT_ID_NAME1);
@@ -934,18 +915,28 @@ int ndo_get_object_id_name1(int insert, int object_type, char * name1)
     MYSQL_EXECUTE(GET_OBJECT_ID_NAME1);
     MYSQL_STORE_RESULT(GET_OBJECT_ID_NAME1);
 
-    while (!MYSQL_FETCH(GET_OBJECT_ID_NAME1)) {
+    if (!MYSQL_FETCH(GET_OBJECT_ID_NAME1)) {
         trace("got id=%d", object_id);
-        return object_id;
+    }
+    else {
+        object_id = NDO_ERROR;
     }
 
-    if (insert == TRUE) {
+    if (insert == TRUE && object_id == NDO_ERROR) {
         trace_info("insert==TRUE, calling ndo_insert_object_id_name1");
-        return ndo_insert_object_id_name1(object_type, name1);
+        object_id = ndo_insert_object_id_name1(object_type, name1);
+    }
+
+    if (ndo_writing_object_configuration == TRUE && object_id != NDO_ERROR) {
+        trace_info("ndo_writing_object_configuration==TRUE, setting is_active=1");
+        MYSQL_RESET_BIND(HANDLE_OBJECT_WRITING);
+        MYSQL_BIND_INT(HANDLE_OBJECT_WRITING, object_id);
+        MYSQL_BIND(HANDLE_OBJECT_WRITING);
+        MYSQL_EXECUTE(HANDLE_OBJECT_WRITING);
     }
 
     trace_func_end();
-    return NDO_ERROR;
+    return object_id;
 }
 
 
@@ -964,7 +955,7 @@ int ndo_get_object_id_name2(int insert, int object_type, char * name1, char * na
         return ndo_get_object_id_name1(insert, object_type, name1);
     }
 
-    int object_id = 0;
+    int object_id = NDO_ERROR;
 
     MYSQL_RESET_BIND(GET_OBJECT_ID_NAME2);
     MYSQL_RESET_RESULT(GET_OBJECT_ID_NAME2);
@@ -979,20 +970,28 @@ int ndo_get_object_id_name2(int insert, int object_type, char * name1, char * na
     MYSQL_EXECUTE(GET_OBJECT_ID_NAME2);
     MYSQL_STORE_RESULT(GET_OBJECT_ID_NAME2);
 
-    while (!MYSQL_FETCH(GET_OBJECT_ID_NAME2)) {
+    if (!MYSQL_FETCH(GET_OBJECT_ID_NAME2)) {
         trace("got id=%d", object_id);
-        return object_id;
+    }
+    else {
+        object_id = NDO_ERROR;
     }
 
-    /* if we made it this far it means nothing exists in the database yet */
-
-    if (insert == TRUE) {
+    if (insert == TRUE && object_id == NDO_ERROR) {
         trace_info("insert==TRUE, calling ndo_insert_object_id_name2");
-        return ndo_insert_object_id_name2(object_type, name1, name2);
+        object_id = ndo_insert_object_id_name2(object_type, name1, name2);
+    }
+
+    if (ndo_writing_object_configuration == TRUE && object_id != NDO_ERROR) {
+        trace_info("ndo_writing_object_configuration==TRUE, setting is_active=1");
+        MYSQL_RESET_BIND(HANDLE_OBJECT_WRITING);
+        MYSQL_BIND_INT(HANDLE_OBJECT_WRITING, object_id);
+        MYSQL_BIND(HANDLE_OBJECT_WRITING);
+        MYSQL_EXECUTE(HANDLE_OBJECT_WRITING);
     }
 
     trace_func_end();
-    return NDO_ERROR;
+    return object_id;
 }
 
 
@@ -1054,7 +1053,9 @@ int ndo_insert_object_id_name2(int object_type, char * name1, char * name2)
 
 int ndo_write_config(int type)
 {
-
+    trace_func_begin();
+    trace_func_end();
+    return NDO_OK;
 }
 
 void initialize_bindings_array()
@@ -1097,6 +1098,7 @@ void initialize_bindings_array()
     num_bindings[HANDLE_EXTERNAL_COMMAND] = 4;
     num_bindings[HANDLE_ACKNOWLEDGEMENT] = 10;
     num_bindings[HANDLE_STATE_CHANGE] = 11;
+    num_bindings[HANDLE_OBJECT_WRITING] = 1;
 
     num_result_bindings[GET_OBJECT_ID_NAME1] = 1;
     num_result_bindings[GET_OBJECT_ID_NAME2] = 1;
@@ -1183,6 +1185,7 @@ int initialize_stmt_data()
     ndo_sql[HANDLE_EXTERNAL_COMMAND].query = strdup("INSERT INTO nagios_externalcommands (instance_id, command_type, entry_time, command_name, command_args) VALUES (1,?,FROM_UNIXTIME(?),?,?) ON DUPLICATE KEY UPDATE instance_id = VALUES(instance_id), command_type = VALUES(command_type), entry_time = VALUES(entry_time), command_name = VALUES(command_name), command_args = VALUES(command_args)");
     ndo_sql[HANDLE_ACKNOWLEDGEMENT].query = strdup("INSERT INTO nagios_acknowledgements (instance_id, entry_time, entry_time_usec, acknowledgement_type, object_id, state, author_name, comment_data, is_sticky, persistent_comment, notify_contacts) VALUES (1,FROM_UNIXTIME(?),?,?,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE instance_id = VALUES(instance_id), entry_time = VALUES(entry_time), entry_time_usec = VALUES(entry_time_usec), acknowledgement_type = VALUES(acknowledgement_type), object_id = VALUES(object_id), state = VALUES(state), author_name = VALUES(author_name), comment_data = VALUES(comment_data), is_sticky = VALUES(is_sticky), persistent_comment = VALUES(persistent_comment), notify_contacts = VALUES(notify_contacts)");
     ndo_sql[HANDLE_STATE_CHANGE].query = strdup("INSERT INTO nagios_statehistory SET instance_id = 1, state_time = FROM_UNIXTIME(?), state_time_usec = ?, object_id = ?, state_change = 1, state = ?, state_type = ?, current_check_attempt = ?, max_check_attempts = ?, last_state = ?, last_hard_state = ?, output = ?, long_output = ?");
+    ndo_sql[HANDLE_OBJECT_WRITING].query = strdup("UPDATE nagios_objects SET is_active = 1 WHERE object_id = ?");
 
     /* now check to make sure all those strdups worked */
     for (i = 0; i < NUM_QUERIES; i++) {
@@ -1220,15 +1223,11 @@ int initialize_stmt_data()
 }
 
 
-
-
-
 int deinitialize_stmt_data()
 {
     trace_func_begin();
 
     int i = 0;
-    int errors = 0;
 
     if (ndo_sql == NULL) {
         return NDO_OK;
@@ -1263,4 +1262,5 @@ int deinitialize_stmt_data()
     free(ndo_sql);
 
     trace_func_end();
+    return NDO_OK;
 }

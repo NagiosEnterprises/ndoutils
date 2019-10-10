@@ -27,9 +27,7 @@ int ndo_handle_process(int type, void * d)
         if (ndo_startup_skip_writing_objects != TRUE) {
 
             ndo_write_stmt_init();
-            ndo_begin_active_objects(active_objects_run);
             ndo_write_object_config(NDO_CONFIG_DUMP_ORIGINAL);
-            ndo_end_active_objects();
             ndo_write_stmt_close();
 
             ndo_write_config_files();

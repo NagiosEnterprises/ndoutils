@@ -192,7 +192,7 @@ do { \
 #define WRITE_SET_SQL(query) strcpy(ndo_query, query)
 #define WRITE_RESET_BIND(stmt) _MYSQL_RESET_BIND(ndo_write_bind[stmt], sizeof(ndo_write_bind[stmt]), ndo_write_i[stmt])
 #define WRITE_BIND(stmt) _MYSQL_BIND(ndo_write_stmt[stmt], ndo_write_bind[stmt])
-#define WRITE_PREPARE(stmt) _MYSQL_PREPARE(ndo_write_stmt[stmt], ndo_query)
+#define WRITE_PREPARE(stmt) _MYSQL_PREPARE(ndo_write_stmt[stmt], ndo_write_query)
 #define WRITE_EXECUTE(stmt) _MYSQL_EXECUTE(ndo_write_stmt[stmt])
 
 
