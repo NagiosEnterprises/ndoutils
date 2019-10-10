@@ -23,6 +23,7 @@ do { \
 do { \
     if (ndo_return != 0) { \
         int ndo_mysql_errno = *mysql_stmt_error(stmt); \
+        trace("ERROR: %d, %d", ndo_return, ndo_mysql_errno); \
         if (ndo_mysql_errno == CR_SERVER_GONE_ERROR || ndo_mysql_errno == CR_SERVER_LOST) { \
             while (ndo_return != NDO_OK) { \
                 sleep(1); \
@@ -38,6 +39,7 @@ do { \
 do { \
     if (ndo_return != 0) { \
         int ndo_mysql_errno = *mysql_stmt_error(stmt); \
+        trace("ERROR: %d, %d", ndo_return, ndo_mysql_errno); \
         if (ndo_mysql_errno == CR_SERVER_GONE_ERROR || ndo_mysql_errno == CR_SERVER_LOST) { \
             while (ndo_return != NDO_OK) { \
                 sleep(1); \
@@ -53,6 +55,7 @@ do { \
 do { \
     if (ndo_return != 0) { \
         int ndo_mysql_errno = *mysql_stmt_error(stmt); \
+        trace("ERROR: %d, %d", ndo_return, ndo_mysql_errno); \
         if (ndo_mysql_errno == CR_SERVER_GONE_ERROR || ndo_mysql_errno == CR_SERVER_LOST) { \
             while (ndo_return != NDO_OK) { \
                 sleep(1); \
@@ -68,6 +71,7 @@ do { \
 do { \
     if (ndo_return != 0) { \
         int ndo_mysql_errno = *mysql_stmt_error(stmt); \
+        trace("ERROR: %d, %d", ndo_return, ndo_mysql_errno); \
         if (ndo_mysql_errno == CR_SERVER_GONE_ERROR || ndo_mysql_errno == CR_SERVER_LOST) { \
             while (ndo_return != NDO_OK) { \
                 sleep(1); \
@@ -82,11 +86,14 @@ do { \
 #define NDO_HANDLE_ERROR_PREPARE_STMT(stmt, query) \
 do { \
     if (ndo_return != 0) { \
-        int ndo_mysql_errno = *mysql_stmt_error(stmt); \
-        if (ndo_mysql_errno == CR_SERVER_GONE_ERROR || ndo_mysql_errno == CR_SERVER_LOST) { \
-            while (ndo_return != NDO_OK) { \
+        int ndo_mysql_errno = mysql_stmt_errno(stmt); \
+        const char * ndo_mysql_error = mysql_stmt_error(stmt); \
+        trace("ERROR: %d, %d(%s) (%s)", ndo_return, ndo_mysql_errno, ndo_mysql_error, query); \
+        if (ndo_mysql_errno == CR_SERVER_GONE_ERROR || ndo_mysql_errno == CR_SERVER_LOST || ndo_mysql_errno == CR_CONN_HOST_ERROR) { \
+            trace("wtf! %s, %d", "message1", ndo_return); \
+            while (ndo_initialize_database() != NDO_OK) { \
+                trace("wtf! %s", "message2"); \
                 sleep(1); \
-                ndo_return = ndo_initialize_database(); \
             } \
             ndo_return = mysql_stmt_prepare(stmt, query, strlen(query)); \
         } \

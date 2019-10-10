@@ -88,6 +88,7 @@ int ndo_initialize_database();
 int ndo_initialize_prepared_statements();
 void ndo_disconnect_database();
 int ndo_register_callbacks();
+int ndo_register_timedevent_callback();
 int ndo_deregister_callbacks();
 
 
@@ -119,6 +120,9 @@ int ndo_set_all_objects_inactive();
 int ndo_begin_active_objects(int run_count);
 int ndo_end_active_objects();
 int ndo_set_object_active(int object_id, int config_type, void * next);
+
+int ndo_write_stmt_init();
+int ndo_write_stmt_close();
 
 int ndo_write_config_files();
 int ndo_write_config(int type);

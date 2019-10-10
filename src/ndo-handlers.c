@@ -26,9 +26,11 @@ int ndo_handle_process(int type, void * d)
 
         if (ndo_startup_skip_writing_objects != TRUE) {
 
+            ndo_write_stmt_init();
             ndo_begin_active_objects(active_objects_run);
             ndo_write_object_config(NDO_CONFIG_DUMP_ORIGINAL);
             ndo_end_active_objects();
+            ndo_write_stmt_close();
 
             ndo_write_config_files();
             ndo_write_config(NDO_CONFIG_DUMP_ORIGINAL);
@@ -49,28 +51,34 @@ int ndo_handle_process(int type, void * d)
     case NEBTYPE_PROCESS_SHUTDOWN:
     case NEBTYPE_PROCESS_RESTART:
 
-        MYSQL_RESET_BIND(HANDLE_PROCESS_SHUTDOWN);
+        if (ndo_process_options & NDO_PROCESS_PROCESS) {
 
-        MYSQL_BIND_INT(HANDLE_PROCESS_SHUTDOWN, data->timestamp.tv_sec);
+            MYSQL_RESET_BIND(HANDLE_PROCESS_SHUTDOWN);
 
-        MYSQL_BIND(HANDLE_PROCESS_SHUTDOWN);
-        MYSQL_EXECUTE(HANDLE_PROCESS_SHUTDOWN);
+            MYSQL_BIND_INT(HANDLE_PROCESS_SHUTDOWN, data->timestamp.tv_sec);
+
+            MYSQL_BIND(HANDLE_PROCESS_SHUTDOWN);
+            MYSQL_EXECUTE(HANDLE_PROCESS_SHUTDOWN);
+        }
 
         break;
 
     }
 
-    MYSQL_RESET_BIND(HANDLE_PROCESS);
+    if (ndo_process_options & NDO_PROCESS_PROCESS) {
 
-    MYSQL_BIND_INT(HANDLE_PROCESS, data->type);
-    MYSQL_BIND_INT(HANDLE_PROCESS, data->timestamp.tv_sec);
-    MYSQL_BIND_INT(HANDLE_PROCESS, data->timestamp.tv_usec);
-    MYSQL_BIND_INT(HANDLE_PROCESS, program_pid);
-    MYSQL_BIND_STR(HANDLE_PROCESS, program_version);
-    MYSQL_BIND_STR(HANDLE_PROCESS, program_mod_date);
+        MYSQL_RESET_BIND(HANDLE_PROCESS);
 
-    MYSQL_BIND(HANDLE_PROCESS);
-    MYSQL_EXECUTE(HANDLE_PROCESS);
+        MYSQL_BIND_INT(HANDLE_PROCESS, data->type);
+        MYSQL_BIND_INT(HANDLE_PROCESS, data->timestamp.tv_sec);
+        MYSQL_BIND_INT(HANDLE_PROCESS, data->timestamp.tv_usec);
+        MYSQL_BIND_INT(HANDLE_PROCESS, program_pid);
+        MYSQL_BIND_STR(HANDLE_PROCESS, program_version);
+        MYSQL_BIND_STR(HANDLE_PROCESS, program_mod_date);
+
+        MYSQL_BIND(HANDLE_PROCESS);
+        MYSQL_EXECUTE(HANDLE_PROCESS);
+    }
 
     trace_func_end();
     return NDO_OK;
@@ -183,8 +191,8 @@ int ndo_handle_log(int type, void * d)
     MYSQL_BIND_INT(HANDLE_LOG_DATA, data->data_type);
     MYSQL_BIND_STR(HANDLE_LOG_DATA, data->data);
 
-    MYSQL_BIND(HANDLE_TIMEDEVENT_EXECUTE);
-    MYSQL_EXECUTE(HANDLE_TIMEDEVENT_EXECUTE);
+    MYSQL_BIND(HANDLE_LOG_DATA);
+    MYSQL_EXECUTE(HANDLE_LOG_DATA);
 
     /* trace_func_end_nolog(); */
     return NDO_OK;

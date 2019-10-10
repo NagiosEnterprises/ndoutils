@@ -722,6 +722,9 @@ int ndo_initialize_database()
     ndo_log("Database initialized");
     ndo_database_connected = TRUE;
 
+    mysql_debug("d:t:O,/tmp/client.trace");
+    mysql_dump_debug_info(mysql_connection);
+
     trace_func_end();
     return initialize_stmt_data();
 }
@@ -756,12 +759,13 @@ int ndo_register_callbacks()
     trace_func_begin();
     int result = 0;
 
-    if (ndo_process_options & NDO_PROCESS_PROCESS) {
-        result += neb_register_callback(NEBCALLBACK_PROCESS_DATA, ndo_handle, 0, ndo_handle_process);
-    }
-    if (ndo_process_options & NDO_PROCESS_TIMED_EVENT) {
-        result += neb_register_callback(NEBCALLBACK_TIMED_EVENT_DATA, ndo_handle, 0, ndo_handle_timed_event);
-    }
+    /* this callback is always registered, as thats where the configuration writing
+       comes from. ndo_process_options is actually checked in the case of a
+       shutdown or restart */
+    result += neb_register_callback(NEBCALLBACK_PROCESS_DATA, ndo_handle, 0, ndo_handle_process);
+
+    /* we register the timed event callback after configurations are written to the db */
+
     if (ndo_process_options & NDO_PROCESS_LOG) {
         result += neb_register_callback(NEBCALLBACK_LOG_DATA, ndo_handle, 0, ndo_handle_log);
     }
@@ -823,6 +827,19 @@ int ndo_register_callbacks()
     }
 
     ndo_log("Callbacks registered");
+    trace_func_end();
+    return NDO_OK;
+}
+
+
+int ndo_register_timedevent_callback()
+{
+    trace_func_begin();
+
+    if (ndo_process_options & NDO_PROCESS_TIMED_EVENT) {
+        return neb_register_callback(NEBCALLBACK_TIMED_EVENT_DATA, ndo_handle, 0, ndo_handle_timed_event);
+    }
+
     trace_func_end();
     return NDO_OK;
 }
@@ -898,6 +915,7 @@ int ndo_get_object_id_name1(int insert, int object_type, char * name1)
 
     if (name1 == NULL || strlen(name1) == 0) {
         ndo_log("ndo_get_object_id_name1() - name1 is null");
+        trace_info("name1==NULL, returning error");
         return NDO_ERROR;
     }
 
@@ -917,10 +935,12 @@ int ndo_get_object_id_name1(int insert, int object_type, char * name1)
     MYSQL_STORE_RESULT(GET_OBJECT_ID_NAME1);
 
     while (!MYSQL_FETCH(GET_OBJECT_ID_NAME1)) {
+        trace("got id=%d", object_id);
         return object_id;
     }
 
     if (insert == TRUE) {
+        trace_info("insert==TRUE, calling ndo_insert_object_id_name1");
         return ndo_insert_object_id_name1(object_type, name1);
     }
 
@@ -934,10 +954,13 @@ int ndo_get_object_id_name2(int insert, int object_type, char * name1, char * na
     trace("insert=%d, object_type=%d, name1=%s, name2=%s", insert, object_type, name1, name2);
 
     if (name1 == NULL || strlen(name1) == 0) {
+        ndo_log("ndo_get_object_id_name2() - name1 is null");
+        trace_info("name1==NULL, returning error");
         return NDO_ERROR;
     }
 
     if (name2 == NULL || strlen(name2) == 0) {
+        trace_info("name2==NULL, calling ndo_get_object_id_name1");
         return ndo_get_object_id_name1(insert, object_type, name1);
     }
 
@@ -957,12 +980,14 @@ int ndo_get_object_id_name2(int insert, int object_type, char * name1, char * na
     MYSQL_STORE_RESULT(GET_OBJECT_ID_NAME2);
 
     while (!MYSQL_FETCH(GET_OBJECT_ID_NAME2)) {
+        trace("got id=%d", object_id);
         return object_id;
     }
 
     /* if we made it this far it means nothing exists in the database yet */
 
     if (insert == TRUE) {
+        trace_info("insert==TRUE, calling ndo_insert_object_id_name2");
         return ndo_insert_object_id_name2(object_type, name1, name2);
     }
 
@@ -980,10 +1005,9 @@ int ndo_insert_object_id_name1(int object_type, char * name1)
     trace("object_type=%d, name1=%s", object_type, name1);
 
     if (name1 == NULL || strlen(name1) == 0) {
+        trace_info("name1==NULL, returning error");
         return NDO_ERROR;
     }
-
-    int object_id = 0;
 
     MYSQL_RESET_BIND(INSERT_OBJECT_ID_NAME1);
     MYSQL_RESET_RESULT(INSERT_OBJECT_ID_NAME1);
@@ -1004,14 +1028,14 @@ int ndo_insert_object_id_name2(int object_type, char * name1, char * name2)
     trace("object_type=%d, name1=%s, name2=%s", object_type, name1, name2);
 
     if (name1 == NULL || strlen(name1) == 0) {
+        trace_info("name1==NULL, returning error");
         return NDO_ERROR;
     }
 
     if (name2 == NULL || strlen(name2) == 0) {
+        trace_info("name2==NULL, calling ndo_insert_object_id_name1");
         return ndo_insert_object_id_name1(object_type, name1);
     }
-
-    int object_id = 0;
 
     MYSQL_RESET_BIND(INSERT_OBJECT_ID_NAME2);
     MYSQL_RESET_RESULT(INSERT_OBJECT_ID_NAME2);
@@ -1126,8 +1150,8 @@ int initialize_stmt_data()
 
     ndo_sql[GET_OBJECT_ID_NAME1].query = strdup("SELECT object_id FROM nagios_objects WHERE objecttype_id = ? AND name1 = ? AND name2 IS NULL");
     ndo_sql[GET_OBJECT_ID_NAME2].query = strdup("SELECT object_id FROM nagios_objects WHERE objecttype_id = ? AND name1 = ? AND name2 = ?");
-    ndo_sql[INSERT_OBJECT_ID_NAME1].query = strdup("INSERT INTO nagios_objects (objecttype_id, name1) VALUES (?,?) ON DUPLICATE KEY UPDATE is_active = 1");
-    ndo_sql[INSERT_OBJECT_ID_NAME2].query = strdup("INSERT INTO nagios_objects (objecttype_id, name1, name2) VALUES (?,?,?) ON DUPLICATE KEY UPDATE is_active = 1");
+    ndo_sql[INSERT_OBJECT_ID_NAME1].query = strdup("INSERT INTO nagios_objects (instance_id, objecttype_id, name1) VALUES (1,?,?) ON DUPLICATE KEY UPDATE is_active = 1");
+    ndo_sql[INSERT_OBJECT_ID_NAME2].query = strdup("INSERT INTO nagios_objects (instance_id, objecttype_id, name1, name2) VALUES (1,?,?,?) ON DUPLICATE KEY UPDATE is_active = 1");
     ndo_sql[HANDLE_LOG_DATA].query = strdup("INSERT INTO nagios_logentries (instance_id, logentry_time, entry_time, entry_time_usec, logentry_type, logentry_data, realtime_data, inferred_data_extracted) VALUES (1,FROM_UNIXTIME(?),FROM_UNIXTIME(?),?,?,?,1,1)");
     ndo_sql[HANDLE_PROCESS].query = strdup("INSERT INTO nagios_processevents (instance_id, event_type, event_time, event_time_usec, process_id, program_name, program_version, program_date) VALUES (1,?,FROM_UNIXTIME(?),?,?,'Nagios',?,?)");
     ndo_sql[HANDLE_PROCESS_SHUTDOWN].query = strdup("UPDATE nagios_programstatus SET program_end_time = FROM_UNIXTIME(?), is_currently_running = 0");
@@ -1138,9 +1162,6 @@ int initialize_stmt_data()
     ndo_sql[HANDLE_EVENT_HANDLER].query = strdup("INSERT INTO nagios_eventhandlers (instance_id, start_time, start_time_usec, end_time, end_time_usec, eventhandler_type, object_id, state, state_type, command_object_id, command_args, command_line, timeout, early_timeout, execution_time, return_code, output, long_output) VALUES (1,FROM_UNIXTIME(?),?,FROM_UNIXTIME(?),?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE instance_id = VALUES(instance_id), start_time = VALUES(start_time), start_time_usec = VALUES(start_time_usec), end_time = VALUES(end_time), end_time_usec = VALUES(end_time_usec), eventhandler_type = VALUES(eventhandler_type), object_id = VALUES(object_id), state = VALUES(state), state_type = VALUES(state_type), command_object_id = VALUES(command_object_id), command_args = VALUES(command_args), command_line = VALUES(command_line), timeout = VALUES(timeout), early_timeout = VALUES(early_timeout), execution_time = VALUES(execution_time), return_code = VALUES(return_code), output = VALUES(output), long_output = VALUES(long_output)");
     ndo_sql[HANDLE_HOST_CHECK].query = strdup("INSERT INTO nagios_hostchecks (instance_id, start_time, start_time_usec, end_time, end_time_usec, host_object_id, check_type, current_check_attempt, max_check_attempts, state, state_type, timeout, early_timeout, execution_time, latency, return_code, output, long_output, perfdata, command_object_id, command_args, command_line) VALUES (1,FROM_UNIXTIME(?),?,FROM_UNIXTIME(?),?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE instance_id = VALUES(instance_id), start_time = VALUES(start_time), start_time_usec = VALUES(start_time_usec), end_time = VALUES(end_time), end_time_usec = VALUES(end_time_usec), host_object_id = VALUES(host_object_id), check_type = VALUES(check_type), current_check_attempt = VALUES(current_check_attempt), max_check_attempts = VALUES(max_check_attempts), state = VALUES(state), state_type = VALUES(state_type), timeout = VALUES(timeout), early_timeout = VALUES(early_timeout), execution_time = VALUES(execution_time), latency = VALUES(latency), return_code = VALUES(return_code), output = VALUES(output), long_output = VALUES(long_output), perfdata = VALUES(perfdata), command_object_id = VALUES(command_object_id), command_args = VALUES(command_args), command_line = VALUES(command_line)");
     ndo_sql[HANDLE_SERVICE_CHECK].query = strdup("INSERT INTO nagios_servicechecks (instance_id, start_time, start_time_usec, end_time, end_time_usec, service_object_id, check_type, current_check_attempt, max_check_attempts, state, state_type, timeout, early_timeout, execution_time, latency, return_code, output, long_output, perfdata, command_object_id, command_args, command_line) VALUES (1,FROM_UNIXTIME(?),?,FROM_UNIXTIME(?),?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE instance_id = VALUES(instance_id), start_time = VALUES(start_time), start_time_usec = VALUES(start_time_usec), end_time = VALUES(end_time), end_time_usec = VALUES(end_time_usec), service_object_id = VALUES(service_object_id), check_type = VALUES(check_type), current_check_attempt = VALUES(current_check_attempt), max_check_attempts = VALUES(max_check_attempts), state = VALUES(state), state_type = VALUES(state_type), timeout = VALUES(timeout), early_timeout = VALUES(early_timeout), execution_time = VALUES(execution_time), latency = VALUES(latency), return_code = VALUES(return_code), output = VALUES(output), long_output = VALUES(long_output), perfdata = VALUES(perfdata), command_object_id = VALUES(command_object_id), command_args = VALUES(command_args), command_line = VALUES(command_line)");
-    num_bindings[HANDLE_COMMENT_DELETE] = 2;
-    num_bindings[HANDLE_COMMENT_HISTORY_DELETE] = 4;
-
     ndo_sql[HANDLE_COMMENT_ADD].query = strdup("INSERT INTO nagios_comments (instance_id, comment_type, entry_type, object_id, comment_time, internal_comment_id, author_name, comment_data, is_persistent, comment_source, expires, expiration_time, entry_time, entry_time_usec) VALUES (1,?,?,?,FROM_UNIXTIME(?),?,?,?,?,?,?,FROM_UNIXTIME(?),FROM_UNIXTIME(?),?) ON DUPLICATE KEY UPDATE instance_id = VALUES(instance_id), comment_type = VALUES(comment_type), entry_type = VALUES(entry_type), object_id = VALUES(object_id), comment_time = VALUES(comment_time), internal_comment_id = VALUES(internal_comment_id), author_name = VALUES(author_name), comment_data = VALUES(comment_data), is_persistent = VALUES(is_persistent), comment_source = VALUES(comment_source), expires = VALUES(expires), expiration_time = VALUES(expiration_time), entry_time = VALUES(entry_time), entry_time_usec = VALUES(entry_time_usec)");
     ndo_sql[HANDLE_COMMENT_HISTORY_ADD].query = strdup("INSERT INTO nagios_commenthistory (instance_id, comment_type, entry_type, object_id, comment_time, internal_comment_id, author_name, comment_data, is_persistent, comment_source, expires, expiration_time, entry_time, entry_time_usec) VALUES (1,?,?,?,FROM_UNIXTIME(?),?,?,?,?,?,?,FROM_UNIXTIME(?),FROM_UNIXTIME(?),?) ON DUPLICATE KEY UPDATE instance_id = VALUES(instance_id), comment_type = VALUES(comment_type), entry_type = VALUES(entry_type), object_id = VALUES(object_id), comment_time = VALUES(comment_time), internal_comment_id = VALUES(internal_comment_id), author_name = VALUES(author_name), comment_data = VALUES(comment_data), is_persistent = VALUES(is_persistent), comment_source = VALUES(comment_source), expires = VALUES(expires), expiration_time = VALUES(expiration_time), entry_time = VALUES(entry_time), entry_time_usec = VALUES(entry_time_usec)");
     ndo_sql[HANDLE_COMMENT_DELETE].query = strdup("DELETE FROM nagios_comments WHERE comment_time = FROM_UNIXTIME(?) AND internal_comment_id = ?");
