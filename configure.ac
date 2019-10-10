@@ -114,7 +114,7 @@ if ! test -f $nagios_config; then
         nagios_config="$bin_dir/nagios.cfg"
         if ! test -f $nagios_config; then
             nagios_config=""
-            AC_MSG_ERROR([Unable to find Nagios config file. Use --with-nagios-config])
+            AC_MSG([Unable to find Nagios config file. Use --with-nagios-config])
         fi
     fi
 fi
