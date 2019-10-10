@@ -22,7 +22,7 @@ do { \
 #define NDO_HANDLE_ERROR_BIND_STMT(stmt, bind) \
 do { \
     if (ndo_return != 0) { \
-        int ndo_mysql_errno = *mysql_stmt_error(stmt); \
+        int ndo_mysql_errno = mysql_stmt_errno(stmt); \
         trace("ERROR: %d, %d", ndo_return, ndo_mysql_errno); \
         if (ndo_mysql_errno == CR_SERVER_GONE_ERROR || ndo_mysql_errno == CR_SERVER_LOST) { \
             while (ndo_return != NDO_OK) { \
@@ -38,7 +38,7 @@ do { \
 #define NDO_HANDLE_ERROR_RESULT_STMT(stmt, result) \
 do { \
     if (ndo_return != 0) { \
-        int ndo_mysql_errno = *mysql_stmt_error(stmt); \
+        int ndo_mysql_errno = mysql_stmt_errno(stmt); \
         trace("ERROR: %d, %d", ndo_return, ndo_mysql_errno); \
         if (ndo_mysql_errno == CR_SERVER_GONE_ERROR || ndo_mysql_errno == CR_SERVER_LOST) { \
             while (ndo_return != NDO_OK) { \
@@ -54,7 +54,7 @@ do { \
 #define NDO_HANDLE_ERROR_STORE_STMT(stmt) \
 do { \
     if (ndo_return != 0) { \
-        int ndo_mysql_errno = *mysql_stmt_error(stmt); \
+        int ndo_mysql_errno = mysql_stmt_errno(stmt); \
         trace("ERROR: %d, %d", ndo_return, ndo_mysql_errno); \
         if (ndo_mysql_errno == CR_SERVER_GONE_ERROR || ndo_mysql_errno == CR_SERVER_LOST) { \
             while (ndo_return != NDO_OK) { \
@@ -70,7 +70,7 @@ do { \
 #define NDO_HANDLE_ERROR_EXECUTE_STMT(stmt) \
 do { \
     if (ndo_return != 0) { \
-        int ndo_mysql_errno = *mysql_stmt_error(stmt); \
+        int ndo_mysql_errno = mysql_stmt_errno(stmt); \
         trace("ERROR: %d, %d", ndo_return, ndo_mysql_errno); \
         if (ndo_mysql_errno == CR_SERVER_GONE_ERROR || ndo_mysql_errno == CR_SERVER_LOST) { \
             while (ndo_return != NDO_OK) { \

@@ -150,10 +150,10 @@ int ndo_begin_active_objects(int run_count)
     /* from here, everytime that ndo_set_object_active is called, we cat
         "?," to the string, and once it's done, we overwrite the final "," with ")" */
 
-    if (run_count > 0) {
-        memset(active_objects_query, 0, sizeof(active_objects_query));
-    }
+    memset(active_objects_query, 0, sizeof(active_objects_query));
     strcpy(active_objects_query, active_objects_query_base);
+
+    printf(">> starting active_objects_query\n>> %s\n\n", active_objects_query);
 
     if (run_count == 0) {
         active_objects_object_ids = calloc(ndo_max_object_insert_count, sizeof(int));
@@ -192,15 +192,24 @@ int ndo_set_object_active(int object_id, int config_type, void * next)
 
     active_objects_object_ids[ndo_write_i[WRITE_ACTIVE_OBJECTS]] = object_id;
 
+    printf(">> got object_id: %d\n", object_id);
+
     WRITE_BIND_INT(WRITE_ACTIVE_OBJECTS, active_objects_object_ids[ndo_write_i[WRITE_ACTIVE_OBJECTS]]);
 
     strcat(active_objects_query, "?,");
 
+    printf(">> query:\n>> %s\n", active_objects_query);
+
     if (ndo_write_i[WRITE_ACTIVE_OBJECTS] >= ndo_max_object_insert_count || next == NULL) {
 
-        /* update last comma to a ) */
         char * last_comma = strrchr(active_objects_query, ',');
+        /* update last comma to a ) */
+        printf(">> last_comma: [%s]\n>> query:\n>> [%s]\n", last_comma, active_objects_query);
         * last_comma = ')';
+
+
+        printf("%s\n", ">> end object active");
+        printf(">> last_comma: [%s]\n>> query:\n>> [%s]\n", last_comma, active_objects_query);
 
         _MYSQL_PREPARE(ndo_write_stmt[WRITE_ACTIVE_OBJECTS], active_objects_query);
         WRITE_BIND(WRITE_ACTIVE_OBJECTS);
@@ -660,6 +669,9 @@ int ndo_write_contact_objects(int config_type)
 
         tmp = tmp->next;
     }
+
+    /* we have to manually run this since none of these objects are set active */
+    ndo_begin_active_objects(++active_objects_run);
 
     trace_func_end();
     return NDO_OK;
@@ -1134,6 +1146,9 @@ int ndo_write_hosts_objects(int config_type)
         tmp = tmp->next;
     }
 
+    /* we have to manually run this since none of these objects are set active */
+    ndo_begin_active_objects(++active_objects_run);
+
     trace_func_end();
     return NDO_OK;
 }
@@ -1159,10 +1174,14 @@ int ndo_write_hostgroups(int config_type)
     GENERIC_PREPARE();
     GENERIC_RESET_BIND();
 
+    printf("!!!! QUERY: %s\n", active_objects_query);
+
     while (tmp != NULL) {
 
         object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_HOSTGROUP, tmp->group_name);
         ndo_set_object_active(object_id, config_type, tmp->next);
+
+        printf("!!!! QUERY: %s\n", active_objects_query);
 
         GENERIC_BIND_INT(object_id);
         GENERIC_BIND_INT(config_type);
@@ -1604,6 +1623,9 @@ int ndo_write_services_objects(int config_type)
 
         tmp = tmp->next;
     }
+
+    /* we have to manually run this since none of these objects are set active */
+    ndo_begin_active_objects(++active_objects_run);
 
     trace_func_end();
     return NDO_OK;
