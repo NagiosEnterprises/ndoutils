@@ -24,32 +24,31 @@
 NEB_API_VERSION(CURRENT_NEB_API_VERSION)
 
 /**** NAGIOS VARIABLES ****/
-extern command              * command_list;
-extern timeperiod           * timeperiod_list;
-extern contact              * contact_list;
-extern contactgroup         * contactgroup_list;
-extern host                 * host_list;
-extern hostgroup            * hostgroup_list;
-extern service              * service_list;
-extern servicegroup         * servicegroup_list;
-extern hostescalation       * hostescalation_list;
-extern hostescalation      ** hostescalation_ary;
-extern serviceescalation    * serviceescalation_list;
-extern serviceescalation   ** serviceescalation_ary;
-extern hostdependency       * hostdependency_list;
-extern hostdependency      ** hostdependency_ary;
-extern servicedependency    * servicedependency_list;
-extern servicedependency   ** servicedependency_ary;
+extern command * command_list;
+extern timeperiod * timeperiod_list;
+extern contact * contact_list;
+extern contactgroup * contactgroup_list;
+extern host * host_list;
+extern hostgroup * hostgroup_list;
+extern service * service_list;
+extern servicegroup * servicegroup_list;
+extern hostescalation * hostescalation_list;
+extern hostescalation ** hostescalation_ary;
+extern serviceescalation * serviceescalation_list;
+extern serviceescalation ** serviceescalation_ary;
+extern hostdependency * hostdependency_list;
+extern hostdependency ** hostdependency_ary;
+extern servicedependency * servicedependency_list;
+extern servicedependency ** servicedependency_ary;
 
-extern char                 * config_file;
-extern sched_info             scheduling_info;
-extern char                 * global_host_event_handler;
-extern char                 * global_service_event_handler;
+extern char * config_file;
+extern sched_info scheduling_info;
+extern char * global_host_event_handler;
+extern char * global_service_event_handler;
 
-extern int                  __nagios_object_structure_version;
+extern int __nagios_object_structure_version;
 
-extern struct object_count    num_objects;
-
+extern struct object_count num_objects;
 
 
 /**********************************************/
@@ -65,7 +64,7 @@ extern struct object_count    num_objects;
 int ndo_database_connected = FALSE;
 
 char * ndo_db_host = NULL;
-int    ndo_db_port = 3306;
+int ndo_db_port = 3306;
 char * ndo_db_socket = NULL;
 char * ndo_db_user = NULL;
 char * ndo_db_pass = NULL;
@@ -92,7 +91,6 @@ char ndo_error_msg[1024] = { 0 };
 
 int ndo_bind_i = 0;
 int ndo_result_i = 0;
-
 
 
 int ndo_max_object_insert_count = 200;
@@ -245,10 +243,7 @@ char * ndo_strip(char * s)
     len = strlen(str);
 
     for (i = 0; i < len; i++) {
-        if (   str[i] == ' '
-            || str[i] == '\t'
-            || str[i] == '\n'
-            || str[i] == '\r') {
+        if (str[i] == ' ' || str[i] == '\t' || str[i] == '\n' || str[i] == '\r') {
 
             continue;
         }
@@ -264,10 +259,7 @@ char * ndo_strip(char * s)
     len = strlen(str);
 
     for (i = (len - 1); i >= 0; i--) {
-        if (   str[i] == ' '
-            || str[i] == '\t'
-            || str[i] == '\n'
-            || str[i] == '\r') {
+        if (str[i] == ' ' || str[i] == '\t' || str[i] == '\n' || str[i] == '\r') {
 
             continue;
         }
@@ -369,13 +361,13 @@ int ndo_process_config_file()
         char * next_line = strchr(current_line, '\n');
 
         if (next_line != NULL) {
-            (* next_line) = '\0';
+            (*next_line) = '\0';
         }
 
         ndo_process_config_line(current_line);
 
         if (next_line != NULL) {
-            (* next_line) = '\n';
+            (*next_line) = '\n';
             current_line = next_line + 1;
         }
         else {
@@ -692,14 +684,14 @@ int ndo_initialize_database()
         }
 
         connected = mysql_real_connect(
-                mysql_connection,
-                ndo_db_host,
-                ndo_db_user,
-                ndo_db_pass,
-                ndo_db_name,
-                ndo_db_port,
-                ndo_db_socket,
-                CLIENT_REMEMBER_OPTIONS);
+            mysql_connection,
+            ndo_db_host,
+            ndo_db_user,
+            ndo_db_pass,
+            ndo_db_name,
+            ndo_db_port,
+            ndo_db_socket,
+            CLIENT_REMEMBER_OPTIONS);
 
         if (connected == NULL) {
             ndo_log("Unable to connect to mysql. Check your configuration");
@@ -793,7 +785,7 @@ int ndo_register_callbacks()
         result += neb_register_callback(NEBCALLBACK_NOTIFICATION_DATA, ndo_handle, 0, ndo_handle_notification);
         result += neb_register_callback(NEBCALLBACK_CONTACT_NOTIFICATION_DATA, ndo_handle, 0, ndo_handle_contact_notification);
         result += neb_register_callback(NEBCALLBACK_CONTACT_NOTIFICATION_METHOD_DATA, ndo_handle, 0, ndo_handle_contact_notification_method);
-    }    
+    }
     if (ndo_process_options & NDO_PROCESS_EXTERNAL_COMMAND) {
         result += neb_register_callback(NEBCALLBACK_EXTERNAL_COMMAND_DATA, ndo_handle, 0, ndo_handle_external_command);
     }
@@ -1108,7 +1100,7 @@ int initialize_stmt_data()
     initialize_bindings_array();
 
     if (ndo_sql == NULL) {
-        ndo_sql = calloc(NUM_QUERIES, sizeof(* ndo_sql));
+        ndo_sql = calloc(NUM_QUERIES, sizeof(*ndo_sql));
     }
 
     if (ndo_sql == NULL) {

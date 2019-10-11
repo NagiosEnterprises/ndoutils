@@ -60,7 +60,6 @@ int ndo_handle_process(int type, void * d)
         }
 
         break;
-
     }
 
     if (ndo_process_options & NDO_PROCESS_PROCESS) {
@@ -147,8 +146,7 @@ int ndo_handle_timed_event(int type, void * d)
         MYSQL_EXECUTE(HANDLE_TIMEDEVENT_REMOVE);
     }
 
-    if (    data->type == NEBTYPE_TIMEDEVENT_EXECUTE
-        && (data->event_type == EVENT_SERVICE_CHECK || data->event_type == EVENT_HOST_CHECK)) {
+    if (data->type == NEBTYPE_TIMEDEVENT_EXECUTE && (data->event_type == EVENT_SERVICE_CHECK || data->event_type == EVENT_HOST_CHECK)) {
 
         MYSQL_RESET_BIND(HANDLE_TIMEDEVENT_EXECUTE);
 
@@ -606,7 +604,9 @@ int ndo_handle_flapping(int type, void * d)
         comment_time = comment->entry_time;
     }
 
-    if (comment) { free(comment); }
+    if (comment) {
+        free(comment);
+    }
 
     MYSQL_RESET_BIND(HANDLE_FLAPPING);
 
@@ -669,10 +669,10 @@ int ndo_handle_host_status(int type, void * d)
     trace_func_handler(host_status);
 
     nebstruct_host_status_data * data = d;
-    int host_object_id        = 0;
-    int timeperiod_object_id  = 0;
-    host * hst                = NULL;
-    timeperiod * tm           = NULL;
+    int host_object_id = 0;
+    int timeperiod_object_id = 0;
+    host * hst = NULL;
+    timeperiod * tm = NULL;
 
     if (data->object_ptr == NULL) {
         NDO_REPORT_ERROR("Broker data pointer(s) is/are null");
@@ -686,7 +686,7 @@ int ndo_handle_host_status(int type, void * d)
     timeperiod_object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_TIMEPERIOD, tm->name);
 
     MYSQL_RESET_BIND(HANDLE_HOST_STATUS);
-    
+
     MYSQL_BIND_INT(HANDLE_HOST_STATUS, host_object_id);
     MYSQL_BIND_INT(HANDLE_HOST_STATUS, data->timestamp.tv_sec);
     MYSQL_BIND_STR(HANDLE_HOST_STATUS, hst->plugin_output);
@@ -731,7 +731,7 @@ int ndo_handle_host_status(int type, void * d)
     MYSQL_BIND_DOUBLE(HANDLE_HOST_STATUS, hst->check_interval);
     MYSQL_BIND_DOUBLE(HANDLE_HOST_STATUS, hst->retry_interval);
     MYSQL_BIND_INT(HANDLE_HOST_STATUS, timeperiod_object_id);
-    
+
     MYSQL_BIND(HANDLE_HOST_STATUS);
     MYSQL_EXECUTE(HANDLE_HOST_STATUS);
 
@@ -745,10 +745,10 @@ int ndo_handle_service_status(int type, void * d)
 
     nebstruct_service_status_data * data = d;
 
-    int service_object_id     = 0;
-    int timeperiod_object_id  = 0;
-    service * svc             = NULL;
-    timeperiod * tm           = NULL;
+    int service_object_id = 0;
+    int timeperiod_object_id = 0;
+    service * svc = NULL;
+    timeperiod * tm = NULL;
 
     if (data->object_ptr == NULL) {
         NDO_REPORT_ERROR("Broker data pointer(s) is/are null");
@@ -822,8 +822,8 @@ int ndo_handle_contact_status(int type, void * d)
 
     nebstruct_contact_status_data * data = d;
 
-    int contact_object_id     = 0;
-    contact * cnt             = NULL;
+    int contact_object_id = 0;
+    contact * cnt = NULL;
 
     if (data->object_ptr == NULL) {
         NDO_REPORT_ERROR("Broker data pointer(s) is/are null");
@@ -903,8 +903,8 @@ int ndo_handle_contact_notification(int type, void * d)
 
     nebstruct_contact_notification_data * data = d;
 
-    int contact_object_id     = 0;
-    contact * cnt             = NULL;
+    int contact_object_id = 0;
+    contact * cnt = NULL;
 
     if (data->contact_ptr == NULL) {
         NDO_REPORT_ERROR("Broker data pointer is null");

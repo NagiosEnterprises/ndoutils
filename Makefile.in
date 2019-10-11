@@ -75,6 +75,14 @@ expanded:
 	cd src/ && $(MAKE) $@
 
 
+formatted:
+	@for file in $$(find . -type f -name "*.c" -o -name "*.h" -path ./include/nagios -prune); do \
+		clang-format -style=file $$file | sed 's/= {\(.*\)};$$/= { \1 };/' > $$file.formatted; \
+		mv $$file.formatted $$file; \
+	done
+	git status
+
+
 test-enabled:
 	cd test/ && $(MAKE) test
 
