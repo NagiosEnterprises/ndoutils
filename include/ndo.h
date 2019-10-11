@@ -46,6 +46,18 @@
 #define trace_info_nolog(msg) trace_nolog("%s", msg)
 #define trace_handler(_struct) trace("type=%d, data(type=%d,f=%d,a=%d,t=%ld.%06ld)", type, ((nebstruct_## _struct ##_data *)d)->type, ((nebstruct_## _struct ##_data *)d)->flags, ((nebstruct_## _struct ##_data *)d)->attr, ((nebstruct_## _struct ##_data *)d)->timestamp.tv_sec, ((nebstruct_## _struct ##_data *)d)->timestamp.tv_usec)
 #define trace_handler_nolog(_struct) trace_nolog("type=%d, data(type=%d,f=%d,a=%d,t=%ld.%06ld)", type, ((nebstruct_## _struct ##_data *)d)->type, ((nebstruct_## _struct ##_data *)d)->flags, ((nebstruct_## _struct ##_data *)d)->attr, ((nebstruct_## _struct ##_data *)d)->timestamp.tv_sec, ((nebstruct_## _struct ##_data *)d)->timestamp.tv_usec)
+#define trace_return_void() \
+do { \
+    trace("returning void"); \
+    return; \
+}
+
+#define trace_return(fmtid, value) \
+do { \
+    trace("returning with value: " fmtid, value);
+    return value;
+} while (0)
+
 
 #define NDO_REPORT_ERROR(err) \
 do { \
