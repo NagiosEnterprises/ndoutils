@@ -3,7 +3,7 @@
 
 int ndo_handle_process(int type, void * d)
 {
-    trace_handler(process);
+    trace_func_handler(process);
 
     nebstruct_process_data * data = d;
     char * program_version = get_program_version();
@@ -78,21 +78,20 @@ int ndo_handle_process(int type, void * d)
         MYSQL_EXECUTE(HANDLE_PROCESS);
     }
 
-    trace_func_end();
-    return NDO_OK;
+    trace_return_ok();
 }
 
 
 int ndo_handle_timed_event(int type, void * d)
 {
-    trace_handler(timed_event);
+    trace_func_handler(timed_event);
 
     nebstruct_timed_event_data * data = d;
 
     int object_id = 0;
 
     if (data->type == NEBTYPE_TIMEDEVENT_SLEEP) {
-        return NDO_OK;
+        trace_return_ok_cond("data->type == NEBTYPE_TIMEDEVENT_SLEEP");
     }
 
     if (data->event_type == EVENT_SERVICE_CHECK) {
@@ -159,14 +158,15 @@ int ndo_handle_timed_event(int type, void * d)
         MYSQL_EXECUTE(HANDLE_TIMEDEVENT_EXECUTE);
     }
 
-    trace_func_end();
-    return NDO_OK;
+    trace_return_ok();
 }
 
 
 int ndo_handle_log(int type, void * d)
 {
-    /* trace_handler_nolog(log); */
+    /*
+    trace_func_handler();
+    */
 
     nebstruct_log_data * data = d;
 
@@ -174,11 +174,17 @@ int ndo_handle_log(int type, void * d)
        logs to the neb module before the database initialization has occured,
        so if the db hasn't been initialized, we just return */
     if (mysql_connection == NULL || ndo_database_connected != TRUE) {
+        /*
+        trace_return_ok_cond("mysql_connection == NULL || ndo_database_connected != TRUE");
+        */
         return NDO_OK;
     }
 
     if (data->data == NULL || strlen(data->data) == 0) {
+        trace_return_ok_cond("data->data == NULL || strlen(data->data) == 0");
+        /*
         return NDO_OK;
+        */
     }
 
     MYSQL_RESET_BIND(HANDLE_LOG_DATA);
@@ -192,14 +198,16 @@ int ndo_handle_log(int type, void * d)
     MYSQL_BIND(HANDLE_LOG_DATA);
     MYSQL_EXECUTE(HANDLE_LOG_DATA);
 
-    /* trace_func_end_nolog(); */
+    /* 
+    trace_return_ok();
+    */
     return NDO_OK;
 }
 
 
 int ndo_handle_system_command(int type, void * d)
 {
-    trace_handler(system_command);
+    trace_func_handler(system_command);
 
     nebstruct_system_command_data * data = d;
 
@@ -220,14 +228,13 @@ int ndo_handle_system_command(int type, void * d)
     MYSQL_BIND(HANDLE_SYSTEM_COMMAND);
     MYSQL_EXECUTE(HANDLE_SYSTEM_COMMAND);
 
-    trace_func_end();
-    return NDO_OK;
+    trace_return_ok();
 }
 
 
 int ndo_handle_event_handler(int type, void * d)
 {
-    trace_handler(event_handler);
+    trace_func_handler(event_handler);
 
     nebstruct_event_handler_data * data = d;
     int object_id = 0;
@@ -266,14 +273,13 @@ int ndo_handle_event_handler(int type, void * d)
     MYSQL_BIND(HANDLE_EVENT_HANDLER);
     MYSQL_EXECUTE(HANDLE_EVENT_HANDLER);
 
-    trace_func_end();
-    return NDO_OK;
+    trace_return_ok();
 }
 
 
 int ndo_handle_host_check(int type, void * d)
 {
-    trace_handler(host_check);
+    trace_func_handler(host_check);
 
     nebstruct_host_check_data * data = d;
     int object_id = 0;
@@ -282,7 +288,7 @@ int ndo_handle_host_check(int type, void * d)
 
     /* this is the only data we care about / need */
     if (type != NEBTYPE_HOSTCHECK_PROCESSED) {
-        return NDO_OK;
+        trace_return_ok_cond("type != NEBTYPE_HOSTCHECK_PROCESSED");
     }
 
     object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_HOST, data->host_name);
@@ -316,13 +322,12 @@ int ndo_handle_host_check(int type, void * d)
     MYSQL_BIND(HANDLE_HOST_CHECK);
     MYSQL_EXECUTE(HANDLE_HOST_CHECK);
 
-    trace_func_end();
-    return NDO_OK;
+    trace_return_ok();
 }
 
 int ndo_handle_service_check(int type, void * d)
 {
-    trace_handler(service_check);
+    trace_func_handler(service_check);
 
     nebstruct_service_check_data * data = d;
     int object_id = 0;
@@ -331,7 +336,7 @@ int ndo_handle_service_check(int type, void * d)
 
     /* this is the only data we care about / need */
     if (type != NEBTYPE_SERVICECHECK_PROCESSED) {
-        return NDO_OK;
+        trace_return_ok_cond("type != NEBTYPE_SERVICECHECK_PROCESSED");
     }
 
     object_id = ndo_get_object_id_name2(TRUE, NDO_OBJECTTYPE_SERVICE, data->host_name, data->service_description);
@@ -370,14 +375,13 @@ int ndo_handle_service_check(int type, void * d)
     MYSQL_BIND(HANDLE_SERVICE_CHECK);
     MYSQL_EXECUTE(HANDLE_SERVICE_CHECK);
 
-    trace_func_end();
-    return NDO_OK;
+    trace_return_ok();
 }
 
 
 int ndo_handle_comment(int type, void * d)
 {
-    trace_handler(comment);
+    trace_func_handler(comment);
 
     nebstruct_comment_data * data = d;
     int object_id = 0;
@@ -453,14 +457,13 @@ int ndo_handle_comment(int type, void * d)
         MYSQL_EXECUTE(HANDLE_COMMENT_DELETE);
     }
 
-    trace_func_end();
-    return NDO_OK;
+    trace_return_ok();
 }
 
 
 int ndo_handle_downtime(int type, void * d)
 {
-    trace_handler(downtime);
+    trace_func_handler(downtime);
 
     nebstruct_downtime_data * data = d;
     int object_id = 0;
@@ -577,14 +580,13 @@ int ndo_handle_downtime(int type, void * d)
         MYSQL_EXECUTE(HANDLE_DOWNTIME_STOP);
     }
 
-    trace_func_end();
-    return NDO_OK;
+    trace_return_ok();
 }
 
 
 int ndo_handle_flapping(int type, void * d)
 {
-    trace_handler(flapping);
+    trace_func_handler(flapping);
 
     nebstruct_flapping_data * data = d;
     int object_id = 0;
@@ -623,14 +625,13 @@ int ndo_handle_flapping(int type, void * d)
     MYSQL_BIND(HANDLE_FLAPPING);
     MYSQL_EXECUTE(HANDLE_FLAPPING);
 
-    trace_func_end();
-    return NDO_OK;
+    trace_return_ok();
 }
 
 
 int ndo_handle_program_status(int type, void * d)
 {
-    trace_handler(program_status);
+    trace_func_handler(program_status);
 
     nebstruct_program_status_data * data = d;
 
@@ -659,14 +660,13 @@ int ndo_handle_program_status(int type, void * d)
     MYSQL_BIND(HANDLE_PROGRAM_STATUS);
     MYSQL_EXECUTE(HANDLE_PROGRAM_STATUS);
 
-    trace_func_end();
-    return NDO_OK;
+    trace_return_ok();
 }
 
 
 int ndo_handle_host_status(int type, void * d)
 {
-    trace_handler(host_status);
+    trace_func_handler(host_status);
 
     nebstruct_host_status_data * data = d;
     int host_object_id        = 0;
@@ -676,7 +676,7 @@ int ndo_handle_host_status(int type, void * d)
 
     if (data->object_ptr == NULL) {
         NDO_REPORT_ERROR("Broker data pointer(s) is/are null");
-        return NDO_OK;
+        trace_return_ok_cond("data->object_ptr == NULL");
     }
 
     hst = data->object_ptr;
@@ -735,14 +735,13 @@ int ndo_handle_host_status(int type, void * d)
     MYSQL_BIND(HANDLE_HOST_STATUS);
     MYSQL_EXECUTE(HANDLE_HOST_STATUS);
 
-    trace_func_end();
-    return NDO_OK;
+    trace_return_ok();
 }
 
 
 int ndo_handle_service_status(int type, void * d)
 {
-    trace_handler(service_status);
+    trace_func_handler(service_status);
 
     nebstruct_service_status_data * data = d;
 
@@ -753,7 +752,7 @@ int ndo_handle_service_status(int type, void * d)
 
     if (data->object_ptr == NULL) {
         NDO_REPORT_ERROR("Broker data pointer(s) is/are null");
-        return NDO_OK;
+        trace_return_ok_cond("data->object_ptr == NULL");
     }
 
     svc = data->object_ptr;
@@ -813,14 +812,13 @@ int ndo_handle_service_status(int type, void * d)
     MYSQL_BIND(HANDLE_SERVICE_STATUS);
     MYSQL_EXECUTE(HANDLE_SERVICE_STATUS);
 
-    trace_func_end();
-    return NDO_OK;
+    trace_return_ok();
 }
 
 
 int ndo_handle_contact_status(int type, void * d)
 {
-    trace_handler(contact_status);
+    trace_func_handler(contact_status);
 
     nebstruct_contact_status_data * data = d;
 
@@ -829,7 +827,7 @@ int ndo_handle_contact_status(int type, void * d)
 
     if (data->object_ptr == NULL) {
         NDO_REPORT_ERROR("Broker data pointer(s) is/are null");
-        return NDO_OK;
+        trace_return_ok_cond("data->object_ptr == NULL");
     }
 
     cnt = data->object_ptr;
@@ -851,14 +849,13 @@ int ndo_handle_contact_status(int type, void * d)
     MYSQL_BIND(HANDLE_CONTACT_STATUS);
     MYSQL_EXECUTE(HANDLE_CONTACT_STATUS);
 
-    trace_func_end();
-    return NDO_OK;
+    trace_return_ok();
 }
 
 
 int ndo_handle_notification(int type, void * d)
 {
-    trace_handler(notification);
+    trace_func_handler(notification);
 
     nebstruct_notification_data * data = d;
     int object_id = 0;
@@ -896,14 +893,13 @@ int ndo_handle_notification(int type, void * d)
        then notified (and that data also brokered) */
     ndo_last_notification_id = mysql_insert_id(mysql_connection);
 
-    trace_func_end();
-    return NDO_OK;
+    trace_return_ok();
 }
 
 
 int ndo_handle_contact_notification(int type, void * d)
 {
-    trace_handler(contact_notification);
+    trace_func_handler(contact_notification);
 
     nebstruct_contact_notification_data * data = d;
 
@@ -912,7 +908,7 @@ int ndo_handle_contact_notification(int type, void * d)
 
     if (data->contact_ptr == NULL) {
         NDO_REPORT_ERROR("Broker data pointer is null");
-        return NDO_OK;
+        trace_return_ok_cond("data->contact_ptr == NULL");
     }
 
     cnt = data->contact_ptr;
@@ -934,14 +930,13 @@ int ndo_handle_contact_notification(int type, void * d)
     /* see notes regarding `ndo_last_notification_id` - those apply here too */
     ndo_last_contact_notification_id = mysql_insert_id(mysql_connection);
 
-    trace_func_end();
-    return NDO_OK;
+    trace_return_ok();
 }
 
 
 int ndo_handle_contact_notification_method(int type, void * d)
 {
-    trace_handler(contact_notification_method);
+    trace_func_handler(contact_notification_method);
 
     nebstruct_contact_notification_method_data * data = d;
 
@@ -960,19 +955,18 @@ int ndo_handle_contact_notification_method(int type, void * d)
     MYSQL_BIND(HANDLE_CONTACT_NOTIFICATION_METHOD);
     MYSQL_EXECUTE(HANDLE_CONTACT_NOTIFICATION_METHOD);
 
-    trace_func_end();
-    return NDO_OK;
+    trace_return_ok();
 }
 
 
 int ndo_handle_external_command(int type, void * d)
 {
-    trace_handler(external_command);
+    trace_func_handler(external_command);
 
     nebstruct_external_command_data * data = d;
 
     if (data->type != NEBTYPE_EXTERNALCOMMAND_START) {
-        return NDO_OK;
+        trace_return_ok_cond("data->type != NEBTYPE_EXTERNALCOMMAND_START");
     }
 
     MYSQL_RESET_BIND(HANDLE_EXTERNAL_COMMAND);
@@ -985,14 +979,13 @@ int ndo_handle_external_command(int type, void * d)
     MYSQL_BIND(HANDLE_EXTERNAL_COMMAND);
     MYSQL_EXECUTE(HANDLE_EXTERNAL_COMMAND);
 
-    trace_func_end();
-    return NDO_OK;
+    trace_return_ok();
 }
 
 
 int ndo_handle_acknowledgement(int type, void * d)
 {
-    trace_handler(acknowledgement);
+    trace_func_handler(acknowledgement);
 
     nebstruct_acknowledgement_data * data = d;
 
@@ -1021,14 +1014,13 @@ int ndo_handle_acknowledgement(int type, void * d)
     MYSQL_BIND(HANDLE_ACKNOWLEDGEMENT);
     MYSQL_EXECUTE(HANDLE_ACKNOWLEDGEMENT);
 
-    trace_func_end();
-    return NDO_OK;
+    trace_return_ok();
 }
 
 
 int ndo_handle_state_change(int type, void * d)
 {
-    trace_handler(statechange);
+    trace_func_handler(statechange);
 
     nebstruct_statechange_data * data = d;
 
@@ -1037,7 +1029,7 @@ int ndo_handle_state_change(int type, void * d)
     int last_hard_state = 0;
 
     if (data->type != NEBTYPE_STATECHANGE_END) {
-        return NDO_OK;
+        trace_return_ok_cond("data->type != NEBTYPE_STATECHANGE_END");
     }
 
     if (data->statechange_type == SERVICE_STATECHANGE) {
@@ -1076,14 +1068,13 @@ int ndo_handle_state_change(int type, void * d)
     MYSQL_BIND(HANDLE_STATE_CHANGE);
     MYSQL_EXECUTE(HANDLE_STATE_CHANGE);
 
-    trace_func_end();
-    return NDO_OK;
+    trace_return_ok();
 }
 
 
 int ndo_handle_retention(int type, void * d)
 {
-    trace_handler(retention);
+    trace_func_handler(retention);
 
     nebstruct_retention_data * data = d;
 
@@ -1091,6 +1082,5 @@ int ndo_handle_retention(int type, void * d)
         ndo_write_config(NDO_CONFIG_DUMP_RETAINED);
     }
 
-    trace_func_end();
-    return NDO_OK;
+    trace_return_ok();
 }

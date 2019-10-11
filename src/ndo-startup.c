@@ -1,7 +1,7 @@
 
 int ndo_set_all_objects_inactive()
 {
-    trace_func_begin();
+    trace_func_void();
 
     char * deactivate_sql = "UPDATE nagios_objects SET is_active = 0";
 
@@ -13,14 +13,13 @@ int ndo_set_all_objects_inactive()
         ndo_log(err);
     }
 
-    trace_func_end();
-    return NDO_OK;
+    trace_return_ok();
 }
 
 
 int ndo_table_genocide()
 {
-    trace_func_begin();
+    trace_func_void();
 
     int i = 0;
 
@@ -77,22 +76,20 @@ int ndo_table_genocide()
         }
     }
 
-    trace_func_end();
-    return NDO_OK;
+    trace_return_ok();
 }
 
 
 int ndo_write_config_files()
 {
-    trace_func_begin();
-    trace_func_end();
-    return NDO_OK;
+    trace_func_void();
+    trace_return_ok();
 }
 
 
 int ndo_write_object_config(int config_type)
 {
-    trace("config_type=%d", config_type);
+    trace_func_args("config_type=%d", config_type);
     ndo_writing_object_configuration = TRUE;
 
     ndo_write_commands(config_type);
@@ -107,22 +104,21 @@ int ndo_write_object_config(int config_type)
     ndo_write_serviceescalations(config_type);
 
     ndo_writing_object_configuration = FALSE;
-    trace_func_end();
-    return NDO_OK;
+
+    trace_return_ok();
 }
 
 
 int ndo_write_runtime_variables()
 {
-    trace_func_begin();
-    trace_func_end();
-    return NDO_OK;
+    trace_func_void();
+    trace_return_ok();
 }
 
 
 int ndo_write_stmt_init()
 {
-    trace_func_begin();
+    trace_func_void();
 
     int i = 0;
 
@@ -130,14 +126,13 @@ int ndo_write_stmt_init()
         ndo_write_stmt[i] = mysql_stmt_init(mysql_connection);
     }
 
-    trace_func_end();
-    return NDO_OK;
+    trace_return_ok();
 }
 
 
 int ndo_write_stmt_close()
 {
-    trace_func_begin();
+    trace_func_void();
 
     int i = 0;
 
@@ -145,14 +140,13 @@ int ndo_write_stmt_close()
         mysql_stmt_close(ndo_write_stmt[i]);
     }
 
-    trace_func_end();
-    return NDO_OK;
+    trace_return_ok();
 }
 
 
 int send_subquery(int stmt, int * counter, char * query, char * query_on_update, size_t * query_len, size_t query_base_len, size_t query_on_update_len)
 {
-    trace("stmt=%d, *counter=%d, query=%s, query_on_update=%s, *query_len=%zu, query_base_lan=%zu, query_on_update_len=%zu", stmt, * counter, query, query_on_update, * query_len, query_base_len, query_on_update_len);
+    trace_func_args("stmt=%d, *counter=%d, query=%s, query_on_update=%s, *query_len=%zu, query_base_lan=%zu, query_on_update_len=%zu", stmt, * counter, query, query_on_update, * query_len, query_base_len, query_on_update_len);
 
     strcpy(query + (* query_len) - 1, query_on_update);
 
@@ -166,14 +160,13 @@ int send_subquery(int stmt, int * counter, char * query, char * query_on_update,
     * counter = 0;
     ndo_write_i[stmt] = 0;
 
-    trace_func_end();
-    return NDO_OK;
+    trace_return_ok();
 }
 
 
 int ndo_write_commands(int config_type)
 {
-    trace("config_type=%d", config_type);
+    trace_func_args("config_type=%d", config_type);
 
     command * tmp = command_list;
     int object_id = 0;
@@ -199,14 +192,13 @@ int ndo_write_commands(int config_type)
         tmp = tmp->next;
     }
 
-    trace_func_end();
-    return NDO_OK;
+    trace_return_ok();
 }
 
 
 int ndo_write_timeperiods(int config_type)
 {
-    trace("config_type=%d", config_type);
+    trace_func_args("config_type=%d", config_type);
 
     timeperiod * tmp = timeperiod_list;
     int object_id = 0;
@@ -243,14 +235,13 @@ int ndo_write_timeperiods(int config_type)
 
     free(timeperiod_ids);
 
-    trace_func_end();
-    return NDO_OK;
+    trace_return_ok();
 }
 
 
 int ndo_write_timeperiod_timeranges(int * timeperiod_ids)
 {
-    trace("timeperiod_ids=%p", timeperiod_ids);
+    trace_func_args("timeperiod_ids=%p", timeperiod_ids);
 
     timeperiod * tmp = timeperiod_list;
     timerange * range = NULL;
@@ -284,14 +275,13 @@ int ndo_write_timeperiod_timeranges(int * timeperiod_ids)
         tmp = tmp->next;
     }
 
-    trace_func_end();
-    return NDO_OK;
+    trace_return_ok();
 }
 
 
 int ndo_write_contacts(int config_type)
 {
-    trace("config_type=%d", config_type);
+    trace_func_args("config_type=%d", config_type);
 
     contact * tmp = contact_list;
     int i = 0;
@@ -436,14 +426,13 @@ int ndo_write_contacts(int config_type)
 
     ndo_write_contact_objects(config_type);
 
-    trace_func_end();
-    return NDO_OK;
+    trace_return_ok();
 }
 
 
 int ndo_write_contact_objects(int config_type)
 {
-    trace("config_type=%d", config_type);
+    trace_func_args("config_type=%d", config_type);
 
     contact * tmp = contact_list;
 
@@ -589,14 +578,13 @@ int ndo_write_contact_objects(int config_type)
         tmp = tmp->next;
     }
 
-    trace_func_end();
-    return NDO_OK;
+    trace_return_ok();
 }
 
 
 int ndo_write_contactgroups(int config_type)
 {
-    trace("config_type=%d", config_type);
+    trace_func_args("config_type=%d", config_type);
 
     contactgroup * tmp = contactgroup_list;
     int object_id = 0;
@@ -633,14 +621,13 @@ int ndo_write_contactgroups(int config_type)
 
     free(contactgroup_ids);
 
-    trace_func_end();
-    return NDO_OK;
+    trace_return_ok();
 }
 
 
 int ndo_write_contactgroup_members(int * contactgroup_ids)
 {
-    trace("contactgroup_ids=%p", contactgroup_ids);
+    trace_func_args("contactgroup_ids=%p", contactgroup_ids);
 
     contactgroup * tmp = contactgroup_list;
     contactsmember * member = NULL;
@@ -675,14 +662,13 @@ int ndo_write_contactgroup_members(int * contactgroup_ids)
         tmp = tmp->next;
     }
 
-    trace_func_end();
-    return NDO_OK;
+    trace_return_ok();
 }
 
 
 int ndo_write_hosts(int config_type)
 {
-    trace("config_type=%d", config_type);
+    trace_func_args("config_type=%d", config_type);
 
     host * tmp = host_list;
     int i = 0;
@@ -896,14 +882,13 @@ int ndo_write_hosts(int config_type)
 
     ndo_write_hosts_objects(config_type);
 
-    trace_func_end();
-    return NDO_OK;
+    trace_return_ok();
 }
 
 
 int ndo_write_hosts_objects(int config_type)
 {
-    trace("config_type=%d", config_type);
+    trace_func_args("config_type=%d", config_type);
 
     host * tmp = host_list;
 
@@ -1062,14 +1047,13 @@ int ndo_write_hosts_objects(int config_type)
         tmp = tmp->next;
     }
 
-    trace_func_end();
-    return NDO_OK;
+    trace_return_ok();
 }
 
 
 int ndo_write_hostgroups(int config_type)
 {
-    trace("config_type=%d", config_type);
+    trace_func_args("config_type=%d", config_type);
 
     hostgroup * tmp = hostgroup_list;
     int object_id = 0;
@@ -1106,14 +1090,13 @@ int ndo_write_hostgroups(int config_type)
 
     free(hostgroup_ids);
 
-    trace_func_end();
-    return NDO_OK;
+    trace_return_ok();
 }
 
 
 int ndo_write_hostgroup_members(int * hostgroup_ids)
 {
-    trace("hostgroup_ids=%p", hostgroup_ids);
+    trace_func_args("hostgroup_ids=%p", hostgroup_ids);
 
     hostgroup * tmp = hostgroup_list;
     hostsmember * member = NULL;
@@ -1148,14 +1131,13 @@ int ndo_write_hostgroup_members(int * hostgroup_ids)
         tmp = tmp->next;
     }
 
-    trace_func_end();
-    return NDO_OK;
+    trace_return_ok();
 }
 
 
 int ndo_write_services(int config_type)
 {
-    trace("config_type=%d", config_type);
+    trace_func_args("config_type=%d", config_type);
 
     service * tmp = service_list;
     int i = 0;
@@ -1362,14 +1344,13 @@ int ndo_write_services(int config_type)
 
     ndo_write_services_objects(config_type);
 
-    trace_func_end();
-    return NDO_OK;
+    trace_return_ok();
 }
 
 
 int ndo_write_services_objects(int config_type)
 {
-    trace("config_type=%d", config_type);
+    trace_func_args("config_type=%d", config_type);
 
     service * tmp = service_list;
 
@@ -1533,14 +1514,13 @@ int ndo_write_services_objects(int config_type)
         tmp = tmp->next;
     }
 
-    trace_func_end();
-    return NDO_OK;
+    trace_return_ok();
 }
 
 
 int ndo_write_servicegroups(int config_type)
 {
-    trace("config_type=%d", config_type);
+    trace_func_args("config_type=%d", config_type);
 
     servicegroup * tmp = servicegroup_list;
     int object_id = 0;
@@ -1577,13 +1557,14 @@ int ndo_write_servicegroups(int config_type)
 
     free(servicegroup_ids);
 
-    trace_func_end();
-    return NDO_OK;
+    trace_return_ok();
 }
 
 
 int ndo_write_servicegroup_members(int * servicegroup_ids)
 {
+    trace_func_args("servicegroup_ids=%p", servicegroup_ids);
+
     servicegroup * tmp = servicegroup_list;
     servicesmember * member = NULL;
     int object_id = 0;
@@ -1617,14 +1598,13 @@ int ndo_write_servicegroup_members(int * servicegroup_ids)
         tmp = tmp->next;
     }
 
-    trace_func_end();
-    return NDO_OK;
+    trace_return_ok();
 }
 
 
 int ndo_write_hostescalations(int config_type)
 {
-    trace("config_type=%d", config_type);
+    trace_func_args("config_type=%d", config_type);
 
     hostescalation * tmp = NULL;
     int host_object_id = 0;
@@ -1676,13 +1656,14 @@ int ndo_write_hostescalations(int config_type)
     free(object_ids);
     free(hostescalation_ids);
 
-    trace_func_end();
-    return NDO_OK;
+    trace_return_ok();
 }
 
 
 int ndo_write_hostescalation_contactgroups(int * hostescalation_ids)
 {
+    trace_func_args("hostescalation_ids=%p", hostescalation_ids);
+
     hostescalation * tmp = NULL;
     contactgroupsmember * group = NULL;
     int object_id = 0;
@@ -1715,13 +1696,14 @@ int ndo_write_hostescalation_contactgroups(int * hostescalation_ids)
         }
     }
 
-    trace_func_end();
-    return NDO_OK;
+    trace_return_ok();
 }
 
 
 int ndo_write_hostescalation_contacts(int * hostescalation_ids)
 {
+    trace_func_args("hostescalation_ids=%p", hostescalation_ids);
+
     hostescalation * tmp = NULL;
     contactsmember * cnt = NULL;
     int object_id = 0;
@@ -1754,14 +1736,13 @@ int ndo_write_hostescalation_contacts(int * hostescalation_ids)
         }
     }
 
-    trace_func_end();
-    return NDO_OK;
+    trace_return_ok();
 }
 
 
 int ndo_write_serviceescalations(int config_type)
 {
-    trace("config_type=%d", config_type);
+    trace_func_args("config_type=%d", config_type);
 
     serviceescalation * tmp = NULL;
     int service_object_id = 0;
@@ -1816,13 +1797,14 @@ int ndo_write_serviceescalations(int config_type)
     free(object_ids);
     free(serviceescalation_ids);
 
-    trace_func_end();
-    return NDO_OK;
+    trace_return_ok();
 }
 
 
 int ndo_write_serviceescalation_contactgroups(int * serviceescalation_ids)
 {
+    trace_func_args("serviceescalation_ids=%p", serviceescalation_ids);
+
     serviceescalation * tmp = NULL;
     contactgroupsmember * group = NULL;
     int object_id = 0;
@@ -1855,13 +1837,14 @@ int ndo_write_serviceescalation_contactgroups(int * serviceescalation_ids)
         }
     }
 
-    trace_func_end();
-    return NDO_OK;
+    trace_return_ok();
 }
 
 
 int ndo_write_serviceescalation_contacts(int * serviceescalation_ids)
 {
+    trace_func_args("serviceescalation_ids=%p", serviceescalation_ids);
+
     serviceescalation * tmp = NULL;
     contactsmember * cnt = NULL;
     int object_id = 0;
@@ -1894,14 +1877,13 @@ int ndo_write_serviceescalation_contacts(int * serviceescalation_ids)
         }
     }
 
-    trace_func_end();
-    return NDO_OK;
+    trace_return_ok();
 }
 
 
 int ndo_write_hostdependencies(int config_type)
 {
-    trace("config_type=%d", config_type);
+    trace_func_args("config_type=%d", config_type);
 
     hostdependency * tmp = NULL;
     int host_object_id = 0;
@@ -1944,14 +1926,13 @@ int ndo_write_hostdependencies(int config_type)
         GENERIC_EXECUTE();
     }
 
-    trace_func_end();
-    return NDO_OK;
+    trace_return_ok();
 }
 
 
 int ndo_write_servicedependencies(int config_type)
 {
-    trace("config_type=%d", config_type);
+    trace_func_args("config_type=%d", config_type);
 
     servicedependency * tmp = NULL;
     int service_object_id = 0;
@@ -1996,6 +1977,5 @@ int ndo_write_servicedependencies(int config_type)
         GENERIC_EXECUTE();
     }
 
-    trace_func_end();
-    return NDO_OK;
+    trace_return_ok();
 }

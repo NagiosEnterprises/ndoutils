@@ -113,6 +113,8 @@ char * ndo_config_file = NULL;
 long ndo_last_notification_id = 0L;
 long ndo_last_contact_notification_id = 0L;
 
+int ndo_debug_stack_frames = 0;
+
 
 #include "ndo-startup.c"
 #include "ndo-handlers.c"
@@ -128,11 +130,24 @@ void ndo_log(char * buffer)
 
 void ndo_debug(int write_to_log, const char * fmt, ...)
 {
-    char buffer[1024] = { 0 };
+    int frame_indentation = 2;
+    char frame_fmt[128] = { 0 };
+    char buffer[2048] = { 0 };
     va_list ap;
     va_start(ap, fmt);
-    vsnprintf(buffer, 1023, fmt, ap);
+    vsnprintf(buffer, 2047, fmt, ap);
     va_end(ap);
+
+    if (strlen(buffer) >= 2047) {
+        char * warning = "[LINE TRUNCATED]";
+        memcpy(buffer, warning, strlen(warning));
+    }
+
+    /* create the padding */
+    if (ndo_debug_stack_frames > 0) {
+        snprintf(frame_fmt, 127, "%%%ds", (frame_indentation * ndo_debug_stack_frames));
+        printf(frame_fmt, " ");
+    }
 
     printf("%s\n", buffer);
 }
@@ -140,7 +155,7 @@ void ndo_debug(int write_to_log, const char * fmt, ...)
 
 int nebmodule_init(int flags, char * args, void * handle)
 {
-    trace("flags=%d, args=%s, handle=%p", flags, args, handle);
+    trace_func_args("flags=%d, args=%s, handle=%p", flags, args, handle);
 
     int result = NDO_ERROR;
 
@@ -151,7 +166,7 @@ int nebmodule_init(int flags, char * args, void * handle)
 
     result = ndo_process_arguments(args);
     if (result != NDO_OK) {
-        return NDO_ERROR;
+        trace_return_error_cond("ndo_process_arguments() != NDO_OK");
     }
 
     /* this needs to happen before we process the config file so that
@@ -160,31 +175,30 @@ int nebmodule_init(int flags, char * args, void * handle)
 
     result = ndo_process_config_file();
     if (result != NDO_OK) {
-        return NDO_ERROR;
+        trace_return_error_cond("trace_func_args() != NDO_OK");
     }
 
     result = ndo_initialize_database();
     if (result != NDO_OK) {
-        return NDO_ERROR;
+        trace_return_error_cond("ndo_initialize_database() != NDO_OK");
     }
 
     result = ndo_register_callbacks();
     if (result != NDO_OK) {
-        return NDO_ERROR;
+        trace_return_error_cond("ndo_register_callbacks() != NDO_OK");
     }
 
     if (ndo_startup_check_enabled == TRUE) {
         ndo_calculate_startup_hash();
     }
 
-    trace_func_end();
-    return NDO_OK;
+    trace_return_ok();
 }
 
 
 int nebmodule_deinit(int flags, int reason)
 {
-    trace("flags=%d, reason=%d", flags, reason);
+    trace_func_args("flags=%d, reason=%d", flags, reason);
 
     ndo_deregister_callbacks();
     ndo_disconnect_database();
@@ -202,15 +216,14 @@ int nebmodule_deinit(int flags, int reason)
 
     ndo_log("NDO - Shutdown complete");
 
-    trace_func_end();
-    return NDO_OK;
+    trace_return_ok();
 }
 
 
 /* free whatever this returns (unless it's null duh) */
 char * ndo_strip(char * s)
 {
-    trace("s=%s", s);
+    trace_func_args("s=%s", s);
 
     int i = 0;
     int len = 0;
@@ -219,21 +232,17 @@ char * ndo_strip(char * s)
     char * tmp = NULL;
 
     if (s == NULL || strlen(s) == 0) {
-        return NULL;
+        trace_return_null_cond("s == NULL || strlen(s) == 0");
     }
 
     str = strdup(s);
     orig = str;
 
     if (str == NULL) {
-        return NULL;
+        trace_return_null_cond("str == NULL");
     }
 
     len = strlen(str);
-
-    if (len == 0) {
-        return str;
-    }
 
     for (i = 0; i < len; i++) {
         if (   str[i] == ' '
@@ -249,7 +258,7 @@ char * ndo_strip(char * s)
     str += i;
 
     if (i >= (len - 1)) {
-        return str;
+        trace_return("%s", str);
     }
 
     len = strlen(str);
@@ -271,31 +280,29 @@ char * ndo_strip(char * s)
     free(orig);
     str = tmp;
 
-    trace_func_end();
-    return str;
+    trace_return("%s", str);
 }
 
 
 int ndo_process_arguments(char * args)
 {
-    trace("args=%s", args);
+    trace_func_args("args=%s", args);
 
     /* the only argument we accept is a config file location */
     ndo_config_file = ndo_strip(args);
 
     if (ndo_config_file == NULL || strlen(ndo_config_file) <= 0) {
         ndo_log("No config file specified! (broker_module=/path/to/ndo.o /PATH/TO/CONFIG/FILE)");
-        return NDO_ERROR;
+        trace_return_error_cond("ndo_config_file == NULL || strlen(ndo_config_file) <= 0");
     }
 
-    trace_func_end();
-    return NDO_OK;
+    trace_return_ok();
 }
 
 
 char * ndo_read_config_file()
 {
-    trace_func_begin();
+    trace_func_void();
 
     FILE * fp = NULL;
     char * contents = NULL;
@@ -304,7 +311,7 @@ char * ndo_read_config_file()
 
     if (ndo_config_file == NULL) {
         ndo_log("No configuration specified");
-        return NULL;
+        trace_return_null_cond("ndo_config_file == NULL");
     }
 
     fp = fopen(ndo_config_file, "r");
@@ -314,7 +321,7 @@ char * ndo_read_config_file()
         strcpy(err, "Unable to open config file specified - ");
         strcat(err, ndo_config_file);
         ndo_log(err);
-        return NULL;
+        trace_return_null_cond("fp == NULL");
     }
 
     /* see how large the file is */
@@ -327,7 +334,7 @@ char * ndo_read_config_file()
     if (contents == NULL) {
         ndo_log("Out of memory apparently. Something bad is about to happen");
         fclose(fp);
-        return NULL;
+        trace_return_null_cond("contents == NULL");
     }
 
     read_size = fread(contents, sizeof(char), file_size, fp);
@@ -336,25 +343,25 @@ char * ndo_read_config_file()
         ndo_log("Unable to fread() config file");
         free(contents);
         fclose(fp);
-        return NULL;
+        trace_return_null_cond("read_size != file_size");
     }
 
     fclose(fp);
 
-    trace_func_end();
-    return contents;
+    trace_return("%s", contents);
 }
 
 
 int ndo_process_config_file()
 {
-    trace_func_begin();
+    trace_func_void();
 
     char * config_file_contents = ndo_read_config_file();
     char * current_line = config_file_contents;
+    int sanity_check;
 
     if (config_file_contents == NULL) {
-        return NDO_ERROR;
+        trace_return_error_cond("config_file_contents == NULL");
     }
 
     while (current_line != NULL) {
@@ -379,42 +386,41 @@ int ndo_process_config_file()
 
     free(config_file_contents);
 
-    trace_func_end();
-    return ndo_config_sanity_check();
+    sanity_check = ndo_config_sanity_check();
+    trace_return("%d", sanity_check);
 }
 
 int ndo_config_sanity_check()
 {
-    trace_func_begin();
-    trace_func_end();
-    return NDO_OK;
+    trace_func_void();
+    trace_return_ok();
 }
 
 
 void ndo_process_config_line(char * line)
 {
-    trace("line=%s", line);
+    trace_func_args("line=%s", line);
 
     char * key = NULL;
     char * val = NULL;
 
     if (line == NULL) {
-        return;
+        trace_return_void_cond("line == NULL");
     }
 
     key = strtok(line, "=");
     if (key == NULL) {
-        return;
+        trace_return_void_cond("key == NULL");
     }
 
     val = strtok(NULL, "\0");
     if (val == NULL) {
-        return;
+        trace_return_void_cond("val == NULL");
     }
 
     key = ndo_strip(key);
     if (key == NULL || strlen(key) == 0) {
-        return;
+        trace_return_void_cond("key == NULL || strlen(key) == 0");
     }
 
     val = ndo_strip(val);
@@ -427,14 +433,14 @@ void ndo_process_config_line(char * line)
             free(val);
         }
 
-        return;
+        trace_return_void_cond("val == NULL || strlen(val) == 0");
     }
 
     /* skip comments */
     if (key[0] == '#') {
         free(key);
         free(val);
-        return;
+        trace_return_void_cond("key[0] == '#'");
     }
 
     /* database connectivity */
@@ -584,22 +590,22 @@ void ndo_process_config_line(char * line)
     free(key);
     free(val);
 
-    trace_func_end();
+    trace_return_void();
 }
 
 
 int ndo_initialize_mysql_connection()
 {
-    trace_func_begin();
+    trace_func_void();
     mysql_connection = mysql_init(NULL);
-    trace_func_end();
-    return NDO_OK;
+    trace_return_ok();
 }
 
 
 int ndo_initialize_database()
 {
-    trace_func_begin();
+    trace_func_void();
+    int init = NDO_ERROR;
 
     /* if we've already connected, we execute a ping because we set our
        auto reconnect options appropriately */
@@ -642,7 +648,7 @@ int ndo_initialize_database()
             ndo_log(error_msg);
             free(error_msg);
 
-            return NDO_ERROR;
+            trace_return_error_cond("mysql_ping() != OK");
         }
 
         /* if our ping went fine, we reconnected successfully */
@@ -659,10 +665,11 @@ int ndo_initialize_database()
 
                so i'm not sure if that means they need to be initialized again
                or if they just need the prepared statement stuff */
-            return initialize_stmt_data();
+            init = initialize_stmt_data();
+            trace_return("%d", init);
         }
 
-        return NDO_OK;
+        trace_return_ok();
     }
 
     /* this is for the actual initial connection */
@@ -673,7 +680,7 @@ int ndo_initialize_database()
 
         if (mysql_connection == NULL) {
             ndo_log("Unable to initialize mysql connection");
-            return NDO_ERROR;
+            trace_return_error_cond("mysql_connection == NULL");
         }
 
         /* without this flag set, then our mysql_ping() reconnection doesn't
@@ -696,34 +703,33 @@ int ndo_initialize_database()
 
         if (connected == NULL) {
             ndo_log("Unable to connect to mysql. Check your configuration");
-            return NDO_ERROR;
+            trace_return_error_cond("connected == NULL");
         }
     }
 
     ndo_log("Database initialized");
     ndo_database_connected = TRUE;
 
+#if defined(DEBUG) && DEBUG != FALSE
     mysql_debug("d:t:O,/tmp/client.trace");
     mysql_dump_debug_info(mysql_connection);
+#endif
 
-    trace_func_end();
-    return initialize_stmt_data();
+    init = initialize_stmt_data();
+    trace_return("%d", init);
 }
 
 
 int ndo_initialize_prepared_statements()
 {
-    trace_func_begin();
-
-
-    trace_func_end();
-    return NDO_OK;
+    trace_func_void();
+    trace_return_ok();
 }
 
 
 void ndo_disconnect_database()
 {
-    trace_func_begin();
+    trace_func_void();
 
     deinitialize_stmt_data();
 
@@ -731,13 +737,13 @@ void ndo_disconnect_database()
         mysql_close(mysql_connection);
     }
     mysql_library_end();
-    trace_func_end();
+    trace_return_void();
 }
 
 
 int ndo_register_callbacks()
 {
-    trace_func_begin();
+    trace_func_void();
     int result = 0;
 
     /* this callback is always registered, as thats where the configuration writing
@@ -804,31 +810,30 @@ int ndo_register_callbacks()
 
     if (result != 0) {
         ndo_log("Something went wrong registering callbacks!");
-        return NDO_ERROR;
+        trace_return_error_cond("result != 0");
     }
 
     ndo_log("Callbacks registered");
-    trace_func_end();
-    return NDO_OK;
+    trace_return_ok();
 }
 
 
 int ndo_register_timedevent_callback()
 {
-    trace_func_begin();
+    trace_func_void();
 
     if (ndo_process_options & NDO_PROCESS_TIMED_EVENT) {
         return neb_register_callback(NEBCALLBACK_TIMED_EVENT_DATA, ndo_handle, 0, ndo_handle_timed_event);
     }
 
-    trace_func_end();
-    return NDO_OK;
+    trace_return_ok();
 }
 
 
 int ndo_deregister_callbacks()
 {
-    trace_func_begin();
+    trace_func_void();
+
     neb_deregister_callback(NEBCALLBACK_PROCESS_DATA, ndo_handle_process);
     neb_deregister_callback(NEBCALLBACK_TIMED_EVENT_DATA, ndo_handle_timed_event);
     neb_deregister_callback(NEBCALLBACK_LOG_DATA, ndo_handle_log);
@@ -853,14 +858,13 @@ int ndo_deregister_callbacks()
     neb_deregister_callback(NEBCALLBACK_RETENTION_DATA, ndo_handle_retention);
 
     ndo_log("Callbacks deregistered");
-    trace_func_end();
-    return NDO_OK;
+    trace_return_ok();
 }
 
 
 void ndo_calculate_startup_hash()
 {
-    trace_func_begin();
+    trace_func_void();
 
     int result = 0;
     int early_timeout = FALSE;
@@ -886,21 +890,19 @@ void ndo_calculate_startup_hash()
         ndo_log(msg);
     }
 
-    trace_func_end();
+    trace_return_void();
 }
 
 
-int ndo_get_object_id_name1(int insert, int object_type, char * name1)
+unsigned long ndo_get_object_id_name1(int insert, int object_type, char * name1)
 {
-    trace("insert=%d, object_type=%d, name1=%s", insert, object_type, name1);
+    trace_func_args("insert=%d, object_type=%d, name1=%s", insert, object_type, name1);
+    unsigned long object_id = NDO_ERROR;
 
     if (name1 == NULL || strlen(name1) == 0) {
         ndo_log("ndo_get_object_id_name1() - name1 is null");
-        trace_info("name1==NULL, returning error");
-        return NDO_ERROR;
+        trace_return_error_cond("name1==NULL, returning error");
     }
-
-    int object_id = NDO_ERROR;
 
     MYSQL_RESET_BIND(GET_OBJECT_ID_NAME1);
     MYSQL_RESET_RESULT(GET_OBJECT_ID_NAME1);
@@ -915,47 +917,38 @@ int ndo_get_object_id_name1(int insert, int object_type, char * name1)
     MYSQL_EXECUTE(GET_OBJECT_ID_NAME1);
     MYSQL_STORE_RESULT(GET_OBJECT_ID_NAME1);
 
-    if (!MYSQL_FETCH(GET_OBJECT_ID_NAME1)) {
-        trace("got id=%d", object_id);
-    }
-    else {
+    if (MYSQL_FETCH(GET_OBJECT_ID_NAME2)) {
         object_id = NDO_ERROR;
     }
 
     if (insert == TRUE && object_id == NDO_ERROR) {
-        trace_info("insert==TRUE, calling ndo_insert_object_id_name1");
         object_id = ndo_insert_object_id_name1(object_type, name1);
     }
 
     if (ndo_writing_object_configuration == TRUE && object_id != NDO_ERROR) {
-        trace_info("ndo_writing_object_configuration==TRUE, setting is_active=1");
         MYSQL_RESET_BIND(HANDLE_OBJECT_WRITING);
         MYSQL_BIND_INT(HANDLE_OBJECT_WRITING, object_id);
         MYSQL_BIND(HANDLE_OBJECT_WRITING);
         MYSQL_EXECUTE(HANDLE_OBJECT_WRITING);
     }
 
-    trace_func_end();
-    return object_id;
+    trace_return("%lu", object_id);
 }
 
 
-int ndo_get_object_id_name2(int insert, int object_type, char * name1, char * name2)
+unsigned long ndo_get_object_id_name2(int insert, int object_type, char * name1, char * name2)
 {
-    trace("insert=%d, object_type=%d, name1=%s, name2=%s", insert, object_type, name1, name2);
+    trace_func_args("insert=%d, object_type=%d, name1=%s, name2=%s", insert, object_type, name1, name2);
+    unsigned long object_id = NDO_ERROR;
 
     if (name1 == NULL || strlen(name1) == 0) {
         ndo_log("ndo_get_object_id_name2() - name1 is null");
-        trace_info("name1==NULL, returning error");
-        return NDO_ERROR;
+        trace_return_error_cond("name1==NULL, returning error");
     }
 
     if (name2 == NULL || strlen(name2) == 0) {
-        trace_info("name2==NULL, calling ndo_get_object_id_name1");
-        return ndo_get_object_id_name1(insert, object_type, name1);
+        trace_return_error_cond("name2 == NULL || strlen(name2) == 0");
     }
-
-    int object_id = NDO_ERROR;
 
     MYSQL_RESET_BIND(GET_OBJECT_ID_NAME2);
     MYSQL_RESET_RESULT(GET_OBJECT_ID_NAME2);
@@ -970,10 +963,7 @@ int ndo_get_object_id_name2(int insert, int object_type, char * name1, char * na
     MYSQL_EXECUTE(GET_OBJECT_ID_NAME2);
     MYSQL_STORE_RESULT(GET_OBJECT_ID_NAME2);
 
-    if (!MYSQL_FETCH(GET_OBJECT_ID_NAME2)) {
-        trace("got id=%d", object_id);
-    }
-    else {
+    if (MYSQL_FETCH(GET_OBJECT_ID_NAME2)) {
         object_id = NDO_ERROR;
     }
 
@@ -990,8 +980,7 @@ int ndo_get_object_id_name2(int insert, int object_type, char * name1, char * na
         MYSQL_EXECUTE(HANDLE_OBJECT_WRITING);
     }
 
-    trace_func_end();
-    return object_id;
+    trace_return("%lu", object_id);
 }
 
 
@@ -999,13 +988,14 @@ int ndo_get_object_id_name2(int insert, int object_type, char * name1, char * na
    and then an insert. the reason for this is that usually, this function
    will be called by get_object_id() functions ..and the object_bind is already
    appropriately set */
-int ndo_insert_object_id_name1(int object_type, char * name1)
+unsigned long ndo_insert_object_id_name1(int object_type, char * name1)
 {
-    trace("object_type=%d, name1=%s", object_type, name1);
+    trace_func_args("object_type=%d, name1=%s", object_type, name1);
+    unsigned long object_id = 0UL;
 
     if (name1 == NULL || strlen(name1) == 0) {
-        trace_info("name1==NULL, returning error");
-        return NDO_ERROR;
+        ndo_log("ndo_insert_object_id_name1() - name1 is null");
+        trace_return_error_cond("name1 == NULL || strlen(name1) == 0");
     }
 
     MYSQL_RESET_BIND(INSERT_OBJECT_ID_NAME1);
@@ -1017,23 +1007,25 @@ int ndo_insert_object_id_name1(int object_type, char * name1)
     MYSQL_BIND(INSERT_OBJECT_ID_NAME1);
     MYSQL_EXECUTE(INSERT_OBJECT_ID_NAME1);
 
-    trace_func_end();
-    return mysql_insert_id(mysql_connection);
+    object_id = mysql_insert_id(mysql_connection);
+    trace_return("%lu", object_id);
 }
 
 
-int ndo_insert_object_id_name2(int object_type, char * name1, char * name2)
+unsigned long ndo_insert_object_id_name2(int object_type, char * name1, char * name2)
 {
-    trace("object_type=%d, name1=%s, name2=%s", object_type, name1, name2);
+    trace_func_args("object_type=%d, name1=%s, name2=%s", object_type, name1, name2);
+    unsigned long object_id = 0UL;
 
     if (name1 == NULL || strlen(name1) == 0) {
-        trace_info("name1==NULL, returning error");
-        return NDO_ERROR;
+        ndo_log("ndo_insert_object_id_name2() - name1 is null");
+        trace_return_error_cond("name1 == NULL || strlen(name1) == 0");
     }
 
     if (name2 == NULL || strlen(name2) == 0) {
         trace_info("name2==NULL, calling ndo_insert_object_id_name1");
-        return ndo_insert_object_id_name1(object_type, name1);
+        object_id = ndo_insert_object_id_name1(object_type, name1);
+        trace_return("%lu", object_id);
     }
 
     MYSQL_RESET_BIND(INSERT_OBJECT_ID_NAME2);
@@ -1046,21 +1038,20 @@ int ndo_insert_object_id_name2(int object_type, char * name1, char * name2)
     MYSQL_BIND(INSERT_OBJECT_ID_NAME2);
     MYSQL_EXECUTE(INSERT_OBJECT_ID_NAME2);
 
-    trace_func_end();
-    return mysql_insert_id(mysql_connection);
+    object_id = mysql_insert_id(mysql_connection);
+    trace_return("%lu", object_id);
 }
 
 
 int ndo_write_config(int type)
 {
-    trace_func_begin();
-    trace_func_end();
-    return NDO_OK;
+    trace_func_args("type=%d", type);
+    trace_return_ok();
 }
 
 void initialize_bindings_array()
 {
-    trace_func_begin();
+    trace_func_void();
 
     num_bindings[GENERIC] = 50 * MAX_OBJECT_INSERT;
     num_bindings[GET_OBJECT_ID_NAME1] = 2;
@@ -1103,13 +1094,13 @@ void initialize_bindings_array()
     num_result_bindings[GET_OBJECT_ID_NAME1] = 1;
     num_result_bindings[GET_OBJECT_ID_NAME2] = 1;
 
-    trace_func_end();
+    trace_return_void();
 }
 
 
 int initialize_stmt_data()
 {
-    trace_func_begin();
+    trace_func_void();
 
     int i = 0;
     int errors = 0;
@@ -1121,9 +1112,8 @@ int initialize_stmt_data()
     }
 
     if (ndo_sql == NULL) {
-        char msg[] = "Unable to allocate memory for ndo_sql";
-        ndo_log(msg);
-        return NDO_ERROR;
+        ndo_log("Unable to allocate memory for ndo_sql");
+        trace_return_error_cond("ndo_sql == NULL");
     }
 
     for (i = 0; i < NUM_QUERIES; i++) {
@@ -1198,8 +1188,8 @@ int initialize_stmt_data()
     }
 
     if (errors > 0) {
-        ndo_log("errors1");
-        return NDO_ERROR;
+        ndo_log("Error allocating memory");
+        trace_return_error_cond("errors > 0");
     }
 
     /* now prepare each statement - we start at one since GENERIC doesn't
@@ -1214,23 +1204,22 @@ int initialize_stmt_data()
     }
 
     if (errors > 0) {
-        ndo_log("errors2");
-        return NDO_ERROR;
+        ndo_log("Error preparing statements");
+        trace_return_error_cond("errors > 0");
     }
 
-    trace_func_end();
-    return NDO_OK;
+    trace_return_ok();
 }
 
 
 int deinitialize_stmt_data()
 {
-    trace_func_begin();
+    trace_func_void();
 
     int i = 0;
 
     if (ndo_sql == NULL) {
-        return NDO_OK;
+        trace_return_ok_cond("ndo_sql == NULL");
     }
 
     for (i = 0; i < NUM_QUERIES; i++) {
@@ -1261,6 +1250,5 @@ int deinitialize_stmt_data()
 
     free(ndo_sql);
 
-    trace_func_end();
-    return NDO_OK;
+    trace_return_ok();
 }

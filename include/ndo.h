@@ -30,32 +30,95 @@
 
 #ifdef DEBUG
 # define TRACE(fmt, ...) ndo_debug(TRUE, fmt, __VA_ARGS__)
-# define TRACE_NOLOG(fmt, ...) ndo_debug(FALSE, fmt, __VA_ARGS__)
 #else
 # define TRACE(fmt, ...) (void)0
-# define TRACE_NOLOG(fmt, ...) (void)0
 #endif
 
 #define trace(fmt, ...) TRACE("%s():%d - " fmt, __func__, __LINE__, __VA_ARGS__)
-#define trace_nolog(fmt, ...) TRACE_NOLOG("%s():%d - " fmt, __func__, __LINE__, __VA_ARGS__)
-#define trace_func_begin() trace("%s", "begin function (void args)")
-#define trace_func_begin_nolog() trace_nolog("%s", "begin function (void args)")
-#define trace_func_end() trace("%s", "end function")
-#define trace_func_end_nolog() trace_nolog("%s", "end function")
 #define trace_info(msg) trace("%s", msg)
-#define trace_info_nolog(msg) trace_nolog("%s", msg)
-#define trace_handler(_struct) trace("type=%d, data(type=%d,f=%d,a=%d,t=%ld.%06ld)", type, ((nebstruct_## _struct ##_data *)d)->type, ((nebstruct_## _struct ##_data *)d)->flags, ((nebstruct_## _struct ##_data *)d)->attr, ((nebstruct_## _struct ##_data *)d)->timestamp.tv_sec, ((nebstruct_## _struct ##_data *)d)->timestamp.tv_usec)
-#define trace_handler_nolog(_struct) trace_nolog("type=%d, data(type=%d,f=%d,a=%d,t=%ld.%06ld)", type, ((nebstruct_## _struct ##_data *)d)->type, ((nebstruct_## _struct ##_data *)d)->flags, ((nebstruct_## _struct ##_data *)d)->attr, ((nebstruct_## _struct ##_data *)d)->timestamp.tv_sec, ((nebstruct_## _struct ##_data *)d)->timestamp.tv_usec)
+
+#define trace_func_void() \
+do { \
+    ndo_debug_stack_frames++; \
+    trace("%s", "begin function (void args)"); \
+} while (0)
+
+
+#define trace_func_args(fmt, ...) \
+do { \
+    ndo_debug_stack_frames++; \
+    trace(fmt, __VA_ARGS__); \
+} while (0)
+
+
+#define trace_func_handler(_struct) \
+do { \
+    ndo_debug_stack_frames++; \
+    trace("type=%d, data(type=%d,f=%d,a=%d,t=%ld.%06ld)", type, ((nebstruct_## _struct ##_data *)d)->type, ((nebstruct_## _struct ##_data *)d)->flags, ((nebstruct_## _struct ##_data *)d)->attr, ((nebstruct_## _struct ##_data *)d)->timestamp.tv_sec, ((nebstruct_## _struct ##_data *)d)->timestamp.tv_usec); \
+} while (0)
+
+
 #define trace_return_void() \
 do { \
-    trace("returning void"); \
+    ndo_debug_stack_frames--; \
+    trace("%s", "returning void"); \
     return; \
-}
+} while (0)
+
+#define trace_return_void_cond(condition) \
+do { \
+    ndo_debug_stack_frames--; \
+    trace("(%s), returning void", condition); \
+    return; \
+} while (0)
+
+#define trace_return_error() \
+do { \
+    ndo_debug_stack_frames--; \
+    trace("%s", "returning ERROR"); \
+    return NDO_ERROR; \
+} while (0)
+
+#define trace_return_error_cond(condition) \
+do { \
+    ndo_debug_stack_frames--; \
+    trace("(%s), returning ERROR", condition); \
+    return NDO_ERROR; \
+} while (0)
+
+#define trace_return_ok() \
+do { \
+    ndo_debug_stack_frames--; \
+    trace("%s", "returning OK"); \
+    return NDO_OK; \
+} while (0)
+
+#define trace_return_ok_cond(condition) \
+do { \
+    ndo_debug_stack_frames--; \
+    trace("(%s), returning OK", condition); \
+    return NDO_OK; \
+} while (0)
+
+#define trace_return_null() \
+do { \
+    ndo_debug_stack_frames--; \
+    trace("%s", "returning NULL"); \
+    return NULL; \
+} while (0)
+
+#define trace_return_null_cond(condition) \
+do { \
+    ndo_debug_stack_frames--; \
+    trace("(%s), returning NULL", condition); \
+    return NULL; \
+} while (0)
 
 #define trace_return(fmtid, value) \
 do { \
-    trace("returning with value: " fmtid, value);
-    return value;
+    ndo_debug_stack_frames--; \
+    trace("returning with value: " fmtid, value); \
+    return value; \
 } while (0)
 
 
@@ -208,10 +271,10 @@ int write_to_log(char * buffer, unsigned long l, time_t * t);
 
 void ndo_calculate_startup_hash();
 
-int ndo_get_object_id_name1(int insert, int object_type, char * name1);
-int ndo_get_object_id_name2(int insert, int object_type, char * name1, char * name2);
-int ndo_insert_object_id_name1(int object_type, char * name1);
-int ndo_insert_object_id_name2(int object_type, char * name1, char * name2);
+unsigned long ndo_get_object_id_name1(int insert, int object_type, char * name1);
+unsigned long ndo_get_object_id_name2(int insert, int object_type, char * name1, char * name2);
+unsigned long ndo_insert_object_id_name1(int object_type, char * name1);
+unsigned long ndo_insert_object_id_name2(int object_type, char * name1, char * name2);
 
 int send_subquery(int stmt, int * counter, char * query, char * query_on_update, size_t * query_len, size_t query_base_len, size_t query_on_update_len);
 
