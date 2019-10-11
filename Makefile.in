@@ -71,6 +71,10 @@ install-broker-line:
 	fi
 
 
+expanded:
+	cd src/ && $(MAKE) $@
+
+
 test-enabled:
 	cd test/ && $(MAKE) test
 
