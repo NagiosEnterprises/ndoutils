@@ -59,7 +59,7 @@ extern struct object_count num_objects;
    so we pad a bit and hope we never go over this */
 #define MAX_SQL_BUFFER ((MAX_OBJECT_INSERT * 150) + 8000)
 #define MAX_SQL_BINDINGS 600
-#define MAX_BIND_BUFFER 4096
+#define MAX_BIND_BUFFER BUFSZ_XXL
 
 int ndo_database_connected = FALSE;
 
@@ -87,7 +87,7 @@ int num_result_bindings[NUM_QUERIES] = { 0 };
 int num_bindings[NUM_QUERIES] = { 0 };
 
 int ndo_return = 0;
-char ndo_error_msg[1024] = { 0 };
+char ndo_error_msg[BUFSZ_LARGE] = { 0 };
 
 int ndo_bind_i = 0;
 int ndo_result_i = 0;
@@ -129,21 +129,23 @@ void ndo_log(char * buffer)
 void ndo_debug(int write_to_log, const char * fmt, ...)
 {
     int frame_indentation = 2;
-    char frame_fmt[128] = { 0 };
-    char buffer[2048] = { 0 };
+    char frame_fmt[BUFSZ_SMOL] = { 0 };
+    char buffer[BUFSZ_XL] = { 0 };
     va_list ap;
     va_start(ap, fmt);
-    vsnprintf(buffer, 2047, fmt, ap);
+    vsnprintf(buffer, BUFSZ_XL - 1, fmt, ap);
     va_end(ap);
 
-    if (strlen(buffer) >= 2047) {
+    if (strlen(buffer) >= BUFSZ_XL - 1) {
         char * warning = "[LINE TRUNCATED]";
         memcpy(buffer, warning, strlen(warning));
     }
 
+    buffer[BUFSZ_XL - 1] = '\0';
+
     /* create the padding */
     if (ndo_debug_stack_frames > 0) {
-        snprintf(frame_fmt, 127, "%%%ds", (frame_indentation * ndo_debug_stack_frames));
+        snprintf(frame_fmt, BUFSZ_SMOL - 1, "%%%ds", (frame_indentation * ndo_debug_stack_frames));
         printf(frame_fmt, " ");
     }
 
@@ -309,9 +311,8 @@ char * ndo_read_config_file()
     fp = fopen(ndo_config_file, "r");
 
     if (fp == NULL) {
-        char err[1024] = { 0 };
-        strcpy(err, "Unable to open config file specified - ");
-        strcat(err, ndo_config_file);
+        char err[BUFSZ_LARGE] = { 0 };
+        snprintf(err, BUFSZ_LARGE - 1, "Unable to open config file specified - %s", ndo_config_file);
         ndo_log(err);
         trace_return_null_cond("fp == NULL");
     }
@@ -877,8 +878,8 @@ void ndo_calculate_startup_hash()
     }
 
     else if (result == 2) {
-        char msg[1024] = { 0 };
-        snprintf(msg, 1023, "Bad permissions on hashfile in (%s)", ndo_startup_hash_script_path);
+        char msg[BUFSZ_LARGE] = { 0 };
+        snprintf(msg, BUFSZ_LARGE - 1, "Bad permissions on hashfile in (%s)", ndo_startup_hash_script_path);
         ndo_log(msg);
     }
 
@@ -1172,8 +1173,8 @@ int initialize_stmt_data()
     /* now check to make sure all those strdups worked */
     for (i = 0; i < NUM_QUERIES; i++) {
         if (ndo_sql[i].query == NULL) {
-            char msg[256] = { 0 };
-            snprintf(msg, 255, "Unable to allocate memory for query (%d)", i);
+            char msg[BUFSZ_MED] = { 0 };
+            snprintf(msg, BUFSZ_MED - 1, "Unable to allocate memory for query (%d)", i);
             ndo_log(msg);
             errors++;
         }
@@ -1188,8 +1189,8 @@ int initialize_stmt_data()
        have a query at this point */
     for (i = 1; i < NUM_QUERIES; i++) {
         if (mysql_stmt_prepare(ndo_sql[i].stmt, ndo_sql[i].query, strlen(ndo_sql[i].query))) {
-            char msg[256] = { 0 };
-            snprintf(msg, 255, "Unable to prepare statement for query (%d)", i);
+            char msg[BUFSZ_MED] = { 0 };
+            snprintf(msg, BUFSZ_MED - 1, "Unable to prepare statement for query (%d)", i);
             ndo_log(msg);
             errors++;
         }

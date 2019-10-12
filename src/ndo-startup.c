@@ -8,8 +8,9 @@ int ndo_set_all_objects_inactive()
     ndo_return = mysql_query(mysql_connection, deactivate_sql);
     if (ndo_return != 0) {
 
-        char err[1024] = { 0 };
-        snprintf(err, 1023, "query(%s) failed with rc (%d), mysql (%d: %s)", deactivate_sql, ndo_return, mysql_errno(mysql_connection), mysql_error(mysql_connection));
+        char err[BUFSZ_LARGE] = { 0 };
+        snprintf(err, BUFSZ_LARGE - 1, "query(%s) failed with rc (%d), mysql (%d: %s)", truncate_sql[i], ndo_return, mysql_errno(mysql_connection), mysql_error(mysql_connection));
+        err[BUFSZ_LARGE - 1] = '\0';
         ndo_log(err);
     }
 
@@ -70,8 +71,9 @@ int ndo_table_genocide()
         ndo_return = mysql_query(mysql_connection, truncate_sql[i]);
         if (ndo_return != 0) {
 
-            char err[1024] = { 0 };
-            snprintf(err, 1023, "query(%s) failed with rc (%d), mysql (%d: %s)", truncate_sql[i], ndo_return, mysql_errno(mysql_connection), mysql_error(mysql_connection));
+            char err[BUFSZ_LARGE] = { 0 };
+            snprintf(err, BUFSZ_LARGE - 1, "query(%s) failed with rc (%d), mysql (%d: %s)", truncate_sql[i], ndo_return, mysql_errno(mysql_connection), mysql_error(mysql_connection));
+            err[BUFSZ_LARGE - 1] = '\0';
             ndo_log(err);
         }
     }

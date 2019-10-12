@@ -12,7 +12,7 @@
 #define NDO_HANDLE_ERROR_STMT(err, stmt) \
 do { \
     if (ndo_return != 0) { \
-        snprintf(ndo_error_msg, 1023, "ndo_return = %d (%s)", ndo_return, mysql_stmt_error(stmt)); \
+        snprintf(ndo_error_msg, BUFSZ_LARGE - 1, "ndo_return = %d (%s)", ndo_return, mysql_stmt_error(stmt)); \
         ndo_log(ndo_error_msg); \
         NDO_REPORT_ERROR(err); \
         return NDO_ERROR; \

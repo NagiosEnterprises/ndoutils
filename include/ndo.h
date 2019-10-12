@@ -22,6 +22,16 @@
 #   define FALSE 0
 #endif
 
+
+#define BUFSZ_TINY  (1 << 6)  /* 64 */
+#define BUFSZ_SMOL  (1 << 7)  /* 128 */
+#define BUFSZ_MED   (1 << 8)  /* 256 */
+#define BUFSZ_LARGE (1 << 10) /* 1024 */
+#define BUFSZ_XL    (1 << 11) /* 2048 */
+#define BUFSZ_XXL   (1 << 12) /* 4096 */
+#define BUFSZ_EPIC  (1 << 13) /* 8192 */
+
+
 #include "../include/config.h"
 #include "../include/nagios/objects.h"
 
@@ -124,7 +134,7 @@ do { \
 
 #define NDO_REPORT_ERROR(err) \
 do { \
-    snprintf(ndo_error_msg, 1023, "%s(%s:%d): %s", __func__, __FILE__, __LINE__, err); \
+    snprintf(ndo_error_msg, BUFSZ_LARGE - 1, "%s(%s:%d): %s", __func__, __FILE__, __LINE__, err); \
     ndo_log(ndo_error_msg); \
 } while (0)
 
