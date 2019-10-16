@@ -744,8 +744,9 @@ int ndo_register_callbacks()
        shutdown or restart */
     result += neb_register_callback(NEBCALLBACK_PROCESS_DATA, ndo_handle, 0, ndo_handle_process);
 
-    /* we register the timed event callback after configurations are written to the db */
-
+    if (ndo_process_options & NDO_PROCESS_TIMED_EVENT) {
+        result += neb_register_callback(NEBCALLBACK_TIMED_EVENT_DATA, ndo_handle, 0, ndo_handle_timed_event);
+    }
     if (ndo_process_options & NDO_PROCESS_LOG) {
         result += neb_register_callback(NEBCALLBACK_LOG_DATA, ndo_handle, 0, ndo_handle_log);
     }
@@ -807,18 +808,6 @@ int ndo_register_callbacks()
     }
 
     ndo_log("Callbacks registered");
-    trace_return_ok();
-}
-
-
-int ndo_register_timedevent_callback()
-{
-    trace_func_void();
-
-    if (ndo_process_options & NDO_PROCESS_TIMED_EVENT) {
-        return neb_register_callback(NEBCALLBACK_TIMED_EVENT_DATA, ndo_handle, 0, ndo_handle_timed_event);
-    }
-
     trace_return_ok();
 }
 

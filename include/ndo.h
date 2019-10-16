@@ -173,7 +173,6 @@ int ndo_initialize_database();
 int ndo_initialize_prepared_statements();
 void ndo_disconnect_database();
 int ndo_register_callbacks();
-int ndo_register_timedevent_callback();
 int ndo_deregister_callbacks();
 
 
