@@ -402,7 +402,7 @@ START_TEST(test_event_handler)
                                   "AND start_time_usec = 5233 AND end_time = FROM_UNIXTIME(0) "
                                   "AND end_time_usec = 0 AND eventhandler_type = 3 "
                                   "AND object_id = (SELECT object_id from nagios_objects WHERE objecttype_id = 2 AND name1 = '_testhost_1' AND name2 = '_testservice_http' LIMIT 1) AND state = 0 "
-                                  "AND state_type = 1 AND command_object_id = (SELECT object_id FROM nagios_objects WHERE objecttype_id = 12 AND name1 = 'check_xi_host_ping' AND name2 IS NULL LIMIT 1) "
+                                  "AND state_type = 1 AND command_object_id = (SELECT object_id FROM nagios_objects WHERE objecttype_id = 12 AND name1 = 'check_xi_host_ping' AND name2 = '' LIMIT 1) "
                                   "AND command_args = '' AND command_line = '/usr/bin/echo fake global event handler command' "
                                   "AND timeout = 30 AND early_timeout = 0 "
                                   "AND execution_time = 0 AND return_code = 0 "
@@ -453,8 +453,8 @@ START_TEST(test_event_handler)
                                   "instance_id = 1 AND start_time = FROM_UNIXTIME(1568312540) "
                                   "AND start_time_usec = 976228 AND end_time = FROM_UNIXTIME(0) "
                                   "AND end_time_usec = 0 AND eventhandler_type = 2 "
-                                  "AND object_id = (SELECT object_id from nagios_objects WHERE objecttype_id = 1 AND name1 = '_testhost_1' AND name2 IS NULL LIMIT 1) AND state = 1 "
-                                  "AND state_type = 0 AND command_object_id = (SELECT object_id FROM nagios_objects WHERE objecttype_id = 12 AND name1 = 'check_xi_host_ping' AND name2 IS NULL LIMIT 1) "
+                                  "AND object_id = (SELECT object_id from nagios_objects WHERE objecttype_id = 1 AND name1 = '_testhost_1' AND name2 = '' LIMIT 1) AND state = 1 "
+                                  "AND state_type = 0 AND command_object_id = (SELECT object_id FROM nagios_objects WHERE objecttype_id = 12 AND name1 = 'check_xi_host_ping' AND name2 = '' LIMIT 1) "
                                   "AND command_args = '' AND command_line = '/usr/bin/echo fake global event handler command' "
                                   "AND timeout = 30 AND early_timeout = 0 "
                                   "AND execution_time = 0 AND return_code = 0 "
@@ -1364,7 +1364,7 @@ START_TEST(test_flapping_data)
     mysql_query(mysql_connection, "SELECT 2 FROM nagios_flappinghistory WHERE "
                                   "instance_id = 1 AND event_time = FROM_UNIXTIME(1567543077) AND event_time_usec = 95771 "
                                   "AND event_type = 1001 AND reason_type = 2 AND flapping_type = 0 "
-                                  "AND object_id = (SELECT object_id from nagios_objects WHERE objecttype_id = 1 AND name1 = '_testhost_1' AND name2 IS NULL LIMIT 1) "
+                                  "AND object_id = (SELECT object_id from nagios_objects WHERE objecttype_id = 1 AND name1 = '_testhost_1' AND name2 = '' LIMIT 1) "
                                   "AND percent_state_change = 23.35526315789474 AND low_threshold = 0 "
                                   "AND high_threshold = 0 AND comment_time = FROM_UNIXTIME(0) AND "
                                   "internal_comment_id = 0 ");
@@ -1466,7 +1466,7 @@ START_TEST(test_host_status)
     ndo_handle_host_status(d.type, &d);
 
     mysql_query(mysql_connection, "SELECT 1 FROM nagios_hoststatus WHERE "
-                                  "instance_id = 1 AND host_object_id = (SELECT object_id FROM nagios_objects WHERE objecttype_id = 1 AND name1 = '_testhost_1' AND name2 IS NULL LIMIT 1) "
+                                  "instance_id = 1 AND host_object_id = (SELECT object_id FROM nagios_objects WHERE objecttype_id = 1 AND name1 = '_testhost_1' AND name2 = '' LIMIT 1) "
                                   "AND status_update_time = FROM_UNIXTIME(1567634416) AND output = 'OK - 127.0.0.1 rta 0.012ms lost 0%' "
                                   "AND long_output = '' AND perfdata = 'rta=0.012ms;3000.000;5000.000;0; rtmax=0.036ms;;;; rtmin=0.005ms;;;; pl=0%;80;100;0;100' "
                                   "AND current_state = 0 AND has_been_checked = 1 AND should_be_scheduled = 1 "
@@ -1488,7 +1488,7 @@ START_TEST(test_host_status)
                                   "AND obsess_over_host = 1 AND modified_host_attributes = 0 "
                                   "AND event_handler = '' AND check_command = 'check_xi_host_ping!3000.0!80%!5000.0!100%' "
                                   "AND normal_check_interval = 5 AND retry_check_interval = 1 "
-                                  "AND check_timeperiod_object_id = (SELECT object_id FROM nagios_objects WHERE objecttype_id = 9 AND name1 = 'xi_timeperiod_24x7' AND name2 IS NULL LIMIT 1)");
+                                  "AND check_timeperiod_object_id = (SELECT object_id FROM nagios_objects WHERE objecttype_id = 9 AND name1 = 'xi_timeperiod_24x7' AND name2 = '' LIMIT 1)");
 
     tmp_result = mysql_store_result(mysql_connection);
     ck_assert(tmp_result != NULL);
@@ -1545,7 +1545,7 @@ START_TEST(test_service_status)
                                   "AND failure_prediction_enabled = 0 AND process_performance_data = 1 "
                                   "AND obsess_over_service = 1 AND modified_service_attributes = 16 AND event_handler = '' "
                                   "AND check_command = 'check_xi_service_http' AND normal_check_interval = 5 AND retry_check_interval = 1 "
-                                  "AND check_timeperiod_object_id = (SELECT object_id FROM nagios_objects WHERE objecttype_id = 9 AND name1 = 'xi_timeperiod_24x7' AND name2 IS NULL LIMIT 1) ");
+                                  "AND check_timeperiod_object_id = (SELECT object_id FROM nagios_objects WHERE objecttype_id = 9 AND name1 = 'xi_timeperiod_24x7' AND name2 = '' LIMIT 1) ");
 
     tmp_result = mysql_store_result(mysql_connection);
     ck_assert(tmp_result != NULL);
@@ -1579,7 +1579,7 @@ START_TEST(test_contact_status)
     ndo_handle_contact_status(d.type, &d);
 
     mysql_query(mysql_connection, "SELECT 1 FROM nagios_contactstatus WHERE "
-                                  "instance_id = 1 AND contact_object_id = (SELECT object_id FROM nagios_objects WHERE objecttype_id = 10 AND name1 = 'nagiosadmin' AND name2 IS NULL LIMIT 1) "
+                                  "instance_id = 1 AND contact_object_id = (SELECT object_id FROM nagios_objects WHERE objecttype_id = 10 AND name1 = 'nagiosadmin' AND name2 = '' LIMIT 1) "
                                   "AND status_update_time = FROM_UNIXTIME(1568226545) AND host_notifications_enabled = 1 "
                                   "AND service_notifications_enabled = 1 AND last_host_notification = FROM_UNIXTIME(1567525739) "
                                   "AND last_service_notification = FROM_UNIXTIME(1567543267) AND modified_attributes = 0 "
@@ -1680,7 +1680,7 @@ START_TEST(test_notification_data)
                                   "instance_id = 1 AND start_time = FROM_UNIXTIME(1568228314) "
                                   "AND start_time_usec = 479541 AND end_time = FROM_UNIXTIME(0) "
                                   "AND end_time_usec = 0 AND notification_type = 0 "
-                                  "AND notification_reason = 0 AND object_id = (SELECT object_id FROM nagios_objects WHERE objecttype_id = 1 AND name1 = '_testhost_1' AND name2 IS NULL LIMIT 1) "
+                                  "AND notification_reason = 0 AND object_id = (SELECT object_id FROM nagios_objects WHERE objecttype_id = 1 AND name1 = '_testhost_1' AND name2 = '' LIMIT 1) "
                                   "AND state = 0 AND output = 'Return some other status message' "
                                   "AND long_output = 'Return some other status message' AND escalated = 0 "
                                   "AND contacts_notified = 0 ");
@@ -1736,7 +1736,7 @@ START_TEST(test_contact_notification_data)
                                   "instance_id = 1 "
                                   "AND start_time = FROM_UNIXTIME(1568235236) AND start_time_usec = 683676 "
                                   "AND end_time = FROM_UNIXTIME(0) AND end_time_usec = 0 "
-                                  "AND contact_object_id = (SELECT object_id FROM nagios_objects WHERE objecttype_id = 10 AND name1 = 'nagiosadmin' AND name2 IS NULL LIMIT 1)");
+                                  "AND contact_object_id = (SELECT object_id FROM nagios_objects WHERE objecttype_id = 10 AND name1 = 'nagiosadmin' AND name2 = '' LIMIT 1)");
 
 
     tmp_result = mysql_store_result(mysql_connection);
@@ -1939,7 +1939,7 @@ START_TEST(test_acknowledgement_data)
     mysql_query(mysql_connection, "SELECT 2 FROM nagios_acknowledgements WHERE "
                                   "instance_id = 1 AND entry_time = FROM_UNIXTIME(1568300150) "
                                   "AND entry_time_usec = 797402 AND acknowledgement_type = 0 "
-                                  "AND object_id = (SELECT object_id FROM nagios_objects WHERE objecttype_id = 1 AND name1 = '_testhost_1' AND name2 IS NULL LIMIT 1) AND state = 1 "
+                                  "AND object_id = (SELECT object_id FROM nagios_objects WHERE objecttype_id = 1 AND name1 = '_testhost_1' AND name2 = '' LIMIT 1) AND state = 1 "
                                   "AND author_name = 'Nagios Admin' AND comment_data = ' this is a different ack' "
                                   "AND is_sticky = 0 AND persistent_comment = 1 "
                                   "AND notify_contacts = 0 ");
@@ -1990,7 +1990,7 @@ START_TEST(test_statechange_data)
 
     mysql_query(mysql_connection, "SELECT 1 FROM nagios_statehistory WHERE "
                                   "instance_id = 1 AND state_time = FROM_UNIXTIME(1568301129) "
-                                  "AND state_time_usec = 715455 AND object_id = (SELECT object_id from nagios_objects WHERE objecttype_id = 1 AND name1 = '_testhost_1' AND name2 IS NULL LIMIT 1) "
+                                  "AND state_time_usec = 715455 AND object_id = (SELECT object_id from nagios_objects WHERE objecttype_id = 1 AND name1 = '_testhost_1' AND name2 = '' LIMIT 1) "
                                   "AND state_change = 1 AND state = 1 "
                                   "AND state_type = 0 AND current_check_attempt = 1 "
                                   "AND max_check_attempts = 5 AND last_state = 0 "
