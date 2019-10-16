@@ -58,7 +58,7 @@ extern struct object_count num_objects;
    and the query_base + query_on_update longest string (write_services) is ~4k
    so we pad a bit and hope we never go over this */
 #define MAX_SQL_BUFFER ((MAX_OBJECT_INSERT * 150) + 8000)
-#define MAX_SQL_BINDINGS 600
+#define MAX_SQL_BINDINGS (MAX_OBJECT_INSERT * 50)
 #define MAX_BIND_BUFFER BUFSZ_XXL
 
 int ndo_database_connected = FALSE;
@@ -80,7 +80,7 @@ MYSQL_STMT * ndo_write_stmt[NUM_WRITE_QUERIES];
 MYSQL_BIND ndo_write_bind[NUM_WRITE_QUERIES][MAX_SQL_BINDINGS];
 char ndo_write_query[MAX_SQL_BUFFER] = { 0 };
 int ndo_write_i[NUM_WRITE_QUERIES] = { 0 };
-unsigned long ndo_write_tmp_len[NUM_WRITE_QUERIES][MAX_OBJECT_INSERT];
+unsigned long ndo_write_tmp_len[NUM_WRITE_QUERIES][MAX_SQL_BUFFER];
 
 int num_result_bindings[NUM_QUERIES] = { 0 };
 
@@ -887,10 +887,11 @@ void ndo_calculate_startup_hash()
 }
 
 
-unsigned long ndo_get_object_id_name1(int insert, int object_type, char * name1)
+long ndo_get_object_id_name1(int insert, int object_type, char * name1)
 {
     trace_func_args("insert=%d, object_type=%d, name1=%s", insert, object_type, name1);
-    unsigned long object_id = NDO_ERROR;
+    long object_id = NDO_ERROR;
+    long tmp = object_id;
 
     if (name1 == NULL || strlen(name1) == 0) {
         ndo_log("ndo_get_object_id_name1() - name1 is null");
@@ -903,16 +904,18 @@ unsigned long ndo_get_object_id_name1(int insert, int object_type, char * name1)
     MYSQL_BIND_INT(GET_OBJECT_ID_NAME1, object_type);
     MYSQL_BIND_STR(GET_OBJECT_ID_NAME1, name1);
 
-    MYSQL_RESULT_INT(GET_OBJECT_ID_NAME1, object_id);
+    MYSQL_RESULT_LONG(GET_OBJECT_ID_NAME1, object_id);
 
     MYSQL_BIND(GET_OBJECT_ID_NAME1);
     MYSQL_BIND_RESULT(GET_OBJECT_ID_NAME1);
     MYSQL_EXECUTE(GET_OBJECT_ID_NAME1);
     MYSQL_STORE_RESULT(GET_OBJECT_ID_NAME1);
 
-    if (MYSQL_FETCH(GET_OBJECT_ID_NAME2)) {
+    if (MYSQL_FETCH(GET_OBJECT_ID_NAME1)) {
         object_id = NDO_ERROR;
     }
+
+    trace("got object_id=%d", object_id);
 
     if (insert == TRUE && object_id == NDO_ERROR) {
         object_id = ndo_insert_object_id_name1(object_type, name1);
@@ -925,14 +928,14 @@ unsigned long ndo_get_object_id_name1(int insert, int object_type, char * name1)
         MYSQL_EXECUTE(HANDLE_OBJECT_WRITING);
     }
 
-    trace_return("%lu", object_id);
+    trace_return("%d", object_id);
 }
 
 
-unsigned long ndo_get_object_id_name2(int insert, int object_type, char * name1, char * name2)
+long ndo_get_object_id_name2(int insert, int object_type, char * name1, char * name2)
 {
     trace_func_args("insert=%d, object_type=%d, name1=%s, name2=%s", insert, object_type, name1, name2);
-    unsigned long object_id = NDO_ERROR;
+    long object_id = NDO_ERROR;
 
     if (name1 == NULL || strlen(name1) == 0) {
         ndo_log("ndo_get_object_id_name2() - name1 is null");
@@ -948,6 +951,7 @@ unsigned long ndo_get_object_id_name2(int insert, int object_type, char * name1,
 
     MYSQL_BIND_INT(GET_OBJECT_ID_NAME2, object_type);
     MYSQL_BIND_STR(GET_OBJECT_ID_NAME2, name1);
+    MYSQL_BIND_STR(GET_OBJECT_ID_NAME2, name2);
 
     MYSQL_RESULT_INT(GET_OBJECT_ID_NAME2, object_id);
 
@@ -959,6 +963,8 @@ unsigned long ndo_get_object_id_name2(int insert, int object_type, char * name1,
     if (MYSQL_FETCH(GET_OBJECT_ID_NAME2)) {
         object_id = NDO_ERROR;
     }
+
+    trace("got object_id=%d", object_id);
 
     if (insert == TRUE && object_id == NDO_ERROR) {
         trace_info("insert==TRUE, calling ndo_insert_object_id_name2");
@@ -973,7 +979,7 @@ unsigned long ndo_get_object_id_name2(int insert, int object_type, char * name1,
         MYSQL_EXECUTE(HANDLE_OBJECT_WRITING);
     }
 
-    trace_return("%lu", object_id);
+    trace_return("%d", object_id);
 }
 
 
@@ -981,10 +987,10 @@ unsigned long ndo_get_object_id_name2(int insert, int object_type, char * name1,
    and then an insert. the reason for this is that usually, this function
    will be called by get_object_id() functions ..and the object_bind is already
    appropriately set */
-unsigned long ndo_insert_object_id_name1(int object_type, char * name1)
+long ndo_insert_object_id_name1(int object_type, char * name1)
 {
     trace_func_args("object_type=%d, name1=%s", object_type, name1);
-    unsigned long object_id = 0UL;
+    long object_id = NDO_ERROR;
 
     if (name1 == NULL || strlen(name1) == 0) {
         ndo_log("ndo_insert_object_id_name1() - name1 is null");
@@ -1001,14 +1007,14 @@ unsigned long ndo_insert_object_id_name1(int object_type, char * name1)
     MYSQL_EXECUTE(INSERT_OBJECT_ID_NAME1);
 
     object_id = mysql_insert_id(mysql_connection);
-    trace_return("%lu", object_id);
+    trace_return("%ld", object_id);
 }
 
 
-unsigned long ndo_insert_object_id_name2(int object_type, char * name1, char * name2)
+long ndo_insert_object_id_name2(int object_type, char * name1, char * name2)
 {
     trace_func_args("object_type=%d, name1=%s, name2=%s", object_type, name1, name2);
-    unsigned long object_id = 0UL;
+    long object_id = NDO_ERROR;
 
     if (name1 == NULL || strlen(name1) == 0) {
         ndo_log("ndo_insert_object_id_name2() - name1 is null");
@@ -1032,7 +1038,7 @@ unsigned long ndo_insert_object_id_name2(int object_type, char * name1, char * n
     MYSQL_EXECUTE(INSERT_OBJECT_ID_NAME2);
 
     object_id = mysql_insert_id(mysql_connection);
-    trace_return("%lu", object_id);
+    trace_return("%ld", object_id);
 }
 
 
@@ -1133,7 +1139,7 @@ int initialize_stmt_data()
 
     ndo_sql[GENERIC].query = calloc(MAX_SQL_BUFFER, sizeof(char));
 
-    ndo_sql[GET_OBJECT_ID_NAME1].query = strdup("SELECT object_id FROM nagios_objects WHERE objecttype_id = ? AND name1 = ? AND name2 IS NULL");
+    ndo_sql[GET_OBJECT_ID_NAME1].query = strdup("SELECT object_id FROM nagios_objects WHERE objecttype_id = ? AND name1 = ?");
     ndo_sql[GET_OBJECT_ID_NAME2].query = strdup("SELECT object_id FROM nagios_objects WHERE objecttype_id = ? AND name1 = ? AND name2 = ?");
     ndo_sql[INSERT_OBJECT_ID_NAME1].query = strdup("INSERT INTO nagios_objects (instance_id, objecttype_id, name1) VALUES (1,?,?) ON DUPLICATE KEY UPDATE is_active = 1");
     ndo_sql[INSERT_OBJECT_ID_NAME2].query = strdup("INSERT INTO nagios_objects (instance_id, objecttype_id, name1, name2) VALUES (1,?,?,?) ON DUPLICATE KEY UPDATE is_active = 1");

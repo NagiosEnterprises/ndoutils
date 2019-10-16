@@ -9,7 +9,7 @@ int ndo_set_all_objects_inactive()
     if (ndo_return != 0) {
 
         char err[BUFSZ_LARGE] = { 0 };
-        snprintf(err, BUFSZ_LARGE - 1, "query(%s) failed with rc (%d), mysql (%d: %s)", truncate_sql[i], ndo_return, mysql_errno(mysql_connection), mysql_error(mysql_connection));
+        snprintf(err, BUFSZ_LARGE - 1, "query(%s) failed with rc (%d), mysql (%d: %s)", deactivate_sql, ndo_return, mysql_errno(mysql_connection), mysql_error(mysql_connection));
         err[BUFSZ_LARGE - 1] = '\0';
         ndo_log(err);
     }
@@ -182,6 +182,8 @@ int ndo_write_commands(int config_type)
 
     while (tmp != NULL) {
 
+        ndo_sql[GENERIC].bind_i = 0;
+
         object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_COMMAND, tmp->name);
 
         GENERIC_BIND_INT(object_id);
@@ -218,6 +220,8 @@ int ndo_write_timeperiods(int config_type)
     GENERIC_RESET_BIND();
 
     while (tmp != NULL) {
+
+        ndo_sql[GENERIC].bind_i = 0;
 
         object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_TIMEPERIOD, tmp->name);
 
@@ -262,6 +266,8 @@ int ndo_write_timeperiod_timeranges(int * timeperiod_ids)
 
         for (day = 0; day < 7; day++) {
             for (range = tmp->days[day]; range != NULL; range = range->next) {
+
+                ndo_sql[GENERIC].bind_i = 0;
 
                 GENERIC_BIND_INT(timeperiod_ids[i]);
                 GENERIC_BIND_INT(day);
@@ -372,17 +378,17 @@ int ndo_write_contacts(int config_type)
         UPDATE_QUERY_X_POS(query, cur_pos, 19, tmp->service_notifications_enabled);
         UPDATE_QUERY_X_POS(query, cur_pos, 21, tmp->can_submit_commands);
 
-        UPDATE_QUERY_X_POS(query, cur_pos, 17, flag_isset(tmp->service_notification_options, OPT_RECOVERY));
-        UPDATE_QUERY_X_POS(query, cur_pos, 19, flag_isset(tmp->service_notification_options, OPT_WARNING));
-        UPDATE_QUERY_X_POS(query, cur_pos, 21, flag_isset(tmp->service_notification_options, OPT_UNKNOWN));
-        UPDATE_QUERY_X_POS(query, cur_pos, 23, flag_isset(tmp->service_notification_options, OPT_CRITICAL));
-        UPDATE_QUERY_X_POS(query, cur_pos, 25, flag_isset(tmp->service_notification_options, OPT_FLAPPING));
-        UPDATE_QUERY_X_POS(query, cur_pos, 27, flag_isset(tmp->service_notification_options, OPT_DOWNTIME));
-        UPDATE_QUERY_X_POS(query, cur_pos, 29, flag_isset(tmp->host_notification_options, OPT_RECOVERY));
-        UPDATE_QUERY_X_POS(query, cur_pos, 31, flag_isset(tmp->host_notification_options, OPT_DOWN));
-        UPDATE_QUERY_X_POS(query, cur_pos, 33, flag_isset(tmp->host_notification_options, OPT_UNREACHABLE));
-        UPDATE_QUERY_X_POS(query, cur_pos, 35, flag_isset(tmp->host_notification_options, OPT_FLAPPING));
-        UPDATE_QUERY_X_POS(query, cur_pos, 37, flag_isset(tmp->host_notification_options, OPT_DOWNTIME));
+        UPDATE_QUERY_X_POS(query, cur_pos, 23, flag_isset(tmp->service_notification_options, OPT_RECOVERY));
+        UPDATE_QUERY_X_POS(query, cur_pos, 25, flag_isset(tmp->service_notification_options, OPT_WARNING));
+        UPDATE_QUERY_X_POS(query, cur_pos, 27, flag_isset(tmp->service_notification_options, OPT_UNKNOWN));
+        UPDATE_QUERY_X_POS(query, cur_pos, 29, flag_isset(tmp->service_notification_options, OPT_CRITICAL));
+        UPDATE_QUERY_X_POS(query, cur_pos, 31, flag_isset(tmp->service_notification_options, OPT_FLAPPING));
+        UPDATE_QUERY_X_POS(query, cur_pos, 33, flag_isset(tmp->service_notification_options, OPT_DOWNTIME));
+        UPDATE_QUERY_X_POS(query, cur_pos, 35, flag_isset(tmp->host_notification_options, OPT_RECOVERY));
+        UPDATE_QUERY_X_POS(query, cur_pos, 37, flag_isset(tmp->host_notification_options, OPT_DOWN));
+        UPDATE_QUERY_X_POS(query, cur_pos, 39, flag_isset(tmp->host_notification_options, OPT_UNREACHABLE));
+        UPDATE_QUERY_X_POS(query, cur_pos, 41, flag_isset(tmp->host_notification_options, OPT_FLAPPING));
+        UPDATE_QUERY_X_POS(query, cur_pos, 43, flag_isset(tmp->host_notification_options, OPT_DOWNTIME));
 
         WRITE_BIND_INT(WRITE_CONTACTS, tmp->minimum_value);
 
@@ -399,6 +405,7 @@ int ndo_write_contacts(int config_type)
             if (loop == 1 || loop == loops) {
                 _MYSQL_PREPARE(ndo_write_stmt[WRITE_CONTACTS], query);
             }
+            WRITE_BIND(WRITE_CONTACTS);
             WRITE_EXECUTE(WRITE_CONTACTS);
 
             ndo_write_i[WRITE_CONTACTS] = 0;
@@ -605,6 +612,8 @@ int ndo_write_contactgroups(int config_type)
 
     while (tmp != NULL) {
 
+        ndo_sql[GENERIC].bind_i = 0;
+
         object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_CONTACTGROUP, tmp->group_name);
 
         GENERIC_BIND_INT(object_id);
@@ -648,6 +657,8 @@ int ndo_write_contactgroup_members(int * contactgroup_ids)
         member = tmp->members;
 
         while (member != NULL) {
+
+            ndo_sql[GENERIC].bind_i = 0;
 
             object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_CONTACT, member->contact_name);
 
@@ -856,6 +867,7 @@ int ndo_write_hosts(int config_type)
             if (loop == 1 || loop == loops) {
                 _MYSQL_PREPARE(ndo_write_stmt[WRITE_HOSTS], query);
             }
+            WRITE_BIND(WRITE_HOSTS);
             WRITE_EXECUTE(WRITE_HOSTS);
 
             ndo_write_i[WRITE_HOSTS] = 0;
@@ -1076,6 +1088,8 @@ int ndo_write_hostgroups(int config_type)
 
     while (tmp != NULL) {
 
+        ndo_sql[GENERIC].bind_i = 0;
+
         object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_HOSTGROUP, tmp->group_name);
 
         GENERIC_BIND_INT(object_id);
@@ -1119,6 +1133,8 @@ int ndo_write_hostgroup_members(int * hostgroup_ids)
         member = tmp->members;
 
         while (member != NULL) {
+
+            ndo_sql[GENERIC].bind_i = 0;
 
             object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_HOST, member->host_name);
 
@@ -1278,11 +1294,11 @@ int ndo_write_services(int config_type)
         UPDATE_QUERY_X_POS(query, cur_pos, 52, flag_isset(tmp->stalking_options, OPT_UNKNOWN));
         UPDATE_QUERY_X_POS(query, cur_pos, 54, flag_isset(tmp->stalking_options, OPT_CRITICAL));
         UPDATE_QUERY_X_POS(query, cur_pos, 56, tmp->is_volatile);
-        UPDATE_QUERY_X_POS(query, cur_pos, 60, tmp->flap_detection_enabled);
-        UPDATE_QUERY_X_POS(query, cur_pos, 62, flag_isset(tmp->flap_detection_options, OPT_OK));
-        UPDATE_QUERY_X_POS(query, cur_pos, 64, flag_isset(tmp->flap_detection_options, OPT_WARNING));
-        UPDATE_QUERY_X_POS(query, cur_pos, 66, flag_isset(tmp->flap_detection_options, OPT_UNKNOWN));
-        UPDATE_QUERY_X_POS(query, cur_pos, 68, flag_isset(tmp->flap_detection_options, OPT_CRITICAL));
+        UPDATE_QUERY_X_POS(query, cur_pos, 58, tmp->flap_detection_enabled);
+        UPDATE_QUERY_X_POS(query, cur_pos, 60, flag_isset(tmp->flap_detection_options, OPT_OK));
+        UPDATE_QUERY_X_POS(query, cur_pos, 62, flag_isset(tmp->flap_detection_options, OPT_WARNING));
+        UPDATE_QUERY_X_POS(query, cur_pos, 64, flag_isset(tmp->flap_detection_options, OPT_UNKNOWN));
+        UPDATE_QUERY_X_POS(query, cur_pos, 66, flag_isset(tmp->flap_detection_options, OPT_CRITICAL));
 
         WRITE_BIND_DOUBLE(WRITE_SERVICES, tmp->low_flap_threshold);
         WRITE_BIND_DOUBLE(WRITE_SERVICES, tmp->high_flap_threshold);
@@ -1292,13 +1308,13 @@ int ndo_write_services(int config_type)
 
         WRITE_BIND_INT(WRITE_SERVICES, tmp->freshness_threshold);
 
-        UPDATE_QUERY_X_POS(query, cur_pos, 72, tmp->accept_passive_checks);
-        UPDATE_QUERY_X_POS(query, cur_pos, 74, tmp->event_handler_enabled);
-        UPDATE_QUERY_X_POS(query, cur_pos, 72, tmp->checks_enabled);
-        UPDATE_QUERY_X_POS(query, cur_pos, 74, tmp->retain_status_information);
-        UPDATE_QUERY_X_POS(query, cur_pos, 72, tmp->retain_nonstatus_information);
-        UPDATE_QUERY_X_POS(query, cur_pos, 74, tmp->notifications_enabled);
-        UPDATE_QUERY_X_POS(query, cur_pos, 72, tmp->obsess);
+        UPDATE_QUERY_X_POS(query, cur_pos, 78, tmp->accept_passive_checks);
+        UPDATE_QUERY_X_POS(query, cur_pos, 80, tmp->event_handler_enabled);
+        UPDATE_QUERY_X_POS(query, cur_pos, 82, tmp->checks_enabled);
+        UPDATE_QUERY_X_POS(query, cur_pos, 84, tmp->retain_status_information);
+        UPDATE_QUERY_X_POS(query, cur_pos, 86, tmp->retain_nonstatus_information);
+        UPDATE_QUERY_X_POS(query, cur_pos, 88, tmp->notifications_enabled);
+        UPDATE_QUERY_X_POS(query, cur_pos, 90, tmp->obsess);
 
         WRITE_BIND_STR(WRITE_SERVICES, tmp->notes);
         WRITE_BIND_STR(WRITE_SERVICES, tmp->notes_url);
@@ -1320,6 +1336,7 @@ int ndo_write_services(int config_type)
             if (loop == 1 || loop == loops) {
                 _MYSQL_PREPARE(ndo_write_stmt[WRITE_SERVICES], query);
             }
+            WRITE_BIND(WRITE_SERVICES);
             WRITE_EXECUTE(WRITE_SERVICES);
 
             ndo_write_i[WRITE_SERVICES] = 0;
@@ -1545,6 +1562,8 @@ int ndo_write_servicegroups(int config_type)
 
     while (tmp != NULL) {
 
+        ndo_sql[GENERIC].bind_i = 0;
+
         object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_SERVICEGROUP, tmp->group_name);
 
         GENERIC_BIND_INT(object_id);
@@ -1589,6 +1608,8 @@ int ndo_write_servicegroup_members(int * servicegroup_ids)
 
         while (member != NULL) {
 
+            ndo_sql[GENERIC].bind_i = 0;
+
             object_id = ndo_get_object_id_name2(TRUE, NDO_OBJECTTYPE_SERVICE, member->host_name, member->service_description);
 
             GENERIC_BIND_INT(servicegroup_ids[i]);
@@ -1630,6 +1651,8 @@ int ndo_write_hostescalations(int config_type)
     GENERIC_RESET_BIND();
 
     for (i = 0; i < num_objects.hostescalations; i++) {
+
+        ndo_sql[GENERIC].bind_i = 0;
 
         tmp = hostescalation_ary[i];
 
@@ -1690,6 +1713,8 @@ int ndo_write_hostescalation_contactgroups(int * hostescalation_ids)
 
         while (group != NULL) {
 
+            ndo_sql[GENERIC].bind_i = 0;
+
             object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_CONTACTGROUP, group->group_name);
 
             GENERIC_BIND_INT(hostescalation_ids[i]);
@@ -1730,6 +1755,8 @@ int ndo_write_hostescalation_contacts(int * hostescalation_ids)
 
         while (cnt != NULL) {
 
+            ndo_sql[GENERIC].bind_i = 0;
+
             object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_CONTACT, cnt->contact_name);
 
             GENERIC_BIND_INT(hostescalation_ids[i]);
@@ -1769,6 +1796,8 @@ int ndo_write_serviceescalations(int config_type)
     GENERIC_RESET_BIND();
 
     for (i = 0; i < num_objects.serviceescalations; i++) {
+
+        ndo_sql[GENERIC].bind_i = 0;
 
         tmp = serviceescalation_ary[i];
 
@@ -1825,6 +1854,8 @@ int ndo_write_serviceescalation_contactgroups(int * serviceescalation_ids)
 
     for (i = 0; i < num_objects.serviceescalations; i++) {
 
+        ndo_sql[GENERIC].bind_i = 0;
+
         tmp = serviceescalation_ary[i];
 
         group = tmp->contact_groups;
@@ -1864,6 +1895,8 @@ int ndo_write_serviceescalation_contacts(int * serviceescalation_ids)
     GENERIC_RESET_BIND();
 
     for (i = 0; i < num_objects.serviceescalations; i++) {
+
+        ndo_sql[GENERIC].bind_i = 0;
 
         tmp = serviceescalation_ary[i];
 
@@ -1907,6 +1940,8 @@ int ndo_write_hostdependencies(int config_type)
     GENERIC_RESET_BIND();
 
     for (i = 0; i < num_objects.hostdependencies; i++) {
+
+        ndo_sql[GENERIC].bind_i = 0;
 
         tmp = hostdependency_ary[i];
 
@@ -1956,6 +1991,8 @@ int ndo_write_servicedependencies(int config_type)
     GENERIC_RESET_BIND();
 
     for (i = 0; i < num_objects.servicedependencies; i++) {
+
+        ndo_sql[GENERIC].bind_i = 0;
 
         tmp = servicedependency_ary[i];
 

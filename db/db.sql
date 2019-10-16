@@ -1,5 +1,6 @@
 
 SET SQL_MODE="NO_AUTO_VALUE_ON_ZERO";
+SET NAMES utf8;
 
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
@@ -16,8 +17,8 @@ CREATE TABLE IF NOT EXISTS `nagios_acknowledgements` (
   `acknowledgement_type` smallint(6) NOT NULL default '0',
   `object_id` int(11) NOT NULL default '0',
   `state` smallint(6) NOT NULL default '0',
-  `author_name` varchar(64) character set latin1 NOT NULL default '',
-  `comment_data` varchar(255) character set latin1 NOT NULL default '',
+  `author_name` varchar(64) NOT NULL default '',
+  `comment_data` varchar(255) NOT NULL default '',
   `is_sticky` smallint(6) NOT NULL default '0',
   `persistent_comment` smallint(6) NOT NULL default '0',
   `notify_contacts` smallint(6) NOT NULL default '0',
@@ -31,7 +32,7 @@ CREATE TABLE IF NOT EXISTS `nagios_commands` (
   `instance_id` smallint(6) NOT NULL default '0',
   `config_type` smallint(6) NOT NULL default '0',
   `object_id` int(11) NOT NULL default '0',
-  `command_line` TEXT character set latin1 NOT NULL default '',
+  `command_line` TEXT NOT NULL default '',
   PRIMARY KEY  (`command_id`),
   UNIQUE KEY `instance_id` (`instance_id`,`object_id`,`config_type`)
 ) ENGINE=MyISAM  COMMENT='Command definitions';
@@ -47,8 +48,8 @@ CREATE TABLE IF NOT EXISTS `nagios_commenthistory` (
   `object_id` int(11) NOT NULL default '0',
   `comment_time` datetime NOT NULL default '1970-01-01 00:00:01',
   `internal_comment_id` int(11) NOT NULL default '0',
-  `author_name` varchar(64) character set latin1 NOT NULL default '',
-  `comment_data` varchar(255) character set latin1 NOT NULL default '',
+  `author_name` varchar(64) NOT NULL default '',
+  `comment_data` varchar(255) NOT NULL default '',
   `is_persistent` smallint(6) NOT NULL default '0',
   `comment_source` smallint(6) NOT NULL default '0',
   `expires` smallint(6) NOT NULL default '0',
@@ -70,8 +71,8 @@ CREATE TABLE IF NOT EXISTS `nagios_comments` (
   `object_id` int(11) NOT NULL default '0',
   `comment_time` datetime NOT NULL default '1970-01-01 00:00:01',
   `internal_comment_id` int(11) NOT NULL default '0',
-  `author_name` varchar(64) character set latin1 NOT NULL default '',
-  `comment_data` varchar(255) character set latin1 NOT NULL default '',
+  `author_name` varchar(64) NOT NULL default '',
+  `comment_data` varchar(255) NOT NULL default '',
   `is_persistent` smallint(6) NOT NULL default '0',
   `comment_source` smallint(6) NOT NULL default '0',
   `expires` smallint(6) NOT NULL default '0',
@@ -85,7 +86,7 @@ CREATE TABLE IF NOT EXISTS `nagios_configfiles` (
   `configfile_id` int(11) NOT NULL auto_increment,
   `instance_id` smallint(6) NOT NULL default '0',
   `configfile_type` smallint(6) NOT NULL default '0',
-  `configfile_path` varchar(255) character set latin1 NOT NULL default '',
+  `configfile_path` varchar(255) NOT NULL default '',
   PRIMARY KEY  (`configfile_id`),
   UNIQUE KEY `instance_id` (`instance_id`,`configfile_type`,`configfile_path`)
 ) ENGINE=MyISAM  COMMENT='Configuration files';
@@ -95,8 +96,8 @@ CREATE TABLE IF NOT EXISTS `nagios_configfilevariables` (
   `configfilevariable_id` int(11) NOT NULL auto_increment,
   `instance_id` smallint(6) NOT NULL default '0',
   `configfile_id` int(11) NOT NULL default '0',
-  `varname` varchar(64) character set latin1 NOT NULL default '',
-  `varvalue` varchar(255) character set latin1 NOT NULL default '',
+  `varname` varchar(64) NOT NULL default '',
+  `varvalue` varchar(255) NOT NULL default '',
   PRIMARY KEY  (`configfilevariable_id`)
 ) ENGINE=MyISAM  COMMENT='Configuration file variables';
 
@@ -104,11 +105,11 @@ CREATE TABLE IF NOT EXISTS `nagios_configfilevariables` (
 CREATE TABLE IF NOT EXISTS `nagios_conninfo` (
   `conninfo_id` int(11) NOT NULL auto_increment,
   `instance_id` smallint(6) NOT NULL default '0',
-  `agent_name` varchar(32) character set latin1 NOT NULL default '',
-  `agent_version` varchar(8) character set latin1 NOT NULL default '',
-  `disposition` varchar(16) character set latin1 NOT NULL default '',
-  `connect_source` varchar(16) character set latin1 NOT NULL default '',
-  `connect_type` varchar(16) character set latin1 NOT NULL default '',
+  `agent_name` varchar(32) NOT NULL default '',
+  `agent_version` varchar(8) NOT NULL default '',
+  `disposition` varchar(16) NOT NULL default '',
+  `connect_source` varchar(16) NOT NULL default '',
+  `connect_type` varchar(16) NOT NULL default '',
   `connect_time` datetime NOT NULL default '1970-01-01 00:00:01',
   `disconnect_time` datetime NOT NULL default '1970-01-01 00:00:01',
   `last_checkin_time` datetime NOT NULL default '1970-01-01 00:00:01',
@@ -126,7 +127,7 @@ CREATE TABLE IF NOT EXISTS `nagios_contactgroups` (
   `instance_id` smallint(6) NOT NULL default '0',
   `config_type` smallint(6) NOT NULL default '0',
   `contactgroup_object_id` int(11) NOT NULL default '0',
-  `alias` varchar(255) character set latin1 NOT NULL default '',
+  `alias` varchar(255) NOT NULL default '',
   PRIMARY KEY  (`contactgroup_id`),
   UNIQUE KEY `instance_id` (`instance_id`,`config_type`,`contactgroup_object_id`)
 ) ENGINE=MyISAM  COMMENT='Contactgroup definitions';
@@ -151,7 +152,7 @@ CREATE TABLE IF NOT EXISTS `nagios_contactnotificationmethods` (
   `end_time` datetime NOT NULL default '1970-01-01 00:00:01',
   `end_time_usec` int(11) NOT NULL default '0',
   `command_object_id` int(11) NOT NULL default '0',
-  `command_args` varchar(255) character set latin1 NOT NULL default '',
+  `command_args` varchar(255) NOT NULL default '',
   PRIMARY KEY  (`contactnotificationmethod_id`),
   UNIQUE KEY `instance_id` (`instance_id`,`contactnotification_id`,`start_time`,`start_time_usec`)
 ) ENGINE=MyISAM  COMMENT='Historical record of contact notification methods';
@@ -176,9 +177,9 @@ CREATE TABLE IF NOT EXISTS `nagios_contacts` (
   `instance_id` smallint(6) NOT NULL default '0',
   `config_type` smallint(6) NOT NULL default '0',
   `contact_object_id` int(11) NOT NULL default '0',
-  `alias` varchar(64) character set latin1 NOT NULL default '',
-  `email_address` varchar(255) character set latin1 NOT NULL default '',
-  `pager_address` varchar(64) character set latin1 NOT NULL default '',
+  `alias` varchar(64) NOT NULL default '',
+  `email_address` varchar(255) NOT NULL default '',
+  `pager_address` varchar(64) NOT NULL default '',
   `minimum_importance` int(11) NOT NULL default '0',
   `host_timeperiod_object_id` int(11) NOT NULL default '0',
   `service_timeperiod_object_id` int(11) NOT NULL default '0',
@@ -223,7 +224,7 @@ CREATE TABLE IF NOT EXISTS `nagios_contact_addresses` (
   `instance_id` smallint(6) NOT NULL default '0',
   `contact_id` int(11) NOT NULL default '0',
   `address_number` smallint(6) NOT NULL default '0',
-  `address` varchar(255) character set latin1 NOT NULL default '',
+  `address` varchar(255) NOT NULL default '',
   PRIMARY KEY  (`contact_address_id`),
   UNIQUE KEY `contact_id` (`contact_id`,`address_number`)
 ) ENGINE=MyISAM COMMENT='Contact addresses';
@@ -235,7 +236,7 @@ CREATE TABLE IF NOT EXISTS `nagios_contact_notificationcommands` (
   `contact_id` int(11) NOT NULL default '0',
   `notification_type` smallint(6) NOT NULL default '0',
   `command_object_id` int(11) NOT NULL default '0',
-  `command_args` varchar(255) character set latin1 NOT NULL default '',
+  `command_args` varchar(255) NOT NULL default '',
   PRIMARY KEY  (`contact_notificationcommand_id`),
   UNIQUE KEY `contact_id` (`contact_id`,`notification_type`,`command_object_id`,`command_args`)
 ) ENGINE=MyISAM  COMMENT='Contact host and service notification commands';
@@ -247,8 +248,8 @@ CREATE TABLE IF NOT EXISTS `nagios_customvariables` (
   `object_id` int(11) NOT NULL default '0',
   `config_type` smallint(6) NOT NULL default '0',
   `has_been_modified` smallint(6) NOT NULL default '0',
-  `varname` varchar(255) character set latin1 NOT NULL default '',
-  `varvalue` varchar(255) character set latin1 NOT NULL default '',
+  `varname` varchar(255) NOT NULL default '',
+  `varvalue` varchar(255) NOT NULL default '',
   PRIMARY KEY  (`customvariable_id`),
   UNIQUE KEY `object_id_2` (`object_id`,`config_type`,`varname`),
   KEY `varname` (`varname`)
@@ -261,8 +262,8 @@ CREATE TABLE IF NOT EXISTS `nagios_customvariablestatus` (
   `object_id` int(11) NOT NULL default '0',
   `status_update_time` datetime NOT NULL default '1970-01-01 00:00:01',
   `has_been_modified` smallint(6) NOT NULL default '0',
-  `varname` varchar(255) character set latin1 NOT NULL default '',
-  `varvalue` varchar(255) character set latin1 NOT NULL default '',
+  `varname` varchar(255) NOT NULL default '',
+  `varvalue` varchar(255) NOT NULL default '',
   PRIMARY KEY  (`customvariablestatus_id`),
   UNIQUE KEY `object_id_2` (`object_id`,`varname`),
   KEY `varname` (`varname`)
@@ -270,8 +271,8 @@ CREATE TABLE IF NOT EXISTS `nagios_customvariablestatus` (
 
 
 CREATE TABLE IF NOT EXISTS `nagios_dbversion` (
-  `name` varchar(10) character set latin1 NOT NULL default '',
-  `version` varchar(10) character set latin1 NOT NULL default ''
+  `name` varchar(10) NOT NULL default '',
+  `version` varchar(10) NOT NULL default ''
 ) ENGINE=MyISAM;
 
 
@@ -281,8 +282,8 @@ CREATE TABLE IF NOT EXISTS `nagios_downtimehistory` (
   `downtime_type` smallint(6) NOT NULL default '0',
   `object_id` int(11) NOT NULL default '0',
   `entry_time` datetime NOT NULL default '1970-01-01 00:00:01',
-  `author_name` varchar(64) character set latin1 NOT NULL default '',
-  `comment_data` varchar(255) character set latin1 NOT NULL default '',
+  `author_name` varchar(64) NOT NULL default '',
+  `comment_data` varchar(255) NOT NULL default '',
   `internal_downtime_id` int(11) NOT NULL default '0',
   `triggered_by_id` int(11) NOT NULL default '0',
   `is_fixed` smallint(6) NOT NULL default '0',
@@ -312,13 +313,13 @@ CREATE TABLE IF NOT EXISTS `nagios_eventhandlers` (
   `end_time` datetime NOT NULL default '1970-01-01 00:00:01',
   `end_time_usec` int(11) NOT NULL default '0',
   `command_object_id` int(11) NOT NULL default '0',
-  `command_args` varchar(255) character set latin1 NOT NULL default '',
-  `command_line` TEXT character set latin1 NOT NULL default '',
+  `command_args` varchar(255) NOT NULL default '',
+  `command_line` TEXT NOT NULL default '',
   `timeout` smallint(6) NOT NULL default '0',
   `early_timeout` smallint(6) NOT NULL default '0',
   `execution_time` double NOT NULL default '0',
   `return_code` smallint(6) NOT NULL default '0',
-  `output` varchar(255) character set latin1 NOT NULL default '',
+  `output` varchar(255) NOT NULL default '',
   `long_output` TEXT NOT NULL default '',
   PRIMARY KEY  (`eventhandler_id`),
   UNIQUE KEY `instance_id` (`instance_id`,`object_id`,`start_time`,`start_time_usec`)
@@ -330,8 +331,8 @@ CREATE TABLE IF NOT EXISTS `nagios_externalcommands` (
   `instance_id` smallint(6) NOT NULL default '0',
   `entry_time` datetime NOT NULL default '1970-01-01 00:00:01',
   `command_type` smallint(6) NOT NULL default '0',
-  `command_name` varchar(128) character set latin1 NOT NULL default '',
-  `command_args` varchar(255) character set latin1 NOT NULL default '',
+  `command_name` varchar(128) NOT NULL default '',
+  `command_args` varchar(255) NOT NULL default '',
   PRIMARY KEY  (`externalcommand_id`)
 ) ENGINE=MyISAM  COMMENT='Historical record of processed external commands';
 
@@ -369,16 +370,16 @@ CREATE TABLE IF NOT EXISTS `nagios_hostchecks` (
   `end_time` datetime NOT NULL default '1970-01-01 00:00:01',
   `end_time_usec` int(11) NOT NULL default '0',
   `command_object_id` int(11) NOT NULL default '0',
-  `command_args` varchar(255) character set latin1 NOT NULL default '',
-  `command_line` TEXT character set latin1 NOT NULL default '',
+  `command_args` varchar(255) NOT NULL default '',
+  `command_line` TEXT NOT NULL default '',
   `timeout` smallint(6) NOT NULL default '0',
   `early_timeout` smallint(6) NOT NULL default '0',
   `execution_time` double NOT NULL default '0',
   `latency` double NOT NULL default '0',
   `return_code` smallint(6) NOT NULL default '0',
-  `output` varchar(255) character set latin1 NOT NULL default '',
+  `output` varchar(255) NOT NULL default '',
   `long_output` TEXT NOT NULL default '',
-  `perfdata` TEXT character set latin1 NOT NULL default '',
+  `perfdata` TEXT NOT NULL default '',
   PRIMARY KEY  (`hostcheck_id`),
   UNIQUE KEY `instance_id` (`instance_id`,`host_object_id`,`start_time`,`start_time_usec`)
 ) ENGINE=MyISAM  COMMENT='Historical host checks';
@@ -443,7 +444,7 @@ CREATE TABLE IF NOT EXISTS `nagios_hostgroups` (
   `instance_id` smallint(6) NOT NULL default '0',
   `config_type` smallint(6) NOT NULL default '0',
   `hostgroup_object_id` int(11) NOT NULL default '0',
-  `alias` varchar(255) character set latin1 NOT NULL default '',
+  `alias` varchar(255) NOT NULL default '',
   PRIMARY KEY  (`hostgroup_id`),
   UNIQUE KEY `instance_id` (`instance_id`,`hostgroup_object_id`)
 ) ENGINE=MyISAM  COMMENT='Hostgroup definitions';
@@ -464,17 +465,17 @@ CREATE TABLE IF NOT EXISTS `nagios_hosts` (
   `instance_id` smallint(6) NOT NULL default '0',
   `config_type` smallint(6) NOT NULL default '0',
   `host_object_id` int(11) NOT NULL default '0',
-  `alias` varchar(64) character set latin1 NOT NULL default '',
-  `display_name` varchar(64) character set latin1 NOT NULL default '',
-  `address` varchar(128) character set latin1 NOT NULL default '',
+  `alias` varchar(64) NOT NULL default '',
+  `display_name` varchar(64) NOT NULL default '',
+  `address` varchar(128) NOT NULL default '',
   `importance` int(11) NOT NULL default '0',
   `check_command_object_id` int(11) NOT NULL default '0',
-  `check_command_args` varchar(255) character set latin1 NOT NULL default '',
+  `check_command_args` varchar(255) NOT NULL default '',
   `eventhandler_command_object_id` int(11) NOT NULL default '0',
-  `eventhandler_command_args` varchar(255) character set latin1 NOT NULL default '',
+  `eventhandler_command_args` varchar(255) NOT NULL default '',
   `notification_timeperiod_object_id` int(11) NOT NULL default '0',
   `check_timeperiod_object_id` int(11) NOT NULL default '0',
-  `failure_prediction_options` varchar(64) character set latin1 NOT NULL default '',
+  `failure_prediction_options` varchar(64) NOT NULL default '',
   `check_interval` double NOT NULL default '0',
   `retry_interval` double NOT NULL default '0',
   `max_check_attempts` smallint(6) NOT NULL default '0',
@@ -505,13 +506,13 @@ CREATE TABLE IF NOT EXISTS `nagios_hosts` (
   `notifications_enabled` smallint(6) NOT NULL default '0',
   `obsess_over_host` smallint(6) NOT NULL default '0',
   `failure_prediction_enabled` smallint(6) NOT NULL default '0',
-  `notes` varchar(255) character set latin1 NOT NULL default '',
-  `notes_url` varchar(255) character set latin1 NOT NULL default '',
-  `action_url` varchar(255) character set latin1 NOT NULL default '',
-  `icon_image` varchar(255) character set latin1 NOT NULL default '',
-  `icon_image_alt` varchar(255) character set latin1 NOT NULL default '',
-  `vrml_image` varchar(255) character set latin1 NOT NULL default '',
-  `statusmap_image` varchar(255) character set latin1 NOT NULL default '',
+  `notes` varchar(255) NOT NULL default '',
+  `notes_url` varchar(255) NOT NULL default '',
+  `action_url` varchar(255) NOT NULL default '',
+  `icon_image` varchar(255) NOT NULL default '',
+  `icon_image_alt` varchar(255) NOT NULL default '',
+  `vrml_image` varchar(255) NOT NULL default '',
+  `statusmap_image` varchar(255) NOT NULL default '',
   `have_2d_coords` smallint(6) NOT NULL default '0',
   `x_2d` smallint(6) NOT NULL default '0',
   `y_2d` smallint(6) NOT NULL default '0',
@@ -530,9 +531,9 @@ CREATE TABLE IF NOT EXISTS `nagios_hoststatus` (
   `instance_id` smallint(6) NOT NULL default '0',
   `host_object_id` int(11) NOT NULL default '0',
   `status_update_time` datetime NOT NULL default '1970-01-01 00:00:01',
-  `output` varchar(255) character set latin1 NOT NULL default '',
+  `output` varchar(255) NOT NULL default '',
   `long_output` TEXT NOT NULL default '',
-  `perfdata` TEXT character set latin1 NOT NULL default '',
+  `perfdata` TEXT NOT NULL default '',
   `current_state` smallint(6) NOT NULL default '0',
   `has_been_checked` smallint(6) NOT NULL default '0',
   `should_be_scheduled` smallint(6) NOT NULL default '0',
@@ -568,8 +569,8 @@ CREATE TABLE IF NOT EXISTS `nagios_hoststatus` (
   `process_performance_data` smallint(6) NOT NULL default '0',
   `obsess_over_host` smallint(6) NOT NULL default '0',
   `modified_host_attributes` int(11) NOT NULL default '0',
-  `event_handler` varchar(255) character set latin1 NOT NULL default '',
-  `check_command` varchar(255) character set latin1 NOT NULL default '',
+  `event_handler` varchar(255) NOT NULL default '',
+  `check_command` varchar(255) NOT NULL default '',
   `normal_check_interval` double NOT NULL default '0',
   `retry_check_interval` double NOT NULL default '0',
   `check_timeperiod_object_id` int(11) NOT NULL default '0',
@@ -627,8 +628,8 @@ CREATE TABLE IF NOT EXISTS `nagios_host_parenthosts` (
 
 CREATE TABLE IF NOT EXISTS `nagios_instances` (
   `instance_id` smallint(6) NOT NULL auto_increment,
-  `instance_name` varchar(64) character set latin1 NOT NULL default '',
-  `instance_description` varchar(128) character set latin1 NOT NULL default '',
+  `instance_name` varchar(64) NOT NULL default '',
+  `instance_description` varchar(128) NOT NULL default '',
   PRIMARY KEY  (`instance_id`)
 ) ENGINE=MyISAM  COMMENT='Location names of various Nagios installations';
 
@@ -640,7 +641,7 @@ CREATE TABLE IF NOT EXISTS `nagios_logentries` (
   `entry_time` datetime NOT NULL default '1970-01-01 00:00:01',
   `entry_time_usec` int(11) NOT NULL default '0',
   `logentry_type` int(11) NOT NULL default '0',
-  `logentry_data` varchar(255) character set latin1 NOT NULL default '',
+  `logentry_data` varchar(255) NOT NULL default '',
   `realtime_data` smallint(6) NOT NULL default '0',
   `inferred_data_extracted` smallint(6) NOT NULL default '0',
   PRIMARY KEY  (`logentry_id`),
@@ -659,7 +660,7 @@ CREATE TABLE IF NOT EXISTS `nagios_notifications` (
   `end_time` datetime NOT NULL default '1970-01-01 00:00:01',
   `end_time_usec` int(11) NOT NULL default '0',
   `state` smallint(6) NOT NULL default '0',
-  `output` varchar(255) character set latin1 NOT NULL default '',
+  `output` varchar(255) NOT NULL default '',
   `long_output` TEXT NOT NULL default '',
   `escalated` smallint(6) NOT NULL default '0',
   `contacts_notified` smallint(6) NOT NULL default '0',
@@ -672,11 +673,11 @@ CREATE TABLE IF NOT EXISTS `nagios_objects` (
   `object_id` int(11) NOT NULL auto_increment,
   `instance_id` smallint(6) NOT NULL default '0',
   `objecttype_id` smallint(6) NOT NULL default '0',
-  `name1` varchar(128) character set latin1 NOT NULL default '',
-  `name2` varchar(128) character set latin1 default NULL,
+  `name1` varchar(128) NOT NULL default '',
+  `name2` varchar(128) NOT NULL default '',
   `is_active` smallint(6) NOT NULL default '0',
   PRIMARY KEY  (`object_id`),
-  KEY `objecttype_id` (`objecttype_id`,`name1`,`name2`)
+  UNIQUE KEY `uniq_object` (`objecttype_id`,`name1`,`name2`)
 ) ENGINE=MyISAM  COMMENT='Current and historical objects of all kinds';
 
 
@@ -687,9 +688,9 @@ CREATE TABLE IF NOT EXISTS `nagios_processevents` (
   `event_time` datetime NOT NULL default '1970-01-01 00:00:01',
   `event_time_usec` int(11) NOT NULL default '0',
   `process_id` int(11) NOT NULL default '0',
-  `program_name` varchar(16) character set latin1 NOT NULL default '',
-  `program_version` varchar(20) character set latin1 NOT NULL default '',
-  `program_date` varchar(10) character set latin1 NOT NULL default '',
+  `program_name` varchar(16) NOT NULL default '',
+  `program_version` varchar(20) NOT NULL default '',
+  `program_date` varchar(10) NOT NULL default '',
   PRIMARY KEY  (`processevent_id`)
 ) ENGINE=MyISAM  COMMENT='Historical Nagios process events';
 
@@ -718,8 +719,8 @@ CREATE TABLE IF NOT EXISTS `nagios_programstatus` (
   `obsess_over_services` smallint(6) NOT NULL default '0',
   `modified_host_attributes` int(11) NOT NULL default '0',
   `modified_service_attributes` int(11) NOT NULL default '0',
-  `global_host_event_handler` varchar(255) character set latin1 NOT NULL default '',
-  `global_service_event_handler` varchar(255) character set latin1 NOT NULL default '',
+  `global_host_event_handler` varchar(255) NOT NULL default '',
+  `global_service_event_handler` varchar(255) NOT NULL default '',
   PRIMARY KEY  (`programstatus_id`),
   UNIQUE KEY `instance_id` (`instance_id`)
 ) ENGINE=MyISAM  COMMENT='Current program status information';
@@ -728,8 +729,8 @@ CREATE TABLE IF NOT EXISTS `nagios_programstatus` (
 CREATE TABLE IF NOT EXISTS `nagios_runtimevariables` (
   `runtimevariable_id` int(11) NOT NULL auto_increment,
   `instance_id` smallint(6) NOT NULL default '0',
-  `varname` varchar(64) character set latin1 NOT NULL default '',
-  `varvalue` varchar(255) character set latin1 NOT NULL default '',
+  `varname` varchar(64) NOT NULL default '',
+  `varvalue` varchar(255) NOT NULL default '',
   PRIMARY KEY  (`runtimevariable_id`),
   UNIQUE KEY `instance_id` (`instance_id`,`varname`)
 ) ENGINE=MyISAM  COMMENT='Runtime variables from the Nagios daemon';
@@ -741,8 +742,8 @@ CREATE TABLE IF NOT EXISTS `nagios_scheduleddowntime` (
   `downtime_type` smallint(6) NOT NULL default '0',
   `object_id` int(11) NOT NULL default '0',
   `entry_time` datetime NOT NULL default '1970-01-01 00:00:01',
-  `author_name` varchar(64) character set latin1 NOT NULL default '',
-  `comment_data` varchar(255) character set latin1 NOT NULL default '',
+  `author_name` varchar(64) NOT NULL default '',
+  `comment_data` varchar(255) NOT NULL default '',
   `internal_downtime_id` int(11) NOT NULL default '0',
   `triggered_by_id` int(11) NOT NULL default '0',
   `is_fixed` smallint(6) NOT NULL default '0',
@@ -771,16 +772,16 @@ CREATE TABLE IF NOT EXISTS `nagios_servicechecks` (
   `end_time` datetime NOT NULL default '1970-01-01 00:00:01',
   `end_time_usec` int(11) NOT NULL default '0',
   `command_object_id` int(11) NOT NULL default '0',
-  `command_args` varchar(255) character set latin1 NOT NULL default '',
-  `command_line` TEXT character set latin1 NOT NULL default '',
+  `command_args` varchar(255) NOT NULL default '',
+  `command_line` TEXT NOT NULL default '',
   `timeout` smallint(6) NOT NULL default '0',
   `early_timeout` smallint(6) NOT NULL default '0',
   `execution_time` double NOT NULL default '0',
   `latency` double NOT NULL default '0',
   `return_code` smallint(6) NOT NULL default '0',
-  `output` varchar(255) character set latin1 NOT NULL default '',
+  `output` varchar(255) NOT NULL default '',
   `long_output` TEXT NOT NULL default '',
-  `perfdata` TEXT character set latin1 NOT NULL default '',
+  `perfdata` TEXT NOT NULL default '',
   PRIMARY KEY  (`servicecheck_id`),
   KEY `instance_id` (`instance_id`),
   KEY `service_object_id` (`service_object_id`),
@@ -849,7 +850,7 @@ CREATE TABLE IF NOT EXISTS `nagios_servicegroups` (
   `instance_id` smallint(6) NOT NULL default '0',
   `config_type` smallint(6) NOT NULL default '0',
   `servicegroup_object_id` int(11) NOT NULL default '0',
-  `alias` varchar(255) character set latin1 NOT NULL default '',
+  `alias` varchar(255) NOT NULL default '',
   PRIMARY KEY  (`servicegroup_id`),
   UNIQUE KEY `instance_id` (`instance_id`,`config_type`,`servicegroup_object_id`)
 ) ENGINE=MyISAM  COMMENT='Servicegroup definitions';
@@ -871,15 +872,15 @@ CREATE TABLE IF NOT EXISTS `nagios_services` (
   `config_type` smallint(6) NOT NULL default '0',
   `host_object_id` int(11) NOT NULL default '0',
   `service_object_id` int(11) NOT NULL default '0',
-  `display_name` varchar(64) character set latin1 NOT NULL default '',
+  `display_name` varchar(64) NOT NULL default '',
   `importance` int(11) NOT NULL default '0',
   `check_command_object_id` int(11) NOT NULL default '0',
-  `check_command_args` varchar(255) character set latin1 NOT NULL default '',
+  `check_command_args` varchar(255) NOT NULL default '',
   `eventhandler_command_object_id` int(11) NOT NULL default '0',
-  `eventhandler_command_args` varchar(255) character set latin1 NOT NULL default '',
+  `eventhandler_command_args` varchar(255) NOT NULL default '',
   `notification_timeperiod_object_id` int(11) NOT NULL default '0',
   `check_timeperiod_object_id` int(11) NOT NULL default '0',
-  `failure_prediction_options` varchar(64) character set latin1 NOT NULL default '',
+  `failure_prediction_options` varchar(64) NOT NULL default '',
   `check_interval` double NOT NULL default '0',
   `retry_interval` double NOT NULL default '0',
   `max_check_attempts` smallint(6) NOT NULL default '0',
@@ -914,11 +915,11 @@ CREATE TABLE IF NOT EXISTS `nagios_services` (
   `notifications_enabled` smallint(6) NOT NULL default '0',
   `obsess_over_service` smallint(6) NOT NULL default '0',
   `failure_prediction_enabled` smallint(6) NOT NULL default '0',
-  `notes` varchar(255) character set latin1 NOT NULL default '',
-  `notes_url` varchar(255) character set latin1 NOT NULL default '',
-  `action_url` varchar(255) character set latin1 NOT NULL default '',
-  `icon_image` varchar(255) character set latin1 NOT NULL default '',
-  `icon_image_alt` varchar(255) character set latin1 NOT NULL default '',
+  `notes` varchar(255) NOT NULL default '',
+  `notes_url` varchar(255) NOT NULL default '',
+  `action_url` varchar(255) NOT NULL default '',
+  `icon_image` varchar(255) NOT NULL default '',
+  `icon_image_alt` varchar(255) NOT NULL default '',
   PRIMARY KEY  (`service_id`),
   UNIQUE KEY `instance_id` (`instance_id`,`config_type`,`service_object_id`),
   KEY `service_object_id` (`service_object_id`)
@@ -930,9 +931,9 @@ CREATE TABLE IF NOT EXISTS `nagios_servicestatus` (
   `instance_id` smallint(6) NOT NULL default '0',
   `service_object_id` int(11) NOT NULL default '0',
   `status_update_time` datetime NOT NULL default '1970-01-01 00:00:01',
-  `output` varchar(255) character set latin1 NOT NULL default '',
+  `output` varchar(255) NOT NULL default '',
   `long_output` TEXT NOT NULL default '',
-  `perfdata` TEXT character set latin1 NOT NULL default '',
+  `perfdata` TEXT NOT NULL default '',
   `current_state` smallint(6) NOT NULL default '0',
   `has_been_checked` smallint(6) NOT NULL default '0',
   `should_be_scheduled` smallint(6) NOT NULL default '0',
@@ -969,8 +970,8 @@ CREATE TABLE IF NOT EXISTS `nagios_servicestatus` (
   `process_performance_data` smallint(6) NOT NULL default '0',
   `obsess_over_service` smallint(6) NOT NULL default '0',
   `modified_service_attributes` int(11) NOT NULL default '0',
-  `event_handler` varchar(255) character set latin1 NOT NULL default '',
-  `check_command` varchar(255) character set latin1 NOT NULL default '',
+  `event_handler` varchar(255) NOT NULL default '',
+  `check_command` varchar(255) NOT NULL default '',
   `normal_check_interval` double NOT NULL default '0',
   `retry_check_interval` double NOT NULL default '0',
   `check_timeperiod_object_id` int(11) NOT NULL default '0',
@@ -1039,7 +1040,7 @@ CREATE TABLE IF NOT EXISTS `nagios_statehistory` (
   `max_check_attempts` smallint(6) NOT NULL default '0',
   `last_state` smallint(6) NOT NULL default '-1',
   `last_hard_state` smallint(6) NOT NULL default '-1',
-  `output` varchar(255) character set latin1 NOT NULL default '',
+  `output` varchar(255) NOT NULL default '',
   `long_output` TEXT NOT NULL default '',
   PRIMARY KEY  (`statehistory_id`)
 ) ENGINE=MyISAM COMMENT='Historical host and service state changes';
@@ -1052,12 +1053,12 @@ CREATE TABLE IF NOT EXISTS `nagios_systemcommands` (
   `start_time_usec` int(11) NOT NULL default '0',
   `end_time` datetime NOT NULL default '1970-01-01 00:00:01',
   `end_time_usec` int(11) NOT NULL default '0',
-  `command_line` TEXT character set latin1 NOT NULL default '',
+  `command_line` TEXT NOT NULL default '',
   `timeout` smallint(6) NOT NULL default '0',
   `early_timeout` smallint(6) NOT NULL default '0',
   `execution_time` double NOT NULL default '0',
   `return_code` smallint(6) NOT NULL default '0',
-  `output` varchar(255) character set latin1 NOT NULL default '',
+  `output` varchar(255) NOT NULL default '',
   `long_output` TEXT NOT NULL default '',
   PRIMARY KEY  (`systemcommand_id`),
   KEY `instance_id` (`instance_id`),
@@ -1108,7 +1109,7 @@ CREATE TABLE IF NOT EXISTS `nagios_timeperiods` (
   `instance_id` smallint(6) NOT NULL default '0',
   `config_type` smallint(6) NOT NULL default '0',
   `timeperiod_object_id` int(11) NOT NULL default '0',
-  `alias` varchar(255) character set latin1 NOT NULL default '',
+  `alias` varchar(255) NOT NULL default '',
   PRIMARY KEY  (`timeperiod_id`),
   UNIQUE KEY `instance_id` (`instance_id`,`config_type`,`timeperiod_object_id`)
 ) ENGINE=MyISAM  COMMENT='Timeperiod definitions';

@@ -49,22 +49,22 @@
 
 #define trace_func_void() \
 do { \
-    ndo_debug_stack_frames++; \
     trace("%s", "begin function (void args)"); \
+    ndo_debug_stack_frames++; \
 } while (0)
 
 
 #define trace_func_args(fmt, ...) \
 do { \
-    ndo_debug_stack_frames++; \
     trace(fmt, __VA_ARGS__); \
+    ndo_debug_stack_frames++; \
 } while (0)
 
 
 #define trace_func_handler(_struct) \
 do { \
-    ndo_debug_stack_frames++; \
     trace("type=%d, data(type=%d,f=%d,a=%d,t=%ld.%06ld)", type, ((nebstruct_## _struct ##_data *)d)->type, ((nebstruct_## _struct ##_data *)d)->flags, ((nebstruct_## _struct ##_data *)d)->attr, ((nebstruct_## _struct ##_data *)d)->timestamp.tv_sec, ((nebstruct_## _struct ##_data *)d)->timestamp.tv_usec); \
+    ndo_debug_stack_frames++; \
 } while (0)
 
 
@@ -281,10 +281,10 @@ int write_to_log(char * buffer, unsigned long l, time_t * t);
 
 void ndo_calculate_startup_hash();
 
-unsigned long ndo_get_object_id_name1(int insert, int object_type, char * name1);
-unsigned long ndo_get_object_id_name2(int insert, int object_type, char * name1, char * name2);
-unsigned long ndo_insert_object_id_name1(int object_type, char * name1);
-unsigned long ndo_insert_object_id_name2(int object_type, char * name1, char * name2);
+long ndo_get_object_id_name1(int insert, int object_type, char * name1);
+long ndo_get_object_id_name2(int insert, int object_type, char * name1, char * name2);
+long ndo_insert_object_id_name1(int object_type, char * name1);
+long ndo_insert_object_id_name2(int object_type, char * name1, char * name2);
 
 int send_subquery(int stmt, int * counter, char * query, char * query_on_update, size_t * query_len, size_t query_base_len, size_t query_on_update_len);
 
