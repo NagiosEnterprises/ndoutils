@@ -285,8 +285,8 @@ int ndo_handle_host_check(int type, void * d)
     int command_object_id = 0;
 
     /* this is the only data we care about / need */
-    if (type != NEBTYPE_HOSTCHECK_PROCESSED) {
-        trace_return_ok_cond("type != NEBTYPE_HOSTCHECK_PROCESSED");
+    if (data->type != NEBTYPE_HOSTCHECK_PROCESSED) {
+        trace_return_ok_cond("data->type != NEBTYPE_HOSTCHECK_PROCESSED");
     }
 
     object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_HOST, data->host_name);
@@ -333,8 +333,8 @@ int ndo_handle_service_check(int type, void * d)
     int command_object_id = 0;
 
     /* this is the only data we care about / need */
-    if (type != NEBTYPE_SERVICECHECK_PROCESSED) {
-        trace_return_ok_cond("type != NEBTYPE_SERVICECHECK_PROCESSED");
+    if (data->type != NEBTYPE_SERVICECHECK_PROCESSED) {
+        trace_return_ok_cond("data->type != NEBTYPE_SERVICECHECK_PROCESSED");
     }
 
     object_id = ndo_get_object_id_name2(TRUE, NDO_OBJECTTYPE_SERVICE, data->host_name, data->service_description);
