@@ -85,6 +85,110 @@ int ndo_table_genocide()
 int ndo_write_config_files()
 {
     trace_func_void();
+
+    int result = ndo_process_nagios_config();
+
+    trace_return("%d", result);
+}
+
+
+int ndo_process_nagios_config()
+{
+    trace_func_void();
+
+    if (config_file == NULL) {
+        ndo_log("No nagios config_file found!");
+        trace_return_error_cond("config_file == NULL");
+    }
+
+    GENERIC_RESET_SQL();
+    GENERIC_RESET_BIND();
+
+    GENERIC_SET_SQL("INSERT INTO nagios_configfiles (instance_id, configfile_type, configfile_path) VALUES (1, 0, ?)");
+
+    GENERIC_PREPARE();
+
+    GENERIC_BIND_STR(config_file);
+
+    GENERIC_BIND();
+    GENERIC_EXECUTE();
+
+    nagios_config_file_id = mysql_insert_id(mysql_connection);
+
+    GENERIC_RESET_SQL();
+    GENERIC_RESET_BIND();
+
+    GENERIC_SET_SQL("INSERT INTO nagios_configfilevariables (instance_id, configfile_id, varname, varvalue) VALUES (1, ?, ?, ?)");
+
+    GENERIC_PREPARE();
+
+    ndo_process_file(config_file, ndo_process_nagios_config_line);
+
+    trace_return_ok();
+}
+
+
+int ndo_process_nagios_config_line(char * line)
+{
+    trace_func_args("line=%s", line);
+
+    char * key = NULL;
+    char * val = NULL;
+
+    if (line == NULL) {
+        trace_return_ok_cond("line == NULL");
+    }
+
+    key = strtok(line, "=");
+    if (key == NULL) {
+        trace_return_ok_cond("key == NULL");
+    }
+
+    val = strtok(NULL, "\0");
+    if (val == NULL) {
+        trace_return_ok_cond("val == NULL");
+    }
+
+    key = ndo_strip(key);
+    if (key == NULL || strlen(key) == 0) {
+        trace_return_ok_cond("key == NULL || strlen(key) == 0");
+    }
+
+    val = ndo_strip(val);
+
+    if (val == NULL || strlen(val) == 0) {
+
+        free(key);
+
+        if (val != NULL) {
+            free(val);
+        }
+
+        trace_return_ok_cond("val == NULL || strlen(val) == 0");
+    }
+
+    /* skip comments */
+    if (key[0] == '#' || key[0] == ';') {
+        free(key);
+        free(val);
+        trace_return_ok_cond("key[0] == '#' || key[0] == ';'");
+    }
+
+    else {
+
+        ndo_sql[GENERIC].bind_i = 0;
+
+        GENERIC_BIND_INT(nagios_config_file_id);
+        GENERIC_BIND_STR(key);
+        GENERIC_BIND_STR(val);
+
+        GENERIC_BIND();
+        GENERIC_EXECUTE();
+    }
+
+    free(key);
+    free(val);
+
     trace_return_ok();
 }
 
@@ -114,6 +218,87 @@ int ndo_write_object_config(int config_type)
 int ndo_write_runtime_variables()
 {
     trace_func_void();
+
+    char * varname[17] = { NULL };
+
+    GENERIC_RESET_SQL();
+    GENERIC_RESET_BIND();
+
+    GENERIC_SET_SQL("INSERT INTO nagios_runtimevariables (instance_id, varname, varvalue) VALUES (1, ?, ?),(1, ?, ?),(1, ?, ?),(1, ?, ?),(1, ?, ?),(1, ?, ?),(1, ?, ?),(1, ?, ?),(1, ?, ?),(1, ?, ?),(1, ?, ?),(1, ?, ?),(1, ?, ?),(1, ?, ?),(1, ?, ?),(1, ?, ?),(1, ?, ?) ON DUPLICATE KEY UPDATE varname = VALUES(varname), varvalue = VALUES(varvalue)");
+
+    GENERIC_PREPARE();
+
+    varname[0] = "total_services";
+    GENERIC_BIND_STR(varname[0]);
+    GENERIC_BIND_INT(scheduling_info.total_services);
+
+    varname[1] = "total_scheduled_services";
+    GENERIC_BIND_STR(varname[1]);
+    GENERIC_BIND_INT(scheduling_info.total_scheduled_services);
+
+    varname[2] = "total_hosts";
+    GENERIC_BIND_STR(varname[2]);
+    GENERIC_BIND_INT(scheduling_info.total_hosts);
+
+    varname[3] = "total_scheduled_hosts";
+    GENERIC_BIND_STR(varname[3]);
+    GENERIC_BIND_INT(scheduling_info.total_scheduled_hosts);
+
+    varname[4] = "average_services_per_host";
+    GENERIC_BIND_STR(varname[4]);
+    GENERIC_BIND_DOUBLE(scheduling_info.average_services_per_host);
+
+    varname[5] = "average_scheduled_services_per_host";
+    GENERIC_BIND_STR(varname[5]);
+    GENERIC_BIND_DOUBLE(scheduling_info.average_scheduled_services_per_host);
+
+    varname[6] = "service_check_interval_total";
+    GENERIC_BIND_STR(varname[6]);
+    GENERIC_BIND_LONG(scheduling_info.service_check_interval_total);
+
+    varname[7] = "host_check_interval_total";
+    GENERIC_BIND_STR(varname[7]);
+    GENERIC_BIND_LONG(scheduling_info.host_check_interval_total);
+
+    varname[8] = "average_service_check_interval";
+    GENERIC_BIND_STR(varname[8]);
+    GENERIC_BIND_DOUBLE(scheduling_info.average_service_check_interval);
+
+    varname[9] = "average_host_check_interval";
+    GENERIC_BIND_STR(varname[9]);
+    GENERIC_BIND_DOUBLE(scheduling_info.average_host_check_interval);
+
+    varname[10] = "average_service_inter_check_delay";
+    GENERIC_BIND_STR(varname[10]);
+    GENERIC_BIND_DOUBLE(scheduling_info.average_service_inter_check_delay);
+
+    varname[11] = "average_host_inter_check_delay";
+    GENERIC_BIND_STR(varname[11]);
+    GENERIC_BIND_DOUBLE(scheduling_info.average_host_inter_check_delay);
+
+    varname[12] = "service_inter_check_delay";
+    GENERIC_BIND_STR(varname[12]);
+    GENERIC_BIND_DOUBLE(scheduling_info.service_inter_check_delay);
+
+    varname[13] = "host_inter_check_delay";
+    GENERIC_BIND_STR(varname[13]);
+    GENERIC_BIND_DOUBLE(scheduling_info.host_inter_check_delay);
+
+    varname[14] = "service_interleave_factor";
+    GENERIC_BIND_STR(varname[14]);
+    GENERIC_BIND_INT(scheduling_info.service_interleave_factor);
+
+    varname[15] = "max_service_check_spread";
+    GENERIC_BIND_STR(varname[15]);
+    GENERIC_BIND_INT(scheduling_info.max_service_check_spread);
+
+    varname[16] = "max_host_check_spread";
+    GENERIC_BIND_STR(varname[16]);
+    GENERIC_BIND_INT(scheduling_info.max_host_check_spread);
+
+    GENERIC_BIND();
+    GENERIC_EXECUTE();
+
     trace_return_ok();
 }
 

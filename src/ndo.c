@@ -110,6 +110,7 @@ char * ndo_config_file = NULL;
 
 long ndo_last_notification_id = 0L;
 long ndo_last_contact_notification_id = 0L;
+long nagios_config_file_id = 0L;
 
 int ndo_debug_stack_frames = 0;
 
@@ -173,10 +174,15 @@ int nebmodule_init(int flags, char * args, void * handle)
        mysql options are valid for the upcoming session */
     ndo_initialize_mysql_connection();
 
-    result = ndo_process_config_file();
+    result = ndo_process_file(ndo_config_file, ndo_process_ndo_config_line);
     if (result != NDO_OK) {
-        trace_return_error_cond("trace_func_args() != NDO_OK");
+        trace_return_error_cond("ndo_process_file() != NDO_OK");
     }
+
+    result = ndo_config_sanity_check();
+    if (result != NDO_OK) {
+        trace_return_error_cond("ndo_config_sanity_check() != NDO_OK");
+    }    
 
     result = ndo_initialize_database();
     if (result != NDO_OK) {
@@ -294,27 +300,28 @@ int ndo_process_arguments(char * args)
 }
 
 
-char * ndo_read_config_file()
+int ndo_process_file(char * file, int (* process_line_cb)(char * line))
 {
-    trace_func_void();
+    trace_func_args("file=%s", file);
 
     FILE * fp = NULL;
     char * contents = NULL;
     int file_size = 0;
     int read_size = 0;
+    int process_result = 0;
 
-    if (ndo_config_file == NULL) {
-        ndo_log("No configuration specified");
-        trace_return_null_cond("ndo_config_file == NULL");
+    if (file == NULL) {
+        ndo_log("NULL file passed, skipping ndo_process_file()");
+        trace_return_error_cond("file == NULL");
     }
 
-    fp = fopen(ndo_config_file, "r");
+    fp = fopen(file, "r");
 
     if (fp == NULL) {
         char err[BUFSZ_LARGE] = { 0 };
-        snprintf(err, BUFSZ_LARGE - 1, "Unable to open config file specified - %s", ndo_config_file);
+        snprintf(err, BUFSZ_LARGE - 1, "Unable to open config file specified - %s", file);
         ndo_log(err);
-        trace_return_null_cond("fp == NULL");
+        trace_return_error_cond("fp == NULL");
     }
 
     /* see how large the file is */
@@ -327,34 +334,37 @@ char * ndo_read_config_file()
     if (contents == NULL) {
         ndo_log("Out of memory apparently. Something bad is about to happen");
         fclose(fp);
-        trace_return_null_cond("contents == NULL");
+        trace_return_error_cond("contents == NULL");
     }
 
     read_size = fread(contents, sizeof(char), file_size, fp);
 
     if (read_size != file_size) {
-        ndo_log("Unable to fread() config file");
+        ndo_log("Unable to fread() file");
         free(contents);
         fclose(fp);
-        trace_return_null_cond("read_size != file_size");
+        trace_return_error_cond("read_size != file_size");
     }
 
     fclose(fp);
 
-    trace_return("%s", contents);
+    process_result = ndo_process_file_lines(contents, process_line_cb);
+
+    free(contents);
+
+    trace_return("%d", process_result);
 }
 
 
-int ndo_process_config_file()
+int ndo_process_file_lines(char * contents, int (* process_line_cb)(char * line))
 {
-    trace_func_void();
+    trace_func_args("contents=%s", contents);
 
-    char * config_file_contents = ndo_read_config_file();
-    char * current_line = config_file_contents;
-    int sanity_check;
+    int process_result = NDO_ERROR;
+    char * current_line = contents;
 
-    if (config_file_contents == NULL) {
-        trace_return_error_cond("config_file_contents == NULL");
+    if (contents == NULL) {
+        trace_return_error_cond("contents == NULL");
     }
 
     while (current_line != NULL) {
@@ -365,7 +375,12 @@ int ndo_process_config_file()
             (*next_line) = '\0';
         }
 
-        ndo_process_config_line(current_line);
+        process_result = process_line_cb(current_line);
+
+        if (process_result == NDO_ERROR) {
+            trace("line with error: [%s]", current_line);
+            trace_return_error_cond("process_result == NDO_ERROR");
+        }
 
         if (next_line != NULL) {
             (*next_line) = '\n';
@@ -377,20 +392,11 @@ int ndo_process_config_file()
         }
     }
 
-    free(config_file_contents);
-
-    sanity_check = ndo_config_sanity_check();
-    trace_return("%d", sanity_check);
-}
-
-int ndo_config_sanity_check()
-{
-    trace_func_void();
     trace_return_ok();
 }
 
 
-void ndo_process_config_line(char * line)
+int ndo_process_ndo_config_line(char * line)
 {
     trace_func_args("line=%s", line);
 
@@ -398,22 +404,22 @@ void ndo_process_config_line(char * line)
     char * val = NULL;
 
     if (line == NULL) {
-        trace_return_void_cond("line == NULL");
+        trace_return_ok_cond("line == NULL");
     }
 
     key = strtok(line, "=");
     if (key == NULL) {
-        trace_return_void_cond("key == NULL");
+        trace_return_ok_cond("key == NULL");
     }
 
     val = strtok(NULL, "\0");
     if (val == NULL) {
-        trace_return_void_cond("val == NULL");
+        trace_return_ok_cond("val == NULL");
     }
 
     key = ndo_strip(key);
     if (key == NULL || strlen(key) == 0) {
-        trace_return_void_cond("key == NULL || strlen(key) == 0");
+        trace_return_ok_cond("key == NULL || strlen(key) == 0");
     }
 
     val = ndo_strip(val);
@@ -426,14 +432,14 @@ void ndo_process_config_line(char * line)
             free(val);
         }
 
-        trace_return_void_cond("val == NULL || strlen(val) == 0");
+        trace_return_ok_cond("val == NULL || strlen(val) == 0");
     }
 
     /* skip comments */
     if (key[0] == '#') {
         free(key);
         free(val);
-        trace_return_void_cond("key[0] == '#'");
+        trace_return_ok_cond("key[0] == '#'");
     }
 
     /* database connectivity */
@@ -583,7 +589,14 @@ void ndo_process_config_line(char * line)
     free(key);
     free(val);
 
-    trace_return_void();
+    trace_return_ok();
+}
+
+
+int ndo_config_sanity_check()
+{
+    trace_func_void();
+    trace_return_ok();
 }
 
 

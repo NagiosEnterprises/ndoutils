@@ -175,6 +175,15 @@ void ndo_disconnect_database();
 int ndo_register_callbacks();
 int ndo_deregister_callbacks();
 
+int ndo_process_file(char * file, int (* process_line_cb)(char * line));
+int ndo_process_file_lines(char * contents, int (* process_line_cb)(char * line));
+
+int ndo_process_ndo_config_file(char * config_file_contents);
+int ndo_process_ndo_config_line(char * line);
+
+int ndo_process_nagios_config_line(char * line);
+int ndo_process_nagios_config();
+
 
 int ndo_handle_process(int type, void * d);
 int ndo_handle_timed_event(int type, void * d);
@@ -273,8 +282,9 @@ int write_to_log(char * buffer, unsigned long l, time_t * t);
 #define WRITE_CONTACTS 10
 #define WRITE_HOSTS 11
 #define WRITE_SERVICES 12
+#define WRITE_CONFIG 13
 
-#define NUM_WRITE_QUERIES 13
+#define NUM_WRITE_QUERIES 14
 
 
 
@@ -323,6 +333,8 @@ int ndo_write_serviceescalation_contacts(int * serviceescalation_ids);
 int ndo_write_hostdependencies(int config_type);
 
 int ndo_write_servicedependencies(int config_type);
+
+int ndo_process_ndo_config_line(char * line);
 
 MYSQL * mysql_connection;
 
