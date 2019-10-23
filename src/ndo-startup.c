@@ -196,20 +196,51 @@ int ndo_process_nagios_config_line(char * line)
 int ndo_write_object_config(int config_type)
 {
     trace_func_args("config_type=%d", config_type);
+
+    ndo_write_timing("ndo_write_object_config begin");
+
     ndo_writing_object_configuration = TRUE;
 
     ndo_write_commands(config_type);
+    ndo_write_timing("ndo_write_commands");
+
     ndo_write_timeperiods(config_type);
+    ndo_write_timing("ndo_write_timeperiods");
+
     ndo_write_contacts(config_type);
+    ndo_write_timing("ndo_write_contacts");
+
     ndo_write_contactgroups(config_type);
+    ndo_write_timing("ndo_write_contactgroups");
+
     ndo_write_hosts(config_type);
+    ndo_write_timing("ndo_write_hosts");
+
+    
     ndo_write_hostgroups(config_type);
+    ndo_write_timing("ndo_write_hostgroups");
+
+    
     ndo_write_services(config_type);
+    ndo_write_timing("ndo_write_services");
+
+    
     ndo_write_servicegroups(config_type);
+    ndo_write_timing("ndo_write_servicegroups");
+
+    
     ndo_write_hostescalations(config_type);
+    ndo_write_timing("ndo_write_hostescalations");
+
+    
     ndo_write_serviceescalations(config_type);
+    ndo_write_timing("ndo_write_serviceescalations");
+
+    
 
     ndo_writing_object_configuration = FALSE;
+
+    ndo_write_timing("ndo_write_object_config begin");
 
     trace_return_ok();
 }

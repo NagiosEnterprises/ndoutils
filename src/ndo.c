@@ -115,6 +115,7 @@ long nagios_config_file_id = 0L;
 int ndo_debug_stack_frames = 0;
 
 
+#include "timing.c"
 #include "ndo-startup.c"
 #include "ndo-handlers.c"
 
