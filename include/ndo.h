@@ -158,6 +158,7 @@ typedef struct ndo_query_data {
     int result_i;
 } ndo_query_data;
 
+
 void initialize_bindings_array();
 int initialize_stmt_data();
 int deinitialize_stmt_data();
@@ -206,6 +207,22 @@ int ndo_handle_contact_status(int type, void * d);
 int ndo_handle_contact_notification(int type, void * d);
 int ndo_handle_contact_notification_method(int type, void * d);
 
+int ndo_handle_queue_timed_event(int type, void * d);
+int ndo_handle_queue_event_handler(int type, void * d);
+int ndo_handle_queue_host_check(int type, void * d);
+int ndo_handle_queue_service_check(int type, void * d);
+int ndo_handle_queue_comment(int type, void * d);
+int ndo_handle_queue_downtime(int type, void * d);
+int ndo_handle_queue_flapping(int type, void * d);
+int ndo_handle_queue_host_status(int type, void * d);
+int ndo_handle_queue_service_status(int type, void * d);
+int ndo_handle_queue_contact_status(int type, void * d);
+int ndo_handle_queue_notification(int type, void * d);
+int ndo_handle_queue_contact_notification(int type, void * d);
+int ndo_handle_queue_contact_notification_method(int type, void * d);
+int ndo_handle_queue_acknowledgement(int type, void * d);
+int ndo_handle_queue_state_change(int type, void * d);
+
 int ndo_handle_retention(int type, void * d);
 
 int ndo_table_genocide();
@@ -228,6 +245,16 @@ int ndo_config_sanity_check();
 char * ndo_strip(char * s);
 
 int write_to_log(char * buffer, unsigned long l, time_t * t);
+
+
+typedef struct queue_node_t {
+    struct queue_node_t * next;
+    void * data;
+    int type;
+} queue_node;
+
+void enqueue(queue_node ** head, void * data, int type);
+void * dequeue(queue_node ** head, int * type);
 
 #define GENERIC 0
 #define GET_OBJECT_ID_NAME1 1

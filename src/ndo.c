@@ -190,13 +190,18 @@ int nebmodule_init(int flags, char * args, void * handle)
         trace_return_error_cond("ndo_initialize_database() != NDO_OK");
     }
 
-    result = ndo_register_callbacks();
-    if (result != NDO_OK) {
-        trace_return_error_cond("ndo_register_callbacks() != NDO_OK");
-    }
-
     if (ndo_startup_check_enabled == TRUE) {
         ndo_calculate_startup_hash();
+    }
+
+    result = ndo_register_static_callbacks();
+    if (result != NDO_OK) {
+        trace_return_error_cond("ndo_register_static_callbacks() != NDO_OK");
+    }
+
+    result = ndo_register_queue_callbacks();
+    if (result != NDO_OK) {
+        trace_return_error_cond("ndo_register_queue_callbacks() != NDO_OK");
     }
 
     trace_return_ok();
@@ -748,7 +753,7 @@ void ndo_disconnect_database()
 }
 
 
-int ndo_register_callbacks()
+int ndo_register_static_callbacks()
 {
     trace_func_void();
     int result = 0;
@@ -758,14 +763,96 @@ int ndo_register_callbacks()
        shutdown or restart */
     result += neb_register_callback(NEBCALLBACK_PROCESS_DATA, ndo_handle, 0, ndo_handle_process);
 
-    if (ndo_process_options & NDO_PROCESS_TIMED_EVENT) {
-        result += neb_register_callback(NEBCALLBACK_TIMED_EVENT_DATA, ndo_handle, 0, ndo_handle_timed_event);
-    }
     if (ndo_process_options & NDO_PROCESS_LOG) {
         result += neb_register_callback(NEBCALLBACK_LOG_DATA, ndo_handle, 0, ndo_handle_log);
     }
     if (ndo_process_options & NDO_PROCESS_SYSTEM_COMMAND) {
         result += neb_register_callback(NEBCALLBACK_SYSTEM_COMMAND_DATA, ndo_handle, 0, ndo_handle_system_command);
+    }
+    if (ndo_process_options & NDO_PROCESS_PROGRAM_STATUS) {
+        result += neb_register_callback(NEBCALLBACK_PROGRAM_STATUS_DATA, ndo_handle, 0, ndo_handle_program_status);
+    }
+    if (ndo_process_options & NDO_PROCESS_EXTERNAL_COMMAND) {
+        result += neb_register_callback(NEBCALLBACK_EXTERNAL_COMMAND_DATA, ndo_handle, 0, ndo_handle_external_command);
+    }
+    if (ndo_config_dump_options & NDO_CONFIG_DUMP_RETAINED) {
+        result += neb_register_callback(NEBCALLBACK_RETENTION_DATA, ndo_handle, 0, ndo_handle_retention);
+    }
+
+    if (result != 0) {
+        ndo_log("Something went wrong registering callbacks!");
+        trace_return_error_cond("result != 0");
+    }
+
+    ndo_log("Callbacks registered");
+    trace_return_ok();
+}
+
+
+int ndo_register_queue_callbacks()
+{
+    trace_func_void();
+    int result = 0;
+
+    if (ndo_process_options & NDO_PROCESS_TIMED_EVENT) {
+        result += neb_register_callback(NEBCALLBACK_TIMED_EVENT_DATA, ndo_handle, 0, ndo_handle_queue_timed_event);
+    }
+    if (ndo_process_options & NDO_PROCESS_EVENT_HANDLER) {
+        result += neb_register_callback(NEBCALLBACK_EVENT_HANDLER_DATA, ndo_handle, 0, ndo_handle_queue_event_handler);
+    }
+    if (ndo_process_options & NDO_PROCESS_HOST_CHECK) {
+        result += neb_register_callback(NEBCALLBACK_HOST_CHECK_DATA, ndo_handle, 0, ndo_handle_queue_host_check);
+    }
+    if (ndo_process_options & NDO_PROCESS_SERVICE_CHECK) {
+        result += neb_register_callback(NEBCALLBACK_SERVICE_CHECK_DATA, ndo_handle, 0, ndo_handle_queue_service_check);
+    }
+    if (ndo_process_options & NDO_PROCESS_COMMENT) {
+        result += neb_register_callback(NEBCALLBACK_COMMENT_DATA, ndo_handle, 0, ndo_handle_queue_comment);
+    }
+    if (ndo_process_options & NDO_PROCESS_DOWNTIME) {
+        result += neb_register_callback(NEBCALLBACK_DOWNTIME_DATA, ndo_handle, 0, ndo_handle_queue_downtime);
+    }
+    if (ndo_process_options & NDO_PROCESS_FLAPPING) {
+        result += neb_register_callback(NEBCALLBACK_FLAPPING_DATA, ndo_handle, 0, ndo_handle_queue_flapping);
+    }
+    if (ndo_process_options & NDO_PROCESS_HOST_STATUS) {
+        result += neb_register_callback(NEBCALLBACK_HOST_STATUS_DATA, ndo_handle, 0, ndo_handle_queue_host_status);
+    }
+    if (ndo_process_options & NDO_PROCESS_SERVICE_STATUS) {
+        result += neb_register_callback(NEBCALLBACK_SERVICE_STATUS_DATA, ndo_handle, 0, ndo_handle_queue_service_status);
+    }
+    if (ndo_process_options & NDO_PROCESS_CONTACT_STATUS) {
+        result += neb_register_callback(NEBCALLBACK_CONTACT_STATUS_DATA, ndo_handle, 0, ndo_handle_queue_contact_status);
+    }
+    if (ndo_process_options & NDO_PROCESS_NOTIFICATION) {
+        result += neb_register_callback(NEBCALLBACK_NOTIFICATION_DATA, ndo_handle, 0, ndo_handle_queue_notification);
+        result += neb_register_callback(NEBCALLBACK_CONTACT_NOTIFICATION_DATA, ndo_handle, 0, ndo_handle_queue_contact_notification);
+        result += neb_register_callback(NEBCALLBACK_CONTACT_NOTIFICATION_METHOD_DATA, ndo_handle, 0, ndo_handle_queue_contact_notification_method);
+    }
+    if (ndo_process_options & NDO_PROCESS_ACKNOWLEDGEMENT) {
+        result += neb_register_callback(NEBCALLBACK_ACKNOWLEDGEMENT_DATA, ndo_handle, 0, ndo_handle_queue_acknowledgement);
+    }
+    if (ndo_process_options & NDO_PROCESS_STATE_CHANGE) {
+        result += neb_register_callback(NEBCALLBACK_STATE_CHANGE_DATA, ndo_handle, 0, ndo_handle_queue_state_change);
+    }
+
+    if (result != 0) {
+        ndo_log("Something went wrong registering callbacks!");
+        trace_return_error_cond("result != 0");
+    }
+
+    ndo_log("Callbacks registered");
+    trace_return_ok();
+}
+
+
+int ndo_register_callbacks()
+{
+    trace_func_void();
+    int result = 0;
+
+    if (ndo_process_options & NDO_PROCESS_TIMED_EVENT) {
+        result += neb_register_callback(NEBCALLBACK_TIMED_EVENT_DATA, ndo_handle, 0, ndo_handle_timed_event);
     }
     if (ndo_process_options & NDO_PROCESS_EVENT_HANDLER) {
         result += neb_register_callback(NEBCALLBACK_EVENT_HANDLER_DATA, ndo_handle, 0, ndo_handle_event_handler);
@@ -785,9 +872,6 @@ int ndo_register_callbacks()
     if (ndo_process_options & NDO_PROCESS_FLAPPING) {
         result += neb_register_callback(NEBCALLBACK_FLAPPING_DATA, ndo_handle, 0, ndo_handle_flapping);
     }
-    if (ndo_process_options & NDO_PROCESS_PROGRAM_STATUS) {
-        result += neb_register_callback(NEBCALLBACK_PROGRAM_STATUS_DATA, ndo_handle, 0, ndo_handle_program_status);
-    }
     if (ndo_process_options & NDO_PROCESS_HOST_STATUS) {
         result += neb_register_callback(NEBCALLBACK_HOST_STATUS_DATA, ndo_handle, 0, ndo_handle_host_status);
     }
@@ -802,18 +886,11 @@ int ndo_register_callbacks()
         result += neb_register_callback(NEBCALLBACK_CONTACT_NOTIFICATION_DATA, ndo_handle, 0, ndo_handle_contact_notification);
         result += neb_register_callback(NEBCALLBACK_CONTACT_NOTIFICATION_METHOD_DATA, ndo_handle, 0, ndo_handle_contact_notification_method);
     }
-    if (ndo_process_options & NDO_PROCESS_EXTERNAL_COMMAND) {
-        result += neb_register_callback(NEBCALLBACK_EXTERNAL_COMMAND_DATA, ndo_handle, 0, ndo_handle_external_command);
-    }
     if (ndo_process_options & NDO_PROCESS_ACKNOWLEDGEMENT) {
         result += neb_register_callback(NEBCALLBACK_ACKNOWLEDGEMENT_DATA, ndo_handle, 0, ndo_handle_acknowledgement);
     }
     if (ndo_process_options & NDO_PROCESS_STATE_CHANGE) {
         result += neb_register_callback(NEBCALLBACK_STATE_CHANGE_DATA, ndo_handle, 0, ndo_handle_state_change);
-    }
-
-    if (ndo_config_dump_options & NDO_CONFIG_DUMP_RETAINED) {
-        result += neb_register_callback(NEBCALLBACK_RETENTION_DATA, ndo_handle, 0, ndo_handle_retention);
     }
 
     if (result != 0) {
@@ -852,6 +929,35 @@ int ndo_deregister_callbacks()
     neb_deregister_callback(NEBCALLBACK_STATE_CHANGE_DATA, ndo_handle_state_change);
 
     neb_deregister_callback(NEBCALLBACK_RETENTION_DATA, ndo_handle_retention);
+
+    /* just in case this hasn't happened - maybe the service was restarted
+       before everything was written successfully */
+    ndo_deregister_queue_callbacks();
+
+    ndo_log("Callbacks deregistered");
+    trace_return_ok();
+}
+
+
+int ndo_deregister_queue_callbacks()
+{
+    trace_func_void();
+
+    neb_deregister_callback(NEBCALLBACK_TIMED_EVENT_DATA, ndo_handle_queue_timed_event);
+    neb_deregister_callback(NEBCALLBACK_EVENT_HANDLER_DATA, ndo_handle_queue_event_handler);
+    neb_deregister_callback(NEBCALLBACK_HOST_CHECK_DATA, ndo_handle_queue_host_check);
+    neb_deregister_callback(NEBCALLBACK_SERVICE_CHECK_DATA, ndo_handle_queue_service_check);
+    neb_deregister_callback(NEBCALLBACK_COMMENT_DATA, ndo_handle_queue_comment);
+    neb_deregister_callback(NEBCALLBACK_DOWNTIME_DATA, ndo_handle_queue_downtime);
+    neb_deregister_callback(NEBCALLBACK_FLAPPING_DATA, ndo_handle_queue_flapping);
+    neb_deregister_callback(NEBCALLBACK_HOST_STATUS_DATA, ndo_handle_queue_host_status);
+    neb_deregister_callback(NEBCALLBACK_SERVICE_STATUS_DATA, ndo_handle_queue_service_status);
+    neb_deregister_callback(NEBCALLBACK_CONTACT_STATUS_DATA, ndo_handle_queue_contact_status);
+    neb_deregister_callback(NEBCALLBACK_NOTIFICATION_DATA, ndo_handle_queue_notification);
+    neb_deregister_callback(NEBCALLBACK_CONTACT_NOTIFICATION_DATA, ndo_handle_queue_contact_notification);
+    neb_deregister_callback(NEBCALLBACK_CONTACT_NOTIFICATION_METHOD_DATA, ndo_handle_queue_contact_notification_method);
+    neb_deregister_callback(NEBCALLBACK_ACKNOWLEDGEMENT_DATA, ndo_handle_queue_acknowledgement);
+    neb_deregister_callback(NEBCALLBACK_STATE_CHANGE_DATA, ndo_handle_queue_state_change);
 
     ndo_log("Callbacks deregistered");
     trace_return_ok();
