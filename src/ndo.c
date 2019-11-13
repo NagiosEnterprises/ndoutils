@@ -20,6 +20,7 @@
 #include <errmsg.h>
 #include <time.h>
 #include <stdarg.h>
+#include <pthread.h>
 
 NEB_API_VERSION(CURRENT_NEB_API_VERSION)
 
@@ -114,10 +115,41 @@ long nagios_config_file_id = 0L;
 
 int ndo_debug_stack_frames = 0;
 
+pthread_t startup_thread;
+
+queue_node * nebstruct_queue_timed_event = NULL;
+queue_node * nebstruct_queue_event_handler_data = NULL;
+queue_node * nebstruct_queue_host_check_data = NULL;
+queue_node * nebstruct_queue_service_check_data = NULL;
+queue_node * nebstruct_queue_comment_data = NULL;
+queue_node * nebstruct_queue_downtime_data = NULL;
+queue_node * nebstruct_queue_flapping_data = NULL;
+queue_node * nebstruct_queue_host_status_data = NULL;
+queue_node * nebstruct_queue_service_status_data = NULL;
+queue_node * nebstruct_queue_contact_status_data = NULL;
+queue_node * nebstruct_queue_notification = NULL;
+queue_node * nebstruct_queue_acknowledgement_data = NULL;
+queue_node * nebstruct_queue_state_change = NULL;
+
+pthread_mutex_t queue_timed_event_mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t queue_event_handler_data_mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t queue_host_check_data_mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t queue_service_check_data_mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t queue_comment_data_mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t queue_downtime_data_mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t queue_flapping_data_mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t queue_host_status_data_mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t queue_service_status_data_mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t queue_contact_status_data_mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t queue_notification_mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t queue_acknowledgement_data_mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t queue_state_change_mutex = PTHREAD_MUTEX_INITIALIZER;
+
 
 #include "timing.c"
 #include "ndo-startup.c"
 #include "ndo-handlers.c"
+#include "ndo-handlers-queue.c"
 
 
 void ndo_log(char * buffer)
@@ -846,63 +878,6 @@ int ndo_register_queue_callbacks()
 }
 
 
-int ndo_register_callbacks()
-{
-    trace_func_void();
-    int result = 0;
-
-    if (ndo_process_options & NDO_PROCESS_TIMED_EVENT) {
-        result += neb_register_callback(NEBCALLBACK_TIMED_EVENT_DATA, ndo_handle, 0, ndo_handle_timed_event);
-    }
-    if (ndo_process_options & NDO_PROCESS_EVENT_HANDLER) {
-        result += neb_register_callback(NEBCALLBACK_EVENT_HANDLER_DATA, ndo_handle, 0, ndo_handle_event_handler);
-    }
-    if (ndo_process_options & NDO_PROCESS_HOST_CHECK) {
-        result += neb_register_callback(NEBCALLBACK_HOST_CHECK_DATA, ndo_handle, 0, ndo_handle_host_check);
-    }
-    if (ndo_process_options & NDO_PROCESS_SERVICE_CHECK) {
-        result += neb_register_callback(NEBCALLBACK_SERVICE_CHECK_DATA, ndo_handle, 0, ndo_handle_service_check);
-    }
-    if (ndo_process_options & NDO_PROCESS_COMMENT) {
-        result += neb_register_callback(NEBCALLBACK_COMMENT_DATA, ndo_handle, 0, ndo_handle_comment);
-    }
-    if (ndo_process_options & NDO_PROCESS_DOWNTIME) {
-        result += neb_register_callback(NEBCALLBACK_DOWNTIME_DATA, ndo_handle, 0, ndo_handle_downtime);
-    }
-    if (ndo_process_options & NDO_PROCESS_FLAPPING) {
-        result += neb_register_callback(NEBCALLBACK_FLAPPING_DATA, ndo_handle, 0, ndo_handle_flapping);
-    }
-    if (ndo_process_options & NDO_PROCESS_HOST_STATUS) {
-        result += neb_register_callback(NEBCALLBACK_HOST_STATUS_DATA, ndo_handle, 0, ndo_handle_host_status);
-    }
-    if (ndo_process_options & NDO_PROCESS_SERVICE_STATUS) {
-        result += neb_register_callback(NEBCALLBACK_SERVICE_STATUS_DATA, ndo_handle, 0, ndo_handle_service_status);
-    }
-    if (ndo_process_options & NDO_PROCESS_CONTACT_STATUS) {
-        result += neb_register_callback(NEBCALLBACK_CONTACT_STATUS_DATA, ndo_handle, 0, ndo_handle_contact_status);
-    }
-    if (ndo_process_options & NDO_PROCESS_NOTIFICATION) {
-        result += neb_register_callback(NEBCALLBACK_NOTIFICATION_DATA, ndo_handle, 0, ndo_handle_notification);
-        result += neb_register_callback(NEBCALLBACK_CONTACT_NOTIFICATION_DATA, ndo_handle, 0, ndo_handle_contact_notification);
-        result += neb_register_callback(NEBCALLBACK_CONTACT_NOTIFICATION_METHOD_DATA, ndo_handle, 0, ndo_handle_contact_notification_method);
-    }
-    if (ndo_process_options & NDO_PROCESS_ACKNOWLEDGEMENT) {
-        result += neb_register_callback(NEBCALLBACK_ACKNOWLEDGEMENT_DATA, ndo_handle, 0, ndo_handle_acknowledgement);
-    }
-    if (ndo_process_options & NDO_PROCESS_STATE_CHANGE) {
-        result += neb_register_callback(NEBCALLBACK_STATE_CHANGE_DATA, ndo_handle, 0, ndo_handle_state_change);
-    }
-
-    if (result != 0) {
-        ndo_log("Something went wrong registering callbacks!");
-        trace_return_error_cond("result != 0");
-    }
-
-    ndo_log("Callbacks registered");
-    trace_return_ok();
-}
-
-
 int ndo_deregister_callbacks()
 {
     trace_func_void();
@@ -943,7 +918,7 @@ int ndo_deregister_queue_callbacks()
 {
     trace_func_void();
 
-    neb_deregister_callback(NEBCALLBACK_TIMED_EVENT_DATA, ndo_handle_queue_timed_event);
+    
     neb_deregister_callback(NEBCALLBACK_EVENT_HANDLER_DATA, ndo_handle_queue_event_handler);
     neb_deregister_callback(NEBCALLBACK_HOST_CHECK_DATA, ndo_handle_queue_host_check);
     neb_deregister_callback(NEBCALLBACK_SERVICE_CHECK_DATA, ndo_handle_queue_service_check);

@@ -25,13 +25,7 @@ int ndo_handle_process(int type, void * d)
     case NEBTYPE_PROCESS_START:
 
         if (ndo_startup_skip_writing_objects != TRUE) {
-
-            ndo_write_stmt_init();
-            ndo_write_object_config(NDO_CONFIG_DUMP_ORIGINAL);
-            ndo_write_stmt_close();
-
-            ndo_write_config_files();
-            ndo_write_config(NDO_CONFIG_DUMP_ORIGINAL);
+            pthread_create(&startup_thread, NULL, ndo_startup_thread, NULL);
         }
 
         break;

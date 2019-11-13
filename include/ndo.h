@@ -173,8 +173,11 @@ int ndo_initialize_mysql_connection();
 int ndo_initialize_database();
 int ndo_initialize_prepared_statements();
 void ndo_disconnect_database();
-int ndo_register_callbacks();
+
+int ndo_register_static_callbacks();
+int ndo_register_queue_callbacks();
 int ndo_deregister_callbacks();
+int ndo_deregister_queue_callbacks();
 
 int ndo_process_file(char * file, int (* process_line_cb)(char * line));
 int ndo_process_file_lines(char * contents, int (* process_line_cb)(char * line));
@@ -225,6 +228,8 @@ int ndo_handle_queue_state_change(int type, void * d);
 
 int ndo_handle_retention(int type, void * d);
 
+void * ndo_startup_thread(void * args);
+
 int ndo_table_genocide();
 int ndo_set_all_objects_inactive();
 int ndo_begin_active_objects(int run_count);
@@ -238,6 +243,8 @@ int ndo_write_config_files();
 int ndo_write_config(int type);
 int ndo_write_runtime_variables();
 
+int ndo_empty_startup_queues();
+int ndo_empty_queue_timed_event();
 
 void ndo_process_config_line(char * line);
 int ndo_process_config_file();

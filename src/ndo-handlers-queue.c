@@ -48,34 +48,6 @@ void * dequeue(queue_node ** head, int * type)
     return data;
 }
 
-queue_node * nebstruct_queue_timed_event = NULL;
-queue_node * nebstruct_queue_event_handler_data = NULL;
-queue_node * nebstruct_queue_host_check_data = NULL;
-queue_node * nebstruct_queue_service_check_data = NULL;
-queue_node * nebstruct_queue_comment_data = NULL;
-queue_node * nebstruct_queue_downtime_data = NULL;
-queue_node * nebstruct_queue_flapping_data = NULL;
-queue_node * nebstruct_queue_host_status_data = NULL;
-queue_node * nebstruct_queue_service_status_data = NULL;
-queue_node * nebstruct_queue_contact_status_data = NULL;
-queue_node * nebstruct_queue_notification = NULL;
-queue_node * nebstruct_queue_acknowledgement_data = NULL;
-queue_node * nebstruct_queue_state_change = NULL;
-
-pthread_mutex_t queue_timed_event_mutex = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t queue_event_handler_data_mutex = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t queue_host_check_data_mutex = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t queue_service_check_data_mutex = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t queue_comment_data_mutex = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t queue_downtime_data_mutex = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t queue_flapping_data_mutex = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t queue_host_status_data_mutex = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t queue_service_status_data_mutex = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t queue_contact_status_data_mutex = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t queue_notification_mutex = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t queue_acknowledgement_data_mutex = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t queue_state_change_mutex = PTHREAD_MUTEX_INITIALIZER;
-
 
 void nebstructcpy(void ** dest, const void * src, size_t n)
 {
@@ -89,7 +61,7 @@ int ndo_handle_queue_timed_event(int type, void * d)
 {
     trace_func_handler(timed_event);
     nebstruct_timed_event_data * data = NULL;
-    nebstructcpy(&data, d, sizeof(*data));
+    nebstructcpy((void *)&data, d, sizeof(*data));
     pthread_mutex_lock(&queue_timed_event_mutex);
     enqueue(&nebstruct_queue_timed_event, data, type);
     pthread_mutex_unlock(&queue_timed_event_mutex);
@@ -101,7 +73,7 @@ int ndo_handle_queue_event_handler(int type, void * d)
 {
     trace_func_handler(event_handler);
     nebstruct_event_handler_data * data = NULL;
-    nebstructcpy(&data, d, sizeof(*data));
+    nebstructcpy((void *)&data, d, sizeof(*data));
     pthread_mutex_lock(&queue_event_handler_data_mutex);
     enqueue(&nebstruct_queue_event_handler_data, data, type);
     pthread_mutex_unlock(&queue_event_handler_data_mutex);
@@ -113,7 +85,7 @@ int ndo_handle_queue_host_check(int type, void * d)
 {
     trace_func_handler(host_check);
     nebstruct_host_check_data * data = NULL;
-    nebstructcpy(&data, d, sizeof(*data));
+    nebstructcpy((void *)&data, d, sizeof(*data));
     pthread_mutex_lock(&queue_host_check_data_mutex);
     enqueue(&nebstruct_queue_host_check_data, data, type);
     pthread_mutex_unlock(&queue_host_check_data_mutex);
@@ -125,7 +97,7 @@ int ndo_handle_queue_service_check(int type, void * d)
 {
     trace_func_handler(service_check);
     nebstruct_service_check_data * data = NULL;
-    nebstructcpy(&data, d, sizeof(*data));
+    nebstructcpy((void *)&data, d, sizeof(*data));
     pthread_mutex_lock(&queue_service_check_data_mutex);
     enqueue(&nebstruct_queue_service_check_data, data, type);
     pthread_mutex_unlock(&queue_service_check_data_mutex);
@@ -137,7 +109,7 @@ int ndo_handle_queue_comment(int type, void * d)
 {
     trace_func_handler(comment);
     nebstruct_comment_data * data = NULL;
-    nebstructcpy(&data, d, sizeof(*data));
+    nebstructcpy((void *)&data, d, sizeof(*data));
     pthread_mutex_lock(&queue_comment_data_mutex);
     enqueue(&nebstruct_queue_comment_data, data, type);
     pthread_mutex_unlock(&queue_comment_data_mutex);
@@ -149,7 +121,7 @@ int ndo_handle_queue_downtime(int type, void * d)
 {
     trace_func_handler(downtime);
     nebstruct_downtime_data * data = NULL;
-    nebstructcpy(&data, d, sizeof(*data));
+    nebstructcpy((void *)&data, d, sizeof(*data));
     pthread_mutex_lock(&queue_downtime_data_mutex);
     enqueue(&nebstruct_queue_downtime_data, data, type);
     pthread_mutex_unlock(&queue_downtime_data_mutex);
@@ -161,7 +133,7 @@ int ndo_handle_queue_flapping(int type, void * d)
 {
     trace_func_handler(flapping);
     nebstruct_flapping_data * data = NULL;
-    nebstructcpy(&data, d, sizeof(*data));
+    nebstructcpy((void *)&data, d, sizeof(*data));
     pthread_mutex_lock(&queue_flapping_data_mutex);
     enqueue(&nebstruct_queue_flapping_data, data, type);
     pthread_mutex_unlock(&queue_flapping_data_mutex);
@@ -173,7 +145,7 @@ int ndo_handle_queue_host_status(int type, void * d)
 {
     trace_func_handler(host_status);
     nebstruct_host_status_data * data = NULL;
-    nebstructcpy(&data, d, sizeof(*data));
+    nebstructcpy((void *)&data, d, sizeof(*data));
     pthread_mutex_lock(&queue_host_status_data_mutex);
     enqueue(&nebstruct_queue_host_status_data, data, type);
     pthread_mutex_unlock(&queue_host_status_data_mutex);
@@ -185,7 +157,7 @@ int ndo_handle_queue_service_status(int type, void * d)
 {
     trace_func_handler(service_status);
     nebstruct_service_status_data * data = NULL;
-    nebstructcpy(&data, d, sizeof(*data));
+    nebstructcpy((void *)&data, d, sizeof(*data));
     pthread_mutex_lock(&queue_service_status_data_mutex);
     enqueue(&nebstruct_queue_service_status_data, data, type);
     pthread_mutex_unlock(&queue_service_status_data_mutex);
@@ -197,7 +169,7 @@ int ndo_handle_queue_contact_status(int type, void * d)
 {
     trace_func_handler(contact_status);
     nebstruct_contact_status_data * data = NULL;
-    nebstructcpy(&data, d, sizeof(*data));
+    nebstructcpy((void *)&data, d, sizeof(*data));
     pthread_mutex_lock(&queue_contact_status_data_mutex);
     enqueue(&nebstruct_queue_contact_status_data, data, type);
     pthread_mutex_unlock(&queue_contact_status_data_mutex);
@@ -209,7 +181,7 @@ int ndo_handle_queue_notification(int type, void * d)
 {
     trace_func_handler(notification);
     nebstruct_notification_data * data = NULL;
-    nebstructcpy(&data, d, sizeof(*data));
+    nebstructcpy((void *)&data, d, sizeof(*data));
     pthread_mutex_lock(&queue_notification_mutex);
     enqueue(&nebstruct_queue_notification, data, type);
     pthread_mutex_unlock(&queue_notification_mutex);
@@ -221,7 +193,7 @@ int ndo_handle_queue_contact_notification(int type, void * d)
 {
     trace_func_handler(contact_notification);
     nebstruct_contact_notification_data * data = NULL;
-    nebstructcpy(&data, d, sizeof(*data));
+    nebstructcpy((void *)&data, d, sizeof(*data));
     pthread_mutex_lock(&queue_notification_mutex);
     enqueue(&nebstruct_queue_notification, data, type);
     pthread_mutex_unlock(&queue_notification_mutex);
@@ -233,7 +205,7 @@ int ndo_handle_queue_contact_notification_method(int type, void * d)
 {
     trace_func_handler(contact_notification_method);
     nebstruct_contact_notification_method_data * data = NULL;
-    nebstructcpy(&data, d, sizeof(*data));
+    nebstructcpy((void *)&data, d, sizeof(*data));
     pthread_mutex_lock(&queue_notification_mutex);
     enqueue(&nebstruct_queue_notification, data, type);
     pthread_mutex_unlock(&queue_notification_mutex);
@@ -245,7 +217,7 @@ int ndo_handle_queue_acknowledgement(int type, void * d)
 {
     trace_func_handler(acknowledgement);
     nebstruct_acknowledgement_data * data = NULL;
-    nebstructcpy(&data, d, sizeof(*data));
+    nebstructcpy((void *)&data, d, sizeof(*data));
     pthread_mutex_lock(&queue_acknowledgement_data_mutex);
     enqueue(&nebstruct_queue_acknowledgement_data, data, type);
     pthread_mutex_unlock(&queue_acknowledgement_data_mutex);
@@ -257,7 +229,7 @@ int ndo_handle_queue_state_change(int type, void * d)
 {
     trace_func_handler(statechange);
     nebstruct_statechange_data * data = NULL;
-    nebstructcpy(&data, d, sizeof(*data));
+    nebstructcpy((void *)&data, d, sizeof(*data));
     pthread_mutex_lock(&queue_state_change_mutex);
     enqueue(&nebstruct_queue_state_change, data, type);
     pthread_mutex_unlock(&queue_state_change_mutex);

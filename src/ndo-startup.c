@@ -82,6 +82,23 @@ int ndo_table_genocide()
 }
 
 
+void * ndo_startup_thread(void * args)
+{
+    trace_func_args("args=%s", "NULL");
+
+    ndo_write_stmt_init();
+    ndo_write_object_config(NDO_CONFIG_DUMP_ORIGINAL);
+    ndo_write_stmt_close();
+
+    ndo_write_config_files();
+    ndo_write_config(NDO_CONFIG_DUMP_ORIGINAL);
+
+    ndo_empty_startup_queues();
+
+    trace_return_ok();
+}
+
+
 int ndo_write_config_files()
 {
     trace_func_void();
