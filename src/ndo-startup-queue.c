@@ -13,12 +13,25 @@
 int ndo_empty_startup_queues()
 {
     ndo_empty_queue_timed_event();
+    ndo_empty_queue_event_handler();
+    ndo_empty_queue_host_check();
+    ndo_empty_queue_service_check();
+    ndo_empty_queue_comment();
+    ndo_empty_queue_downtime();
+    ndo_empty_queue_flapping();
+    ndo_empty_queue_host_status();
+    ndo_empty_queue_service_status();
+    ndo_empty_queue_contact_status();
+    ndo_empty_queue_acknowledgement();
+    ndo_empty_queue_statechange();
+
+    ndo_empty_queue_notification();
 }
 
 
 /* le sigh... this just makes it way easier */
 #define EMTPY_QUEUE_FUNCTION(_type, _callback) \
-int ndo_empty_## _type() \
+int ndo_empty_queue_## _type() \
 { \
     trace_func_void(); \
 \
@@ -45,7 +58,7 @@ int ndo_empty_## _type() \
             break; \
         } \
 \
-        ndo_handle_timed_event(type, data); \
+        ndo_handle_## _type(type, data); \
         free(data); \
         data = NULL; \
     } \
@@ -87,7 +100,7 @@ EMTPY_QUEUE_FUNCTION(contact_status, NEBCALLBACK_CONTACT_STATUS_DATA)
 EMTPY_QUEUE_FUNCTION(acknowledgement, NEBCALLBACK_ACKNOWLEDGEMENT_DATA)
 
 
-EMTPY_QUEUE_FUNCTION(state_change, NEBCALLBACK_STATE_CHANGE_DATA)
+EMTPY_QUEUE_FUNCTION(statechange, NEBCALLBACK_STATE_CHANGE_DATA)
 
 
 /* so, the reason this one doesn't use the prototype is because the order of
@@ -101,9 +114,8 @@ int ndo_empty_queue_notification()
 {
     trace_func_void();
 
-    nebstruct_notification_data * notification_data = NULL;
-    nebstruct_contact_notification_struct * notification_data = NULL;
-    nebstruct_contact_notification_method_struct * notification_data = NULL;
+    void * data = NULL;
+    int type = -1;
 
     /* unlike the EMTPY_QUEUE_FUNCTION() prototype, we can't deregister and
        then register the new ones UNTIL the queue is proven empty. if we do

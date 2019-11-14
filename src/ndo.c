@@ -24,7 +24,6 @@
 
 NEB_API_VERSION(CURRENT_NEB_API_VERSION)
 
-/**** NAGIOS VARIABLES ****/
 extern command * command_list;
 extern timeperiod * timeperiod_list;
 extern contact * contact_list;
@@ -41,26 +40,12 @@ extern hostdependency * hostdependency_list;
 extern hostdependency ** hostdependency_ary;
 extern servicedependency * servicedependency_list;
 extern servicedependency ** servicedependency_ary;
-
 extern char * config_file;
 extern sched_info scheduling_info;
 extern char * global_host_event_handler;
 extern char * global_service_event_handler;
-
 extern int __nagios_object_structure_version;
-
 extern struct object_count num_objects;
-
-
-/**********************************************/
-/* Database varibles */
-
-/* any given query_values string (in startup funcs) is ~120 chars
-   and the query_base + query_on_update longest string (write_services) is ~4k
-   so we pad a bit and hope we never go over this */
-#define MAX_SQL_BUFFER ((MAX_OBJECT_INSERT * 150) + 8000)
-#define MAX_SQL_BINDINGS (MAX_OBJECT_INSERT * 50)
-#define MAX_BIND_BUFFER BUFSZ_XXL
 
 int ndo_database_connected = FALSE;
 
@@ -73,7 +58,6 @@ char * ndo_db_name = NULL;
 
 int ndo_db_reconnect_attempts = 0;
 int ndo_db_max_reconnect_attempts = 5;
-
 
 ndo_query_data * ndo_sql = NULL;
 
@@ -93,12 +77,10 @@ char ndo_error_msg[BUFSZ_LARGE] = { 0 };
 int ndo_bind_i = 0;
 int ndo_result_i = 0;
 
-
 int ndo_max_object_insert_count = 200;
 
 int ndo_writing_object_configuration = FALSE;
 
-#define DEFAULT_STARTUP_HASH_SCRIPT_PATH "/usr/local/nagios/bin/ndo-startup-hash.sh"
 int ndo_startup_check_enabled = FALSE;
 char * ndo_startup_hash_script_path = NULL;
 int ndo_startup_skip_writing_objects = FALSE;
@@ -118,37 +100,38 @@ int ndo_debug_stack_frames = 0;
 pthread_t startup_thread;
 
 queue_node * nebstruct_queue_timed_event = NULL;
-queue_node * nebstruct_queue_event_handler_data = NULL;
-queue_node * nebstruct_queue_host_check_data = NULL;
-queue_node * nebstruct_queue_service_check_data = NULL;
-queue_node * nebstruct_queue_comment_data = NULL;
-queue_node * nebstruct_queue_downtime_data = NULL;
-queue_node * nebstruct_queue_flapping_data = NULL;
-queue_node * nebstruct_queue_host_status_data = NULL;
-queue_node * nebstruct_queue_service_status_data = NULL;
-queue_node * nebstruct_queue_contact_status_data = NULL;
+queue_node * nebstruct_queue_event_handler = NULL;
+queue_node * nebstruct_queue_host_check = NULL;
+queue_node * nebstruct_queue_service_check = NULL;
+queue_node * nebstruct_queue_comment = NULL;
+queue_node * nebstruct_queue_downtime = NULL;
+queue_node * nebstruct_queue_flapping = NULL;
+queue_node * nebstruct_queue_host_status = NULL;
+queue_node * nebstruct_queue_service_status = NULL;
+queue_node * nebstruct_queue_contact_status = NULL;
 queue_node * nebstruct_queue_notification = NULL;
-queue_node * nebstruct_queue_acknowledgement_data = NULL;
-queue_node * nebstruct_queue_state_change = NULL;
+queue_node * nebstruct_queue_acknowledgement = NULL;
+queue_node * nebstruct_queue_statechange = NULL;
 
 pthread_mutex_t queue_timed_event_mutex = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t queue_event_handler_data_mutex = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t queue_host_check_data_mutex = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t queue_service_check_data_mutex = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t queue_comment_data_mutex = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t queue_downtime_data_mutex = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t queue_flapping_data_mutex = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t queue_host_status_data_mutex = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t queue_service_status_data_mutex = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t queue_contact_status_data_mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t queue_event_handler_mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t queue_host_check_mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t queue_service_check_mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t queue_comment_mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t queue_downtime_mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t queue_flapping_mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t queue_host_status_mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t queue_service_status_mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t queue_contact_status_mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t queue_notification_mutex = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t queue_acknowledgement_data_mutex = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t queue_state_change_mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t queue_acknowledgement_mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t queue_statechange_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 
 #include "timing.c"
 #include "ndo-startup.c"
 #include "ndo-handlers.c"
+#include "ndo-startup-queue.c"
 #include "ndo-handlers-queue.c"
 
 
@@ -865,7 +848,7 @@ int ndo_register_queue_callbacks()
         result += neb_register_callback(NEBCALLBACK_ACKNOWLEDGEMENT_DATA, ndo_handle, 0, ndo_handle_queue_acknowledgement);
     }
     if (ndo_process_options & NDO_PROCESS_STATE_CHANGE) {
-        result += neb_register_callback(NEBCALLBACK_STATE_CHANGE_DATA, ndo_handle, 0, ndo_handle_queue_state_change);
+        result += neb_register_callback(NEBCALLBACK_STATE_CHANGE_DATA, ndo_handle, 0, ndo_handle_queue_statechange);
     }
 
     if (result != 0) {
@@ -882,43 +865,9 @@ int ndo_deregister_callbacks()
 {
     trace_func_void();
 
-    neb_deregister_callback(NEBCALLBACK_PROCESS_DATA, ndo_handle_process);
-    neb_deregister_callback(NEBCALLBACK_TIMED_EVENT_DATA, ndo_handle_timed_event);
-    neb_deregister_callback(NEBCALLBACK_LOG_DATA, ndo_handle_log);
-    neb_deregister_callback(NEBCALLBACK_SYSTEM_COMMAND_DATA, ndo_handle_system_command);
-    neb_deregister_callback(NEBCALLBACK_EVENT_HANDLER_DATA, ndo_handle_event_handler);
-    neb_deregister_callback(NEBCALLBACK_HOST_CHECK_DATA, ndo_handle_host_check);
-    neb_deregister_callback(NEBCALLBACK_SERVICE_CHECK_DATA, ndo_handle_service_check);
-    neb_deregister_callback(NEBCALLBACK_COMMENT_DATA, ndo_handle_comment);
-    neb_deregister_callback(NEBCALLBACK_DOWNTIME_DATA, ndo_handle_downtime);
-    neb_deregister_callback(NEBCALLBACK_FLAPPING_DATA, ndo_handle_flapping);
-    neb_deregister_callback(NEBCALLBACK_PROGRAM_STATUS_DATA, ndo_handle_program_status);
-    neb_deregister_callback(NEBCALLBACK_HOST_STATUS_DATA, ndo_handle_host_status);
-    neb_deregister_callback(NEBCALLBACK_SERVICE_STATUS_DATA, ndo_handle_service_status);
-    neb_deregister_callback(NEBCALLBACK_CONTACT_STATUS_DATA, ndo_handle_contact_status);
-    neb_deregister_callback(NEBCALLBACK_NOTIFICATION_DATA, ndo_handle_notification);
-    neb_deregister_callback(NEBCALLBACK_CONTACT_NOTIFICATION_DATA, ndo_handle_contact_notification);
-    neb_deregister_callback(NEBCALLBACK_CONTACT_NOTIFICATION_METHOD_DATA, ndo_handle_contact_notification_method);
-    neb_deregister_callback(NEBCALLBACK_EXTERNAL_COMMAND_DATA, ndo_handle_external_command);
-    neb_deregister_callback(NEBCALLBACK_ACKNOWLEDGEMENT_DATA, ndo_handle_acknowledgement);
-    neb_deregister_callback(NEBCALLBACK_STATE_CHANGE_DATA, ndo_handle_state_change);
-
-    neb_deregister_callback(NEBCALLBACK_RETENTION_DATA, ndo_handle_retention);
-
-    /* just in case this hasn't happened - maybe the service was restarted
-       before everything was written successfully */
-    ndo_deregister_queue_callbacks();
-
-    ndo_log("Callbacks deregistered");
-    trace_return_ok();
-}
-
-
-int ndo_deregister_queue_callbacks()
-{
-    trace_func_void();
-
-    
+    /* just to make sure these get deregistered if they were missed. i.e.: if the queue
+       never gets empty? */
+    neb_deregister_callback(NEBCALLBACK_TIMED_EVENT_DATA, ndo_handle_queue_timed_event);
     neb_deregister_callback(NEBCALLBACK_EVENT_HANDLER_DATA, ndo_handle_queue_event_handler);
     neb_deregister_callback(NEBCALLBACK_HOST_CHECK_DATA, ndo_handle_queue_host_check);
     neb_deregister_callback(NEBCALLBACK_SERVICE_CHECK_DATA, ndo_handle_queue_service_check);
@@ -932,7 +881,32 @@ int ndo_deregister_queue_callbacks()
     neb_deregister_callback(NEBCALLBACK_CONTACT_NOTIFICATION_DATA, ndo_handle_queue_contact_notification);
     neb_deregister_callback(NEBCALLBACK_CONTACT_NOTIFICATION_METHOD_DATA, ndo_handle_queue_contact_notification_method);
     neb_deregister_callback(NEBCALLBACK_ACKNOWLEDGEMENT_DATA, ndo_handle_queue_acknowledgement);
-    neb_deregister_callback(NEBCALLBACK_STATE_CHANGE_DATA, ndo_handle_queue_state_change);
+    neb_deregister_callback(NEBCALLBACK_STATE_CHANGE_DATA, ndo_handle_queue_statechange);
+
+    /* static callbacks */
+    neb_deregister_callback(NEBCALLBACK_PROCESS_DATA, ndo_handle_process);
+    neb_deregister_callback(NEBCALLBACK_LOG_DATA, ndo_handle_log);
+    neb_deregister_callback(NEBCALLBACK_SYSTEM_COMMAND_DATA, ndo_handle_system_command);
+    neb_deregister_callback(NEBCALLBACK_PROGRAM_STATUS_DATA, ndo_handle_program_status);
+    neb_deregister_callback(NEBCALLBACK_EXTERNAL_COMMAND_DATA, ndo_handle_external_command);
+    neb_deregister_callback(NEBCALLBACK_RETENTION_DATA, ndo_handle_retention);
+
+    /* normal handlers */
+    neb_deregister_callback(NEBCALLBACK_TIMED_EVENT_DATA, ndo_handle_timed_event);
+    neb_deregister_callback(NEBCALLBACK_EVENT_HANDLER_DATA, ndo_handle_event_handler);
+    neb_deregister_callback(NEBCALLBACK_HOST_CHECK_DATA, ndo_handle_host_check);
+    neb_deregister_callback(NEBCALLBACK_SERVICE_CHECK_DATA, ndo_handle_service_check);
+    neb_deregister_callback(NEBCALLBACK_COMMENT_DATA, ndo_handle_comment);
+    neb_deregister_callback(NEBCALLBACK_DOWNTIME_DATA, ndo_handle_downtime);
+    neb_deregister_callback(NEBCALLBACK_FLAPPING_DATA, ndo_handle_flapping);
+    neb_deregister_callback(NEBCALLBACK_HOST_STATUS_DATA, ndo_handle_host_status);
+    neb_deregister_callback(NEBCALLBACK_SERVICE_STATUS_DATA, ndo_handle_service_status);
+    neb_deregister_callback(NEBCALLBACK_CONTACT_STATUS_DATA, ndo_handle_contact_status);
+    neb_deregister_callback(NEBCALLBACK_NOTIFICATION_DATA, ndo_handle_notification);
+    neb_deregister_callback(NEBCALLBACK_CONTACT_NOTIFICATION_DATA, ndo_handle_contact_notification);
+    neb_deregister_callback(NEBCALLBACK_CONTACT_NOTIFICATION_METHOD_DATA, ndo_handle_contact_notification_method);
+    neb_deregister_callback(NEBCALLBACK_ACKNOWLEDGEMENT_DATA, ndo_handle_acknowledgement);
+    neb_deregister_callback(NEBCALLBACK_STATE_CHANGE_DATA, ndo_handle_statechange);
 
     ndo_log("Callbacks deregistered");
     trace_return_ok();

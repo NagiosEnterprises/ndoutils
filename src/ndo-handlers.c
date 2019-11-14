@@ -1012,7 +1012,7 @@ int ndo_handle_acknowledgement(int type, void * d)
 }
 
 
-int ndo_handle_state_change(int type, void * d)
+int ndo_handle_statechange(int type, void * d)
 {
     trace_func_handler(statechange);
 

@@ -232,28 +232,21 @@ int ndo_write_object_config(int config_type)
 
     ndo_write_hosts(config_type);
     ndo_write_timing("ndo_write_hosts");
-
     
     ndo_write_hostgroups(config_type);
     ndo_write_timing("ndo_write_hostgroups");
 
-    
     ndo_write_services(config_type);
     ndo_write_timing("ndo_write_services");
 
-    
     ndo_write_servicegroups(config_type);
     ndo_write_timing("ndo_write_servicegroups");
 
-    
     ndo_write_hostescalations(config_type);
     ndo_write_timing("ndo_write_hostescalations");
 
-    
     ndo_write_serviceescalations(config_type);
     ndo_write_timing("ndo_write_serviceescalations");
-
-    
 
     ndo_writing_object_configuration = FALSE;
 
@@ -684,8 +677,8 @@ int ndo_write_contact_objects(int config_type)
 
     int max_object_insert_count = 0;
 
-    int host_notification_command_type = NDO_DATA_HOSTNOTIFICATIONCOMMAND;
-    int service_notification_command_type = NDO_DATA_SERVICENOTIFICATIONCOMMAND;
+    int host_notification_command_type = HOST_NOTIFICATION;
+    int service_notification_command_type = SERVICE_NOTIFICATION;
 
     int addresses_count = 0;
     char addresses_query[MAX_SQL_BUFFER] = { 0 };

@@ -12,10 +12,12 @@ DBLIBS=@DBLIBS@
 
 DBFLAGS=@DBFLAGS@
 
+THREADLIB=-pthread
+
 NDOSOURCEFILES=../include/ndo.h ../include/mysql-helpers.h ndo.c ndo-startup.c ndo-handlers.c ndo-startup-queue.c ndo-handlers-queue.c
 
 ndo.so: $(NDOSOURCEFILES)
-	$(CC) $(SHAREDFLAGS) $(CFLAGS) $(DBFLAGS) ndo.c -o $@ $(DBLIBS)
+	$(CC) $(SHAREDFLAGS) $(CFLAGS) $(DBFLAGS) ndo.c -o $@ $(DBLIBS) $(THREADLIB)
 
 expanded:
 	@rm -rf ../expanded
