@@ -12,8 +12,9 @@ DBLIBS=@DBLIBS@
 
 DBFLAGS=@DBFLAGS@
 
+NDOSOURCEFILES=../include/ndo.h ../include/mysql-helpers.h ndo.c ndo-startup.c ndo-handlers.c ndo-startup-queue.c ndo-handlers-queue.c
 
-ndo.so: ndo.c ndo-handlers.c ndo-startup.c
+ndo.so: $(NDOSOURCEFILES)
 	$(CC) $(SHAREDFLAGS) $(CFLAGS) $(DBFLAGS) ndo.c -o $@ $(DBLIBS)
 
 expanded:
