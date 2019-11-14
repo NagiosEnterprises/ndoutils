@@ -182,11 +182,6 @@ int ndo_handle_queue_notification(int type, void * d)
     trace_func_handler(notification);
     nebstruct_notification_data * data = NULL;
     nebstructcpy((void *)&data, d, sizeof(*data));
-
-    if (data->type == NEBTYPE_NOTIFICATION_START) {
-        ndo_notification_
-    }
-
     pthread_mutex_lock(&queue_notification_mutex);
     enqueue(&nebstruct_queue_notification, data, type);
     pthread_mutex_unlock(&queue_notification_mutex);
@@ -199,11 +194,6 @@ int ndo_handle_queue_contact_notification(int type, void * d)
     trace_func_handler(contact_notification);
     nebstruct_contact_notification_data * data = NULL;
     nebstructcpy((void *)&data, d, sizeof(*data));
-
-    if (data->type == NEBTYPE_CONTACTNOTIFICATION_START) {
-        ndo_notification_
-    }
-
     pthread_mutex_lock(&queue_notification_mutex);
     enqueue(&nebstruct_queue_notification, data, type);
     pthread_mutex_unlock(&queue_notification_mutex);
@@ -216,11 +206,6 @@ int ndo_handle_queue_contact_notification_method(int type, void * d)
     trace_func_handler(contact_notification_method);
     nebstruct_contact_notification_method_data * data = NULL;
     nebstructcpy((void *)&data, d, sizeof(*data));
-
-    if (data->type == NEBTYPE_CONTACTNOTIFICATIONMETHOD_START) {
-        ndo_notification_
-    }    
-
     pthread_mutex_lock(&queue_notification_mutex);
     enqueue(&nebstruct_queue_notification, data, type);
     pthread_mutex_unlock(&queue_notification_mutex);

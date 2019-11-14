@@ -96,14 +96,57 @@ EMTPY_QUEUE_FUNCTION(state_change, NEBCALLBACK_STATE_CHANGE_DATA)
    if they aren't executed in the exact order, then the linking ids will be
    wrong - since we don't use relational ids (e.g.: find the ids based on some
    proper linking) and instead rely on mysql_insert_id - which is fine, IF
-   THEY'RE EXECUTED IN ORDER.
-
-    as of this comments writing, there is no good way to link them all together
-    i.e.: for each notification, how many contact notifications or contact
-    method notifications should there be?
-
-    actually, if we can't solve that, then there is no hope for this at all */
+   THEY'RE EXECUTED IN ORDER. */
 int ndo_empty_queue_notification()
 {
+    trace_func_void();
 
+    nebstruct_notification_data * notification_data = NULL;
+    nebstruct_contact_notification_struct * notification_data = NULL;
+    nebstruct_contact_notification_method_struct * notification_data = NULL;
+
+    /* unlike the EMTPY_QUEUE_FUNCTION() prototype, we can't deregister and
+       then register the new ones UNTIL the queue is proven empty. if we do
+       that, then we run the risk of messing up some notification ids or
+       whatever */
+    while (TRUE) {
+
+        /* again, unlike the EMPTY_QUEUE_FUNCTION() prototype, the mutex
+           locking and unlocking is ABSOLUTELY NECESSARY here - since we're
+           popping queue members WHILE they are potentially still being added */
+        pthread_mutex_lock(&queue_notification_mutex);
+        data = dequeue(&nebstruct_queue_notification, &type);
+        pthread_mutex_unlock(&queue_notification_mutex);
+
+        if (data == NULL || type == -1) {
+
+            /* there may be some contention here between deregistering and re-registering
+               i don't know of a good way to solve this - or if it's really even a problem in practice
+               maybe have some blocking mechanism in core to see if ndo-3 is present and if so, add some blocking
+               in place */
+            neb_deregister_callback(NEBCALLBACK_NOTIFICATION_DATA, ndo_handle_queue_notification);
+            neb_deregister_callback(NEBCALLBACK_CONTACT_NOTIFICATION_DATA, ndo_handle_queue_contact_notification);
+            neb_deregister_callback(NEBCALLBACK_CONTACT_NOTIFICATION_METHOD_DATA, ndo_handle_queue_contact_notification_method);
+
+            neb_register_callback(NEBCALLBACK_NOTIFICATION_DATA, ndo_handle, 0, ndo_handle_notification);
+            neb_register_callback(NEBCALLBACK_CONTACT_NOTIFICATION_DATA, ndo_handle, 0, ndo_handle_contact_notification);
+            neb_register_callback(NEBCALLBACK_CONTACT_NOTIFICATION_METHOD_DATA, ndo_handle, 0, ndo_handle_contact_notification_method);
+
+            break;
+        }
+        else if (type == NEBCALLBACK_NOTIFICATION_DATA) {
+            ndo_handle_notification(type, data);
+        }
+        else if (type == NEBCALLBACK_CONTACT_NOTIFICATION_DATA) {
+            ndo_handle_contact_notification(type, data);
+        }
+        else if (type == NEBCALLBACK_CONTACT_NOTIFICATION_METHOD_DATA) {
+            ndo_handle_contact_notification_method(type, data);
+        }
+
+        free(data);
+        data = NULL;
+    }
+
+    trace_return_ok();
 }
