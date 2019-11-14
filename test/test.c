@@ -1986,7 +1986,7 @@ START_TEST(test_statechange_data)
     d.object_ptr = &test_host;
     d.longoutput = NULL;
 
-    ndo_handle_state_change(d.type, &d);
+    ndo_handle_statechange(d.type, &d);
 
     mysql_query(mysql_connection, "SELECT 1 FROM nagios_statehistory WHERE "
                                   "instance_id = 1 AND state_time = FROM_UNIXTIME(1568301129) "
@@ -2029,7 +2029,7 @@ START_TEST(test_statechange_data)
     d.object_ptr = &test_service;
     d.longoutput = NULL;
 
-    ndo_handle_state_change(d.type, &d);
+    ndo_handle_statechange(d.type, &d);
 
     mysql_query(mysql_connection, "SELECT 2 FROM nagios_statehistory WHERE "
                                   "instance_id = 1 AND state_time = FROM_UNIXTIME(1568301309) "
