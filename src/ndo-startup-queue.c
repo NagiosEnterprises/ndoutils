@@ -1,11 +1,12 @@
 
-/* if you want to see the expanded source, you can either:
+/*
+    if you want to see the expanded source, you can either:
 
-    `make expanded`
+        `make expanded`
 
     or:
 
-    `gcc -E src/ndo-startup-queue.c | clang-format`
+        `gcc -E src/ndo-startup-queue.c | clang-format`
 */
 
 
@@ -88,3 +89,21 @@ EMTPY_QUEUE_FUNCTION(acknowledgement, NEBCALLBACK_ACKNOWLEDGEMENT_DATA)
 
 EMTPY_QUEUE_FUNCTION(state_change, NEBCALLBACK_STATE_CHANGE_DATA)
 
+
+/* so, the reason this one doesn't use the prototype is because the order of
+   all three callbacks that notification encapsulates is actually very important
+
+   if they aren't executed in the exact order, then the linking ids will be
+   wrong - since we don't use relational ids (e.g.: find the ids based on some
+   proper linking) and instead rely on mysql_insert_id - which is fine, IF
+   THEY'RE EXECUTED IN ORDER.
+
+    as of this comments writing, there is no good way to link them all together
+    i.e.: for each notification, how many contact notifications or contact
+    method notifications should there be?
+
+    actually, if we can't solve that, then there is no hope for this at all */
+int ndo_empty_queue_notification()
+{
+
+}
