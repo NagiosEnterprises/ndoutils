@@ -74,6 +74,39 @@ function debug_args ()
     echo "dbname: $dbname"
 }
 
+function mysql_exec ()
+{
+    use_host=""
+    if [ "x$dbhost" != "xlocalhost" ]; then
+        use_host="-h $dbhost"
+    fi
+
+    use_port=""
+    if [ $(( $dbport )) -ne 3306 ]; then
+        use_port="-P $dbport"
+    fi
+
+    mysql -u$dbuser -p$dbpass $dbname $use_host $use_port -e "$@"
+}
+
+function check_mysql_creds ()
+{
+    mysql_exec "SELECT * FROM nagios_hosts LIMIT 0" >/dev/null 2>&1
+    echo $?
+}
+
+function get_database_version ()
+{
+    mysql_exec "SELECT version FROM nagios_dbversion "
+}
+
 default_args
 process_args $@
 debug_args
+
+mysqlok=$(check_mysql_creds)
+if [ $mysqlok -eq 0 ]; then
+    echo "yez is good"
+else
+    echo "ope nope baddd"
+fi
