@@ -183,11 +183,11 @@ int nebmodule_init(int flags, char * args, void * handle)
 
     /* this needs to happen before we process the config file so that
        mysql options are valid for the upcoming session */
-    mysql_connection = mysql_init(NULL);
+    MYSQL *mysql_connection = mysql_init(NULL);
     main_thread_context = calloc(1, sizeof(ndo_query_context));
     main_thread_context->conn = mysql_connection;
 
-    result = ndo_process_file(NULL, ndo_config_file, ndo_process_ndo_config_line);
+    result = ndo_process_file(main_thread_context, ndo_config_file, ndo_process_ndo_config_line);
     if (result != NDO_OK) {
         trace_return_error_cond("ndo_process_file() != NDO_OK");
     }
@@ -225,7 +225,7 @@ int nebmodule_deinit(int flags, int reason)
     trace_func_args("flags=%d, reason=%d", flags, reason);
 
     ndo_deregister_callbacks();
-    ndo_disconnect_database();
+    ndo_disconnect_database(main_thread_context);
 
     if (ndo_config_file != NULL) {
         free(ndo_config_file);
@@ -601,7 +601,7 @@ int ndo_process_ndo_config_line(ndo_query_context *q_ctx, char * line)
 
     /* mysql options */
     else if (!strcmp("mysql.charset", key)) {
-        mysql_options(mysql_connection, MYSQL_SET_CHARSET_NAME, val);
+        mysql_options(q_ctx->conn, MYSQL_SET_CHARSET_NAME, val);
     }
 
     free(key);
@@ -696,7 +696,7 @@ int ndo_initialize_database(ndo_query_context * q_ctx)
 
         if (q_ctx->conn == NULL) {
             ndo_log("Unable to initialize mysql connection");
-            trace_return_error_cond("mysql_connection == NULL");
+            trace_return_error_cond("q_ctx->conn == NULL");
         }
 
         /* without this flag set, then our mysql_ping() reconnection doesn't
@@ -744,14 +744,14 @@ int ndo_initialize_prepared_statements()
 }
 
 
-void ndo_disconnect_database()
+void ndo_disconnect_database(ndo_query_context *q_ctx)
 {
     trace_func_void();
 
     deinitialize_stmt_data();
 
-    if (ndo_database_connected == TRUE) {
-        mysql_close(mysql_connection);
+    if (q_ctx->connected == TRUE) {
+        mysql_close(q_ctx->conn);
     }
     mysql_library_end();
     trace_return_void();
@@ -1054,7 +1054,7 @@ long ndo_insert_object_id_name1(ndo_query_context *q_ctx, int object_type, char 
     MYSQL_BIND(INSERT_OBJECT_ID_NAME1);
     MYSQL_EXECUTE(INSERT_OBJECT_ID_NAME1);
 
-    object_id = mysql_insert_id(mysql_connection);
+    object_id = mysql_insert_id(q_ctx->conn);
     trace_return("%ld", object_id);
 }
 
@@ -1085,7 +1085,7 @@ long ndo_insert_object_id_name2(ndo_query_context *q_ctx, int object_type, char 
     MYSQL_BIND(INSERT_OBJECT_ID_NAME2);
     MYSQL_EXECUTE(INSERT_OBJECT_ID_NAME2);
 
-    object_id = mysql_insert_id(mysql_connection);
+    object_id = mysql_insert_id(q_ctx->conn);
     trace_return("%ld", object_id);
 }
 
@@ -1186,7 +1186,7 @@ int initialize_stmt_data(ndo_query_context * q_ctx)
             mysql_stmt_close(q_ctx->stmt[i]);
         }
 
-        q_ctx->stmt[i] = mysql_stmt_init(mysql_connection);
+        q_ctx->stmt[i] = mysql_stmt_init(q_ctx->conn);
 
         if (num_bindings[i] > 0) {
             q_ctx->bind[i] = calloc(num_bindings[i], sizeof(MYSQL_BIND));

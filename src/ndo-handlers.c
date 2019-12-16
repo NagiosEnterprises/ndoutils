@@ -184,10 +184,7 @@ int ndo_handle_log(ndo_query_context * q_ctx, int type, void * d)
     /* this particular function is a bit weird because it starts passing
        logs to the neb module before the database initialization has occured,
        so if the db hasn't been initialized, we just return */
-    if (mysql_connection == NULL || ndo_database_connected != TRUE) {
-        /*
-        trace_return_ok_cond("mysql_connection == NULL || ndo_database_connected != TRUE");
-        */
+    if (q_ctx->conn == NULL || q_ctx->connected != TRUE) {
         return NDO_OK;
     }
 
@@ -975,7 +972,7 @@ int ndo_handle_notification(ndo_query_context * q_ctx, int type, void * d)
        we can be sure that this will be the appropriate id, as the brokered
        event data for notification happens directly before each contact is
        then notified (and that data also brokered) */
-    ndo_last_notification_id = mysql_insert_id(mysql_connection);
+    ndo_last_notification_id = mysql_insert_id(q_ctx->conn);
 
     trace_return_ok();
 }
@@ -1018,7 +1015,7 @@ int ndo_handle_contact_notification(ndo_query_context * q_ctx, int type, void * 
     MYSQL_EXECUTE(HANDLE_CONTACT_NOTIFICATION);
 
     /* see notes regarding `ndo_last_notification_id` - those apply here too */
-    ndo_last_contact_notification_id = mysql_insert_id(mysql_connection);
+    ndo_last_contact_notification_id = mysql_insert_id(q_ctx->conn);
 
     trace_return_ok();
 }

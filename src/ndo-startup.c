@@ -9,7 +9,7 @@ int ndo_set_all_objects_inactive(ndo_query_context *q_ctx)
     if (ndo_return != 0) {
 
         char err[BUFSZ_LARGE] = { 0 };
-        snprintf(err, BUFSZ_LARGE - 1, "query(%s) failed with rc (%d), mysql (%d: %s)", deactivate_sql, ndo_return, mysql_errno(mysql_connection), mysql_error(mysql_connection));
+        snprintf(err, BUFSZ_LARGE - 1, "query(%s) failed with rc (%d), mysql (%d: %s)", deactivate_sql, ndo_return, mysql_errno(q_ctx->conn), mysql_error(q_ctx->conn));
         err[BUFSZ_LARGE - 1] = '\0';
         ndo_log(err);
     }

@@ -7,11 +7,6 @@
 #include "../include/nagios/objects.h"
 #include <mysql.h>
 
-
-/* shared globals */
-MYSQL * mysql_connection;
-
-
 /* ndo specifics */
 #define DEFAULT_STARTUP_HASH_SCRIPT_PATH "/usr/local/nagios/bin/ndo-startup-hash.sh"
 #define MAX_OBJECT_INSERT 100
@@ -311,7 +306,7 @@ int ndo_process_arguments(char * args);
 int ndo_initialize_mysql_connection();
 int ndo_initialize_database(ndo_query_context *q_ctx);
 int ndo_initialize_prepared_statements();
-void ndo_disconnect_database();
+void ndo_disconnect_database(ndo_query_context *q_ctx);
 
 int ndo_register_static_callbacks();
 int ndo_register_queue_callbacks();
