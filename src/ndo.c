@@ -56,16 +56,10 @@ char * ndo_db_user = NULL;
 char * ndo_db_pass = NULL;
 char * ndo_db_name = NULL;
 
-int ndo_db_reconnect_attempts = 0;
 int ndo_db_max_reconnect_attempts = 5;
 
-ndo_query_data * ndo_sql = NULL;
-
-MYSQL_STMT * ndo_write_stmt[NUM_WRITE_QUERIES];
-MYSQL_BIND ndo_write_bind[NUM_WRITE_QUERIES][MAX_SQL_BINDINGS];
-char ndo_write_query[MAX_SQL_BUFFER] = { 0 };
-int ndo_write_i[NUM_WRITE_QUERIES] = { 0 };
-unsigned long ndo_write_tmp_len[NUM_WRITE_QUERIES][MAX_SQL_BUFFER];
+ndo_query_context * main_thread_context = NULL;
+ndo_query_context * startup_thread_context = NULL;
 
 int num_result_bindings[NUM_QUERIES] = { 0 };
 
@@ -135,6 +129,7 @@ pthread_mutex_t queue_statechange_mutex = PTHREAD_MUTEX_INITIALIZER;
 #include "ndo-handlers-queue.c"
 
 
+
 void ndo_log(char * buffer)
 {
     if (write_to_log(buffer, NSLOG_INFO_MESSAGE, NULL) != NDO_OK) {
@@ -188,9 +183,11 @@ int nebmodule_init(int flags, char * args, void * handle)
 
     /* this needs to happen before we process the config file so that
        mysql options are valid for the upcoming session */
-    ndo_initialize_mysql_connection();
+    mysql_connection = mysql_init(NULL);
+    main_thread_context = calloc(1, sizeof(ndo_query_context));
+    main_thread_context->conn = mysql_connection;
 
-    result = ndo_process_file(ndo_config_file, ndo_process_ndo_config_line);
+    result = ndo_process_file(NULL, ndo_config_file, ndo_process_ndo_config_line);
     if (result != NDO_OK) {
         trace_return_error_cond("ndo_process_file() != NDO_OK");
     }
@@ -200,7 +197,7 @@ int nebmodule_init(int flags, char * args, void * handle)
         trace_return_error_cond("ndo_config_sanity_check() != NDO_OK");
     }    
 
-    result = ndo_initialize_database();
+    result = ndo_initialize_database(main_thread_context);
     if (result != NDO_OK) {
         trace_return_error_cond("ndo_initialize_database() != NDO_OK");
     }
@@ -321,7 +318,7 @@ int ndo_process_arguments(char * args)
 }
 
 
-int ndo_process_file(char * file, int (* process_line_cb)(char * line))
+int ndo_process_file(ndo_query_context *q_ctx, char * file, int (* process_line_cb)(ndo_query_context *q_ctx, char * line))
 {
     trace_func_args("file=%s", file);
 
@@ -369,7 +366,7 @@ int ndo_process_file(char * file, int (* process_line_cb)(char * line))
 
     fclose(fp);
 
-    process_result = ndo_process_file_lines(contents, process_line_cb);
+    process_result = ndo_process_file_lines(q_ctx, contents, process_line_cb);
 
     free(contents);
 
@@ -377,7 +374,7 @@ int ndo_process_file(char * file, int (* process_line_cb)(char * line))
 }
 
 
-int ndo_process_file_lines(char * contents, int (* process_line_cb)(char * line))
+int ndo_process_file_lines(ndo_query_context *q_ctx, char * contents, int (* process_line_cb)(ndo_query_context *q_ctx, char * line))
 {
     trace_func_args("contents=%s", contents);
 
@@ -396,7 +393,7 @@ int ndo_process_file_lines(char * contents, int (* process_line_cb)(char * line)
             (*next_line) = '\0';
         }
 
-        process_result = process_line_cb(current_line);
+        process_result = process_line_cb(q_ctx, current_line);
 
         if (process_result == NDO_ERROR) {
             trace("line with error: [%s]", current_line);
@@ -416,8 +413,8 @@ int ndo_process_file_lines(char * contents, int (* process_line_cb)(char * line)
     trace_return_ok();
 }
 
-
-int ndo_process_ndo_config_line(char * line)
+/* q_ctx is only used in other callbacks, can be NULL for this one */
+int ndo_process_ndo_config_line(ndo_query_context *q_ctx, char * line)
 {
     trace_func_args("line=%s", line);
 
@@ -620,25 +617,16 @@ int ndo_config_sanity_check()
     trace_return_ok();
 }
 
-
-int ndo_initialize_mysql_connection()
-{
-    trace_func_void();
-    mysql_connection = mysql_init(NULL);
-    trace_return_ok();
-}
-
-
-int ndo_initialize_database()
+int ndo_initialize_database(ndo_query_context * q_ctx)
 {
     trace_func_void();
     int init = NDO_ERROR;
 
     /* if we've already connected, we execute a ping because we set our
        auto reconnect options appropriately */
-    if (ndo_database_connected == TRUE) {
+    if (q_ctx->connected == TRUE) {
 
-        if (ndo_db_reconnect_attempts >= ndo_db_max_reconnect_attempts) {
+        if (q_ctx->reconnect_counter >= ndo_db_max_reconnect_attempts) {
 
             /* todo: handle catastrophic failure */
         }
@@ -646,10 +634,10 @@ int ndo_initialize_database()
         /* todo - according to the manpage, mysql_thread_id can't be used
            on machines where the possibility exists for it to grow over
            32 bits. instead use a `SELECT CONNECTION_ID()` select statement */
-        unsigned long thread_id = mysql_thread_id(mysql_connection);
+        unsigned long thread_id = mysql_thread_id(q_ctx->conn);
 
-        int result = mysql_ping(mysql_connection);
-        ndo_db_reconnect_attempts++;
+        int result = mysql_ping(q_ctx->conn);
+        q_ctx->reconnect_counter += 1;
 
         /* something went wrong */
         if (result != 0) {
@@ -679,21 +667,22 @@ int ndo_initialize_database()
         }
 
         /* if our ping went fine, we reconnected successfully */
-        ndo_db_reconnect_attempts = 0;
+        q_ctx->reconnect_counter = 0;
 
         /* if we did a reconnect, we need to reinitialize the prepared
            statements - to check if reconnection occured, we check the current
            thread_id with whatever the newest is. if they differ, reconnection
            has occured */
-        if (thread_id != mysql_thread_id(mysql_connection)) {
+        if (thread_id != mysql_thread_id(q_ctx->conn)) {
 
             /* TODO: the mysql c api documentation is *wonderful* and it talks
                about after a reconnect that prepared statements go away
 
                so i'm not sure if that means they need to be initialized again
                or if they just need the prepared statement stuff */
-            init = initialize_stmt_data();
-            trace_return("%d", init);
+            initialize_stmt_data(q_ctx);
+            //init = initialize_stmt_data();
+            trace_return("%d", NDO_OK);
         }
 
         trace_return_ok();
@@ -705,21 +694,21 @@ int ndo_initialize_database()
         int reconnect = 1;
         MYSQL * connected = NULL;
 
-        if (mysql_connection == NULL) {
+        if (q_ctx->conn == NULL) {
             ndo_log("Unable to initialize mysql connection");
             trace_return_error_cond("mysql_connection == NULL");
         }
 
         /* without this flag set, then our mysql_ping() reconnection doesn't
            work so well [at the beginning of this function] */
-        mysql_options(mysql_connection, MYSQL_OPT_RECONNECT, &reconnect);
+        mysql_options(q_ctx->conn, MYSQL_OPT_RECONNECT, &reconnect);
 
         if (ndo_db_host == NULL) {
             ndo_db_host = strdup("localhost");
         }
 
         connected = mysql_real_connect(
-            mysql_connection,
+            q_ctx->conn,
             ndo_db_host,
             ndo_db_user,
             ndo_db_pass,
@@ -735,15 +724,16 @@ int ndo_initialize_database()
     }
 
     ndo_log("Database initialized");
-    ndo_database_connected = TRUE;
+    q_ctx->connected = TRUE;
 
 #if defined(DEBUG) && DEBUG != FALSE
     mysql_debug("d:t:O,/tmp/client.trace");
-    mysql_dump_debug_info(mysql_connection);
+    mysql_dump_debug_info(q_ctx->conn);
 #endif
 
-    init = initialize_stmt_data();
-    trace_return("%d", init);
+    initialize_stmt_data(q_ctx);
+    //init = initialize_stmt_data();
+    trace_return("%d", NDO_OK);
 }
 
 
@@ -776,22 +766,22 @@ int ndo_register_static_callbacks()
     /* this callback is always registered, as thats where the configuration writing
        comes from. ndo_process_options is actually checked in the case of a
        shutdown or restart */
-    result += neb_register_callback(NEBCALLBACK_PROCESS_DATA, ndo_handle, 0, ndo_handle_process);
+    result += neb_register_callback(NEBCALLBACK_PROCESS_DATA, ndo_handle, 0, ndo_neb_handle_process);
 
     if (ndo_process_options & NDO_PROCESS_LOG) {
-        result += neb_register_callback(NEBCALLBACK_LOG_DATA, ndo_handle, 0, ndo_handle_log);
+        result += neb_register_callback(NEBCALLBACK_LOG_DATA, ndo_handle, 0, ndo_neb_handle_log);
     }
     if (ndo_process_options & NDO_PROCESS_SYSTEM_COMMAND) {
-        result += neb_register_callback(NEBCALLBACK_SYSTEM_COMMAND_DATA, ndo_handle, 0, ndo_handle_system_command);
+        result += neb_register_callback(NEBCALLBACK_SYSTEM_COMMAND_DATA, ndo_handle, 0, ndo_neb_handle_system_command);
     }
     if (ndo_process_options & NDO_PROCESS_PROGRAM_STATUS) {
-        result += neb_register_callback(NEBCALLBACK_PROGRAM_STATUS_DATA, ndo_handle, 0, ndo_handle_program_status);
+        result += neb_register_callback(NEBCALLBACK_PROGRAM_STATUS_DATA, ndo_handle, 0, ndo_neb_handle_program_status);
     }
     if (ndo_process_options & NDO_PROCESS_EXTERNAL_COMMAND) {
-        result += neb_register_callback(NEBCALLBACK_EXTERNAL_COMMAND_DATA, ndo_handle, 0, ndo_handle_external_command);
+        result += neb_register_callback(NEBCALLBACK_EXTERNAL_COMMAND_DATA, ndo_handle, 0, ndo_neb_handle_external_command);
     }
     if (ndo_config_dump_options & NDO_CONFIG_DUMP_RETAINED) {
-        result += neb_register_callback(NEBCALLBACK_RETENTION_DATA, ndo_handle, 0, ndo_handle_retention);
+        result += neb_register_callback(NEBCALLBACK_RETENTION_DATA, ndo_handle, 0, ndo_neb_handle_retention);
     }
 
     if (result != 0) {
@@ -884,29 +874,29 @@ int ndo_deregister_callbacks()
     neb_deregister_callback(NEBCALLBACK_STATE_CHANGE_DATA, ndo_handle_queue_statechange);
 
     /* static callbacks */
-    neb_deregister_callback(NEBCALLBACK_PROCESS_DATA, ndo_handle_process);
-    neb_deregister_callback(NEBCALLBACK_LOG_DATA, ndo_handle_log);
-    neb_deregister_callback(NEBCALLBACK_SYSTEM_COMMAND_DATA, ndo_handle_system_command);
-    neb_deregister_callback(NEBCALLBACK_PROGRAM_STATUS_DATA, ndo_handle_program_status);
-    neb_deregister_callback(NEBCALLBACK_EXTERNAL_COMMAND_DATA, ndo_handle_external_command);
-    neb_deregister_callback(NEBCALLBACK_RETENTION_DATA, ndo_handle_retention);
+    neb_deregister_callback(NEBCALLBACK_PROCESS_DATA, ndo_neb_handle_process);
+    neb_deregister_callback(NEBCALLBACK_LOG_DATA, ndo_neb_handle_log);
+    neb_deregister_callback(NEBCALLBACK_SYSTEM_COMMAND_DATA, ndo_neb_handle_system_command);
+    neb_deregister_callback(NEBCALLBACK_PROGRAM_STATUS_DATA, ndo_neb_handle_program_status);
+    neb_deregister_callback(NEBCALLBACK_EXTERNAL_COMMAND_DATA, ndo_neb_handle_external_command);
+    neb_deregister_callback(NEBCALLBACK_RETENTION_DATA, ndo_neb_handle_retention);
 
     /* normal handlers */
-    neb_deregister_callback(NEBCALLBACK_TIMED_EVENT_DATA, ndo_handle_timed_event);
-    neb_deregister_callback(NEBCALLBACK_EVENT_HANDLER_DATA, ndo_handle_event_handler);
-    neb_deregister_callback(NEBCALLBACK_HOST_CHECK_DATA, ndo_handle_host_check);
-    neb_deregister_callback(NEBCALLBACK_SERVICE_CHECK_DATA, ndo_handle_service_check);
-    neb_deregister_callback(NEBCALLBACK_COMMENT_DATA, ndo_handle_comment);
-    neb_deregister_callback(NEBCALLBACK_DOWNTIME_DATA, ndo_handle_downtime);
-    neb_deregister_callback(NEBCALLBACK_FLAPPING_DATA, ndo_handle_flapping);
-    neb_deregister_callback(NEBCALLBACK_HOST_STATUS_DATA, ndo_handle_host_status);
-    neb_deregister_callback(NEBCALLBACK_SERVICE_STATUS_DATA, ndo_handle_service_status);
-    neb_deregister_callback(NEBCALLBACK_CONTACT_STATUS_DATA, ndo_handle_contact_status);
-    neb_deregister_callback(NEBCALLBACK_NOTIFICATION_DATA, ndo_handle_notification);
-    neb_deregister_callback(NEBCALLBACK_CONTACT_NOTIFICATION_DATA, ndo_handle_contact_notification);
-    neb_deregister_callback(NEBCALLBACK_CONTACT_NOTIFICATION_METHOD_DATA, ndo_handle_contact_notification_method);
-    neb_deregister_callback(NEBCALLBACK_ACKNOWLEDGEMENT_DATA, ndo_handle_acknowledgement);
-    neb_deregister_callback(NEBCALLBACK_STATE_CHANGE_DATA, ndo_handle_statechange);
+    neb_deregister_callback(NEBCALLBACK_TIMED_EVENT_DATA, ndo_neb_handle_timed_event);
+    neb_deregister_callback(NEBCALLBACK_EVENT_HANDLER_DATA, ndo_neb_handle_event_handler);
+    neb_deregister_callback(NEBCALLBACK_HOST_CHECK_DATA, ndo_neb_handle_host_check);
+    neb_deregister_callback(NEBCALLBACK_SERVICE_CHECK_DATA, ndo_neb_handle_service_check);
+    neb_deregister_callback(NEBCALLBACK_COMMENT_DATA, ndo_neb_handle_comment);
+    neb_deregister_callback(NEBCALLBACK_DOWNTIME_DATA, ndo_neb_handle_downtime);
+    neb_deregister_callback(NEBCALLBACK_FLAPPING_DATA, ndo_neb_handle_flapping);
+    neb_deregister_callback(NEBCALLBACK_HOST_STATUS_DATA, ndo_neb_handle_host_status);
+    neb_deregister_callback(NEBCALLBACK_SERVICE_STATUS_DATA, ndo_neb_handle_service_status);
+    neb_deregister_callback(NEBCALLBACK_CONTACT_STATUS_DATA, ndo_neb_handle_contact_status);
+    neb_deregister_callback(NEBCALLBACK_NOTIFICATION_DATA, ndo_neb_handle_notification);
+    neb_deregister_callback(NEBCALLBACK_CONTACT_NOTIFICATION_DATA, ndo_neb_handle_contact_notification);
+    neb_deregister_callback(NEBCALLBACK_CONTACT_NOTIFICATION_METHOD_DATA, ndo_neb_handle_contact_notification_method);
+    neb_deregister_callback(NEBCALLBACK_ACKNOWLEDGEMENT_DATA, ndo_neb_handle_acknowledgement);
+    neb_deregister_callback(NEBCALLBACK_STATE_CHANGE_DATA, ndo_neb_handle_statechange);
 
     ndo_log("Callbacks deregistered");
     trace_return_ok();
@@ -945,7 +935,7 @@ void ndo_calculate_startup_hash()
 }
 
 
-long ndo_get_object_id_name1(int insert, int object_type, char * name1)
+long ndo_get_object_id_name1(ndo_query_context *q_ctx, int insert, int object_type, char * name1)
 {
     trace_func_args("insert=%d, object_type=%d, name1=%s", insert, object_type, name1);
     long object_id = NDO_ERROR;
@@ -976,7 +966,7 @@ long ndo_get_object_id_name1(int insert, int object_type, char * name1)
     trace("got object_id=%d", object_id);
 
     if (insert == TRUE && object_id == NDO_ERROR) {
-        object_id = ndo_insert_object_id_name1(object_type, name1);
+        object_id = ndo_insert_object_id_name1(q_ctx, object_type, name1);
     }
 
     if (ndo_writing_object_configuration == TRUE && object_id != NDO_ERROR) {
@@ -990,7 +980,7 @@ long ndo_get_object_id_name1(int insert, int object_type, char * name1)
 }
 
 
-long ndo_get_object_id_name2(int insert, int object_type, char * name1, char * name2)
+long ndo_get_object_id_name2(ndo_query_context *q_ctx, int insert, int object_type, char * name1, char * name2)
 {
     trace_func_args("insert=%d, object_type=%d, name1=%s, name2=%s", insert, object_type, name1, name2);
     long object_id = NDO_ERROR;
@@ -1026,7 +1016,7 @@ long ndo_get_object_id_name2(int insert, int object_type, char * name1, char * n
 
     if (insert == TRUE && object_id == NDO_ERROR) {
         trace_info("insert==TRUE, calling ndo_insert_object_id_name2");
-        object_id = ndo_insert_object_id_name2(object_type, name1, name2);
+        object_id = ndo_insert_object_id_name2(q_ctx, object_type, name1, name2);
     }
 
     if (ndo_writing_object_configuration == TRUE && object_id != NDO_ERROR) {
@@ -1045,7 +1035,7 @@ long ndo_get_object_id_name2(int insert, int object_type, char * name1, char * n
    and then an insert. the reason for this is that usually, this function
    will be called by get_object_id() functions ..and the object_bind is already
    appropriately set */
-long ndo_insert_object_id_name1(int object_type, char * name1)
+long ndo_insert_object_id_name1(ndo_query_context *q_ctx, int object_type, char * name1)
 {
     trace_func_args("object_type=%d, name1=%s", object_type, name1);
     long object_id = NDO_ERROR;
@@ -1069,7 +1059,7 @@ long ndo_insert_object_id_name1(int object_type, char * name1)
 }
 
 
-long ndo_insert_object_id_name2(int object_type, char * name1, char * name2)
+long ndo_insert_object_id_name2(ndo_query_context *q_ctx, int object_type, char * name1, char * name2)
 {
     trace_func_args("object_type=%d, name1=%s, name2=%s", object_type, name1, name2);
     long object_id = NDO_ERROR;
@@ -1081,7 +1071,7 @@ long ndo_insert_object_id_name2(int object_type, char * name1, char * name2)
 
     if (name2 == NULL || strlen(name2) == 0) {
         trace_info("name2==NULL, calling ndo_insert_object_id_name1");
-        object_id = ndo_insert_object_id_name1(object_type, name1);
+        object_id = ndo_insert_object_id_name1(q_ctx, object_type, name1);
         trace_return("%lu", object_id);
     }
 
@@ -1148,6 +1138,22 @@ void initialize_bindings_array()
     num_bindings[HANDLE_STATE_CHANGE] = 11;
     num_bindings[HANDLE_OBJECT_WRITING] = 1;
 
+    num_bindings[WRITE_HANDLE_OBJECT_WRITING] = MAX_SQL_BINDINGS;
+    num_bindings[WRITE_ACTIVE_OBJECTS] = MAX_SQL_BINDINGS;
+    num_bindings[WRITE_CUSTOMVARS] = MAX_SQL_BINDINGS;
+    num_bindings[WRITE_CONTACT_ADDRESSES] = MAX_SQL_BINDINGS;
+    num_bindings[WRITE_CONTACT_NOTIFICATIONCOMMANDS] = MAX_SQL_BINDINGS;
+    num_bindings[WRITE_HOST_PARENTHOSTS] = MAX_SQL_BINDINGS;
+    num_bindings[WRITE_HOST_CONTACTGROUPS] = MAX_SQL_BINDINGS;
+    num_bindings[WRITE_HOST_CONTACTS] = MAX_SQL_BINDINGS;
+    num_bindings[WRITE_SERVICE_PARENTSERVICES] = MAX_SQL_BINDINGS;
+    num_bindings[WRITE_SERVICE_CONTACTGROUPS] = MAX_SQL_BINDINGS;
+    num_bindings[WRITE_SERVICE_CONTACTS] = MAX_SQL_BINDINGS;
+    num_bindings[WRITE_CONTACTS] = MAX_SQL_BINDINGS;
+    num_bindings[WRITE_HOSTS] = MAX_SQL_BINDINGS;
+    num_bindings[WRITE_SERVICES] = MAX_SQL_BINDINGS;
+    num_bindings[WRITE_CONFIG] = MAX_SQL_BINDINGS;
+
     num_result_bindings[GET_OBJECT_ID_NAME1] = 1;
     num_result_bindings[GET_OBJECT_ID_NAME2] = 1;
 
@@ -1155,88 +1161,89 @@ void initialize_bindings_array()
 }
 
 
-int initialize_stmt_data()
+int initialize_stmt_data(ndo_query_context * q_ctx)
 {
     trace_func_void();
 
     int i = 0;
     int errors = 0;
+    int memory_errors_flag = FALSE;
 
     initialize_bindings_array();
 
-    if (ndo_sql == NULL) {
-        ndo_sql = calloc(NUM_QUERIES, sizeof(*ndo_sql));
+    if (q_ctx == NULL) {
+        q_ctx = calloc(1, sizeof(ndo_query_context));
     }
 
-    if (ndo_sql == NULL) {
-        ndo_log("Unable to allocate memory for ndo_sql");
-        trace_return_error_cond("ndo_sql == NULL");
+    if (q_ctx == NULL) {
+        ndo_log("Unable to allocate memory for q_ctx");
+        trace_return_error_cond("q_ctx == NULL");
     }
 
     for (i = 0; i < NUM_QUERIES; i++) {
 
-        if (ndo_sql[i].stmt != NULL) {
-            mysql_stmt_close(ndo_sql[i].stmt);
+        if (q_ctx->stmt[i] != NULL) {
+            mysql_stmt_close(q_ctx->stmt[i]);
         }
 
-        ndo_sql[i].stmt = mysql_stmt_init(mysql_connection);
+        q_ctx->stmt[i] = mysql_stmt_init(mysql_connection);
 
         if (num_bindings[i] > 0) {
-            ndo_sql[i].bind = calloc(num_bindings[i], sizeof(MYSQL_BIND));
-            ndo_sql[i].strlen = calloc(num_bindings[i], sizeof(long));
+            q_ctx->bind[i] = calloc(num_bindings[i], sizeof(MYSQL_BIND));
+            q_ctx->strlen[i] = calloc(num_bindings[i], sizeof(long));
         }
 
         if (num_result_bindings[i] > 0) {
-            ndo_sql[i].result = calloc(num_result_bindings[i], sizeof(MYSQL_BIND));
-            ndo_sql[i].result_strlen = calloc(num_result_bindings[i], sizeof(long));
+            q_ctx->result[i] = calloc(num_result_bindings[i], sizeof(MYSQL_BIND));
+            q_ctx->result_strlen[i] = calloc(num_bindings[i], sizeof(long));
         }
 
-        ndo_sql[i].bind_i = 0;
-        ndo_sql[i].result_i = 0;
+        q_ctx->bind_i[i] = 0;
+        q_ctx->result_i[i] = 0;
     }
 
-    ndo_sql[GENERIC].query = calloc(MAX_SQL_BUFFER, sizeof(char));
+    q_ctx->query[GENERIC] = calloc(MAX_SQL_BUFFER, sizeof(char));
 
-    ndo_sql[GET_OBJECT_ID_NAME1].query = strdup("SELECT object_id FROM nagios_objects WHERE objecttype_id = ? AND name1 = ?");
-    ndo_sql[GET_OBJECT_ID_NAME2].query = strdup("SELECT object_id FROM nagios_objects WHERE objecttype_id = ? AND name1 = ? AND name2 = ?");
-    ndo_sql[INSERT_OBJECT_ID_NAME1].query = strdup("INSERT INTO nagios_objects (instance_id, objecttype_id, name1) VALUES (1,?,?) ON DUPLICATE KEY UPDATE is_active = 1");
-    ndo_sql[INSERT_OBJECT_ID_NAME2].query = strdup("INSERT INTO nagios_objects (instance_id, objecttype_id, name1, name2) VALUES (1,?,?,?) ON DUPLICATE KEY UPDATE is_active = 1");
-    ndo_sql[HANDLE_LOG_DATA].query = strdup("INSERT INTO nagios_logentries (instance_id, logentry_time, entry_time, entry_time_usec, logentry_type, logentry_data, realtime_data, inferred_data_extracted) VALUES (1,FROM_UNIXTIME(?),FROM_UNIXTIME(?),?,?,?,1,1)");
-    ndo_sql[HANDLE_PROCESS].query = strdup("INSERT INTO nagios_processevents (instance_id, event_type, event_time, event_time_usec, process_id, program_name, program_version, program_date) VALUES (1,?,FROM_UNIXTIME(?),?,?,'Nagios',?,?)");
-    ndo_sql[HANDLE_PROCESS_SHUTDOWN].query = strdup("UPDATE nagios_programstatus SET program_end_time = FROM_UNIXTIME(?), is_currently_running = 0");
-    ndo_sql[HANDLE_TIMEDEVENT_ADD].query = strdup("INSERT INTO nagios_timedeventqueue (instance_id, event_type, queued_time, queued_time_usec, scheduled_time, recurring_event, object_id) VALUES (1,?,FROM_UNIXTIME(?),?,FROM_UNIXTIME(?),?,?) ON DUPLICATE KEY UPDATE instance_id = VALUES(instance_id), event_type = VALUES(event_type), queued_time = VALUES(queued_time), queued_time_usec = VALUES(queued_time_usec), scheduled_time = VALUES(scheduled_time), recurring_event = VALUES(recurring_event), object_id = VALUES(object_id)");
-    ndo_sql[HANDLE_TIMEDEVENT_REMOVE].query = strdup("DELETE FROM nagios_timedeventqueue WHERE instance_id = 1 AND event_type = ? AND scheduled_time = FROM_UNIXTIME(?) AND recurring_event = ? AND object_id = ?");
-    ndo_sql[HANDLE_TIMEDEVENT_EXECUTE].query = strdup("DELETE FROM nagios_timedeventqueue WHERE instance_id = 1 AND scheduled_time < FROM_UNIXTIME(?)");
-    ndo_sql[HANDLE_SYSTEM_COMMAND].query = strdup("INSERT INTO nagios_systemcommands (instance_id, start_time, start_time_usec, end_time, end_time_usec, command_line, timeout, early_timeout, execution_time, return_code, output, long_output) VALUES (1,FROM_UNIXTIME(?),?,FROM_UNIXTIME(?),?,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE instance_id = VALUES(instance_id), start_time = VALUES(start_time), start_time_usec = VALUES(start_time_usec), end_time = VALUES(end_time), end_time_usec = VALUES(end_time_usec), command_line = VALUES(command_line), timeout = VALUES(timeout), early_timeout = VALUES(early_timeout), execution_time = VALUES(execution_time), return_code = VALUES(return_code), output = VALUES(output), long_output = VALUES(long_output)");
-    ndo_sql[HANDLE_EVENT_HANDLER].query = strdup("INSERT INTO nagios_eventhandlers (instance_id, start_time, start_time_usec, end_time, end_time_usec, eventhandler_type, object_id, state, state_type, command_object_id, command_args, command_line, timeout, early_timeout, execution_time, return_code, output, long_output) VALUES (1,FROM_UNIXTIME(?),?,FROM_UNIXTIME(?),?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE instance_id = VALUES(instance_id), start_time = VALUES(start_time), start_time_usec = VALUES(start_time_usec), end_time = VALUES(end_time), end_time_usec = VALUES(end_time_usec), eventhandler_type = VALUES(eventhandler_type), object_id = VALUES(object_id), state = VALUES(state), state_type = VALUES(state_type), command_object_id = VALUES(command_object_id), command_args = VALUES(command_args), command_line = VALUES(command_line), timeout = VALUES(timeout), early_timeout = VALUES(early_timeout), execution_time = VALUES(execution_time), return_code = VALUES(return_code), output = VALUES(output), long_output = VALUES(long_output)");
-    ndo_sql[HANDLE_HOST_CHECK].query = strdup("INSERT INTO nagios_hostchecks (instance_id, start_time, start_time_usec, end_time, end_time_usec, host_object_id, check_type, current_check_attempt, max_check_attempts, state, state_type, timeout, early_timeout, execution_time, latency, return_code, output, long_output, perfdata, command_object_id, command_args, command_line) VALUES (1,FROM_UNIXTIME(?),?,FROM_UNIXTIME(?),?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE instance_id = VALUES(instance_id), start_time = VALUES(start_time), start_time_usec = VALUES(start_time_usec), end_time = VALUES(end_time), end_time_usec = VALUES(end_time_usec), host_object_id = VALUES(host_object_id), check_type = VALUES(check_type), current_check_attempt = VALUES(current_check_attempt), max_check_attempts = VALUES(max_check_attempts), state = VALUES(state), state_type = VALUES(state_type), timeout = VALUES(timeout), early_timeout = VALUES(early_timeout), execution_time = VALUES(execution_time), latency = VALUES(latency), return_code = VALUES(return_code), output = VALUES(output), long_output = VALUES(long_output), perfdata = VALUES(perfdata), command_object_id = VALUES(command_object_id), command_args = VALUES(command_args), command_line = VALUES(command_line)");
-    ndo_sql[HANDLE_SERVICE_CHECK].query = strdup("INSERT INTO nagios_servicechecks (instance_id, start_time, start_time_usec, end_time, end_time_usec, service_object_id, check_type, current_check_attempt, max_check_attempts, state, state_type, timeout, early_timeout, execution_time, latency, return_code, output, long_output, perfdata, command_object_id, command_args, command_line) VALUES (1,FROM_UNIXTIME(?),?,FROM_UNIXTIME(?),?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE instance_id = VALUES(instance_id), start_time = VALUES(start_time), start_time_usec = VALUES(start_time_usec), end_time = VALUES(end_time), end_time_usec = VALUES(end_time_usec), service_object_id = VALUES(service_object_id), check_type = VALUES(check_type), current_check_attempt = VALUES(current_check_attempt), max_check_attempts = VALUES(max_check_attempts), state = VALUES(state), state_type = VALUES(state_type), timeout = VALUES(timeout), early_timeout = VALUES(early_timeout), execution_time = VALUES(execution_time), latency = VALUES(latency), return_code = VALUES(return_code), output = VALUES(output), long_output = VALUES(long_output), perfdata = VALUES(perfdata), command_object_id = VALUES(command_object_id), command_args = VALUES(command_args), command_line = VALUES(command_line)");
-    ndo_sql[HANDLE_COMMENT_ADD].query = strdup("INSERT INTO nagios_comments (instance_id, comment_type, entry_type, object_id, comment_time, internal_comment_id, author_name, comment_data, is_persistent, comment_source, expires, expiration_time, entry_time, entry_time_usec) VALUES (1,?,?,?,FROM_UNIXTIME(?),?,?,?,?,?,?,FROM_UNIXTIME(?),FROM_UNIXTIME(?),?) ON DUPLICATE KEY UPDATE instance_id = VALUES(instance_id), comment_type = VALUES(comment_type), entry_type = VALUES(entry_type), object_id = VALUES(object_id), comment_time = VALUES(comment_time), internal_comment_id = VALUES(internal_comment_id), author_name = VALUES(author_name), comment_data = VALUES(comment_data), is_persistent = VALUES(is_persistent), comment_source = VALUES(comment_source), expires = VALUES(expires), expiration_time = VALUES(expiration_time), entry_time = VALUES(entry_time), entry_time_usec = VALUES(entry_time_usec)");
-    ndo_sql[HANDLE_COMMENT_HISTORY_ADD].query = strdup("INSERT INTO nagios_commenthistory (instance_id, comment_type, entry_type, object_id, comment_time, internal_comment_id, author_name, comment_data, is_persistent, comment_source, expires, expiration_time, entry_time, entry_time_usec) VALUES (1,?,?,?,FROM_UNIXTIME(?),?,?,?,?,?,?,FROM_UNIXTIME(?),FROM_UNIXTIME(?),?) ON DUPLICATE KEY UPDATE instance_id = VALUES(instance_id), comment_type = VALUES(comment_type), entry_type = VALUES(entry_type), object_id = VALUES(object_id), comment_time = VALUES(comment_time), internal_comment_id = VALUES(internal_comment_id), author_name = VALUES(author_name), comment_data = VALUES(comment_data), is_persistent = VALUES(is_persistent), comment_source = VALUES(comment_source), expires = VALUES(expires), expiration_time = VALUES(expiration_time), entry_time = VALUES(entry_time), entry_time_usec = VALUES(entry_time_usec)");
-    ndo_sql[HANDLE_COMMENT_DELETE].query = strdup("DELETE FROM nagios_comments WHERE comment_time = FROM_UNIXTIME(?) AND internal_comment_id = ?");
-    ndo_sql[HANDLE_COMMENT_HISTORY_DELETE].query = strdup("UPDATE nagios_commenthistory SET deletion_time = FROM_UNIXTIME(?), deletion_time_usec = ? WHERE comment_time = FROM_UNIXTIME(?) AND internal_comment_id = ?");
-    ndo_sql[HANDLE_DOWNTIME_ADD].query = strdup("INSERT INTO nagios_scheduleddowntime (instance_id, downtime_type, object_id, entry_time, author_name, comment_data, internal_downtime_id, triggered_by_id, is_fixed, duration, scheduled_start_time, scheduled_end_time) VALUES (1,?,?,FROM_UNIXTIME(?),?,?,?,?,?,?,FROM_UNIXTIME(?),FROM_UNIXTIME(?)) ON DUPLICATE KEY UPDATE instance_id = VALUES(instance_id), downtime_type = VALUES(downtime_type), object_id = VALUES(object_id), entry_time = VALUES(entry_time), author_name = VALUES(author_name), comment_data = VALUES(comment_data), internal_downtime_id = VALUES(internal_downtime_id), triggered_by_id = VALUES(triggered_by_id), is_fixed = VALUES(is_fixed), duration = VALUES(duration), scheduled_start_time = VALUES(scheduled_start_time), scheduled_end_time = VALUES(scheduled_end_time)");
-    ndo_sql[HANDLE_DOWNTIME_HISTORY_ADD].query = strdup("INSERT INTO nagios_downtimehistory (instance_id, downtime_type, object_id, entry_time, author_name, comment_data, internal_downtime_id, triggered_by_id, is_fixed, duration, scheduled_start_time, scheduled_end_time) VALUES (1,?,?,FROM_UNIXTIME(?),?,?,?,?,?,?,FROM_UNIXTIME(?),FROM_UNIXTIME(?)) ON DUPLICATE KEY UPDATE instance_id = VALUES(instance_id), downtime_type = VALUES(downtime_type), object_id = VALUES(object_id), entry_time = VALUES(entry_time), author_name = VALUES(author_name), comment_data = VALUES(comment_data), internal_downtime_id = VALUES(internal_downtime_id), triggered_by_id = VALUES(triggered_by_id), is_fixed = VALUES(is_fixed), duration = VALUES(duration), scheduled_start_time = VALUES(scheduled_start_time), scheduled_end_time = VALUES(scheduled_end_time)");
-    ndo_sql[HANDLE_DOWNTIME_START].query = strdup("UPDATE nagios_scheduleddowntime SET actual_start_time = FROM_UNIXTIME(?), actual_start_time_usec = ?, was_started = 1 WHERE object_id = ? AND downtime_type = ? AND entry_time = FROM_UNIXTIME(?) AND scheduled_start_time = FROM_UNIXTIME(?) AND scheduled_end_time = FROM_UNIXTIME(?)");
-    ndo_sql[HANDLE_DOWNTIME_HISTORY_START].query = strdup("UPDATE nagios_downtimehistory SET actual_start_time = FROM_UNIXTIME(?), actual_start_time_usec = ?, was_started = 1 WHERE object_id = ? AND downtime_type = ? AND entry_time = FROM_UNIXTIME(?) AND scheduled_start_time = FROM_UNIXTIME(?) AND scheduled_end_time = FROM_UNIXTIME(?)");
-    ndo_sql[HANDLE_DOWNTIME_STOP].query = strdup("DELETE FROM nagios_scheduleddowntime WHERE downtime_type = ? AND object_id = ? AND entry_time = FROM_UNIXTIME(?) AND scheduled_start_time = FROM_UNIXTIME(?) AND scheduled_end_time = FROM_UNIXTIME(?)");
-    ndo_sql[HANDLE_DOWNTIME_HISTORY_STOP].query = strdup("UPDATE nagios_downtimehistory SET actual_end_time = FROM_UNIXTIME(?), actual_end_time_usec = ?, was_cancelled = ? WHERE object_id = ? AND downtime_type = ? AND entry_time = FROM_UNIXTIME(?) AND scheduled_start_time = FROM_UNIXTIME(?) AND scheduled_end_time = FROM_UNIXTIME(?)");
-    ndo_sql[HANDLE_FLAPPING].query = strdup("INSERT INTO nagios_flappinghistory (instance_id, event_time, event_time_usec, event_type, reason_type, flapping_type, object_id, percent_state_change, low_threshold, high_threshold, comment_time, internal_comment_id) VALUES (1,FROM_UNIXTIME(?),?,?,?,?,?,?,?,?,FROM_UNIXTIME(?),?) ON DUPLICATE KEY UPDATE instance_id = VALUES(instance_id), event_time = VALUES(event_time), event_time_usec = VALUES(event_time_usec), event_type = VALUES(event_type), reason_type = VALUES(reason_type), flapping_type = VALUES(flapping_type), object_id = VALUES(object_id), percent_state_change = VALUES(percent_state_change), low_threshold = VALUES(low_threshold), high_threshold = VALUES(high_threshold), comment_time = VALUES(comment_time), internal_comment_id = VALUES(internal_comment_id)");
-    ndo_sql[HANDLE_PROGRAM_STATUS].query = strdup("INSERT INTO nagios_programstatus (instance_id, status_update_time, program_start_time, is_currently_running, process_id, daemon_mode, last_command_check, last_log_rotation, notifications_enabled, active_service_checks_enabled, passive_service_checks_enabled, active_host_checks_enabled, passive_host_checks_enabled, event_handlers_enabled, flap_detection_enabled, failure_prediction_enabled, process_performance_data, obsess_over_hosts, obsess_over_services, modified_host_attributes, modified_service_attributes, global_host_event_handler, global_service_event_handler) VALUES (1,FROM_UNIXTIME(?),FROM_UNIXTIME(?),1,?,?,FROM_UNIXTIME(0),FROM_UNIXTIME(?),?,?,?,?,?,?,?,0,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE instance_id = VALUES(instance_id), status_update_time = VALUES(status_update_time), program_start_time = VALUES(program_start_time), is_currently_running = VALUES(is_currently_running), process_id = VALUES(process_id), daemon_mode = VALUES(daemon_mode), last_command_check = VALUES(last_command_check), last_log_rotation = VALUES(last_log_rotation), notifications_enabled = VALUES(notifications_enabled), active_service_checks_enabled = VALUES(active_service_checks_enabled), passive_service_checks_enabled = VALUES(passive_service_checks_enabled), active_host_checks_enabled = VALUES(active_host_checks_enabled), passive_host_checks_enabled = VALUES(passive_host_checks_enabled), event_handlers_enabled = VALUES(event_handlers_enabled), flap_detection_enabled = VALUES(flap_detection_enabled), failure_prediction_enabled = VALUES(failure_prediction_enabled), process_performance_data = VALUES(process_performance_data), obsess_over_hosts = VALUES(obsess_over_hosts), obsess_over_services = VALUES(obsess_over_services), modified_host_attributes = VALUES(modified_host_attributes), modified_service_attributes = VALUES(modified_service_attributes), global_host_event_handler = VALUES(global_host_event_handler), global_service_event_handler = VALUES(global_service_event_handler)");
-    ndo_sql[HANDLE_HOST_STATUS].query = strdup("INSERT INTO nagios_hoststatus (instance_id, host_object_id, status_update_time, output, long_output, perfdata, current_state, has_been_checked, should_be_scheduled, current_check_attempt, max_check_attempts, last_check, next_check, check_type, last_state_change, last_hard_state_change, last_hard_state, last_time_up, last_time_down, last_time_unreachable, state_type, last_notification, next_notification, no_more_notifications, notifications_enabled, problem_has_been_acknowledged, acknowledgement_type, current_notification_number, passive_checks_enabled, active_checks_enabled, event_handler_enabled, flap_detection_enabled, is_flapping, percent_state_change, latency, execution_time, scheduled_downtime_depth, failure_prediction_enabled, process_performance_data, obsess_over_host, modified_host_attributes, event_handler, check_command, normal_check_interval, retry_check_interval, check_timeperiod_object_id) VALUES (1,?,FROM_UNIXTIME(?),?,?,?,?,?,?,?,?,FROM_UNIXTIME(?),FROM_UNIXTIME(?),?,FROM_UNIXTIME(?),FROM_UNIXTIME(?),?,FROM_UNIXTIME(?),FROM_UNIXTIME(?),FROM_UNIXTIME(?),?,FROM_UNIXTIME(?),FROM_UNIXTIME(?),?,?,?,?,?,?,?,?,?,?,?,?,?,?,0,?,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE instance_id = VALUES(instance_id), host_object_id = VALUES(host_object_id), status_update_time = VALUES(status_update_time), output = VALUES(output), long_output = VALUES(long_output), perfdata = VALUES(perfdata), current_state = VALUES(current_state), has_been_checked = VALUES(has_been_checked), should_be_scheduled = VALUES(should_be_scheduled), current_check_attempt = VALUES(current_check_attempt), max_check_attempts = VALUES(max_check_attempts), last_check = VALUES(last_check), next_check = VALUES(next_check), check_type = VALUES(check_type), last_state_change = VALUES(last_state_change), last_hard_state_change = VALUES(last_hard_state_change), last_hard_state = VALUES(last_hard_state), last_time_up = VALUES(last_time_up), last_time_down = VALUES(last_time_down), last_time_unreachable = VALUES(last_time_unreachable), state_type = VALUES(state_type), last_notification = VALUES(last_notification), next_notification = VALUES(next_notification), no_more_notifications = VALUES(no_more_notifications), notifications_enabled = VALUES(notifications_enabled), problem_has_been_acknowledged = VALUES(problem_has_been_acknowledged), acknowledgement_type = VALUES(acknowledgement_type), current_notification_number = VALUES(current_notification_number), passive_checks_enabled = VALUES(passive_checks_enabled), active_checks_enabled = VALUES(active_checks_enabled), event_handler_enabled = VALUES(event_handler_enabled), flap_detection_enabled = VALUES(flap_detection_enabled), is_flapping = VALUES(is_flapping), percent_state_change = VALUES(percent_state_change), latency = VALUES(latency), execution_time = VALUES(execution_time), scheduled_downtime_depth = VALUES(scheduled_downtime_depth), failure_prediction_enabled = VALUES(failure_prediction_enabled), process_performance_data = VALUES(process_performance_data), obsess_over_host = VALUES(obsess_over_host), modified_host_attributes = VALUES(modified_host_attributes), event_handler = VALUES(event_handler), check_command = VALUES(check_command), normal_check_interval = VALUES(normal_check_interval), retry_check_interval = VALUES(retry_check_interval), check_timeperiod_object_id = VALUES(check_timeperiod_object_id)");
-    ndo_sql[HANDLE_SERVICE_STATUS].query = strdup("INSERT INTO nagios_servicestatus (instance_id, service_object_id, status_update_time, output, long_output, perfdata, current_state, has_been_checked, should_be_scheduled, current_check_attempt, max_check_attempts, last_check, next_check, check_type, last_state_change, last_hard_state_change, last_hard_state, last_time_ok, last_time_warning, last_time_unknown, last_time_critical, state_type, last_notification, next_notification, no_more_notifications, notifications_enabled, problem_has_been_acknowledged, acknowledgement_type, current_notification_number, passive_checks_enabled, active_checks_enabled, event_handler_enabled, flap_detection_enabled, is_flapping, percent_state_change, latency, execution_time, scheduled_downtime_depth, failure_prediction_enabled, process_performance_data, obsess_over_service, modified_service_attributes, event_handler, check_command, normal_check_interval, retry_check_interval, check_timeperiod_object_id) VALUES (1,?,FROM_UNIXTIME(?),?,?,?,?,?,?,?,?,FROM_UNIXTIME(?),FROM_UNIXTIME(?),?,FROM_UNIXTIME(?),FROM_UNIXTIME(?),?,FROM_UNIXTIME(?),FROM_UNIXTIME(?),FROM_UNIXTIME(?),FROM_UNIXTIME(?),?,FROM_UNIXTIME(?),FROM_UNIXTIME(?),?,?,?,?,?,?,?,?,?,?,?,?,?,?,0,?,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE instance_id = VALUES(instance_id), service_object_id = VALUES(service_object_id), status_update_time = VALUES(status_update_time), output = VALUES(output), long_output = VALUES(long_output), perfdata = VALUES(perfdata), current_state = VALUES(current_state), has_been_checked = VALUES(has_been_checked), should_be_scheduled = VALUES(should_be_scheduled), current_check_attempt = VALUES(current_check_attempt), max_check_attempts = VALUES(max_check_attempts), last_check = VALUES(last_check), next_check = VALUES(next_check), check_type = VALUES(check_type), last_state_change = VALUES(last_state_change), last_hard_state_change = VALUES(last_hard_state_change), last_hard_state = VALUES(last_hard_state), last_time_ok = VALUES(last_time_ok), last_time_warning = VALUES(last_time_warning), last_time_unknown = VALUES(last_time_unknown), last_time_critical = VALUES(last_time_critical), state_type = VALUES(state_type), last_notification = VALUES(last_notification), next_notification = VALUES(next_notification), no_more_notifications = VALUES(no_more_notifications), notifications_enabled = VALUES(notifications_enabled), problem_has_been_acknowledged = VALUES(problem_has_been_acknowledged), acknowledgement_type = VALUES(acknowledgement_type), current_notification_number = VALUES(current_notification_number), passive_checks_enabled = VALUES(passive_checks_enabled), active_checks_enabled = VALUES(active_checks_enabled), event_handler_enabled = VALUES(event_handler_enabled), flap_detection_enabled = VALUES(flap_detection_enabled), is_flapping = VALUES(is_flapping), percent_state_change = VALUES(percent_state_change), latency = VALUES(latency), execution_time = VALUES(execution_time), scheduled_downtime_depth = VALUES(scheduled_downtime_depth), failure_prediction_enabled = VALUES(failure_prediction_enabled), process_performance_data = VALUES(process_performance_data), obsess_over_service = VALUES(obsess_over_service), modified_service_attributes = VALUES(modified_service_attributes), event_handler = VALUES(event_handler), check_command = VALUES(check_command), normal_check_interval = VALUES(normal_check_interval), retry_check_interval = VALUES(retry_check_interval), check_timeperiod_object_id = VALUES(check_timeperiod_object_id)");
-    ndo_sql[HANDLE_CONTACT_STATUS].query = strdup("INSERT INTO nagios_contactstatus (instance_id, contact_object_id, status_update_time, host_notifications_enabled, service_notifications_enabled, last_host_notification, last_service_notification, modified_attributes, modified_host_attributes, modified_service_attributes) VALUES (1,?,FROM_UNIXTIME(?),?,?,FROM_UNIXTIME(?),FROM_UNIXTIME(?),?,?,?) ON DUPLICATE KEY UPDATE instance_id = VALUES(instance_id), contact_object_id = VALUES(contact_object_id), status_update_time = VALUES(status_update_time), host_notifications_enabled = VALUES(host_notifications_enabled), service_notifications_enabled = VALUES(service_notifications_enabled), last_host_notification = VALUES(last_host_notification), last_service_notification = VALUES(last_service_notification), modified_attributes = VALUES(modified_attributes), modified_host_attributes = VALUES(modified_host_attributes), modified_service_attributes = VALUES(modified_service_attributes)");
-    ndo_sql[HANDLE_NOTIFICATION].query = strdup("INSERT INTO nagios_notifications (instance_id, start_time, start_time_usec, end_time, end_time_usec, notification_type, notification_reason, object_id, state, output, long_output, escalated, contacts_notified) VALUES (1,FROM_UNIXTIME(?),?,FROM_UNIXTIME(?),?,?,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE instance_id = VALUES(instance_id), start_time = VALUES(start_time), start_time_usec = VALUES(start_time_usec), end_time = VALUES(end_time), end_time_usec = VALUES(end_time_usec), notification_type = VALUES(notification_type), notification_reason = VALUES(notification_reason), object_id = VALUES(object_id), state = VALUES(state), output = VALUES(output), long_output = VALUES(long_output), escalated = VALUES(escalated), contacts_notified = VALUES(contacts_notified)");
-    ndo_sql[HANDLE_CONTACT_NOTIFICATION].query = strdup("INSERT INTO nagios_contactnotifications (instance_id, notification_id, start_time, start_time_usec, end_time, end_time_usec, contact_object_id) VALUES (1,?,FROM_UNIXTIME(?),?,FROM_UNIXTIME(?),?,?) ON DUPLICATE KEY UPDATE instance_id = VALUES(instance_id), notification_id = VALUES(notification_id), start_time = VALUES(start_time), start_time_usec = VALUES(start_time_usec), end_time = VALUES(end_time), end_time_usec = VALUES(end_time_usec), contact_object_id = VALUES(contact_object_id)");
-    ndo_sql[HANDLE_CONTACT_NOTIFICATION_METHOD].query = strdup("INSERT INTO nagios_contactnotificationmethods (instance_id, contactnotification_id, start_time, start_time_usec, end_time, end_time_usec, command_object_id, command_args) VALUES (1,?,FROM_UNIXTIME(?),?,FROM_UNIXTIME(?),?,?,?) ON DUPLICATE KEY UPDATE instance_id = VALUES(instance_id), contactnotification_id = VALUES(contactnotification_id), start_time = VALUES(start_time), start_time_usec = VALUES(start_time_usec), end_time = VALUES(end_time), end_time_usec = VALUES(end_time_usec), command_object_id = VALUES(command_object_id), command_args = VALUES(command_args)");
-    ndo_sql[HANDLE_EXTERNAL_COMMAND].query = strdup("INSERT INTO nagios_externalcommands (instance_id, command_type, entry_time, command_name, command_args) VALUES (1,?,FROM_UNIXTIME(?),?,?) ON DUPLICATE KEY UPDATE instance_id = VALUES(instance_id), command_type = VALUES(command_type), entry_time = VALUES(entry_time), command_name = VALUES(command_name), command_args = VALUES(command_args)");
-    ndo_sql[HANDLE_ACKNOWLEDGEMENT].query = strdup("INSERT INTO nagios_acknowledgements (instance_id, entry_time, entry_time_usec, acknowledgement_type, object_id, state, author_name, comment_data, is_sticky, persistent_comment, notify_contacts) VALUES (1,FROM_UNIXTIME(?),?,?,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE instance_id = VALUES(instance_id), entry_time = VALUES(entry_time), entry_time_usec = VALUES(entry_time_usec), acknowledgement_type = VALUES(acknowledgement_type), object_id = VALUES(object_id), state = VALUES(state), author_name = VALUES(author_name), comment_data = VALUES(comment_data), is_sticky = VALUES(is_sticky), persistent_comment = VALUES(persistent_comment), notify_contacts = VALUES(notify_contacts)");
-    ndo_sql[HANDLE_STATE_CHANGE].query = strdup("INSERT INTO nagios_statehistory SET instance_id = 1, state_time = FROM_UNIXTIME(?), state_time_usec = ?, object_id = ?, state_change = 1, state = ?, state_type = ?, current_check_attempt = ?, max_check_attempts = ?, last_state = ?, last_hard_state = ?, output = ?, long_output = ?");
-    ndo_sql[HANDLE_OBJECT_WRITING].query = strdup("UPDATE nagios_objects SET is_active = 1 WHERE object_id = ?");
+    q_ctx->query[GET_OBJECT_ID_NAME1] = strdup("SELECT object_id FROM nagios_objects WHERE objecttype_id = ? AND name1 = ?");
+    q_ctx->query[GET_OBJECT_ID_NAME2] = strdup("SELECT object_id FROM nagios_objects WHERE objecttype_id = ? AND name1 = ? AND name2 = ?");
+    q_ctx->query[INSERT_OBJECT_ID_NAME1] = strdup("INSERT INTO nagios_objects (instance_id, objecttype_id, name1) VALUES (1,?,?) ON DUPLICATE KEY UPDATE is_active = 1");
+    q_ctx->query[INSERT_OBJECT_ID_NAME2] = strdup("INSERT INTO nagios_objects (instance_id, objecttype_id, name1, name2) VALUES (1,?,?,?) ON DUPLICATE KEY UPDATE is_active = 1");
+    q_ctx->query[HANDLE_LOG_DATA] = strdup("INSERT INTO nagios_logentries (instance_id, logentry_time, entry_time, entry_time_usec, logentry_type, logentry_data, realtime_data, inferred_data_extracted) VALUES (1,FROM_UNIXTIME(?),FROM_UNIXTIME(?),?,?,?,1,1)");
+    q_ctx->query[HANDLE_PROCESS] = strdup("INSERT INTO nagios_processevents (instance_id, event_type, event_time, event_time_usec, process_id, program_name, program_version, program_date) VALUES (1,?,FROM_UNIXTIME(?),?,?,'Nagios',?,?)");
+    q_ctx->query[HANDLE_PROCESS_SHUTDOWN] = strdup("UPDATE nagios_programstatus SET program_end_time = FROM_UNIXTIME(?), is_currently_running = 0");
+    q_ctx->query[HANDLE_TIMEDEVENT_ADD] = strdup("INSERT INTO nagios_timedeventqueue (instance_id, event_type, queued_time, queued_time_usec, scheduled_time, recurring_event, object_id) VALUES (1,?,FROM_UNIXTIME(?),?,FROM_UNIXTIME(?),?,?) ON DUPLICATE KEY UPDATE instance_id = VALUES(instance_id), event_type = VALUES(event_type), queued_time = VALUES(queued_time), queued_time_usec = VALUES(queued_time_usec), scheduled_time = VALUES(scheduled_time), recurring_event = VALUES(recurring_event), object_id = VALUES(object_id)");
+    q_ctx->query[HANDLE_TIMEDEVENT_REMOVE] = strdup("DELETE FROM nagios_timedeventqueue WHERE instance_id = 1 AND event_type = ? AND scheduled_time = FROM_UNIXTIME(?) AND recurring_event = ? AND object_id = ?");
+    q_ctx->query[HANDLE_TIMEDEVENT_EXECUTE] = strdup("DELETE FROM nagios_timedeventqueue WHERE instance_id = 1 AND scheduled_time < FROM_UNIXTIME(?)");
+    q_ctx->query[HANDLE_SYSTEM_COMMAND] = strdup("INSERT INTO nagios_systemcommands (instance_id, start_time, start_time_usec, end_time, end_time_usec, command_line, timeout, early_timeout, execution_time, return_code, output, long_output) VALUES (1,FROM_UNIXTIME(?),?,FROM_UNIXTIME(?),?,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE instance_id = VALUES(instance_id), start_time = VALUES(start_time), start_time_usec = VALUES(start_time_usec), end_time = VALUES(end_time), end_time_usec = VALUES(end_time_usec), command_line = VALUES(command_line), timeout = VALUES(timeout), early_timeout = VALUES(early_timeout), execution_time = VALUES(execution_time), return_code = VALUES(return_code), output = VALUES(output), long_output = VALUES(long_output)");
+    q_ctx->query[HANDLE_EVENT_HANDLER] = strdup("INSERT INTO nagios_eventhandlers (instance_id, start_time, start_time_usec, end_time, end_time_usec, eventhandler_type, object_id, state, state_type, command_object_id, command_args, command_line, timeout, early_timeout, execution_time, return_code, output, long_output) VALUES (1,FROM_UNIXTIME(?),?,FROM_UNIXTIME(?),?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE instance_id = VALUES(instance_id), start_time = VALUES(start_time), start_time_usec = VALUES(start_time_usec), end_time = VALUES(end_time), end_time_usec = VALUES(end_time_usec), eventhandler_type = VALUES(eventhandler_type), object_id = VALUES(object_id), state = VALUES(state), state_type = VALUES(state_type), command_object_id = VALUES(command_object_id), command_args = VALUES(command_args), command_line = VALUES(command_line), timeout = VALUES(timeout), early_timeout = VALUES(early_timeout), execution_time = VALUES(execution_time), return_code = VALUES(return_code), output = VALUES(output), long_output = VALUES(long_output)");
+    q_ctx->query[HANDLE_HOST_CHECK] = strdup("INSERT INTO nagios_hostchecks (instance_id, start_time, start_time_usec, end_time, end_time_usec, host_object_id, check_type, current_check_attempt, max_check_attempts, state, state_type, timeout, early_timeout, execution_time, latency, return_code, output, long_output, perfdata, command_object_id, command_args, command_line) VALUES (1,FROM_UNIXTIME(?),?,FROM_UNIXTIME(?),?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE instance_id = VALUES(instance_id), start_time = VALUES(start_time), start_time_usec = VALUES(start_time_usec), end_time = VALUES(end_time), end_time_usec = VALUES(end_time_usec), host_object_id = VALUES(host_object_id), check_type = VALUES(check_type), current_check_attempt = VALUES(current_check_attempt), max_check_attempts = VALUES(max_check_attempts), state = VALUES(state), state_type = VALUES(state_type), timeout = VALUES(timeout), early_timeout = VALUES(early_timeout), execution_time = VALUES(execution_time), latency = VALUES(latency), return_code = VALUES(return_code), output = VALUES(output), long_output = VALUES(long_output), perfdata = VALUES(perfdata), command_object_id = VALUES(command_object_id), command_args = VALUES(command_args), command_line = VALUES(command_line)");
+    q_ctx->query[HANDLE_SERVICE_CHECK] = strdup("INSERT INTO nagios_servicechecks (instance_id, start_time, start_time_usec, end_time, end_time_usec, service_object_id, check_type, current_check_attempt, max_check_attempts, state, state_type, timeout, early_timeout, execution_time, latency, return_code, output, long_output, perfdata, command_object_id, command_args, command_line) VALUES (1,FROM_UNIXTIME(?),?,FROM_UNIXTIME(?),?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE instance_id = VALUES(instance_id), start_time = VALUES(start_time), start_time_usec = VALUES(start_time_usec), end_time = VALUES(end_time), end_time_usec = VALUES(end_time_usec), service_object_id = VALUES(service_object_id), check_type = VALUES(check_type), current_check_attempt = VALUES(current_check_attempt), max_check_attempts = VALUES(max_check_attempts), state = VALUES(state), state_type = VALUES(state_type), timeout = VALUES(timeout), early_timeout = VALUES(early_timeout), execution_time = VALUES(execution_time), latency = VALUES(latency), return_code = VALUES(return_code), output = VALUES(output), long_output = VALUES(long_output), perfdata = VALUES(perfdata), command_object_id = VALUES(command_object_id), command_args = VALUES(command_args), command_line = VALUES(command_line)");
+    q_ctx->query[HANDLE_COMMENT_ADD] = strdup("INSERT INTO nagios_comments (instance_id, comment_type, entry_type, object_id, comment_time, internal_comment_id, author_name, comment_data, is_persistent, comment_source, expires, expiration_time, entry_time, entry_time_usec) VALUES (1,?,?,?,FROM_UNIXTIME(?),?,?,?,?,?,?,FROM_UNIXTIME(?),FROM_UNIXTIME(?),?) ON DUPLICATE KEY UPDATE instance_id = VALUES(instance_id), comment_type = VALUES(comment_type), entry_type = VALUES(entry_type), object_id = VALUES(object_id), comment_time = VALUES(comment_time), internal_comment_id = VALUES(internal_comment_id), author_name = VALUES(author_name), comment_data = VALUES(comment_data), is_persistent = VALUES(is_persistent), comment_source = VALUES(comment_source), expires = VALUES(expires), expiration_time = VALUES(expiration_time), entry_time = VALUES(entry_time), entry_time_usec = VALUES(entry_time_usec)");
+    q_ctx->query[HANDLE_COMMENT_HISTORY_ADD] = strdup("INSERT INTO nagios_commenthistory (instance_id, comment_type, entry_type, object_id, comment_time, internal_comment_id, author_name, comment_data, is_persistent, comment_source, expires, expiration_time, entry_time, entry_time_usec) VALUES (1,?,?,?,FROM_UNIXTIME(?),?,?,?,?,?,?,FROM_UNIXTIME(?),FROM_UNIXTIME(?),?) ON DUPLICATE KEY UPDATE instance_id = VALUES(instance_id), comment_type = VALUES(comment_type), entry_type = VALUES(entry_type), object_id = VALUES(object_id), comment_time = VALUES(comment_time), internal_comment_id = VALUES(internal_comment_id), author_name = VALUES(author_name), comment_data = VALUES(comment_data), is_persistent = VALUES(is_persistent), comment_source = VALUES(comment_source), expires = VALUES(expires), expiration_time = VALUES(expiration_time), entry_time = VALUES(entry_time), entry_time_usec = VALUES(entry_time_usec)");
+    q_ctx->query[HANDLE_COMMENT_DELETE] = strdup("DELETE FROM nagios_comments WHERE comment_time = FROM_UNIXTIME(?) AND internal_comment_id = ?");
+    q_ctx->query[HANDLE_COMMENT_HISTORY_DELETE] = strdup("UPDATE nagios_commenthistory SET deletion_time = FROM_UNIXTIME(?), deletion_time_usec = ? WHERE comment_time = FROM_UNIXTIME(?) AND internal_comment_id = ?");
+    q_ctx->query[HANDLE_DOWNTIME_ADD] = strdup("INSERT INTO nagios_scheduleddowntime (instance_id, downtime_type, object_id, entry_time, author_name, comment_data, internal_downtime_id, triggered_by_id, is_fixed, duration, scheduled_start_time, scheduled_end_time) VALUES (1,?,?,FROM_UNIXTIME(?),?,?,?,?,?,?,FROM_UNIXTIME(?),FROM_UNIXTIME(?)) ON DUPLICATE KEY UPDATE instance_id = VALUES(instance_id), downtime_type = VALUES(downtime_type), object_id = VALUES(object_id), entry_time = VALUES(entry_time), author_name = VALUES(author_name), comment_data = VALUES(comment_data), internal_downtime_id = VALUES(internal_downtime_id), triggered_by_id = VALUES(triggered_by_id), is_fixed = VALUES(is_fixed), duration = VALUES(duration), scheduled_start_time = VALUES(scheduled_start_time), scheduled_end_time = VALUES(scheduled_end_time)");
+    q_ctx->query[HANDLE_DOWNTIME_HISTORY_ADD] = strdup("INSERT INTO nagios_downtimehistory (instance_id, downtime_type, object_id, entry_time, author_name, comment_data, internal_downtime_id, triggered_by_id, is_fixed, duration, scheduled_start_time, scheduled_end_time) VALUES (1,?,?,FROM_UNIXTIME(?),?,?,?,?,?,?,FROM_UNIXTIME(?),FROM_UNIXTIME(?)) ON DUPLICATE KEY UPDATE instance_id = VALUES(instance_id), downtime_type = VALUES(downtime_type), object_id = VALUES(object_id), entry_time = VALUES(entry_time), author_name = VALUES(author_name), comment_data = VALUES(comment_data), internal_downtime_id = VALUES(internal_downtime_id), triggered_by_id = VALUES(triggered_by_id), is_fixed = VALUES(is_fixed), duration = VALUES(duration), scheduled_start_time = VALUES(scheduled_start_time), scheduled_end_time = VALUES(scheduled_end_time)");
+    q_ctx->query[HANDLE_DOWNTIME_START] = strdup("UPDATE nagios_scheduleddowntime SET actual_start_time = FROM_UNIXTIME(?), actual_start_time_usec = ?, was_started = 1 WHERE object_id = ? AND downtime_type = ? AND entry_time = FROM_UNIXTIME(?) AND scheduled_start_time = FROM_UNIXTIME(?) AND scheduled_end_time = FROM_UNIXTIME(?)");
+    q_ctx->query[HANDLE_DOWNTIME_HISTORY_START] = strdup("UPDATE nagios_downtimehistory SET actual_start_time = FROM_UNIXTIME(?), actual_start_time_usec = ?, was_started = 1 WHERE object_id = ? AND downtime_type = ? AND entry_time = FROM_UNIXTIME(?) AND scheduled_start_time = FROM_UNIXTIME(?) AND scheduled_end_time = FROM_UNIXTIME(?)");
+    q_ctx->query[HANDLE_DOWNTIME_STOP] = strdup("DELETE FROM nagios_scheduleddowntime WHERE downtime_type = ? AND object_id = ? AND entry_time = FROM_UNIXTIME(?) AND scheduled_start_time = FROM_UNIXTIME(?) AND scheduled_end_time = FROM_UNIXTIME(?)");
+    q_ctx->query[HANDLE_DOWNTIME_HISTORY_STOP] = strdup("UPDATE nagios_downtimehistory SET actual_end_time = FROM_UNIXTIME(?), actual_end_time_usec = ?, was_cancelled = ? WHERE object_id = ? AND downtime_type = ? AND entry_time = FROM_UNIXTIME(?) AND scheduled_start_time = FROM_UNIXTIME(?) AND scheduled_end_time = FROM_UNIXTIME(?)");
+    q_ctx->query[HANDLE_FLAPPING] = strdup("INSERT INTO nagios_flappinghistory (instance_id, event_time, event_time_usec, event_type, reason_type, flapping_type, object_id, percent_state_change, low_threshold, high_threshold, comment_time, internal_comment_id) VALUES (1,FROM_UNIXTIME(?),?,?,?,?,?,?,?,?,FROM_UNIXTIME(?),?) ON DUPLICATE KEY UPDATE instance_id = VALUES(instance_id), event_time = VALUES(event_time), event_time_usec = VALUES(event_time_usec), event_type = VALUES(event_type), reason_type = VALUES(reason_type), flapping_type = VALUES(flapping_type), object_id = VALUES(object_id), percent_state_change = VALUES(percent_state_change), low_threshold = VALUES(low_threshold), high_threshold = VALUES(high_threshold), comment_time = VALUES(comment_time), internal_comment_id = VALUES(internal_comment_id)");
+    q_ctx->query[HANDLE_PROGRAM_STATUS] = strdup("INSERT INTO nagios_programstatus (instance_id, status_update_time, program_start_time, is_currently_running, process_id, daemon_mode, last_command_check, last_log_rotation, notifications_enabled, active_service_checks_enabled, passive_service_checks_enabled, active_host_checks_enabled, passive_host_checks_enabled, event_handlers_enabled, flap_detection_enabled, failure_prediction_enabled, process_performance_data, obsess_over_hosts, obsess_over_services, modified_host_attributes, modified_service_attributes, global_host_event_handler, global_service_event_handler) VALUES (1,FROM_UNIXTIME(?),FROM_UNIXTIME(?),1,?,?,FROM_UNIXTIME(0),FROM_UNIXTIME(?),?,?,?,?,?,?,?,0,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE instance_id = VALUES(instance_id), status_update_time = VALUES(status_update_time), program_start_time = VALUES(program_start_time), is_currently_running = VALUES(is_currently_running), process_id = VALUES(process_id), daemon_mode = VALUES(daemon_mode), last_command_check = VALUES(last_command_check), last_log_rotation = VALUES(last_log_rotation), notifications_enabled = VALUES(notifications_enabled), active_service_checks_enabled = VALUES(active_service_checks_enabled), passive_service_checks_enabled = VALUES(passive_service_checks_enabled), active_host_checks_enabled = VALUES(active_host_checks_enabled), passive_host_checks_enabled = VALUES(passive_host_checks_enabled), event_handlers_enabled = VALUES(event_handlers_enabled), flap_detection_enabled = VALUES(flap_detection_enabled), failure_prediction_enabled = VALUES(failure_prediction_enabled), process_performance_data = VALUES(process_performance_data), obsess_over_hosts = VALUES(obsess_over_hosts), obsess_over_services = VALUES(obsess_over_services), modified_host_attributes = VALUES(modified_host_attributes), modified_service_attributes = VALUES(modified_service_attributes), global_host_event_handler = VALUES(global_host_event_handler), global_service_event_handler = VALUES(global_service_event_handler)");
+    q_ctx->query[HANDLE_HOST_STATUS] = strdup("INSERT INTO nagios_hoststatus (instance_id, host_object_id, status_update_time, output, long_output, perfdata, current_state, has_been_checked, should_be_scheduled, current_check_attempt, max_check_attempts, last_check, next_check, check_type, last_state_change, last_hard_state_change, last_hard_state, last_time_up, last_time_down, last_time_unreachable, state_type, last_notification, next_notification, no_more_notifications, notifications_enabled, problem_has_been_acknowledged, acknowledgement_type, current_notification_number, passive_checks_enabled, active_checks_enabled, event_handler_enabled, flap_detection_enabled, is_flapping, percent_state_change, latency, execution_time, scheduled_downtime_depth, failure_prediction_enabled, process_performance_data, obsess_over_host, modified_host_attributes, event_handler, check_command, normal_check_interval, retry_check_interval, check_timeperiod_object_id) VALUES (1,?,FROM_UNIXTIME(?),?,?,?,?,?,?,?,?,FROM_UNIXTIME(?),FROM_UNIXTIME(?),?,FROM_UNIXTIME(?),FROM_UNIXTIME(?),?,FROM_UNIXTIME(?),FROM_UNIXTIME(?),FROM_UNIXTIME(?),?,FROM_UNIXTIME(?),FROM_UNIXTIME(?),?,?,?,?,?,?,?,?,?,?,?,?,?,?,0,?,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE instance_id = VALUES(instance_id), host_object_id = VALUES(host_object_id), status_update_time = VALUES(status_update_time), output = VALUES(output), long_output = VALUES(long_output), perfdata = VALUES(perfdata), current_state = VALUES(current_state), has_been_checked = VALUES(has_been_checked), should_be_scheduled = VALUES(should_be_scheduled), current_check_attempt = VALUES(current_check_attempt), max_check_attempts = VALUES(max_check_attempts), last_check = VALUES(last_check), next_check = VALUES(next_check), check_type = VALUES(check_type), last_state_change = VALUES(last_state_change), last_hard_state_change = VALUES(last_hard_state_change), last_hard_state = VALUES(last_hard_state), last_time_up = VALUES(last_time_up), last_time_down = VALUES(last_time_down), last_time_unreachable = VALUES(last_time_unreachable), state_type = VALUES(state_type), last_notification = VALUES(last_notification), next_notification = VALUES(next_notification), no_more_notifications = VALUES(no_more_notifications), notifications_enabled = VALUES(notifications_enabled), problem_has_been_acknowledged = VALUES(problem_has_been_acknowledged), acknowledgement_type = VALUES(acknowledgement_type), current_notification_number = VALUES(current_notification_number), passive_checks_enabled = VALUES(passive_checks_enabled), active_checks_enabled = VALUES(active_checks_enabled), event_handler_enabled = VALUES(event_handler_enabled), flap_detection_enabled = VALUES(flap_detection_enabled), is_flapping = VALUES(is_flapping), percent_state_change = VALUES(percent_state_change), latency = VALUES(latency), execution_time = VALUES(execution_time), scheduled_downtime_depth = VALUES(scheduled_downtime_depth), failure_prediction_enabled = VALUES(failure_prediction_enabled), process_performance_data = VALUES(process_performance_data), obsess_over_host = VALUES(obsess_over_host), modified_host_attributes = VALUES(modified_host_attributes), event_handler = VALUES(event_handler), check_command = VALUES(check_command), normal_check_interval = VALUES(normal_check_interval), retry_check_interval = VALUES(retry_check_interval), check_timeperiod_object_id = VALUES(check_timeperiod_object_id)");
+    q_ctx->query[HANDLE_SERVICE_STATUS] = strdup("INSERT INTO nagios_servicestatus (instance_id, service_object_id, status_update_time, output, long_output, perfdata, current_state, has_been_checked, should_be_scheduled, current_check_attempt, max_check_attempts, last_check, next_check, check_type, last_state_change, last_hard_state_change, last_hard_state, last_time_ok, last_time_warning, last_time_unknown, last_time_critical, state_type, last_notification, next_notification, no_more_notifications, notifications_enabled, problem_has_been_acknowledged, acknowledgement_type, current_notification_number, passive_checks_enabled, active_checks_enabled, event_handler_enabled, flap_detection_enabled, is_flapping, percent_state_change, latency, execution_time, scheduled_downtime_depth, failure_prediction_enabled, process_performance_data, obsess_over_service, modified_service_attributes, event_handler, check_command, normal_check_interval, retry_check_interval, check_timeperiod_object_id) VALUES (1,?,FROM_UNIXTIME(?),?,?,?,?,?,?,?,?,FROM_UNIXTIME(?),FROM_UNIXTIME(?),?,FROM_UNIXTIME(?),FROM_UNIXTIME(?),?,FROM_UNIXTIME(?),FROM_UNIXTIME(?),FROM_UNIXTIME(?),FROM_UNIXTIME(?),?,FROM_UNIXTIME(?),FROM_UNIXTIME(?),?,?,?,?,?,?,?,?,?,?,?,?,?,?,0,?,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE instance_id = VALUES(instance_id), service_object_id = VALUES(service_object_id), status_update_time = VALUES(status_update_time), output = VALUES(output), long_output = VALUES(long_output), perfdata = VALUES(perfdata), current_state = VALUES(current_state), has_been_checked = VALUES(has_been_checked), should_be_scheduled = VALUES(should_be_scheduled), current_check_attempt = VALUES(current_check_attempt), max_check_attempts = VALUES(max_check_attempts), last_check = VALUES(last_check), next_check = VALUES(next_check), check_type = VALUES(check_type), last_state_change = VALUES(last_state_change), last_hard_state_change = VALUES(last_hard_state_change), last_hard_state = VALUES(last_hard_state), last_time_ok = VALUES(last_time_ok), last_time_warning = VALUES(last_time_warning), last_time_unknown = VALUES(last_time_unknown), last_time_critical = VALUES(last_time_critical), state_type = VALUES(state_type), last_notification = VALUES(last_notification), next_notification = VALUES(next_notification), no_more_notifications = VALUES(no_more_notifications), notifications_enabled = VALUES(notifications_enabled), problem_has_been_acknowledged = VALUES(problem_has_been_acknowledged), acknowledgement_type = VALUES(acknowledgement_type), current_notification_number = VALUES(current_notification_number), passive_checks_enabled = VALUES(passive_checks_enabled), active_checks_enabled = VALUES(active_checks_enabled), event_handler_enabled = VALUES(event_handler_enabled), flap_detection_enabled = VALUES(flap_detection_enabled), is_flapping = VALUES(is_flapping), percent_state_change = VALUES(percent_state_change), latency = VALUES(latency), execution_time = VALUES(execution_time), scheduled_downtime_depth = VALUES(scheduled_downtime_depth), failure_prediction_enabled = VALUES(failure_prediction_enabled), process_performance_data = VALUES(process_performance_data), obsess_over_service = VALUES(obsess_over_service), modified_service_attributes = VALUES(modified_service_attributes), event_handler = VALUES(event_handler), check_command = VALUES(check_command), normal_check_interval = VALUES(normal_check_interval), retry_check_interval = VALUES(retry_check_interval), check_timeperiod_object_id = VALUES(check_timeperiod_object_id)");
+    q_ctx->query[HANDLE_CONTACT_STATUS] = strdup("INSERT INTO nagios_contactstatus (instance_id, contact_object_id, status_update_time, host_notifications_enabled, service_notifications_enabled, last_host_notification, last_service_notification, modified_attributes, modified_host_attributes, modified_service_attributes) VALUES (1,?,FROM_UNIXTIME(?),?,?,FROM_UNIXTIME(?),FROM_UNIXTIME(?),?,?,?) ON DUPLICATE KEY UPDATE instance_id = VALUES(instance_id), contact_object_id = VALUES(contact_object_id), status_update_time = VALUES(status_update_time), host_notifications_enabled = VALUES(host_notifications_enabled), service_notifications_enabled = VALUES(service_notifications_enabled), last_host_notification = VALUES(last_host_notification), last_service_notification = VALUES(last_service_notification), modified_attributes = VALUES(modified_attributes), modified_host_attributes = VALUES(modified_host_attributes), modified_service_attributes = VALUES(modified_service_attributes)");
+    q_ctx->query[HANDLE_NOTIFICATION] = strdup("INSERT INTO nagios_notifications (instance_id, start_time, start_time_usec, end_time, end_time_usec, notification_type, notification_reason, object_id, state, output, long_output, escalated, contacts_notified) VALUES (1,FROM_UNIXTIME(?),?,FROM_UNIXTIME(?),?,?,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE instance_id = VALUES(instance_id), start_time = VALUES(start_time), start_time_usec = VALUES(start_time_usec), end_time = VALUES(end_time), end_time_usec = VALUES(end_time_usec), notification_type = VALUES(notification_type), notification_reason = VALUES(notification_reason), object_id = VALUES(object_id), state = VALUES(state), output = VALUES(output), long_output = VALUES(long_output), escalated = VALUES(escalated), contacts_notified = VALUES(contacts_notified)");
+    q_ctx->query[HANDLE_CONTACT_NOTIFICATION] = strdup("INSERT INTO nagios_contactnotifications (instance_id, notification_id, start_time, start_time_usec, end_time, end_time_usec, contact_object_id) VALUES (1,?,FROM_UNIXTIME(?),?,FROM_UNIXTIME(?),?,?) ON DUPLICATE KEY UPDATE instance_id = VALUES(instance_id), notification_id = VALUES(notification_id), start_time = VALUES(start_time), start_time_usec = VALUES(start_time_usec), end_time = VALUES(end_time), end_time_usec = VALUES(end_time_usec), contact_object_id = VALUES(contact_object_id)");
+    q_ctx->query[HANDLE_CONTACT_NOTIFICATION_METHOD] = strdup("INSERT INTO nagios_contactnotificationmethods (instance_id, contactnotification_id, start_time, start_time_usec, end_time, end_time_usec, command_object_id, command_args) VALUES (1,?,FROM_UNIXTIME(?),?,FROM_UNIXTIME(?),?,?,?) ON DUPLICATE KEY UPDATE instance_id = VALUES(instance_id), contactnotification_id = VALUES(contactnotification_id), start_time = VALUES(start_time), start_time_usec = VALUES(start_time_usec), end_time = VALUES(end_time), end_time_usec = VALUES(end_time_usec), command_object_id = VALUES(command_object_id), command_args = VALUES(command_args)");
+    q_ctx->query[HANDLE_EXTERNAL_COMMAND] = strdup("INSERT INTO nagios_externalcommands (instance_id, command_type, entry_time, command_name, command_args) VALUES (1,?,FROM_UNIXTIME(?),?,?) ON DUPLICATE KEY UPDATE instance_id = VALUES(instance_id), command_type = VALUES(command_type), entry_time = VALUES(entry_time), command_name = VALUES(command_name), command_args = VALUES(command_args)");
+    q_ctx->query[HANDLE_ACKNOWLEDGEMENT] = strdup("INSERT INTO nagios_acknowledgements (instance_id, entry_time, entry_time_usec, acknowledgement_type, object_id, state, author_name, comment_data, is_sticky, persistent_comment, notify_contacts) VALUES (1,FROM_UNIXTIME(?),?,?,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE instance_id = VALUES(instance_id), entry_time = VALUES(entry_time), entry_time_usec = VALUES(entry_time_usec), acknowledgement_type = VALUES(acknowledgement_type), object_id = VALUES(object_id), state = VALUES(state), author_name = VALUES(author_name), comment_data = VALUES(comment_data), is_sticky = VALUES(is_sticky), persistent_comment = VALUES(persistent_comment), notify_contacts = VALUES(notify_contacts)");
+    q_ctx->query[HANDLE_STATE_CHANGE] = strdup("INSERT INTO nagios_statehistory SET instance_id = 1, state_time = FROM_UNIXTIME(?), state_time_usec = ?, object_id = ?, state_change = 1, state = ?, state_type = ?, current_check_attempt = ?, max_check_attempts = ?, last_state = ?, last_hard_state = ?, output = ?, long_output = ?");
+    q_ctx->query[HANDLE_OBJECT_WRITING] = strdup("UPDATE nagios_objects SET is_active = 1 WHERE object_id = ?");
 
     /* now check to make sure all those strdups worked */
-    for (i = 0; i < NUM_QUERIES; i++) {
-        if (ndo_sql[i].query == NULL) {
+    for (i = 0; i < NUM_INITIALIZED_QUERIES; i++) {
+        if (q_ctx->query[i] == NULL) {
             char msg[BUFSZ_MED] = { 0 };
             snprintf(msg, BUFSZ_MED - 1, "Unable to allocate memory for query (%d)", i);
             ndo_log(msg);
@@ -1245,14 +1252,13 @@ int initialize_stmt_data()
     }
 
     if (errors > 0) {
-        ndo_log("Error allocating memory");
-        trace_return_error_cond("errors > 0");
+        /* We still want to prepare valid statements so that not all data is lost */
+        memory_errors_flag = TRUE;
     }
 
-    /* now prepare each statement - we start at one since GENERIC doesn't
-       have a query at this point */
-    for (i = 1; i < NUM_QUERIES; i++) {
-        if (mysql_stmt_prepare(ndo_sql[i].stmt, ndo_sql[i].query, strlen(ndo_sql[i].query))) {
+    /* now prepare each statement that has an assigned query (i.e. just the handlers) */
+    for (i = 0; i < NUM_QUERIES; i++) {
+        if (q_ctx->query[i] != NULL && mysql_stmt_prepare(q_ctx->stmt[i], q_ctx->query[i], strlen(q_ctx->query[i]))) {
             char msg[BUFSZ_MED] = { 0 };
             snprintf(msg, BUFSZ_MED - 1, "Unable to prepare statement for query (%d)", i);
             ndo_log(msg);
@@ -1261,7 +1267,7 @@ int initialize_stmt_data()
     }
 
     if (errors > 0) {
-        ndo_log("Error preparing statements");
+        ndo_log(memory_errors_flag ? "Error allocating memory" : "Error preparing statements");
         trace_return_error_cond("errors > 0");
     }
 
@@ -1269,43 +1275,43 @@ int initialize_stmt_data()
 }
 
 
-int deinitialize_stmt_data()
+int deinitialize_stmt_data(ndo_query_context * q_ctx)
 {
     trace_func_void();
 
     int i = 0;
 
-    if (ndo_sql == NULL) {
-        trace_return_ok_cond("ndo_sql == NULL");
+    if (q_ctx == NULL) {
+        trace_return_ok_cond("q_ctx == NULL");
     }
 
     for (i = 0; i < NUM_QUERIES; i++) {
-        if (ndo_sql[i].stmt != NULL) {
-            mysql_stmt_close(ndo_sql[i].stmt);
+        if (q_ctx->stmt[i] != NULL) {
+            mysql_stmt_close(q_ctx->stmt[i]);
         }
 
-        if (ndo_sql[i].query != NULL) {
-            free(ndo_sql[i].query);
+        if (q_ctx->query[i] != NULL) {
+            free(q_ctx->query[i]);
         }
 
-        if (ndo_sql[i].bind != NULL) {
-            free(ndo_sql[i].bind);
+        if (q_ctx->bind[i] != NULL) {
+            free(q_ctx->bind[i]);
         }
 
-        if (ndo_sql[i].strlen != NULL) {
-            free(ndo_sql[i].strlen);
+        if (q_ctx->strlen[i] != NULL) {
+            free(q_ctx->strlen[i]);
         }
 
-        if (ndo_sql[i].result != NULL) {
-            free(ndo_sql[i].result);
+        if (q_ctx->result[i] != NULL) {
+            free(q_ctx->result[i]);
         }
 
-        if (ndo_sql[i].result_strlen != NULL) {
-            free(ndo_sql[i].result_strlen);
+        if (q_ctx->result_strlen[i] != NULL) {
+            free(q_ctx->result_strlen[i]);
         }
     }
 
-    free(ndo_sql);
+    free(q_ctx);
 
     trace_return_ok();
 }

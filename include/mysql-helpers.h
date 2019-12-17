@@ -27,7 +27,7 @@ do { \
         if (ndo_mysql_errno == CR_SERVER_GONE_ERROR || ndo_mysql_errno == CR_SERVER_LOST) { \
             while (ndo_return != NDO_OK) { \
                 sleep(1); \
-                ndo_return = ndo_initialize_database(); \
+                ndo_return = ndo_initialize_database(q_ctx); \
             } \
             ndo_return = mysql_stmt_bind_param(stmt, bind); \
         } \
@@ -43,7 +43,7 @@ do { \
         if (ndo_mysql_errno == CR_SERVER_GONE_ERROR || ndo_mysql_errno == CR_SERVER_LOST) { \
             while (ndo_return != NDO_OK) { \
                 sleep(1); \
-                ndo_return = ndo_initialize_database(); \
+                ndo_return = ndo_initialize_database(q_ctx); \
             } \
             ndo_return = mysql_stmt_bind_result(stmt, result); \
         } \
@@ -59,7 +59,7 @@ do { \
         if (ndo_mysql_errno == CR_SERVER_GONE_ERROR || ndo_mysql_errno == CR_SERVER_LOST) { \
             while (ndo_return != NDO_OK) { \
                 sleep(1); \
-                ndo_return = ndo_initialize_database(); \
+                ndo_return = ndo_initialize_database(q_ctx); \
             } \
             ndo_return = mysql_stmt_store_result(stmt); \
         } \
@@ -75,7 +75,7 @@ do { \
         if (ndo_mysql_errno == CR_SERVER_GONE_ERROR || ndo_mysql_errno == CR_SERVER_LOST) { \
             while (ndo_return != NDO_OK) { \
                 sleep(1); \
-                ndo_return = ndo_initialize_database(); \
+                ndo_return = ndo_initialize_database(q_ctx); \
             } \
             ndo_return = mysql_stmt_execute(stmt); \
         } \
@@ -91,7 +91,7 @@ do { \
         trace("ERROR: %d, %d(%s) (%s)", ndo_return, ndo_mysql_errno, ndo_mysql_error, query); \
         if (ndo_mysql_errno == CR_SERVER_GONE_ERROR || ndo_mysql_errno == CR_SERVER_LOST || ndo_mysql_errno == CR_CONN_HOST_ERROR) { \
             trace("wtf! %s, %d", "message1", ndo_return); \
-            while (ndo_initialize_database() != NDO_OK) { \
+            while (ndo_return = ndo_initialize_database(q_ctx) != NDO_OK) { \
                 trace("wtf! %s", "message2"); \
                 sleep(1); \
             } \
@@ -171,66 +171,36 @@ do { \
     NDO_HANDLE_ERROR_EXECUTE_STMT(stmt); \
 } while (0)
 
-
-/* startup/writing mysql helpers */
-
-/*
-    all of these queries and statements, etc. are contained in the 
-    ndo_write_* family of global vars
-*/
-
-#define WRITE_BIND_LONG(stmt, var) _MYSQL_BIND_LONG(ndo_write_bind[stmt][ndo_write_i[stmt]], ndo_write_i[stmt], var)
-#define WRITE_BIND_INT(stmt, var) WRITE_BIND_LONG(stmt, var)
-#define WRITE_BIND_DOUBLE(stmt, var) _MYSQL_BIND_DOUBLE(ndo_write_bind[stmt][ndo_write_i[stmt]], ndo_write_i[stmt], var)
-#define WRITE_BIND_FLOAT(stmt, var) _MYSQL_BIND_FLOAT(ndo_write_bind[stmt][ndo_write_i[stmt]], ndo_write_i[stmt], var)
-#define WRITE_BIND_SHORT(stmt, var) _MYSQL_BIND_SHORT(ndo_write_bind[stmt][ndo_write_i[stmt]], ndo_write_i[stmt], var)
-#define WRITE_BIND_TINY(stmt, var) _MYSQL_BIND_TINY(ndo_write_bind[stmt][ndo_write_i[stmt]], ndo_write_i[stmt], var)
-#define WRITE_BIND_LONGLONG(stmt, var) _MYSQL_BIND_LONGLONG(ndo_write_bind[stmt][ndo_write_i[stmt]], ndo_write_i[stmt], var)
-#define WRITE_BIND_STR(stmt, var) _MYSQL_BIND_STR(ndo_write_bind[stmt][ndo_write_i[stmt]], ndo_write_i[stmt], var, ndo_write_tmp_len[stmt][ndo_write_i[stmt]], strlen(var))
-
-#define WRITE_RESET_SQL() memset(ndo_query, 0, sizeof(ndo_query))
-#define WRITE_SET_SQL(query) strcpy(ndo_query, query)
-#define WRITE_RESET_BIND(stmt) _MYSQL_RESET_BIND(ndo_write_bind[stmt], sizeof(ndo_write_bind[stmt]), ndo_write_i[stmt])
-#define WRITE_BIND(stmt) _MYSQL_BIND(ndo_write_stmt[stmt], ndo_write_bind[stmt])
-#define WRITE_PREPARE(stmt) _MYSQL_PREPARE(ndo_write_stmt[stmt], ndo_write_query)
-#define WRITE_EXECUTE(stmt) _MYSQL_EXECUTE(ndo_write_stmt[stmt])
-
-
 /* handler and miscellaneous function mysql helpers */
 
-/*
-    all of these revolve around the usage of the ndo_sql global,
-    which is a ndo_query_data struct
-*/
-
-#define MYSQL_BIND_LONG(stmt, var) _MYSQL_BIND_LONG(ndo_sql[stmt].bind[ndo_sql[stmt].bind_i], ndo_sql[stmt].bind_i, var)
+#define MYSQL_BIND_LONG(stmt, var) _MYSQL_BIND_LONG(q_ctx->bind[stmt][q_ctx->bind_i[stmt]], q_ctx->bind_i[stmt], var)
 #define MYSQL_BIND_INT(stmt, var) MYSQL_BIND_LONG(stmt, var)
-#define MYSQL_BIND_DOUBLE(stmt, var) _MYSQL_BIND_DOUBLE(ndo_sql[stmt].bind[ndo_sql[stmt].bind_i], ndo_sql[stmt].bind_i, var)
-#define MYSQL_BIND_FLOAT(stmt, var) _MYSQL_BIND_FLOAT(ndo_sql[stmt].bind[ndo_sql[stmt].bind_i], ndo_sql[stmt].bind_i, var)
-#define MYSQL_BIND_SHORT(stmt, var) _MYSQL_BIND_SHORT(ndo_sql[stmt].bind[ndo_sql[stmt].bind_i], ndo_sql[stmt].bind_i, var)
-#define MYSQL_BIND_TINY(stmt, var) _MYSQL_BIND_TINY(ndo_sql[stmt].bind[ndo_sql[stmt].bind_i], ndo_sql[stmt].bind_i, var)
-#define MYSQL_BIND_LONGLONG(stmt, var) _MYSQL_BIND_LONGLONG(ndo_sql[stmt].bind[ndo_sql[stmt].bind_i], ndo_sql[stmt].bind_i, var)
-#define MYSQL_BIND_STR(stmt, var) _MYSQL_BIND_STR(ndo_sql[stmt].bind[ndo_sql[stmt].bind_i], ndo_sql[stmt].bind_i, var, ndo_sql[stmt].strlen[ndo_sql[stmt].bind_i], strlen(var))
+#define MYSQL_BIND_DOUBLE(stmt, var) _MYSQL_BIND_DOUBLE(q_ctx->bind[stmt][q_ctx->bind_i[stmt]], q_ctx->bind_i[stmt], var)
+#define MYSQL_BIND_FLOAT(stmt, var) _MYSQL_BIND_FLOAT(q_ctx->bind[stmt][q_ctx->bind_i[stmt]], q_ctx->bind_i[stmt], var)
+#define MYSQL_BIND_SHORT(stmt, var) _MYSQL_BIND_SHORT(q_ctx->bind[stmt][q_ctx->bind_i[stmt]], q_ctx->bind_i[stmt], var)
+#define MYSQL_BIND_TINY(stmt, var) _MYSQL_BIND_TINY(q_ctx->bind[stmt][q_ctx->bind_i[stmt]], q_ctx->bind_i[stmt], var)
+#define MYSQL_BIND_LONGLONG(stmt, var) _MYSQL_BIND_LONGLONG(q_ctx->bind[stmt][q_ctx->bind_i[stmt]], q_ctx->bind_i[stmt], var)
+#define MYSQL_BIND_STR(stmt, var) _MYSQL_BIND_STR(q_ctx->bind[stmt][q_ctx->bind_i[stmt]], q_ctx->bind_i[stmt], var, q_ctx->strlen[stmt][q_ctx->bind_i[stmt]], strlen(var))
 
-#define MYSQL_RESULT_LONG(stmt, var) _MYSQL_BIND_LONG(ndo_sql[stmt].result[ndo_sql[stmt].result_i], ndo_sql[stmt].result_i, var)
+#define MYSQL_RESULT_LONG(stmt, var) _MYSQL_BIND_LONG(q_ctx->result[stmt][q_ctx->result_i[stmt]], q_ctx->result_i[stmt], var)
 #define MYSQL_RESULT_INT(stmt, var) MYSQL_RESULT_LONG(stmt, var)
 
-/* #define MYSQL_RESET_BIND(stmt) memset(ndo_sql[stmt].bind, 0, (sizeof(MYSQL_BIND) * num_bindings[stmt])) */
-#define MYSQL_RESET_BIND(stmt) ndo_sql[stmt].bind_i = 0
-#define MYSQL_BIND(_stmt) _MYSQL_BIND(ndo_sql[_stmt].stmt, ndo_sql[_stmt].bind)
-#define MYSQL_RESET_RESULT(stmt) ndo_sql[stmt].result_i = 0
-#define MYSQL_BIND_RESULT(_stmt) _MYSQL_BIND_RESULT(ndo_sql[_stmt].stmt, ndo_sql[_stmt].result)
-#define MYSQL_STORE_RESULT(_stmt) _MYSQL_STORE_RESULT(ndo_sql[_stmt].stmt)
-#define MYSQL_FETCH(_stmt) mysql_stmt_fetch(ndo_sql[_stmt].stmt)
-#define MYSQL_EXECUTE(_stmt) _MYSQL_EXECUTE(ndo_sql[_stmt].stmt)
+/* #define MYSQL_RESET_BIND(stmt) memset(q_ctx->bind[stmt], 0, (sizeof(MYSQL_BIND) * num_bindings[stmt])) */
+#define MYSQL_RESET_BIND(stmt) q_ctx->bind_i[stmt] = 0
+#define MYSQL_BIND(_stmt) _MYSQL_BIND(q_ctx->stmt[_stmt], q_ctx->bind[_stmt])
+#define MYSQL_RESET_RESULT(stmt) q_ctx->result_i[stmt] = 0
+#define MYSQL_BIND_RESULT(_stmt) _MYSQL_BIND_RESULT(q_ctx->stmt[_stmt], q_ctx->result[_stmt])
+#define MYSQL_STORE_RESULT(_stmt) _MYSQL_STORE_RESULT(q_ctx->stmt[_stmt])
+#define MYSQL_FETCH(_stmt) mysql_stmt_fetch(q_ctx->stmt[_stmt])
+#define MYSQL_EXECUTE(_stmt) _MYSQL_EXECUTE(q_ctx->stmt[_stmt])
 
 /*
     these only work for the GENERIC ndo_sql data, as everything is else is set
     and prepared already
 */
 
-#define GENERIC_RESET_SQL() memset(ndo_sql[GENERIC].query, 0, MAX_SQL_BUFFER)
-#define GENERIC_SET_SQL(_query) strcpy(ndo_sql[GENERIC].query, _query)
+#define GENERIC_RESET_SQL() memset(q_ctx->query[GENERIC], 0, MAX_SQL_BUFFER)
+#define GENERIC_SET_SQL(_query) strcpy(q_ctx->query[GENERIC], _query)
 
 
 /*
@@ -238,11 +208,11 @@ do { \
     that utilize the generic sql struct
 */
 
-#define GENERIC_RESET_BIND() _MYSQL_RESET_BIND(ndo_sql[GENERIC].bind, num_bindings[GENERIC], ndo_sql[GENERIC].bind_i)
+#define GENERIC_RESET_BIND() _MYSQL_RESET_BIND(q_ctx->bind[GENERIC], num_bindings[GENERIC], q_ctx->bind_i[GENERIC])
 #define GENERIC_BIND() MYSQL_BIND(GENERIC)
 
 #define GENERIC_EXECUTE() MYSQL_EXECUTE(GENERIC)
-#define GENERIC_PREPARE() _MYSQL_PREPARE(ndo_sql[GENERIC].stmt, ndo_sql[GENERIC].query)
+#define GENERIC_PREPARE() _MYSQL_PREPARE(q_ctx->stmt[GENERIC], q_ctx->query[GENERIC])
 
 #define GENERIC_BIND_LONG(var) MYSQL_BIND_LONG(GENERIC, var)
 #define GENERIC_BIND_INT(var) MYSQL_BIND_LONG(GENERIC, var)

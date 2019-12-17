@@ -1,8 +1,14 @@
 
 // todo: all of the mysql bindings need to be gone through and compared against the schema to ensure doubles aren't being cast as ints (won't error, but the data won't be right either)
 
-int ndo_handle_process(int type, void * d)
+int ndo_neb_handle_process(int type, void * d)
 {
+    return ndo_handle_process(main_thread_context, type, d);
+}
+
+int ndo_handle_process(ndo_query_context * q_ctx, int type, void * d)
+{
+    ndo_log(strdup("handling process(int type, void * d)"));
     trace_func_handler(process);
 
     nebstruct_process_data * data = d;
@@ -15,8 +21,8 @@ int ndo_handle_process(int type, void * d)
     case NEBTYPE_PROCESS_PRELAUNCH:
 
         if (ndo_startup_skip_writing_objects != TRUE) {
-            ndo_table_genocide();
-            ndo_set_all_objects_inactive();
+            ndo_table_genocide(q_ctx);
+            ndo_set_all_objects_inactive(q_ctx);
         }
 
         break;
@@ -34,7 +40,7 @@ int ndo_handle_process(int type, void * d)
     case NEBTYPE_PROCESS_EVENTLOOPSTART:
 
         if (ndo_startup_skip_writing_objects != TRUE) {
-            ndo_write_runtime_variables();
+            ndo_write_runtime_variables(q_ctx);
         }
 
         break;
@@ -75,8 +81,14 @@ int ndo_handle_process(int type, void * d)
 }
 
 
-int ndo_handle_timed_event(int type, void * d)
+int ndo_neb_handle_timed_event(int type, void * d)
 {
+    return ndo_handle_timed_event(main_thread_context, type, d);
+}
+
+int ndo_handle_timed_event(ndo_query_context * q_ctx, int type, void * d)
+{
+    ndo_log(strdup("handling timed_event(int type, void * d)"));
     trace_func_handler(timed_event);
 
     nebstruct_timed_event_data * data = d;
@@ -90,12 +102,12 @@ int ndo_handle_timed_event(int type, void * d)
     if (data->event_type == EVENT_SERVICE_CHECK) {
 
         service * svc = data->event_data;
-        object_id = ndo_get_object_id_name2(TRUE, NDO_OBJECTTYPE_SERVICE, svc->host_name, svc->description);
+        object_id = ndo_get_object_id_name2(q_ctx, TRUE, NDO_OBJECTTYPE_SERVICE, svc->host_name, svc->description);
     }
     else if (data->event_type == EVENT_HOST_CHECK) {
 
         host * hst = data->event_data;
-        object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_HOST, hst->name);
+        object_id = ndo_get_object_id_name1(q_ctx, TRUE, NDO_OBJECTTYPE_HOST, hst->name);
     }
     else if (data->event_type == EVENT_SCHEDULED_DOWNTIME) {
 
@@ -105,10 +117,10 @@ int ndo_handle_timed_event(int type, void * d)
         char * service_description = dwn->service_description;
 
         if (service_description != NULL && strlen(service_description) > 0) {
-            object_id = ndo_get_object_id_name2(TRUE, NDO_OBJECTTYPE_SERVICE, host_name, service_description);
+            object_id = ndo_get_object_id_name2(q_ctx, TRUE, NDO_OBJECTTYPE_SERVICE, host_name, service_description);
         }
         else {
-            object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_HOST, host_name);
+            object_id = ndo_get_object_id_name1(q_ctx, TRUE, NDO_OBJECTTYPE_HOST, host_name);
         }
     }
 
@@ -154,8 +166,15 @@ int ndo_handle_timed_event(int type, void * d)
 }
 
 
-int ndo_handle_log(int type, void * d)
+int ndo_neb_handle_log(int type, void * d)
 {
+    return ndo_handle_log(main_thread_context, type, d);
+}
+
+int ndo_handle_log(ndo_query_context * q_ctx, int type, void * d)
+{
+    //ndo_log(strdup("handling log(int type, void * d)"));
+    return NDO_OK;
     /*
     trace_func_handler();
     */
@@ -197,8 +216,14 @@ int ndo_handle_log(int type, void * d)
 }
 
 
-int ndo_handle_system_command(int type, void * d)
+int ndo_neb_handle_system_command(int type, void * d)
 {
+    return ndo_handle_system_command(main_thread_context, type, d);
+}
+
+int ndo_handle_system_command(ndo_query_context * q_ctx, int type, void * d)
+{
+    ndo_log(strdup("handling system_command(int type, void * d)"));
     trace_func_handler(system_command);
 
     nebstruct_system_command_data * data = d;
@@ -224,8 +249,14 @@ int ndo_handle_system_command(int type, void * d)
 }
 
 
-int ndo_handle_event_handler(int type, void * d)
+int ndo_neb_handle_event_handler(int type, void * d)
 {
+    return ndo_handle_event_handler(main_thread_context, type, d);
+}
+
+int ndo_handle_event_handler(ndo_query_context * q_ctx, int type, void * d)
+{
+    ndo_log(strdup("handling event_handler(int type, void * d)"));
     trace_func_handler(event_handler);
 
     nebstruct_event_handler_data * data = d;
@@ -234,13 +265,13 @@ int ndo_handle_event_handler(int type, void * d)
     int command_object_id = 0;
 
     if (data->eventhandler_type == SERVICE_EVENTHANDLER || data->eventhandler_type == GLOBAL_SERVICE_EVENTHANDLER) {
-        object_id = ndo_get_object_id_name2(TRUE, NDO_OBJECTTYPE_SERVICE, data->host_name, data->service_description);
+        object_id = ndo_get_object_id_name2(q_ctx, TRUE, NDO_OBJECTTYPE_SERVICE, data->host_name, data->service_description);
     }
     else {
-        object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_HOST, data->host_name);
+        object_id = ndo_get_object_id_name1(q_ctx, TRUE, NDO_OBJECTTYPE_HOST, data->host_name);
     }
 
-    command_object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_COMMAND, data->command_name);
+    command_object_id = ndo_get_object_id_name1(q_ctx, TRUE, NDO_OBJECTTYPE_COMMAND, data->command_name);
 
     MYSQL_RESET_BIND(HANDLE_EVENT_HANDLER);
 
@@ -269,8 +300,14 @@ int ndo_handle_event_handler(int type, void * d)
 }
 
 
-int ndo_handle_host_check(int type, void * d)
+int ndo_neb_handle_host_check(int type, void * d)
 {
+    return ndo_handle_host_check(main_thread_context, type, d);
+}
+
+int ndo_handle_host_check(ndo_query_context * q_ctx, int type, void * d)
+{
+    ndo_log(strdup("handling host_check(int type, void * d)"));
     trace_func_handler(host_check);
 
     nebstruct_host_check_data * data = d;
@@ -283,9 +320,9 @@ int ndo_handle_host_check(int type, void * d)
         trace_return_ok_cond("data->type != NEBTYPE_HOSTCHECK_PROCESSED");
     }
 
-    object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_HOST, data->host_name);
+    object_id = ndo_get_object_id_name1(q_ctx, TRUE, NDO_OBJECTTYPE_HOST, data->host_name);
 
-    command_object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_COMMAND, data->command_name);
+    command_object_id = ndo_get_object_id_name1(q_ctx, TRUE, NDO_OBJECTTYPE_COMMAND, data->command_name);
 
     MYSQL_RESET_BIND(HANDLE_HOST_CHECK);
 
@@ -317,8 +354,14 @@ int ndo_handle_host_check(int type, void * d)
     trace_return_ok();
 }
 
-int ndo_handle_service_check(int type, void * d)
+int ndo_neb_handle_service_check(int type, void * d)
 {
+    return ndo_handle_service_check(main_thread_context, type, d);
+}
+
+int ndo_handle_service_check(ndo_query_context * q_ctx, int type, void * d)
+{
+    ndo_log(strdup("handling service_check(int type, void * d)"));
     trace_func_handler(service_check);
 
     nebstruct_service_check_data * data = d;
@@ -331,13 +374,13 @@ int ndo_handle_service_check(int type, void * d)
         trace_return_ok_cond("data->type != NEBTYPE_SERVICECHECK_PROCESSED");
     }
 
-    object_id = ndo_get_object_id_name2(TRUE, NDO_OBJECTTYPE_SERVICE, data->host_name, data->service_description);
+    object_id = ndo_get_object_id_name2(q_ctx, TRUE, NDO_OBJECTTYPE_SERVICE, data->host_name, data->service_description);
 
     if (data->command_name != NULL) {
         /* Nagios Core appears to always pass NULL for its command arguments when brokering NEBTYPE_SERVICECHECK_PROCESSED.
          * It's not clear why this was done, so we're working around it here for now.
          */
-        command_object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_COMMAND, data->command_name);
+        command_object_id = ndo_get_object_id_name1(q_ctx, TRUE, NDO_OBJECTTYPE_COMMAND, data->command_name);
     }
 
     MYSQL_RESET_BIND(HANDLE_SERVICE_CHECK);
@@ -371,18 +414,24 @@ int ndo_handle_service_check(int type, void * d)
 }
 
 
-int ndo_handle_comment(int type, void * d)
+int ndo_neb_handle_comment(int type, void * d)
 {
+    return ndo_handle_comment(main_thread_context, type, d);
+}
+
+int ndo_handle_comment(ndo_query_context * q_ctx, int type, void * d)
+{
+    ndo_log(strdup("handling comment(int type, void * d)"));
     trace_func_handler(comment);
 
     nebstruct_comment_data * data = d;
     int object_id = 0;
 
     if (data->comment_type == SERVICE_COMMENT) {
-        object_id = ndo_get_object_id_name2(TRUE, NDO_OBJECTTYPE_SERVICE, data->host_name, data->service_description);
+        object_id = ndo_get_object_id_name2(q_ctx, TRUE, NDO_OBJECTTYPE_SERVICE, data->host_name, data->service_description);
     }
     else {
-        object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_HOST, data->host_name);
+        object_id = ndo_get_object_id_name1(q_ctx, TRUE, NDO_OBJECTTYPE_HOST, data->host_name);
     }
 
     if (data->type == NEBTYPE_COMMENT_ADD || data->type == NEBTYPE_COMMENT_LOAD) {
@@ -405,7 +454,6 @@ int ndo_handle_comment(int type, void * d)
 
         MYSQL_BIND(HANDLE_COMMENT_ADD);
         MYSQL_EXECUTE(HANDLE_COMMENT_ADD);
-
 
         MYSQL_RESET_BIND(HANDLE_COMMENT_HISTORY_ADD);
 
@@ -453,18 +501,24 @@ int ndo_handle_comment(int type, void * d)
 }
 
 
-int ndo_handle_downtime(int type, void * d)
+int ndo_neb_handle_downtime(int type, void * d)
 {
+    return ndo_handle_downtime(main_thread_context, type, d);
+}
+
+int ndo_handle_downtime(ndo_query_context * q_ctx, int type, void * d)
+{
+    ndo_log(strdup("handling downtime(int type, void * d)"));
     trace_func_handler(downtime);
 
     nebstruct_downtime_data * data = d;
     int object_id = 0;
 
     if (data->downtime_type == SERVICE_DOWNTIME) {
-        object_id = ndo_get_object_id_name2(TRUE, NDO_OBJECTTYPE_SERVICE, data->host_name, data->service_description);
+        object_id = ndo_get_object_id_name2(q_ctx, TRUE, NDO_OBJECTTYPE_SERVICE, data->host_name, data->service_description);
     }
     else {
-        object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_HOST, data->host_name);
+        object_id = ndo_get_object_id_name1(q_ctx, TRUE, NDO_OBJECTTYPE_HOST, data->host_name);
     }
 
     if (data->type == NEBTYPE_DOWNTIME_ADD || data->type == NEBTYPE_DOWNTIME_LOAD) {
@@ -576,8 +630,14 @@ int ndo_handle_downtime(int type, void * d)
 }
 
 
-int ndo_handle_flapping(int type, void * d)
+int ndo_neb_handle_flapping(int type, void * d)
 {
+    return ndo_handle_flapping(main_thread_context, type, d);
+}
+
+int ndo_handle_flapping(ndo_query_context * q_ctx, int type, void * d)
+{
+    ndo_log(strdup("handling flapping(int type, void * d)"));
     trace_func_handler(flapping);
 
     nebstruct_flapping_data * data = d;
@@ -586,11 +646,11 @@ int ndo_handle_flapping(int type, void * d)
     time_t comment_time = 0;
 
     if (data->flapping_type == SERVICE_FLAPPING) {
-        object_id = ndo_get_object_id_name2(TRUE, NDO_OBJECTTYPE_SERVICE, data->host_name, data->service_description);
+        object_id = ndo_get_object_id_name2(q_ctx, TRUE, NDO_OBJECTTYPE_SERVICE, data->host_name, data->service_description);
         comment = find_service_comment(data->comment_id);
     }
     else {
-        object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_HOST, data->host_name);
+        object_id = ndo_get_object_id_name1(q_ctx, TRUE, NDO_OBJECTTYPE_HOST, data->host_name);
         comment = find_host_comment(data->comment_id);
     }
 
@@ -623,8 +683,14 @@ int ndo_handle_flapping(int type, void * d)
 }
 
 
-int ndo_handle_program_status(int type, void * d)
+int ndo_neb_handle_program_status(int type, void * d)
 {
+    return ndo_handle_program_status(main_thread_context, type, d);
+}
+
+int ndo_handle_program_status(ndo_query_context * q_ctx, int type, void * d)
+{
+    ndo_log(strdup("handling program_status(int type, void * d)"));
     trace_func_handler(program_status);
 
     nebstruct_program_status_data * data = d;
@@ -658,8 +724,14 @@ int ndo_handle_program_status(int type, void * d)
 }
 
 
-int ndo_handle_host_status(int type, void * d)
+int ndo_neb_handle_host_status(int type, void * d)
 {
+    return ndo_handle_host_status(main_thread_context, type, d);
+}
+
+int ndo_handle_host_status(ndo_query_context * q_ctx, int type, void * d)
+{
+    ndo_log(strdup("handling host_status(int type, void * d)"));
     trace_func_handler(host_status);
 
     nebstruct_host_status_data * data = d;
@@ -676,8 +748,8 @@ int ndo_handle_host_status(int type, void * d)
     hst = data->object_ptr;
     tm = hst->check_period_ptr;
 
-    host_object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_HOST, hst->name);
-    timeperiod_object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_TIMEPERIOD, tm->name);
+    host_object_id = ndo_get_object_id_name1(q_ctx, TRUE, NDO_OBJECTTYPE_HOST, hst->name);
+    timeperiod_object_id = ndo_get_object_id_name1(q_ctx, TRUE, NDO_OBJECTTYPE_TIMEPERIOD, tm->name);
 
     MYSQL_RESET_BIND(HANDLE_HOST_STATUS);
 
@@ -733,8 +805,14 @@ int ndo_handle_host_status(int type, void * d)
 }
 
 
-int ndo_handle_service_status(int type, void * d)
+int ndo_neb_handle_service_status(int type, void * d)
 {
+    return ndo_handle_service_status(main_thread_context, type, d);
+}
+
+int ndo_handle_service_status(ndo_query_context * q_ctx, int type, void * d)
+{
+    ndo_log(strdup("handling service_status(int type, void * d)"));
     trace_func_handler(service_status);
 
     nebstruct_service_status_data * data = d;
@@ -752,8 +830,8 @@ int ndo_handle_service_status(int type, void * d)
     svc = data->object_ptr;
     tm = svc->check_period_ptr;
 
-    service_object_id = ndo_get_object_id_name2(TRUE, NDO_OBJECTTYPE_SERVICE, svc->host_name, svc->description);
-    timeperiod_object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_TIMEPERIOD, tm->name);
+    service_object_id = ndo_get_object_id_name2(q_ctx, TRUE, NDO_OBJECTTYPE_SERVICE, svc->host_name, svc->description);
+    timeperiod_object_id = ndo_get_object_id_name1(q_ctx, TRUE, NDO_OBJECTTYPE_TIMEPERIOD, tm->name);
 
     MYSQL_RESET_BIND(HANDLE_SERVICE_STATUS);
 
@@ -810,8 +888,14 @@ int ndo_handle_service_status(int type, void * d)
 }
 
 
-int ndo_handle_contact_status(int type, void * d)
+int ndo_neb_handle_contact_status(int type, void * d)
 {
+    return ndo_handle_contact_status(main_thread_context, type, d);
+}
+
+int ndo_handle_contact_status(ndo_query_context * q_ctx, int type, void * d)
+{
+    ndo_log(strdup("handling contact_status(int type, void * d)"));
     trace_func_handler(contact_status);
 
     nebstruct_contact_status_data * data = d;
@@ -826,7 +910,7 @@ int ndo_handle_contact_status(int type, void * d)
 
     cnt = data->object_ptr;
 
-    contact_object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_CONTACT, cnt->name);
+    contact_object_id = ndo_get_object_id_name1(q_ctx, TRUE, NDO_OBJECTTYPE_CONTACT, cnt->name);
 
     MYSQL_RESET_BIND(HANDLE_CONTACT_STATUS);
 
@@ -847,18 +931,24 @@ int ndo_handle_contact_status(int type, void * d)
 }
 
 
-int ndo_handle_notification(int type, void * d)
+int ndo_neb_handle_notification(int type, void * d)
 {
+    return ndo_handle_notification(main_thread_context, type, d);
+}
+
+int ndo_handle_notification(ndo_query_context * q_ctx, int type, void * d)
+{
+    ndo_log(strdup("handling notification(int type, void * d)"));
     trace_func_handler(notification);
 
     nebstruct_notification_data * data = d;
     int object_id = 0;
 
     if (data->notification_type == SERVICE_NOTIFICATION) {
-        object_id = ndo_get_object_id_name2(TRUE, NDO_OBJECTTYPE_SERVICE, data->host_name, data->service_description);
+        object_id = ndo_get_object_id_name2(q_ctx, TRUE, NDO_OBJECTTYPE_SERVICE, data->host_name, data->service_description);
     }
     else {
-        object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_HOST, data->host_name);
+        object_id = ndo_get_object_id_name1(q_ctx, TRUE, NDO_OBJECTTYPE_HOST, data->host_name);
     }
 
     MYSQL_RESET_BIND(HANDLE_NOTIFICATION);
@@ -891,8 +981,14 @@ int ndo_handle_notification(int type, void * d)
 }
 
 
-int ndo_handle_contact_notification(int type, void * d)
+int ndo_neb_handle_contact_notification(int type, void * d)
 {
+    return ndo_handle_contact_notification(main_thread_context, type, d);
+}
+
+int ndo_handle_contact_notification(ndo_query_context * q_ctx, int type, void * d)
+{
+    ndo_log(strdup("handling contact_notification(int type, void * d)"));
     trace_func_handler(contact_notification);
 
     nebstruct_contact_notification_data * data = d;
@@ -907,7 +1003,7 @@ int ndo_handle_contact_notification(int type, void * d)
 
     cnt = data->contact_ptr;
 
-    contact_object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_CONTACT, cnt->name);
+    contact_object_id = ndo_get_object_id_name1(q_ctx, TRUE, NDO_OBJECTTYPE_CONTACT, cnt->name);
 
     MYSQL_RESET_BIND(HANDLE_CONTACT_NOTIFICATION);
 
@@ -928,13 +1024,19 @@ int ndo_handle_contact_notification(int type, void * d)
 }
 
 
-int ndo_handle_contact_notification_method(int type, void * d)
+int ndo_neb_handle_contact_notification_method(int type, void * d)
 {
+    return ndo_handle_contact_notification_method(main_thread_context, type, d);
+}
+
+int ndo_handle_contact_notification_method(ndo_query_context * q_ctx, int type, void * d)
+{
+    ndo_log(strdup("handling contact_notification_method(int type, void * d)"));
     trace_func_handler(contact_notification_method);
 
     nebstruct_contact_notification_method_data * data = d;
 
-    int command_object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_COMMAND, data->command_name);
+    int command_object_id = ndo_get_object_id_name1(q_ctx, TRUE, NDO_OBJECTTYPE_COMMAND, data->command_name);
 
     MYSQL_RESET_BIND(HANDLE_CONTACT_NOTIFICATION_METHOD);
 
@@ -953,8 +1055,14 @@ int ndo_handle_contact_notification_method(int type, void * d)
 }
 
 
-int ndo_handle_external_command(int type, void * d)
+int ndo_neb_handle_external_command(int type, void * d)
 {
+    return ndo_handle_external_command(main_thread_context, type, d);
+}
+
+int ndo_handle_external_command(ndo_query_context * q_ctx, int type, void * d)
+{
+    ndo_log(strdup("handling external_command(int type, void * d)"));
     trace_func_handler(external_command);
 
     nebstruct_external_command_data * data = d;
@@ -977,8 +1085,14 @@ int ndo_handle_external_command(int type, void * d)
 }
 
 
-int ndo_handle_acknowledgement(int type, void * d)
+int ndo_neb_handle_acknowledgement(int type, void * d)
 {
+    return ndo_handle_acknowledgement(main_thread_context, type, d);
+}
+
+int ndo_handle_acknowledgement(ndo_query_context * q_ctx, int type, void * d)
+{
+    ndo_log(strdup("handling acknowledgement(int type, void * d)"));
     trace_func_handler(acknowledgement);
 
     nebstruct_acknowledgement_data * data = d;
@@ -986,10 +1100,10 @@ int ndo_handle_acknowledgement(int type, void * d)
     int object_id = 0;
 
     if (data->acknowledgement_type == SERVICE_ACKNOWLEDGEMENT) {
-        object_id = ndo_get_object_id_name2(TRUE, NDO_OBJECTTYPE_SERVICE, data->host_name, data->service_description);
+        object_id = ndo_get_object_id_name2(q_ctx, TRUE, NDO_OBJECTTYPE_SERVICE, data->host_name, data->service_description);
     }
     else {
-        object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_HOST, data->host_name);
+        object_id = ndo_get_object_id_name1(q_ctx, TRUE, NDO_OBJECTTYPE_HOST, data->host_name);
     }
 
     MYSQL_RESET_BIND(HANDLE_ACKNOWLEDGEMENT);
@@ -1012,8 +1126,14 @@ int ndo_handle_acknowledgement(int type, void * d)
 }
 
 
-int ndo_handle_statechange(int type, void * d)
+int ndo_neb_handle_statechange(int type, void * d)
 {
+    return ndo_handle_statechange(main_thread_context, type, d);
+}
+
+int ndo_handle_statechange(ndo_query_context * q_ctx, int type, void * d)
+{
+    ndo_log(strdup("handling statechange(int type, void * d)"));
     trace_func_handler(statechange);
 
     nebstruct_statechange_data * data = d;
@@ -1030,7 +1150,7 @@ int ndo_handle_statechange(int type, void * d)
 
         service * svc = data->object_ptr;
 
-        object_id = ndo_get_object_id_name2(TRUE, NDO_OBJECTTYPE_SERVICE, svc->host_name, svc->description);
+        object_id = ndo_get_object_id_name2(q_ctx, TRUE, NDO_OBJECTTYPE_SERVICE, svc->host_name, svc->description);
 
         last_state = svc->last_state;
         last_hard_state = svc->last_hard_state;
@@ -1039,7 +1159,7 @@ int ndo_handle_statechange(int type, void * d)
 
         host * hst = data->object_ptr;
 
-        object_id = ndo_get_object_id_name1(TRUE, NDO_OBJECTTYPE_HOST, hst->name);
+        object_id = ndo_get_object_id_name1(q_ctx, TRUE, NDO_OBJECTTYPE_HOST, hst->name);
 
         last_state = hst->last_state;
         last_hard_state = hst->last_hard_state;
@@ -1066,8 +1186,14 @@ int ndo_handle_statechange(int type, void * d)
 }
 
 
+int ndo_neb_handle_retention(int type, void * d)
+{
+    return ndo_handle_retention(type, d);
+}
+
 int ndo_handle_retention(int type, void * d)
 {
+    ndo_log(strdup("handling retention(int type, void * d)"));
     trace_func_handler(retention);
 
     nebstruct_retention_data * data = d;

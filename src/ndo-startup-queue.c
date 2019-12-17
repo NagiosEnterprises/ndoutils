@@ -10,28 +10,28 @@
 */
 
 
-int ndo_empty_startup_queues()
+int ndo_empty_startup_queues(ndo_query_context *q_ctx)
 {
-    ndo_empty_queue_timed_event();
-    ndo_empty_queue_event_handler();
-    ndo_empty_queue_host_check();
-    ndo_empty_queue_service_check();
-    ndo_empty_queue_comment();
-    ndo_empty_queue_downtime();
-    ndo_empty_queue_flapping();
-    ndo_empty_queue_host_status();
-    ndo_empty_queue_service_status();
-    ndo_empty_queue_contact_status();
-    ndo_empty_queue_acknowledgement();
-    ndo_empty_queue_statechange();
+    ndo_empty_queue_timed_event(q_ctx);
+    ndo_empty_queue_event_handler(q_ctx);
+    ndo_empty_queue_host_check(q_ctx);
+    ndo_empty_queue_service_check(q_ctx);
+    ndo_empty_queue_comment(q_ctx);
+    ndo_empty_queue_downtime(q_ctx);
+    ndo_empty_queue_flapping(q_ctx);
+    ndo_empty_queue_host_status(q_ctx);
+    ndo_empty_queue_service_status(q_ctx);
+    ndo_empty_queue_contact_status(q_ctx);
+    ndo_empty_queue_acknowledgement(q_ctx);
+    ndo_empty_queue_statechange(q_ctx);
 
-    ndo_empty_queue_notification();
+    ndo_empty_queue_notification(q_ctx);
 }
 
 
 /* le sigh... this just makes it way easier */
-#define EMTPY_QUEUE_FUNCTION(_type, _callback) \
-int ndo_empty_queue_## _type() \
+#define EMPTY_QUEUE_FUNCTION(_type, _callback) \
+int ndo_empty_queue_## _type(ndo_query_context *q_ctx) \
 { \
     trace_func_void(); \
 \
@@ -42,7 +42,7 @@ int ndo_empty_queue_## _type() \
     /* data goes straight into the database so that our queue doesn't get */ \
     /* backed up */ \
     neb_deregister_callback(_callback, ndo_handle_queue_## _type); \
-    neb_register_callback(_callback, ndo_handle, 0, ndo_handle_## _type); \
+    neb_register_callback(_callback, ndo_handle, 0, ndo_neb_handle_## _type); \
 \
     while (TRUE) { \
 \
@@ -58,7 +58,7 @@ int ndo_empty_queue_## _type() \
             break; \
         } \
 \
-        ndo_handle_## _type(type, data); \
+        ndo_handle_## _type(q_ctx, type, data); \
         free(data); \
         data = NULL; \
     } \
@@ -67,40 +67,40 @@ int ndo_empty_queue_## _type() \
 }
 
 
-EMTPY_QUEUE_FUNCTION(timed_event, NEBCALLBACK_TIMED_EVENT_DATA)
+EMPTY_QUEUE_FUNCTION(timed_event, NEBCALLBACK_TIMED_EVENT_DATA)
 
 
-EMTPY_QUEUE_FUNCTION(event_handler, NEBCALLBACK_EVENT_HANDLER_DATA)
+EMPTY_QUEUE_FUNCTION(event_handler, NEBCALLBACK_EVENT_HANDLER_DATA)
 
 
-EMTPY_QUEUE_FUNCTION(host_check, NEBCALLBACK_HOST_CHECK_DATA)
+EMPTY_QUEUE_FUNCTION(host_check, NEBCALLBACK_HOST_CHECK_DATA)
 
 
-EMTPY_QUEUE_FUNCTION(service_check, NEBCALLBACK_SERVICE_CHECK_DATA)
+EMPTY_QUEUE_FUNCTION(service_check, NEBCALLBACK_SERVICE_CHECK_DATA)
 
 
-EMTPY_QUEUE_FUNCTION(comment, NEBCALLBACK_COMMENT_DATA)
+EMPTY_QUEUE_FUNCTION(comment, NEBCALLBACK_COMMENT_DATA)
 
 
-EMTPY_QUEUE_FUNCTION(downtime, NEBCALLBACK_DOWNTIME_DATA)
+EMPTY_QUEUE_FUNCTION(downtime, NEBCALLBACK_DOWNTIME_DATA)
 
 
-EMTPY_QUEUE_FUNCTION(flapping, NEBCALLBACK_FLAPPING_DATA)
+EMPTY_QUEUE_FUNCTION(flapping, NEBCALLBACK_FLAPPING_DATA)
 
 
-EMTPY_QUEUE_FUNCTION(host_status, NEBCALLBACK_HOST_STATUS_DATA)
+EMPTY_QUEUE_FUNCTION(host_status, NEBCALLBACK_HOST_STATUS_DATA)
 
 
-EMTPY_QUEUE_FUNCTION(service_status, NEBCALLBACK_SERVICE_STATUS_DATA)
+EMPTY_QUEUE_FUNCTION(service_status, NEBCALLBACK_SERVICE_STATUS_DATA)
 
 
-EMTPY_QUEUE_FUNCTION(contact_status, NEBCALLBACK_CONTACT_STATUS_DATA)
+EMPTY_QUEUE_FUNCTION(contact_status, NEBCALLBACK_CONTACT_STATUS_DATA)
 
 
-EMTPY_QUEUE_FUNCTION(acknowledgement, NEBCALLBACK_ACKNOWLEDGEMENT_DATA)
+EMPTY_QUEUE_FUNCTION(acknowledgement, NEBCALLBACK_ACKNOWLEDGEMENT_DATA)
 
 
-EMTPY_QUEUE_FUNCTION(statechange, NEBCALLBACK_STATE_CHANGE_DATA)
+EMPTY_QUEUE_FUNCTION(statechange, NEBCALLBACK_STATE_CHANGE_DATA)
 
 
 /* so, the reason this one doesn't use the prototype is because the order of
@@ -110,14 +110,14 @@ EMTPY_QUEUE_FUNCTION(statechange, NEBCALLBACK_STATE_CHANGE_DATA)
    wrong - since we don't use relational ids (e.g.: find the ids based on some
    proper linking) and instead rely on mysql_insert_id - which is fine, IF
    THEY'RE EXECUTED IN ORDER. */
-int ndo_empty_queue_notification()
+int ndo_empty_queue_notification(ndo_query_context *q_ctx)
 {
     trace_func_void();
 
     void * data = NULL;
     int type = -1;
 
-    /* unlike the EMTPY_QUEUE_FUNCTION() prototype, we can't deregister and
+    /* unlike the EMPTY_QUEUE_FUNCTION() prototype, we can't deregister and
        then register the new ones UNTIL the queue is proven empty. if we do
        that, then we run the risk of messing up some notification ids or
        whatever */
@@ -140,20 +140,20 @@ int ndo_empty_queue_notification()
             neb_deregister_callback(NEBCALLBACK_CONTACT_NOTIFICATION_DATA, ndo_handle_queue_contact_notification);
             neb_deregister_callback(NEBCALLBACK_CONTACT_NOTIFICATION_METHOD_DATA, ndo_handle_queue_contact_notification_method);
 
-            neb_register_callback(NEBCALLBACK_NOTIFICATION_DATA, ndo_handle, 0, ndo_handle_notification);
-            neb_register_callback(NEBCALLBACK_CONTACT_NOTIFICATION_DATA, ndo_handle, 0, ndo_handle_contact_notification);
-            neb_register_callback(NEBCALLBACK_CONTACT_NOTIFICATION_METHOD_DATA, ndo_handle, 0, ndo_handle_contact_notification_method);
+            neb_register_callback(NEBCALLBACK_NOTIFICATION_DATA, ndo_handle, 0, ndo_neb_handle_notification);
+            neb_register_callback(NEBCALLBACK_CONTACT_NOTIFICATION_DATA, ndo_handle, 0, ndo_neb_handle_contact_notification);
+            neb_register_callback(NEBCALLBACK_CONTACT_NOTIFICATION_METHOD_DATA, ndo_handle, 0, ndo_neb_handle_contact_notification_method);
 
             break;
         }
         else if (type == NEBCALLBACK_NOTIFICATION_DATA) {
-            ndo_handle_notification(type, data);
+            ndo_handle_notification(q_ctx, type, data);
         }
         else if (type == NEBCALLBACK_CONTACT_NOTIFICATION_DATA) {
-            ndo_handle_contact_notification(type, data);
+            ndo_handle_contact_notification(q_ctx, type, data);
         }
         else if (type == NEBCALLBACK_CONTACT_NOTIFICATION_METHOD_DATA) {
-            ndo_handle_contact_notification_method(type, data);
+            ndo_handle_contact_notification_method(q_ctx, type, data);
         }
 
         free(data);
