@@ -1,6 +1,6 @@
-db_user=ndo
-db_pass=ndo
-db_name=ndo
+db_user=ndoutils
+db_pass=ndoutils
+db_name=nagios
 db_host=localhost
 db_port=3306
 #db_socket=/var/lib/mysql.sock

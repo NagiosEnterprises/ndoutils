@@ -13,16 +13,16 @@
 void populate_commands()
 {
 
-    mysql_query(mysql_connection, "INSERT INTO nagios_objects SET "
+    mysql_query(main_thread_context->conn, "INSERT INTO nagios_objects SET "
                                   "instance_id = 1, objecttype_id = 12, name1 = 'check_xi_host_ping', name2 = '', is_active = 1");
-    mysql_query(mysql_connection, "INSERT INTO nagios_commands SET "
+    mysql_query(main_thread_context->conn, "INSERT INTO nagios_commands SET "
                                   "instance_id = 1, config_type = 1, "
                                   "object_id = (SELECT object_id from nagios_objects WHERE name1 = 'check_xi_host_ping' AND objecttype_id = 12), "
                                   "command_line = '$USER1$/check_icmp -H $HOSTADDRESS$ -w $ARG1$,$ARG2$ -c $ARG3$,$ARG4$ -p 5'");
 
-    mysql_query(mysql_connection, "INSERT INTO nagios_objects SET "
+    mysql_query(main_thread_context->conn, "INSERT INTO nagios_objects SET "
                                   "instance_id = 1, objecttype_id = 12, name1 = 'check_xi_service_ping', name2 = '', is_active = 1");
-    mysql_query(mysql_connection, "INSERT INTO nagios_commands SET "
+    mysql_query(main_thread_context->conn, "INSERT INTO nagios_commands SET "
                                   "instance_id = 1, config_type = 1, "
                                   "object_id = (SELECT object_id from nagios_objects WHERE name1 = 'check_xi_service_ping' AND objecttype_id = 12) "
                                   "command_line = '$USER1$/check_icmp -H $HOSTADDRESS$ -w $ARG1$,$ARG2$ -c $ARG3$,$ARG4$ -p 5'");
@@ -30,7 +30,7 @@ void populate_commands()
 
 struct host populate_hosts(timeperiod * tp)
 {
-    mysql_query(mysql_connection, "INSERT INTO nagios_objects SET "
+    mysql_query(main_thread_context->conn, "INSERT INTO nagios_objects SET "
                                   "instance_id = 1, objecttype_id = 1, name1 = '_testhost_1', name2 = ', is_active = 1");
 
     struct host the_host = {
@@ -166,10 +166,10 @@ void free_host(struct host the_host)
 
 struct service populate_service(timeperiod * tp, host * hst)
 {
-    mysql_query(mysql_connection, "INSERT INTO nagios_objects SET "
+    mysql_query(main_thread_context->conn, "INSERT INTO nagios_objects SET "
                                   "instance_id = 1, objecttype_id = 2, name1 = '_testhost_1', name2 = '_testservice_ping', is_active = 1");
 
-    mysql_query(mysql_connection, "INSERT INTO nagios_objects SET "
+    mysql_query(main_thread_context->conn, "INSERT INTO nagios_objects SET "
                                   "instance_id = 1, objecttype_id = 2, name1 = '_testhost_1', name2 = '_testservice_http', is_active = 1");
 
     struct service the_service = {
@@ -296,7 +296,7 @@ void free_service(struct service the_service)
 struct contact populate_contact(timeperiod * tp)
 {
 
-    mysql_query(mysql_connection, "INSERT INTO nagios_objects SET "
+    mysql_query(main_thread_context->conn, "INSERT INTO nagios_objects SET "
                                   "instance_id = 1, objecttype_id = 10, name1 = 'nagiosadmin', name2 = '', is_active = 1");
 
     struct contact the_contact = {
@@ -346,7 +346,7 @@ void free_contact(struct contact the_contact)
 struct timeperiod populate_timeperiods()
 {
 
-    mysql_query(mysql_connection, "INSERT INTO nagios_objects SET "
+    mysql_query(main_thread_context->conn, "INSERT INTO nagios_objects SET "
                                   "instance_id = 1, objecttype_id = 9, name1 = 'xi_timeperiod_24x7', is_active = 1");
     struct timerange * tr = calloc(1, sizeof(struct timerange));
 

@@ -132,11 +132,11 @@ START_TEST(test_program_state)
     d.flags = 0;
     d.attr = 0;
     d.timestamp = (struct timeval){.tv_sec = 1568324497, .tv_usec = 393922};
-    ndo_handle_process(d.type, &d);
+    ndo_neb_handle_process(d.type, &d);
 
     /* Objects should not exist in most tables */
     /* Note: test suit's db_name should ALWAYS be 'ndo' */
-    mysql_query(mysql_connection, "SELECT 1 FROM information_schema.TABLES WHERE "
+    mysql_query(main_thread_context->conn, "SELECT 1 FROM information_schema.TABLES WHERE "
                                   "TABLE_ROWS > 0 AND TABLE_SCHEMA = 'ndo' AND "
                                   "TABLE_NAME IN ('nagios_programstatus', "
                                   "'nagios_hoststatus', "
@@ -178,7 +178,7 @@ START_TEST(test_program_state)
                                   "'nagios_hostescalation_contactgroups', "
                                   "'nagios_serviceescalation_contactgroups' ) ");
 
-    tmp_result = mysql_store_result(mysql_connection);
+    tmp_result = mysql_store_result(main_thread_context->conn);
     ck_assert(tmp_result != NULL);
 
     if (tmp_result != NULL) {
@@ -189,9 +189,9 @@ START_TEST(test_program_state)
     mysql_free_result(tmp_result);
 
     /* Objects in nagios_objects should not be active */
-    mysql_query(mysql_connection, "SELECT 2 FROM nagios_objects WHERE is_active = 1");
+    mysql_query(main_thread_context->conn, "SELECT 2 FROM nagios_objects WHERE is_active = 1");
 
-    tmp_result = mysql_store_result(mysql_connection);
+    tmp_result = mysql_store_result(main_thread_context->conn);
     ck_assert(tmp_result != NULL);
 
     if (tmp_result != NULL) {
@@ -201,12 +201,12 @@ START_TEST(test_program_state)
 
     mysql_free_result(tmp_result);
 
-    mysql_query(mysql_connection, "SELECT 3 FROM nagios_processevents WHERE "
+    mysql_query(main_thread_context->conn, "SELECT 3 FROM nagios_processevents WHERE "
                                   "instance_id = 1 AND event_type = 104 AND "
                                   "event_time = FROM_UNIXTIME(1568324497) AND event_time_usec = 393922 AND "
                                   "program_name = 'Nagios' ");
 
-    tmp_result = mysql_store_result(mysql_connection);
+    tmp_result = mysql_store_result(main_thread_context->conn);
     ck_assert(tmp_result != NULL);
     if (tmp_result != NULL) {
         tmp_row = mysql_fetch_row(tmp_result);
@@ -241,14 +241,14 @@ START_TEST(test_program_state_end)
     d.flags = 0;
     d.attr = 0;
     d.timestamp = (struct timeval){.tv_sec = 1568735696, .tv_usec = 896836};
-    ndo_handle_process(d.type, &d);
+    ndo_neb_handle_process(d.type, &d);
 
-    mysql_query(mysql_connection, "SELECT 4 FROM nagios_processevents WHERE "
+    mysql_query(main_thread_context->conn, "SELECT 4 FROM nagios_processevents WHERE "
                                   "instance_id = 1 AND event_type = 102 AND "
                                   "event_time = FROM_UNIXTIME(1568735696) AND event_time_usec = 896836 AND "
                                   "program_name = 'Nagios' ");
 
-    tmp_result = mysql_store_result(mysql_connection);
+    tmp_result = mysql_store_result(main_thread_context->conn);
     ck_assert(tmp_result != NULL);
     if (tmp_result != NULL) {
         tmp_row = mysql_fetch_row(tmp_result);
@@ -261,10 +261,10 @@ START_TEST(test_program_state_end)
     }
     mysql_free_result(tmp_result);
 
-    mysql_query(mysql_connection, "SELECT 5 FROM nagios_programstatus WHERE "
+    mysql_query(main_thread_context->conn, "SELECT 5 FROM nagios_programstatus WHERE "
                                   "program_end_time = FROM_UNIXTIME(1568735696) AND is_currently_running = 0");
 
-    tmp_result = mysql_store_result(mysql_connection);
+    tmp_result = mysql_store_result(main_thread_context->conn);
     ck_assert(tmp_result != NULL);
     if (tmp_result != NULL) {
         tmp_row = mysql_fetch_row(tmp_result);
@@ -305,7 +305,7 @@ START_TEST(test_log_data)
     d.data_type = 0;
     d.data = strdup("log data");
 
-    ndo_handle_log(0, (void *) &d);
+    ndo_neb_handle_log(0, (void *) &d);
 
     // do a query against log_data
     // assert the values are what we set them
@@ -339,9 +339,9 @@ START_TEST(test_system_command)
     d.return_code = 0;
     d.output = NULL;
 
-    ndo_handle_system_command(d.type, &d);
+    ndo_neb_handle_system_command(d.type, &d);
 
-    mysql_query(mysql_connection, "SELECT 1 FROM nagios_systemcommands WHERE "
+    mysql_query(main_thread_context->conn, "SELECT 1 FROM nagios_systemcommands WHERE "
                                   "instance_id = 1 AND start_time = FROM_UNIXTIME(1568303746) "
                                   "AND start_time_usec = 165485 AND end_time = FROM_UNIXTIME(0) "
                                   "AND end_time_usec = 0 AND command_line = '/usr/bin/echo fake_command' "
@@ -349,7 +349,7 @@ START_TEST(test_system_command)
                                   "AND execution_time = 0 AND return_code = 0 "
                                   "AND output = '' AND long_output = '' ");
 
-    tmp_result = mysql_store_result(mysql_connection);
+    tmp_result = mysql_store_result(main_thread_context->conn);
     ck_assert(tmp_result != NULL);
 
     if (tmp_result != NULL) {
@@ -395,9 +395,9 @@ START_TEST(test_event_handler)
     d.output = NULL;
     d.object_ptr = &test_service;
 
-    ndo_handle_event_handler(d.type, &d);
+    ndo_neb_handle_event_handler(d.type, &d);
 
-    mysql_query(mysql_connection, "SELECT 1 FROM nagios_eventhandlers WHERE "
+    mysql_query(main_thread_context->conn, "SELECT 1 FROM nagios_eventhandlers WHERE "
                                   "instance_id = 1 AND start_time = FROM_UNIXTIME(1568308620) "
                                   "AND start_time_usec = 5233 AND end_time = FROM_UNIXTIME(0) "
                                   "AND end_time_usec = 0 AND eventhandler_type = 3 "
@@ -408,7 +408,7 @@ START_TEST(test_event_handler)
                                   "AND execution_time = 0 AND return_code = 0 "
                                   "AND output = '' AND long_output = '' ");
 
-    tmp_result = mysql_store_result(mysql_connection);
+    tmp_result = mysql_store_result(main_thread_context->conn);
     ck_assert(tmp_result != NULL);
 
     if (tmp_result != NULL) {
@@ -447,9 +447,9 @@ START_TEST(test_event_handler)
     d.output = NULL;
     d.object_ptr = &test_host;
 
-    ndo_handle_event_handler(d.type, &d);
+    ndo_neb_handle_event_handler(d.type, &d);
 
-    mysql_query(mysql_connection, "SELECT 2 FROM nagios_eventhandlers WHERE "
+    mysql_query(main_thread_context->conn, "SELECT 2 FROM nagios_eventhandlers WHERE "
                                   "instance_id = 1 AND start_time = FROM_UNIXTIME(1568312540) "
                                   "AND start_time_usec = 976228 AND end_time = FROM_UNIXTIME(0) "
                                   "AND end_time_usec = 0 AND eventhandler_type = 2 "
@@ -460,7 +460,7 @@ START_TEST(test_event_handler)
                                   "AND execution_time = 0 AND return_code = 0 "
                                   "AND output = '' AND long_output = '' ");
 
-    tmp_result = mysql_store_result(mysql_connection);
+    tmp_result = mysql_store_result(main_thread_context->conn);
     ck_assert(tmp_result != NULL);
 
     if (tmp_result != NULL) {
@@ -516,9 +516,9 @@ START_TEST(test_host_check)
     d.check_result_ptr = NULL;
     d.object_ptr = NULL;
 
-    ndo_handle_host_check(d.type, &d);
+    ndo_neb_handle_host_check(d.type, &d);
 
-    mysql_query(mysql_connection, "SELECT 1 FROM nagios_hostchecks "
+    mysql_query(main_thread_context->conn, "SELECT 1 FROM nagios_hostchecks "
                                   "WHERE instance_id = 1 AND start_time = FROM_UNIXTIME(1567102578) AND start_time_usec = 740516 "
                                   "AND end_time = FROM_UNIXTIME(0) AND end_time_usec = 0 AND host_object_id = 0 AND check_type = 0 "
                                   "AND current_check_attempt = 1 AND max_check_attempts = 5 AND state = 0 AND state_type = 1 "
@@ -528,7 +528,7 @@ START_TEST(test_host_check)
                                   "AND command_line = '/usr/local/nagios/libexec/check_icmp -H 127.0.0.1 -w 3000.0,80%% -c 5000.0,100%% -p 5' ");
 
 
-    tmp_result = mysql_store_result(mysql_connection);
+    tmp_result = mysql_store_result(main_thread_context->conn);
     ck_assert(tmp_result != NULL);
 
     if (tmp_result != NULL) {
@@ -571,9 +571,9 @@ START_TEST(test_host_check)
     d.check_result_ptr = NULL;
     d.object_ptr = NULL;
 
-    ndo_handle_host_check(d.type, &d);
+    ndo_neb_handle_host_check(d.type, &d);
 
-    mysql_query(mysql_connection, "SELECT 2 FROM nagios_hostchecks "
+    mysql_query(main_thread_context->conn, "SELECT 2 FROM nagios_hostchecks "
                                   "WHERE instance_id = 1 AND start_time = FROM_UNIXTIME(1567104907) AND start_time_usec = 365285 "
                                   "AND end_time = FROM_UNIXTIME(1567104907) AND end_time_usec = 396672 AND check_type = 0 "
                                   "AND current_check_attempt = 1 AND max_check_attempts = 5 AND state = 0 AND state_type = 1 "
@@ -582,7 +582,7 @@ START_TEST(test_host_check)
                                   "AND perfdata = 'rta=0.037ms;3000.000;5000.000;0; rtmax=0.082ms;;;; rtmin=0.014ms;;;; pl=0%%;80;100;0;100' "
                                   "AND command_args = '3000.0!80%!5000.0!100%' ");
 
-    tmp_result = mysql_store_result(mysql_connection);
+    tmp_result = mysql_store_result(main_thread_context->conn);
     ck_assert(tmp_result != NULL);
 
     if (tmp_result != NULL) {
@@ -639,9 +639,9 @@ START_TEST(test_service_check)
     /* object pointer was not originally null */
     d.object_ptr = NULL;
 
-    ndo_handle_service_check(d.type, &d);
+    ndo_neb_handle_service_check(d.type, &d);
 
-    mysql_query(mysql_connection, "SELECT 1 FROM nagios_servicechecks WHERE "
+    mysql_query(main_thread_context->conn, "SELECT 1 FROM nagios_servicechecks WHERE "
                                   "instance_id = 1 AND start_time = FROM_UNIXTIME(0) AND start_time_usec = 0 "
                                   "AND end_time = FROM_UNIXTIME(0) AND end_time_usec = 0 "
                                   "AND check_type = 0 AND current_check_attempt = 1 AND max_check_attempts = 5 "
@@ -654,7 +654,7 @@ START_TEST(test_service_check)
                                   "AND command_args = '3000.0!80%!5000.0!100%' AND command_line = ''");
 
 
-    tmp_result = mysql_store_result(mysql_connection);
+    tmp_result = mysql_store_result(main_thread_context->conn);
     ck_assert(tmp_result != NULL);
 
     if (tmp_result != NULL) {
@@ -700,9 +700,9 @@ START_TEST(test_service_check)
     d.check_result_ptr = NULL;
     d.object_ptr = NULL;
 
-    ndo_handle_service_check(d.type, &d);
+    ndo_neb_handle_service_check(d.type, &d);
 
-    mysql_query(mysql_connection, "SELECT 2 FROM nagios_servicechecks WHERE "
+    mysql_query(main_thread_context->conn, "SELECT 2 FROM nagios_servicechecks WHERE "
                                   "instance_id = 1 AND start_time = FROM_UNIXTIME(1567180765) AND start_time_usec = 383185 "
                                   "AND end_time = FROM_UNIXTIME(1567180765) AND end_time_usec = 493635 "
                                   "AND check_type = 0 AND current_check_attempt = 5 AND max_check_attempts = 5 "
@@ -713,7 +713,7 @@ START_TEST(test_service_check)
                                   "AND perfdata = 'fakedata=0;;;;' ");
 
 
-    tmp_result = mysql_store_result(mysql_connection);
+    tmp_result = mysql_store_result(main_thread_context->conn);
     ck_assert(tmp_result != NULL);
 
     if (tmp_result != NULL) {
@@ -763,18 +763,18 @@ START_TEST(test_comment_data)
     d_add_host.comment_id = 1;
     d_add_host.object_ptr = NULL;
 
-    ndo_handle_comment(0, &d_add_host);
+    ndo_neb_handle_comment(0, &d_add_host);
 
 
     /* Verify that the comment shows in commenthistory */
-    mysql_query(mysql_connection, "SELECT 1 FROM nagios_commenthistory "
+    mysql_query(main_thread_context->conn, "SELECT 1 FROM nagios_commenthistory "
                                   " WHERE comment_type = 1 AND entry_type = 1 AND comment_time = FROM_UNIXTIME(1567021619) "
                                   " AND internal_comment_id = 1 AND author_name = 'Nagios Admin' "
                                   " AND comment_data = 'this is a unique comment' AND is_persistent = 1 "
                                   " AND comment_source = 1 AND expires = 0 AND expiration_time = FROM_UNIXTIME(0) "
                                   " AND entry_time = FROM_UNIXTIME(1567021700) AND entry_time_usec = 29064 ");
 
-    tmp_result = mysql_store_result(mysql_connection);
+    tmp_result = mysql_store_result(main_thread_context->conn);
     ck_assert(tmp_result != NULL);
 
     if (tmp_result != NULL) {
@@ -792,14 +792,14 @@ START_TEST(test_comment_data)
     free(d_add_host.comment_data);
 
     /* Verify that the comment shows in comments */
-    mysql_query(mysql_connection, "SELECT 2 FROM nagios_comments "
+    mysql_query(main_thread_context->conn, "SELECT 2 FROM nagios_comments "
                                   " WHERE comment_type = 1 AND entry_type = 1 AND comment_time = FROM_UNIXTIME(1567021619) "
                                   " AND internal_comment_id = 1 AND author_name = 'Nagios Admin' "
                                   " AND comment_data = 'this is a unique comment' AND is_persistent = 1 "
                                   " AND comment_source = 1 AND expires = 0 AND expiration_time = FROM_UNIXTIME(0) "
                                   " AND entry_time = FROM_UNIXTIME(1567021700) AND entry_time_usec = 29064 ");
 
-    tmp_result = mysql_store_result(mysql_connection);
+    tmp_result = mysql_store_result(main_thread_context->conn);
     ck_assert(tmp_result != NULL);
 
     if (tmp_result != NULL) {
@@ -832,13 +832,13 @@ START_TEST(test_comment_data)
     d_delete_host.comment_id = 1;
     d_delete_host.object_ptr = NULL;
 
-    ndo_handle_comment(0, &d_delete_host);
+    ndo_neb_handle_comment(0, &d_delete_host);
 
     /* Comment should be present in commenthistory with deletion time */
-    mysql_query(mysql_connection, "SELECT 3 FROM nagios_commenthistory "
+    mysql_query(main_thread_context->conn, "SELECT 3 FROM nagios_commenthistory "
                                   " WHERE internal_comment_id = 1 AND deletion_time IS NOT NULL");
 
-    tmp_result = mysql_store_result(mysql_connection);
+    tmp_result = mysql_store_result(main_thread_context->conn);
     ck_assert(tmp_result != NULL);
 
     if (tmp_result != NULL) {
@@ -856,10 +856,10 @@ START_TEST(test_comment_data)
     free(d_delete_host.comment_data);
 
     /* Comment should be deleted from comments table */
-    mysql_query(mysql_connection, "SELECT 4 FROM nagios_comments "
+    mysql_query(main_thread_context->conn, "SELECT 4 FROM nagios_comments "
                                   " WHERE internal_comment_id = 1");
 
-    tmp_result = mysql_store_result(mysql_connection);
+    tmp_result = mysql_store_result(main_thread_context->conn);
     ck_assert(tmp_result != NULL);
 
     if (tmp_result != NULL) {
@@ -890,18 +890,18 @@ START_TEST(test_comment_data)
     d_add_service.comment_id = 2;
     d_add_service.object_ptr = NULL;
 
-    ndo_handle_comment(0, &d_add_service);
+    ndo_neb_handle_comment(0, &d_add_service);
 
 
     /* Verify that the comment shows in commenthistory */
-    mysql_query(mysql_connection, "SELECT 5 FROM nagios_commenthistory "
+    mysql_query(main_thread_context->conn, "SELECT 5 FROM nagios_commenthistory "
                                   " WHERE comment_type = 2 AND entry_type = 1 AND comment_time = FROM_UNIXTIME(1567021620) "
                                   " AND internal_comment_id = 2 AND author_name = 'Nagios Admin' "
                                   " AND comment_data = 'this is a different comment' AND is_persistent = 1 "
                                   " AND comment_source = 1 AND expires = 0 AND expiration_time = FROM_UNIXTIME(0) "
                                   " AND entry_time = FROM_UNIXTIME(1567021701) AND entry_time_usec = 29065 ");
 
-    tmp_result = mysql_store_result(mysql_connection);
+    tmp_result = mysql_store_result(main_thread_context->conn);
     ck_assert(tmp_result != NULL);
 
     if (tmp_result != NULL) {
@@ -915,14 +915,14 @@ START_TEST(test_comment_data)
     mysql_free_result(tmp_result);
 
     /* Verify that the comment shows in comments */
-    mysql_query(mysql_connection, "SELECT 6 FROM nagios_comments "
+    mysql_query(main_thread_context->conn, "SELECT 6 FROM nagios_comments "
                                   " WHERE comment_type = 2 AND entry_type = 1 AND comment_time = FROM_UNIXTIME(1567021620) "
                                   " AND internal_comment_id = 2 AND author_name = 'Nagios Admin' "
                                   " AND comment_data = 'this is a different comment' AND is_persistent = 1 "
                                   " AND comment_source = 1 AND expires = 0 AND expiration_time = FROM_UNIXTIME(0) "
                                   " AND entry_time = FROM_UNIXTIME(1567021701) AND entry_time_usec = 29065 ");
 
-    tmp_result = mysql_store_result(mysql_connection);
+    tmp_result = mysql_store_result(main_thread_context->conn);
     ck_assert(tmp_result != NULL);
 
     if (tmp_result != NULL) {
@@ -960,13 +960,13 @@ START_TEST(test_comment_data)
     d_delete_service.comment_id = 2;
     d_delete_service.object_ptr = NULL;
 
-    ndo_handle_comment(0, &d_delete_service);
+    ndo_neb_handle_comment(0, &d_delete_service);
 
     /* Comment should be present in commenthistory with deletion time */
-    mysql_query(mysql_connection, "SELECT 7 FROM nagios_commenthistory "
+    mysql_query(main_thread_context->conn, "SELECT 7 FROM nagios_commenthistory "
                                   " WHERE internal_comment_id = 2 AND deletion_time IS NOT NULL");
 
-    tmp_result = mysql_store_result(mysql_connection);
+    tmp_result = mysql_store_result(main_thread_context->conn);
     ck_assert(tmp_result != NULL);
 
     if (tmp_result != NULL) {
@@ -980,10 +980,10 @@ START_TEST(test_comment_data)
     mysql_free_result(tmp_result);
 
     /* Comment should be deleted from comments table */
-    mysql_query(mysql_connection, "SELECT 8 FROM nagios_comments "
+    mysql_query(main_thread_context->conn, "SELECT 8 FROM nagios_comments "
                                   " WHERE internal_comment_id = 2");
 
-    tmp_result = mysql_store_result(mysql_connection);
+    tmp_result = mysql_store_result(main_thread_context->conn);
     ck_assert(tmp_result != NULL);
 
     if (tmp_result != NULL) {
@@ -1026,17 +1026,17 @@ START_TEST(test_downtime_data)
     d.downtime_id = 1;
     d.object_ptr = 0x0;
 
-    ndo_handle_downtime(d.type, &d);
+    ndo_neb_handle_downtime(d.type, &d);
 
     /* Verify that the downtime was added to scheduleddowntime */
-    mysql_query(mysql_connection, "SELECT 1 FROM nagios_scheduleddowntime WHERE "
+    mysql_query(main_thread_context->conn, "SELECT 1 FROM nagios_scheduleddowntime WHERE "
                                   "instance_id = 1 AND downtime_type = 2 " /* AND object_id = ? "*/
                                   "AND entry_time = FROM_UNIXTIME(1567191710) AND author_name = 'Nagios Admin' "
                                   "AND comment_data = 'this is a test comment for downtime' AND internal_downtime_id = 1 "
                                   "AND triggered_by_id = 0 AND is_fixed = 1 AND duration = 900 "
                                   "AND scheduled_start_time = FROM_UNIXTIME(1567192501) AND scheduled_end_time = FROM_UNIXTIME(1567193401) ");
 
-    tmp_result = mysql_store_result(mysql_connection);
+    tmp_result = mysql_store_result(main_thread_context->conn);
     ck_assert(tmp_result != NULL);
 
     if (tmp_result != NULL) {
@@ -1055,14 +1055,14 @@ START_TEST(test_downtime_data)
 
     /* Verify that the exact same entry was added to downtimehistory */
 
-    mysql_query(mysql_connection, "SELECT 2 FROM nagios_downtimehistory WHERE "
+    mysql_query(main_thread_context->conn, "SELECT 2 FROM nagios_downtimehistory WHERE "
                                   "instance_id = 1 AND downtime_type = 2 " /* AND object_id = ? "*/
                                   "AND entry_time = FROM_UNIXTIME(1567191710) AND author_name = 'Nagios Admin' "
                                   "AND comment_data = 'this is a test comment for downtime' AND internal_downtime_id = 1 "
                                   "AND triggered_by_id = 0 AND is_fixed = 1 AND duration = 900 "
                                   "AND scheduled_start_time = FROM_UNIXTIME(1567192501) AND scheduled_end_time = FROM_UNIXTIME(1567193401) ");
 
-    tmp_result = mysql_store_result(mysql_connection);
+    tmp_result = mysql_store_result(main_thread_context->conn);
     ck_assert(tmp_result != NULL);
 
     if (tmp_result != NULL) {
@@ -1097,11 +1097,11 @@ START_TEST(test_downtime_data)
     d.object_ptr = NULL;
 
 
-    ndo_handle_downtime(d.type, &d);
+    ndo_neb_handle_downtime(d.type, &d);
 
     /* Verify that the same downtime above is present in downtimehistory and scheduleddowntime,
      * but that actual_start_time, actual_start_time_usec, and was_started were updated */
-    mysql_query(mysql_connection, "SELECT 3 FROM nagios_scheduleddowntime WHERE "
+    mysql_query(main_thread_context->conn, "SELECT 3 FROM nagios_scheduleddowntime WHERE "
                                   "instance_id = 1 AND downtime_type = 2 " /* AND object_id = ? "*/
                                   "AND entry_time = FROM_UNIXTIME(1567191710) AND author_name = 'Nagios Admin' "
                                   "AND comment_data = 'this is a test comment for downtime' AND internal_downtime_id = 1 "
@@ -1110,7 +1110,7 @@ START_TEST(test_downtime_data)
                                   /* query is the same as "SELECT 1..." up until this line */
                                   "AND actual_start_time = FROM_UNIXTIME(1567192611) AND actual_start_time_usec = 90214 AND was_started = 1 ");
 
-    tmp_result = mysql_store_result(mysql_connection);
+    tmp_result = mysql_store_result(main_thread_context->conn);
     ck_assert(tmp_result != NULL);
 
     if (tmp_result != NULL) {
@@ -1125,7 +1125,7 @@ START_TEST(test_downtime_data)
 
     /* Verify that the updated values are also in downtimehistory */
 
-    mysql_query(mysql_connection, "SELECT 4 FROM nagios_downtimehistory WHERE "
+    mysql_query(main_thread_context->conn, "SELECT 4 FROM nagios_downtimehistory WHERE "
                                   "instance_id = 1 AND downtime_type = 2 " /* AND object_id = ? "*/
                                   "AND entry_time = FROM_UNIXTIME(1567191710) AND author_name = 'Nagios Admin' "
                                   "AND comment_data = 'this is a test comment for downtime' AND internal_downtime_id = 1 "
@@ -1134,7 +1134,7 @@ START_TEST(test_downtime_data)
                                   /* query is the same as "SELECT 2..." up until this line */
                                   "AND actual_start_time = FROM_UNIXTIME(1567192611) AND actual_start_time_usec = 90214 AND was_started = 1 ");
 
-    tmp_result = mysql_store_result(mysql_connection);
+    tmp_result = mysql_store_result(main_thread_context->conn);
     ck_assert(tmp_result != NULL);
 
     if (tmp_result != NULL) {
@@ -1172,17 +1172,17 @@ START_TEST(test_downtime_data)
     d.downtime_id = 1;
     d.object_ptr = NULL;
 
-    ndo_handle_downtime(d.type, &d);
+    ndo_neb_handle_downtime(d.type, &d);
 
     /* Verify that the downtime was deleted from scheduleddowntime */
-    mysql_query(mysql_connection, "SELECT 5 FROM nagios_scheduleddowntime WHERE "
+    mysql_query(main_thread_context->conn, "SELECT 5 FROM nagios_scheduleddowntime WHERE "
                                   "instance_id = 1 AND downtime_type = 2 " /* AND object_id = ? "*/
                                   "AND entry_time = FROM_UNIXTIME(1567191710) AND author_name = 'Nagios Admin' "
                                   "AND comment_data = 'this is a test comment for downtime' AND internal_downtime_id = 1 "
                                   "AND triggered_by_id = 0 AND is_fixed = 1 AND duration = 900 "
                                   "AND scheduled_start_time = FROM_UNIXTIME(1567192501) AND scheduled_end_time = FROM_UNIXTIME(1567193401) ");
 
-    tmp_result = mysql_store_result(mysql_connection);
+    tmp_result = mysql_store_result(main_thread_context->conn);
     ck_assert(tmp_result != NULL);
 
     if (tmp_result != NULL) {
@@ -1193,7 +1193,7 @@ START_TEST(test_downtime_data)
 
     /* Verify that the the entry still exists in downtimehistory with updated actual_end_time, actual_end_time_usec, was_cancelled */
 
-    mysql_query(mysql_connection, "SELECT 6 FROM nagios_downtimehistory WHERE "
+    mysql_query(main_thread_context->conn, "SELECT 6 FROM nagios_downtimehistory WHERE "
                                   "instance_id = 1 AND downtime_type = 2 " /* AND object_id = ? "*/
                                   "AND entry_time = FROM_UNIXTIME(1567191710) AND author_name = 'Nagios Admin' "
                                   "AND comment_data = 'this is a test comment for downtime' AND internal_downtime_id = 1 "
@@ -1203,7 +1203,7 @@ START_TEST(test_downtime_data)
                                   /* query is the same as "SELECT 4..." up until this line */
                                   "AND actual_end_time = FROM_UNIXTIME(1567521860) AND actual_end_time_usec = 732623 AND was_cancelled = 0 ");
 
-    tmp_result = mysql_store_result(mysql_connection);
+    tmp_result = mysql_store_result(main_thread_context->conn);
     ck_assert(tmp_result != NULL);
 
     if (tmp_result != NULL) {
@@ -1240,7 +1240,7 @@ START_TEST(test_downtime_data)
     d.downtime_id = 5;
     d.object_ptr = NULL;
 
-    ndo_handle_downtime(d.type, &d);
+    ndo_neb_handle_downtime(d.type, &d);
 
     free(d.host_name);
     free(d.author_name);
@@ -1264,11 +1264,11 @@ START_TEST(test_downtime_data)
     d.downtime_id = 5;
     d.object_ptr = NULL;
 
-    ndo_handle_downtime(d.type, &d);
+    ndo_neb_handle_downtime(d.type, &d);
 
     /* Verify that the the entry still exists in downtimehistory with updated was_cancelled */
 
-    mysql_query(mysql_connection, "SELECT 8 FROM nagios_downtimehistory WHERE "
+    mysql_query(main_thread_context->conn, "SELECT 8 FROM nagios_downtimehistory WHERE "
                                   "instance_id = 1 AND downtime_type = 2 " /* AND object_id = ? "*/
                                   "AND entry_time = FROM_UNIXTIME(1567191810) AND author_name = 'Nagios Admin' "
                                   "AND comment_data = 'cancellable downtime' AND internal_downtime_id = 5 "
@@ -1276,7 +1276,7 @@ START_TEST(test_downtime_data)
                                   "AND scheduled_start_time = FROM_UNIXTIME(1567202501) AND scheduled_end_time = FROM_UNIXTIME(1567203401) "
                                   "AND actual_end_time = FROM_UNIXTIME(1567522060) AND actual_end_time_usec = 732623 AND was_cancelled = 1 ");
 
-    tmp_result = mysql_store_result(mysql_connection);
+    tmp_result = mysql_store_result(main_thread_context->conn);
     ck_assert(tmp_result != NULL);
 
     if (tmp_result != NULL) {
@@ -1316,10 +1316,10 @@ START_TEST(test_flapping_data)
     d.comment_id = 0;
     d.object_ptr = NULL;
 
-    ndo_handle_flapping(d.type, &d);
+    ndo_neb_handle_flapping(d.type, &d);
 
     /* Verify that an entry is created for FLAPPING_START with services */
-    mysql_query(mysql_connection, "SELECT 1 FROM nagios_flappinghistory WHERE "
+    mysql_query(main_thread_context->conn, "SELECT 1 FROM nagios_flappinghistory WHERE "
                                   "instance_id = 1 AND event_time = FROM_UNIXTIME(1567539851) AND event_time_usec = 906317 "
                                   "AND event_type = 1000 AND reason_type = 0 AND flapping_type = 1 "
                                   "AND object_id = (SELECT object_id from nagios_objects WHERE objecttype_id = 2 AND name1 = '_testhost_1' AND name2 = '_testservice_http' LIMIT 1) "
@@ -1328,7 +1328,7 @@ START_TEST(test_flapping_data)
                                   "internal_comment_id = 0 ");
 
 
-    tmp_result = mysql_store_result(mysql_connection);
+    tmp_result = mysql_store_result(main_thread_context->conn);
     ck_assert(tmp_result != NULL);
 
     if (tmp_result != NULL) {
@@ -1359,9 +1359,9 @@ START_TEST(test_flapping_data)
     d.comment_id = 0;
     d.object_ptr = NULL;
 
-    ndo_handle_flapping(d.type, &d);
+    ndo_neb_handle_flapping(d.type, &d);
 
-    mysql_query(mysql_connection, "SELECT 2 FROM nagios_flappinghistory WHERE "
+    mysql_query(main_thread_context->conn, "SELECT 2 FROM nagios_flappinghistory WHERE "
                                   "instance_id = 1 AND event_time = FROM_UNIXTIME(1567543077) AND event_time_usec = 95771 "
                                   "AND event_type = 1001 AND reason_type = 2 AND flapping_type = 0 "
                                   "AND object_id = (SELECT object_id from nagios_objects WHERE objecttype_id = 1 AND name1 = '_testhost_1' AND name2 = '' LIMIT 1) "
@@ -1369,7 +1369,7 @@ START_TEST(test_flapping_data)
                                   "AND high_threshold = 0 AND comment_time = FROM_UNIXTIME(0) AND "
                                   "internal_comment_id = 0 ");
 
-    tmp_result = mysql_store_result(mysql_connection);
+    tmp_result = mysql_store_result(main_thread_context->conn);
     ck_assert(tmp_result != NULL);
 
     if (tmp_result != NULL) {
@@ -1417,9 +1417,9 @@ START_TEST(test_program_status)
     d.global_host_event_handler = NULL;
     d.global_service_event_handler = NULL;
 
-    ndo_handle_program_status(d.type, &d);
+    ndo_neb_handle_program_status(d.type, &d);
 
-    mysql_query(mysql_connection, "SELECT 1 FROM nagios_programstatus WHERE "
+    mysql_query(main_thread_context->conn, "SELECT 1 FROM nagios_programstatus WHERE "
                                   "instance_id = 1 AND status_update_time = FROM_UNIXTIME(1567626021) "
                                   "AND program_start_time = FROM_UNIXTIME(1567542969) AND is_currently_running = 1 "
                                   "AND process_id = 107564 AND daemon_mode = 0 "
@@ -1432,7 +1432,7 @@ START_TEST(test_program_status)
                                   "AND obsess_over_services = 0 AND modified_host_attributes = 0 "
                                   "AND modified_service_attributes = 0 AND global_host_event_handler = '' AND global_service_event_handler = ''");
 
-    tmp_result = mysql_store_result(mysql_connection);
+    tmp_result = mysql_store_result(main_thread_context->conn);
     ck_assert(tmp_result != NULL);
 
     if (tmp_result != NULL) {
@@ -1463,9 +1463,9 @@ START_TEST(test_host_status)
     d.timestamp = (struct timeval){.tv_sec = 1567634416, .tv_usec = 981815};
     d.object_ptr = &test_host;
 
-    ndo_handle_host_status(d.type, &d);
+    ndo_neb_handle_host_status(d.type, &d);
 
-    mysql_query(mysql_connection, "SELECT 1 FROM nagios_hoststatus WHERE "
+    mysql_query(main_thread_context->conn, "SELECT 1 FROM nagios_hoststatus WHERE "
                                   "instance_id = 1 AND host_object_id = (SELECT object_id FROM nagios_objects WHERE objecttype_id = 1 AND name1 = '_testhost_1' AND name2 = '' LIMIT 1) "
                                   "AND status_update_time = FROM_UNIXTIME(1567634416) AND output = 'OK - 127.0.0.1 rta 0.012ms lost 0%' "
                                   "AND long_output = '' AND perfdata = 'rta=0.012ms;3000.000;5000.000;0; rtmax=0.036ms;;;; rtmin=0.005ms;;;; pl=0%;80;100;0;100' "
@@ -1490,7 +1490,7 @@ START_TEST(test_host_status)
                                   "AND normal_check_interval = 5 AND retry_check_interval = 1 "
                                   "AND check_timeperiod_object_id = (SELECT object_id FROM nagios_objects WHERE objecttype_id = 9 AND name1 = 'xi_timeperiod_24x7' AND name2 = '' LIMIT 1)");
 
-    tmp_result = mysql_store_result(mysql_connection);
+    tmp_result = mysql_store_result(main_thread_context->conn);
     ck_assert(tmp_result != NULL);
 
     if (tmp_result != NULL) {
@@ -1521,9 +1521,9 @@ START_TEST(test_service_status)
     d.timestamp = (struct timeval){.tv_sec = 1567709361, .tv_usec = 154555};
     d.object_ptr = &test_service;
 
-    ndo_handle_service_status(d.type, &d);
+    ndo_neb_handle_service_status(d.type, &d);
 
-    mysql_query(mysql_connection, "SELECT 1 FROM nagios_servicestatus WHERE "
+    mysql_query(main_thread_context->conn, "SELECT 1 FROM nagios_servicestatus WHERE "
                                   "instance_id = 1 AND service_object_id = (SELECT object_id FROM nagios_objects WHERE objecttype_id = 2 AND name1 = '_testhost_1' AND name2 = '_testservice_http' LIMIT 1)"
                                   "AND status_update_time = FROM_UNIXTIME(1567709361) AND output = 'This is not real output' "
                                   "AND long_output = '' AND perfdata = '' AND current_state = 0 "
@@ -1547,7 +1547,7 @@ START_TEST(test_service_status)
                                   "AND check_command = 'check_xi_service_http' AND normal_check_interval = 5 AND retry_check_interval = 1 "
                                   "AND check_timeperiod_object_id = (SELECT object_id FROM nagios_objects WHERE objecttype_id = 9 AND name1 = 'xi_timeperiod_24x7' AND name2 = '' LIMIT 1) ");
 
-    tmp_result = mysql_store_result(mysql_connection);
+    tmp_result = mysql_store_result(main_thread_context->conn);
     ck_assert(tmp_result != NULL);
 
     if (tmp_result != NULL) {
@@ -1576,16 +1576,16 @@ START_TEST(test_contact_status)
     d.timestamp = (struct timeval){.tv_sec = 1568226545, .tv_usec = 362038};
     d.object_ptr = &test_contact;
 
-    ndo_handle_contact_status(d.type, &d);
+    ndo_neb_handle_contact_status(d.type, &d);
 
-    mysql_query(mysql_connection, "SELECT 1 FROM nagios_contactstatus WHERE "
+    mysql_query(main_thread_context->conn, "SELECT 1 FROM nagios_contactstatus WHERE "
                                   "instance_id = 1 AND contact_object_id = (SELECT object_id FROM nagios_objects WHERE objecttype_id = 10 AND name1 = 'nagiosadmin' AND name2 = '' LIMIT 1) "
                                   "AND status_update_time = FROM_UNIXTIME(1568226545) AND host_notifications_enabled = 1 "
                                   "AND service_notifications_enabled = 1 AND last_host_notification = FROM_UNIXTIME(1567525739) "
                                   "AND last_service_notification = FROM_UNIXTIME(1567543267) AND modified_attributes = 0 "
                                   "AND modified_host_attributes = 0 AND modified_service_attributes = 0 ");
 
-    tmp_result = mysql_store_result(mysql_connection);
+    tmp_result = mysql_store_result(main_thread_context->conn);
     ck_assert(tmp_result != NULL);
 
     if (tmp_result != NULL) {
@@ -1627,9 +1627,9 @@ START_TEST(test_notification_data)
     d.contacts_notified = 0;
     d.object_ptr = &test_service;
 
-    ndo_handle_notification(d.type, &d);
+    ndo_neb_handle_notification(d.type, &d);
 
-    mysql_query(mysql_connection, "SELECT 1 FROM nagios_notifications WHERE "
+    mysql_query(main_thread_context->conn, "SELECT 1 FROM nagios_notifications WHERE "
                                   "instance_id = 1 AND start_time = FROM_UNIXTIME(1568228312) "
                                   "AND start_time_usec = 479539 AND end_time = FROM_UNIXTIME(0) "
                                   "AND end_time_usec = 0 AND notification_type = 1 "
@@ -1638,7 +1638,7 @@ START_TEST(test_notification_data)
                                   "AND long_output = 'Return some status message' AND escalated = 0 "
                                   "AND contacts_notified = 0 ");
 
-    tmp_result = mysql_store_result(mysql_connection);
+    tmp_result = mysql_store_result(main_thread_context->conn);
     ck_assert(tmp_result != NULL);
 
     if (tmp_result != NULL) {
@@ -1674,9 +1674,9 @@ START_TEST(test_notification_data)
     d.contacts_notified = 0;
     d.object_ptr = &test_service;
 
-    ndo_handle_notification(d.type, &d);
+    ndo_neb_handle_notification(d.type, &d);
 
-    mysql_query(mysql_connection, "SELECT 2 FROM nagios_notifications WHERE "
+    mysql_query(main_thread_context->conn, "SELECT 2 FROM nagios_notifications WHERE "
                                   "instance_id = 1 AND start_time = FROM_UNIXTIME(1568228314) "
                                   "AND start_time_usec = 479541 AND end_time = FROM_UNIXTIME(0) "
                                   "AND end_time_usec = 0 AND notification_type = 0 "
@@ -1685,7 +1685,7 @@ START_TEST(test_notification_data)
                                   "AND long_output = 'Return some other status message' AND escalated = 0 "
                                   "AND contacts_notified = 0 ");
 
-    tmp_result = mysql_store_result(mysql_connection);
+    tmp_result = mysql_store_result(main_thread_context->conn);
     ck_assert(tmp_result != NULL);
 
     if (tmp_result != NULL) {
@@ -1730,16 +1730,16 @@ START_TEST(test_contact_notification_data)
     d.object_ptr = &test_contact;
     d.contact_ptr = &test_contact;
 
-    ndo_handle_contact_notification(d.type, &d);
+    ndo_neb_handle_contact_notification(d.type, &d);
 
-    mysql_query(mysql_connection, "SELECT 1 FROM nagios_contactnotifications WHERE "
+    mysql_query(main_thread_context->conn, "SELECT 1 FROM nagios_contactnotifications WHERE "
                                   "instance_id = 1 "
                                   "AND start_time = FROM_UNIXTIME(1568235236) AND start_time_usec = 683676 "
                                   "AND end_time = FROM_UNIXTIME(0) AND end_time_usec = 0 "
                                   "AND contact_object_id = (SELECT object_id FROM nagios_objects WHERE objecttype_id = 10 AND name1 = 'nagiosadmin' AND name2 = '' LIMIT 1)");
 
 
-    tmp_result = mysql_store_result(mysql_connection);
+    tmp_result = mysql_store_result(main_thread_context->conn);
     ck_assert(tmp_result != NULL);
 
     if (tmp_result != NULL) {
@@ -1788,15 +1788,18 @@ START_TEST(test_contact_notification_method_data)
     d.object_ptr = &test_service;
     d.contact_ptr = &test_contact;
 
-    ndo_handle_contact_notification_method(d.type, &d);
+    ndo_neb_handle_contact_notification_method(d.type, &d);
 
-    mysql_query(mysql_connection, "SELECT 1 FROM nagios_contactnotificationmethods WHERE "
-                                  "instance_id = 1 AND contactnotification_id = 1 "
+    mysql_query(main_thread_context->conn, "SELECT 1 FROM nagios_contactnotificationmethods WHERE "
+                                  "instance_id = 1 AND contactnotification_id = "
+                                      "(SELECT contactnotification_id FROM nagios_contactnotifications "
+                                      "WHERE start_time = FROM_UNIXTIME(1568235236) AND start_time_usec = 683676 "
+                                      "ORDER BY contactnotification_id DESC LIMIT 1) "
                                   "AND start_time = FROM_UNIXTIME(1568237093) AND start_time_usec = 608098 "
                                   "AND end_time = FROM_UNIXTIME(0) AND end_time_usec = 0 "
                                   "AND command_object_id = -1 AND command_args = '' ");
 
-    tmp_result = mysql_store_result(mysql_connection);
+    tmp_result = mysql_store_result(main_thread_context->conn);
     ck_assert(tmp_result != NULL);
 
     if (tmp_result != NULL) {
@@ -1834,14 +1837,14 @@ START_TEST(test_external_command)
     d.command_string = strdup("ADD_HOST_COMMENT");
     d.command_args = strdup("_testhost_1;1;Nagios Admin; This is a comment");
 
-    ndo_handle_external_command(d.type, &d);
+    ndo_neb_handle_external_command(d.type, &d);
 
-    mysql_query(mysql_connection, "SELECT 1 FROM nagios_externalcommands WHERE "
+    mysql_query(main_thread_context->conn, "SELECT 1 FROM nagios_externalcommands WHERE "
                                   "instance_id = 1 AND command_type = 1 "
                                   " AND entry_time = FROM_UNIXTIME(1568238569) AND command_name = 'ADD_HOST_COMMENT'"
                                   " AND command_args = '_testhost_1;1;Nagios Admin; This is a comment'");
 
-    tmp_result = mysql_store_result(mysql_connection);
+    tmp_result = mysql_store_result(main_thread_context->conn);
     ck_assert(tmp_result != NULL);
 
     if (tmp_result != NULL) {
@@ -1891,9 +1894,9 @@ START_TEST(test_acknowledgement_data)
     d.notify_contacts = 0;
     d.object_ptr = &test_service;
 
-    ndo_handle_acknowledgement(d.type, &d);
+    ndo_neb_handle_acknowledgement(d.type, &d);
 
-    mysql_query(mysql_connection, "SELECT 1 FROM nagios_acknowledgements WHERE "
+    mysql_query(main_thread_context->conn, "SELECT 1 FROM nagios_acknowledgements WHERE "
                                   "instance_id = 1 AND entry_time = FROM_UNIXTIME(1568299147) "
                                   "AND entry_time_usec = 318748 AND acknowledgement_type = 1 "
                                   "AND object_id = (SELECT object_id FROM nagios_objects WHERE objecttype_id = 2 AND name1 = '_testhost_1' AND name2 = '_testservice_http' LIMIT 1) AND state = 1 "
@@ -1901,7 +1904,7 @@ START_TEST(test_acknowledgement_data)
                                   "AND is_sticky = 0 AND persistent_comment = 1 "
                                   "AND notify_contacts = 0 ");
 
-    tmp_result = mysql_store_result(mysql_connection);
+    tmp_result = mysql_store_result(main_thread_context->conn);
     ck_assert(tmp_result != NULL);
 
     if (tmp_result != NULL) {
@@ -1934,9 +1937,9 @@ START_TEST(test_acknowledgement_data)
     d.notify_contacts = 0;
     d.object_ptr = &test_host;
 
-    ndo_handle_acknowledgement(d.type, &d);
+    ndo_neb_handle_acknowledgement(d.type, &d);
 
-    mysql_query(mysql_connection, "SELECT 2 FROM nagios_acknowledgements WHERE "
+    mysql_query(main_thread_context->conn, "SELECT 2 FROM nagios_acknowledgements WHERE "
                                   "instance_id = 1 AND entry_time = FROM_UNIXTIME(1568300150) "
                                   "AND entry_time_usec = 797402 AND acknowledgement_type = 0 "
                                   "AND object_id = (SELECT object_id FROM nagios_objects WHERE objecttype_id = 1 AND name1 = '_testhost_1' AND name2 = '' LIMIT 1) AND state = 1 "
@@ -1944,7 +1947,7 @@ START_TEST(test_acknowledgement_data)
                                   "AND is_sticky = 0 AND persistent_comment = 1 "
                                   "AND notify_contacts = 0 ");
 
-    tmp_result = mysql_store_result(mysql_connection);
+    tmp_result = mysql_store_result(main_thread_context->conn);
     ck_assert(tmp_result != NULL);
 
     if (tmp_result != NULL) {
@@ -1986,9 +1989,9 @@ START_TEST(test_statechange_data)
     d.object_ptr = &test_host;
     d.longoutput = NULL;
 
-    ndo_handle_statechange(d.type, &d);
+    ndo_neb_handle_statechange(d.type, &d);
 
-    mysql_query(mysql_connection, "SELECT 1 FROM nagios_statehistory WHERE "
+    mysql_query(main_thread_context->conn, "SELECT 1 FROM nagios_statehistory WHERE "
                                   "instance_id = 1 AND state_time = FROM_UNIXTIME(1568301129) "
                                   "AND state_time_usec = 715455 AND object_id = (SELECT object_id from nagios_objects WHERE objecttype_id = 1 AND name1 = '_testhost_1' AND name2 = '' LIMIT 1) "
                                   "AND state_change = 1 AND state = 1 "
@@ -1998,7 +2001,7 @@ START_TEST(test_statechange_data)
                                   "AND long_output = ''");
 
 
-    tmp_result = mysql_store_result(mysql_connection);
+    tmp_result = mysql_store_result(main_thread_context->conn);
     ck_assert(tmp_result != NULL);
 
     if (tmp_result != NULL) {
@@ -2029,9 +2032,9 @@ START_TEST(test_statechange_data)
     d.object_ptr = &test_service;
     d.longoutput = NULL;
 
-    ndo_handle_statechange(d.type, &d);
+    ndo_neb_handle_statechange(d.type, &d);
 
-    mysql_query(mysql_connection, "SELECT 2 FROM nagios_statehistory WHERE "
+    mysql_query(main_thread_context->conn, "SELECT 2 FROM nagios_statehistory WHERE "
                                   "instance_id = 1 AND state_time = FROM_UNIXTIME(1568301309) "
                                   "AND state_time_usec = 12692 AND object_id = (SELECT object_id FROM nagios_objects WHERE objecttype_id = 2 AND name1 = '_testhost_1' AND name2 = '_testservice_http' LIMIT 1) "
                                   "AND state_change = 1 AND state = 1 "
@@ -2041,7 +2044,7 @@ START_TEST(test_statechange_data)
                                   "AND long_output = ''");
 
 
-    tmp_result = mysql_store_result(mysql_connection);
+    tmp_result = mysql_store_result(main_thread_context->conn);
     ck_assert(tmp_result != NULL);
 
     if (tmp_result != NULL) {

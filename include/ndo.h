@@ -458,7 +458,8 @@ int ndo_write_serviceescalation_contacts(ndo_query_context *q_ctx, int * service
 int ndo_write_hostdependencies(ndo_query_context *q_ctx, int config_type);
 int ndo_write_servicedependencies(ndo_query_context *q_ctx, int config_type);
 
-
+extern ndo_query_context * main_thread_context;
+extern ndo_query_context * startup_thread_context;
 
 
 

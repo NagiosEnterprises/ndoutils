@@ -413,7 +413,6 @@ int ndo_process_file_lines(ndo_query_context *q_ctx, char * contents, int (* pro
     trace_return_ok();
 }
 
-/* q_ctx is only used in other callbacks, can be NULL for this one */
 int ndo_process_ndo_config_line(ndo_query_context *q_ctx, char * line)
 {
     trace_func_args("line=%s", line);
