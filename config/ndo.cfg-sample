@@ -1,6 +1,7 @@
-db_user=ndoutils
-db_pass=ndoutils
-db_name=nagios
+# This sample CFG is for running the automated test suite, not necessarily for running in a production environment
+db_user=ndo
+db_pass=ndo
+db_name=ndo
 db_host=localhost
 db_port=3306
 #db_socket=/var/lib/mysql.sock
