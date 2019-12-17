@@ -4,7 +4,7 @@
 version="3.0.0"
 
 # previous versions we perform upgrades for
-versions=("2.1.2" "2.1.3" "3.0.0")
+versions=("2.0.1" "2.1.2" "2.1.3" "3.0.0")
 
 # these get updated during some checks later on
 install=TRUE

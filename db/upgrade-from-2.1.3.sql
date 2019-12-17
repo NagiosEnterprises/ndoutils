@@ -1,4 +1,4 @@
-SET NAMES='utf8'
+SET NAMES utf8;
 
 ALTER TABLE `nagios_acknowledgements` MODIFY `entry_time` datetime NOT NULL DEFAULT '1970-01-01 00:00:01';
 ALTER TABLE `nagios_acknowledgements` MODIFY `author_name` varchar(64) NOT NULL default '';
