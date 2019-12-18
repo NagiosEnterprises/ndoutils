@@ -21,10 +21,10 @@ function print_help ()
     echo "$0 -u <db user> -p <db pass> -h <db host> -P <db port> -d <db name> $1[ -H $2]"
     echo ""
     echo "  -u   Database user"
-    echo "       default: 'ndo'"
+    echo "       default: 'ndoutils'"
     echo ""
     echo "  -p   Database password"
-    echo "       default: 'ndo'"
+    echo "       default: 'ndoutils'"
     echo ""
     echo "  -h   Database host"
     echo "       default: 'localhost'"
@@ -33,7 +33,7 @@ function print_help ()
     echo "       default: 3306"
     echo ""
     echo "  -d   Database name"
-    echo "       default: 'ndo'"
+    echo "       default: 'nagios'"
     echo ""
     echo "  -H   Print help and exit"
     echo ""
@@ -42,11 +42,11 @@ function print_help ()
 
 function default_args ()
 {
-    dbuser=ndo
-    dbpass=ndo
+    dbuser=ndoutils
+    dbpass=ndoutils
     dbhost=localhost
     dbport=3306
-    dbname=ndo
+    dbname=nagios
 }
 
 function process_args ()

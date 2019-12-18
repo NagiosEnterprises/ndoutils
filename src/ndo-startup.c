@@ -81,6 +81,7 @@ int ndo_table_genocide(ndo_query_context *q_ctx)
     trace_return_ok();
 }
 
+int ndo_write_db_init(ndo_query_context * q_ctx);
 
 void * ndo_startup_thread(void * args)
 {
