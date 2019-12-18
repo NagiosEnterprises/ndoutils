@@ -79,6 +79,17 @@ int ndo_startup_check_enabled = FALSE;
 char * ndo_startup_hash_script_path = NULL;
 int ndo_startup_skip_writing_objects = FALSE;
 
+char *mysql_opt_ssl_ca = NULL;
+char *mysql_opt_ssl_capath = NULL;
+char *mysql_opt_ssl_cert = NULL;
+char *mysql_opt_ssl_cipher = NULL;
+char *mysql_opt_ssl_crl = NULL;
+char *mysql_opt_ssl_crlpath = NULL;
+char *mysql_opt_ssl_key = NULL;
+unsigned int *mysql_opt_ssl_mode = NULL;
+char *mysql_opt_tls_ciphersuites = NULL;
+char *mysql_opt_tls_version = NULL;
+char *mysql_set_charset_name = NULL;
 
 void * ndo_handle = NULL;
 int ndo_process_options = 0;
@@ -598,9 +609,84 @@ int ndo_process_ndo_config_line(ndo_query_context *q_ctx, char * line)
         }
     }
 
+    /* SSL options */
+#ifdef MYSQL_OPT_SSL_CA
+    else if (!strcasecmp("mysql_opt_ssl_ca", key)) {
+        /* file path to ca certificate */
+        mysql_opt_ssl_ca = strdup(val);
+    }
+#endif
+#ifdef MYSQL_OPT_SSL_CAPATH
+    else if (!strcasecmp("mysql_opt_ssl_capath", key)) {
+        /* directory path to ca certificate */
+        mysql_opt_ssl_capath = strdup(val);
+    }
+#endif
+#ifdef MYSQL_OPT_SSL_CERT
+    else if (!strcasecmp("mysql_opt_ssl_cert", key)) {
+        /* file path to client public key */
+        mysql_opt_ssl_cert = strdup(val);
+    }
+#endif
+#ifdef MYSQL_OPT_SSL_CIPHER
+    else if (!strcasecmp("mysql_opt_ssl_cipher", key)) {
+        /* list of acceptable ciphers */
+        mysql_opt_ssl_cipher = strdup(val);
+    }
+#endif
+#ifdef MYSQL_OPT_SSL_CRL
+    else if (!strcasecmp("mysql_opt_ssl_crl", key)) {
+        /* file path to CRL list */
+        mysql_opt_ssl_crl = strdup(val);
+    }
+#endif
+#ifdef MYSQL_OPT_SSL_CRLPATH
+    else if (!strcasecmp("mysql_opt_ssl_crlpath", key)) {
+        /* directory path to CRL lists */
+        mysql_opt_ssl_crlpath = strdup(val);
+    }
+#endif
+#ifdef MYSQL_OPT_SSL_KEY
+    else if (!strcasecmp("mysql_opt_ssl_key", key)) {
+        /* file path to client private key */
+        mysql_opt_ssl_key = strdup(val);
+    }
+#endif
+#ifdef MYSQL_OPT_SSL_MODE
+    else if (!strcasecmp("mysql_opt_ssl_mode", key)) {
+
+        mysql_opt_ssl_mode = calloc(1, sizeof(unsigned int));
+        if (!strcasecmp("SSL_MODE_DISABLED", val)) {
+            mysql_opt_ssl_mode = MYSQL_OPT_SSL_VERIFY_SERVER_CERT;
+        }
+        else if (!strcasecmp("SSL_MODE_PREFERRED", val)) {
+            mysql_opt_ssl_mode = SSL_MODE_PREFERRED;
+        }
+        else if (!strcasecmp("SSL_MODE_REQUIRED", val)) {
+            mysql_opt_ssl_mode = SSL_MODE_REQUIRED;
+        }
+        else if (!strcasecmp("SSL_MODE_VERIFY_CA", val)) {
+            mysql_opt_ssl_mode = SSL_MODE_VERIFY_CA;
+        }
+        else if (!strcasecmp("SSL_MODE_VERIFY_IDENTITY", val)) {
+            mysql_opt_ssl_mode = SSL_MODE_VERIFY_IDENTITY;
+        }
+    }
+#endif
+#ifdef MYSQL_OPT_TLS_CIPHERSUITES
+    else if (!strcasecmp("mysql_opt_tls_ciphersuites", key)) {
+        mysql_opt_tls_ciphersuites = strdup(val);
+    }
+#endif
+#ifdef MYSQL_OPT_TLS_VERSION
+    else if (!strcasecmp("mysql_opt_tls_version", key)) {
+        mysql_opt_tls_version = strdup(val);
+    }
+#endif
+
     /* mysql options */
     else if (!strcmp("mysql.charset", key)) {
-        mysql_options(q_ctx->conn, MYSQL_SET_CHARSET_NAME, val);
+        mysql_set_charset_name = strdup(val);
     }
 
     free(key);
@@ -701,6 +787,60 @@ int ndo_initialize_database(ndo_query_context * q_ctx)
         /* without this flag set, then our mysql_ping() reconnection doesn't
            work so well [at the beginning of this function] */
         mysql_options(q_ctx->conn, MYSQL_OPT_RECONNECT, &reconnect);
+        /* Also set the rest of the options that were retrieved from the config file */
+        if (mysql_set_charset_name != NULL) {
+            mysql_options(q_ctx->conn, MYSQL_SET_CHARSET_NAME, mysql_set_charset_name);
+        }
+#ifdef MYSQL_OPT_SSL_CA
+        if (mysql_opt_ssl_ca != NULL) {
+            mysql_options(q_ctx->conn, MYSQL_OPT_SSL_CA, mysql_opt_ssl_ca);
+        }
+#endif
+#ifdef MYSQL_OPT_SSL_CAPATH
+        if (mysql_opt_ssl_capath != NULL) {
+            mysql_options(q_ctx->conn, MYSQL_OPT_SSL_CAPATH, mysql_opt_ssl_capath);
+        }
+#endif
+#ifdef MYSQL_OPT_SSL_CERT
+        if (mysql_opt_ssl_cert != NULL) {
+            mysql_options(q_ctx->conn, MYSQL_OPT_SSL_CERT, mysql_opt_ssl_cert);
+        }
+#endif
+#ifdef MYSQL_OPT_SSL_CIPHER
+        if (mysql_opt_ssl_cipher != NULL) {
+            mysql_options(q_ctx->conn, MYSQL_OPT_SSL_CIPHER, mysql_opt_ssl_cipher);
+        }
+#endif
+#ifdef MYSQL_OPT_SSL_CRL
+        if (mysql_opt_ssl_crl != NULL) {
+            mysql_options(q_ctx->conn, MYSQL_OPT_SSL_CRL, mysql_opt_ssl_crl);
+        }
+#endif
+#ifdef MYSQL_OPT_SSL_CRLPATH
+        if (mysql_opt_ssl_crlpath != NULL) {
+            mysql_options(q_ctx->conn, MYSQL_OPT_SSL_CRLPATH, mysql_opt_ssl_crlpath);
+        }
+#endif
+#ifdef MYSQL_OPT_SSL_KEY
+        if (mysql_opt_ssl_key != NULL) {
+            mysql_options(q_ctx->conn, MYSQL_OPT_SSL_KEY, mysql_opt_ssl_key);
+        }
+#endif
+#ifdef MYSQL_OPT_SSL_MODE
+        if (mysql_opt_ssl_mode != NULL) {
+            mysql_options(q_ctx->conn, MYSQL_OPT_SSL_MODE, mysql_opt_ssl_mode);
+        }
+#endif
+#ifdef MYSQL_OPT_TLS_CIPHERSUITES
+        if (mysql_opt_tls_ciphersuites != NULL) {
+            mysql_options(q_ctx->conn, MYSQL_OPT_TLS_CIPHERSUITES, mysql_opt_tls_ciphersuites);
+        }
+#endif
+#ifdef MYSQL_OPT_TLS_VERSION
+        if (mysql_opt_tls_version != NULL) {
+            mysql_options(q_ctx->conn, MYSQL_OPT_TLS_VERSION, mysql_opt_tls_version);
+        }
+#endif
 
         if (ndo_db_host == NULL) {
             ndo_db_host = strdup("localhost");
