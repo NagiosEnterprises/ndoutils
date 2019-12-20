@@ -763,6 +763,7 @@ int ndo_handle_host_status(ndo_query_context * q_ctx, int type, void * d)
     MYSQL_BIND_INT(HANDLE_HOST_STATUS, hst->last_check);
     MYSQL_BIND_INT(HANDLE_HOST_STATUS, hst->next_check);
     MYSQL_BIND_INT(HANDLE_HOST_STATUS, hst->check_type);
+    MYSQL_BIND_INT(HANDLE_HOST_STATUS, hst->check_options);
     MYSQL_BIND_INT(HANDLE_HOST_STATUS, hst->last_state_change);
     MYSQL_BIND_INT(HANDLE_HOST_STATUS, hst->last_hard_state_change);
     MYSQL_BIND_INT(HANDLE_HOST_STATUS, hst->last_hard_state);
@@ -845,6 +846,7 @@ int ndo_handle_service_status(ndo_query_context * q_ctx, int type, void * d)
     MYSQL_BIND_INT(HANDLE_SERVICE_STATUS, svc->last_check);
     MYSQL_BIND_INT(HANDLE_SERVICE_STATUS, svc->next_check);
     MYSQL_BIND_INT(HANDLE_SERVICE_STATUS, svc->check_type);
+    MYSQL_BIND_INT(HANDLE_SERVICE_STATUS, svc->check_options);
     MYSQL_BIND_INT(HANDLE_SERVICE_STATUS, svc->last_state_change);
     MYSQL_BIND_INT(HANDLE_SERVICE_STATUS, svc->last_hard_state_change);
     MYSQL_BIND_INT(HANDLE_SERVICE_STATUS, svc->last_hard_state);

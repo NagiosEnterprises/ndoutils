@@ -124,6 +124,7 @@ ALTER TABLE `nagios_hoststatus` MODIFY `last_notification` datetime NOT NULL def
 ALTER TABLE `nagios_hoststatus` MODIFY `next_notification` datetime NOT NULL default '1970-01-01 00:00:01';
 ALTER TABLE `nagios_hoststatus` MODIFY `event_handler` varchar(255) NOT NULL default '';
 ALTER TABLE `nagios_hoststatus` MODIFY `check_command` varchar(255) NOT NULL default '';
+ALTER TABLE `nagios_hoststatus` ADD `check_options` smallint(6) NOT NULL default '0' AFTER `check_type`;
 
 ALTER TABLE `nagios_instances` MODIFY `instance_name` varchar(64) NOT NULL default '';
 ALTER TABLE `nagios_instances` MODIFY `instance_description` varchar(128) NOT NULL default '';
@@ -201,6 +202,7 @@ ALTER TABLE `nagios_servicestatus` MODIFY `last_notification` datetime NOT NULL 
 ALTER TABLE `nagios_servicestatus` MODIFY `next_notification` datetime NOT NULL default '1970-01-01 00:00:01';
 ALTER TABLE `nagios_servicestatus` MODIFY `event_handler` varchar(255) NOT NULL default '';
 ALTER TABLE `nagios_servicestatus` MODIFY `check_command` varchar(255) NOT NULL default '';
+ALTER TABLE `nagios_servicestatus` ADD `check_options` smallint(6) NOT NULL default '0' AFTER `check_type`;
 
 ALTER TABLE `nagios_statehistory` MODIFY `state_time` datetime NOT NULL default '1970-01-01 00:00:01';
 ALTER TABLE `nagios_statehistory` MODIFY `output` varchar(255) NOT NULL default '';
