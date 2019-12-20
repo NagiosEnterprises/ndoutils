@@ -610,82 +610,73 @@ int ndo_process_ndo_config_line(ndo_query_context *q_ctx, char * line)
     }
 
     /* SSL options */
-#ifdef MYSQL_OPT_SSL_CA
+#if MYSQL_VERSION_ID > 50635
     else if (!strcasecmp("mysql_opt_ssl_ca", key)) {
         /* file path to ca certificate */
         mysql_opt_ssl_ca = strdup(val);
     }
-#endif
-#ifdef MYSQL_OPT_SSL_CAPATH
     else if (!strcasecmp("mysql_opt_ssl_capath", key)) {
         /* directory path to ca certificate */
         mysql_opt_ssl_capath = strdup(val);
     }
-#endif
-#ifdef MYSQL_OPT_SSL_CERT
     else if (!strcasecmp("mysql_opt_ssl_cert", key)) {
         /* file path to client public key */
         mysql_opt_ssl_cert = strdup(val);
     }
-#endif
-#ifdef MYSQL_OPT_SSL_CIPHER
     else if (!strcasecmp("mysql_opt_ssl_cipher", key)) {
         /* list of acceptable ciphers */
         mysql_opt_ssl_cipher = strdup(val);
     }
-#endif
-#ifdef MYSQL_OPT_SSL_CRL
     else if (!strcasecmp("mysql_opt_ssl_crl", key)) {
         /* file path to CRL list */
         mysql_opt_ssl_crl = strdup(val);
     }
-#endif
-#ifdef MYSQL_OPT_SSL_CRLPATH
     else if (!strcasecmp("mysql_opt_ssl_crlpath", key)) {
         /* directory path to CRL lists */
         mysql_opt_ssl_crlpath = strdup(val);
     }
-#endif
-#ifdef MYSQL_OPT_SSL_KEY
     else if (!strcasecmp("mysql_opt_ssl_key", key)) {
         /* file path to client private key */
         mysql_opt_ssl_key = strdup(val);
     }
 #endif
-#ifdef MYSQL_OPT_SSL_MODE
-    else if (!strcasecmp("mysql_opt_ssl_mode", key)) {
+#if MYSQL_VERSION_ID > 50635 || (MYSQL_VERSION_ID > 50654 && MYSQL_VERSION_ID < 50600)
+    if (!strcasecmp("mysql_opt_ssl_mode", key)) {
 
         mysql_opt_ssl_mode = calloc(1, sizeof(unsigned int));
-        if (!strcasecmp("SSL_MODE_DISABLED", val)) {
-            mysql_opt_ssl_mode = MYSQL_OPT_SSL_VERIFY_SERVER_CERT;
+        if (!strcasecmp("SSL_MODE_REQUIRED", val)) {
+            *mysql_opt_ssl_mode = SSL_MODE_REQUIRED;
+        }
+#if MYSQL_VERSION_ID > 50710
+        else if (!strcasecmp("SSL_MODE_DISABLED", val)) {
+            *mysql_opt_ssl_mode = SSL_MODE_DISABLED;
         }
         else if (!strcasecmp("SSL_MODE_PREFERRED", val)) {
-            mysql_opt_ssl_mode = SSL_MODE_PREFERRED;
-        }
-        else if (!strcasecmp("SSL_MODE_REQUIRED", val)) {
-            mysql_opt_ssl_mode = SSL_MODE_REQUIRED;
+            *mysql_opt_ssl_mode = SSL_MODE_PREFERRED;
         }
         else if (!strcasecmp("SSL_MODE_VERIFY_CA", val)) {
-            mysql_opt_ssl_mode = SSL_MODE_VERIFY_CA;
+            *mysql_opt_ssl_mode = SSL_MODE_VERIFY_CA;
         }
         else if (!strcasecmp("SSL_MODE_VERIFY_IDENTITY", val)) {
-            mysql_opt_ssl_mode = SSL_MODE_VERIFY_IDENTITY;
+            *mysql_opt_ssl_mode = SSL_MODE_VERIFY_IDENTITY;
         }
+#endif
     }
 #endif
-#ifdef MYSQL_OPT_TLS_CIPHERSUITES
+#if MYSQL_VERSION_ID > 80015
     else if (!strcasecmp("mysql_opt_tls_ciphersuites", key)) {
         mysql_opt_tls_ciphersuites = strdup(val);
     }
 #endif
-#ifdef MYSQL_OPT_TLS_VERSION
+#if MYSQL_VERSION_ID > 50709
     else if (!strcasecmp("mysql_opt_tls_version", key)) {
         mysql_opt_tls_version = strdup(val);
     }
 #endif
 
     /* mysql options */
-    else if (!strcmp("mysql.charset", key)) {
+    else if (!strcmp("mysql_set_charset_name", key)) {
+
         mysql_set_charset_name = strdup(val);
     }
 
@@ -791,52 +782,42 @@ int ndo_initialize_database(ndo_query_context * q_ctx)
         if (mysql_set_charset_name != NULL) {
             mysql_options(q_ctx->conn, MYSQL_SET_CHARSET_NAME, mysql_set_charset_name);
         }
-#ifdef MYSQL_OPT_SSL_CA
+
+    /* SSL options - these are added to over time, so check version numbers (the options themselves are enum members) */
+#if MYSQL_VERSION_ID > 50635
         if (mysql_opt_ssl_ca != NULL) {
             mysql_options(q_ctx->conn, MYSQL_OPT_SSL_CA, mysql_opt_ssl_ca);
         }
-#endif
-#ifdef MYSQL_OPT_SSL_CAPATH
         if (mysql_opt_ssl_capath != NULL) {
             mysql_options(q_ctx->conn, MYSQL_OPT_SSL_CAPATH, mysql_opt_ssl_capath);
         }
-#endif
-#ifdef MYSQL_OPT_SSL_CERT
         if (mysql_opt_ssl_cert != NULL) {
             mysql_options(q_ctx->conn, MYSQL_OPT_SSL_CERT, mysql_opt_ssl_cert);
         }
-#endif
-#ifdef MYSQL_OPT_SSL_CIPHER
         if (mysql_opt_ssl_cipher != NULL) {
             mysql_options(q_ctx->conn, MYSQL_OPT_SSL_CIPHER, mysql_opt_ssl_cipher);
         }
-#endif
-#ifdef MYSQL_OPT_SSL_CRL
         if (mysql_opt_ssl_crl != NULL) {
             mysql_options(q_ctx->conn, MYSQL_OPT_SSL_CRL, mysql_opt_ssl_crl);
         }
-#endif
-#ifdef MYSQL_OPT_SSL_CRLPATH
         if (mysql_opt_ssl_crlpath != NULL) {
             mysql_options(q_ctx->conn, MYSQL_OPT_SSL_CRLPATH, mysql_opt_ssl_crlpath);
         }
-#endif
-#ifdef MYSQL_OPT_SSL_KEY
         if (mysql_opt_ssl_key != NULL) {
             mysql_options(q_ctx->conn, MYSQL_OPT_SSL_KEY, mysql_opt_ssl_key);
         }
 #endif
-#ifdef MYSQL_OPT_SSL_MODE
+#if MYSQL_VERSION_ID > 50635 || (MYSQL_VERSION_ID > 50554 && MYSQL_VERSION_ID < 50600)
         if (mysql_opt_ssl_mode != NULL) {
             mysql_options(q_ctx->conn, MYSQL_OPT_SSL_MODE, mysql_opt_ssl_mode);
         }
 #endif
-#ifdef MYSQL_OPT_TLS_CIPHERSUITES
+#if MYSQL_VERSION_ID > 80015
         if (mysql_opt_tls_ciphersuites != NULL) {
             mysql_options(q_ctx->conn, MYSQL_OPT_TLS_CIPHERSUITES, mysql_opt_tls_ciphersuites);
         }
 #endif
-#ifdef MYSQL_OPT_TLS_VERSION
+#if MYSQL_VERSION_ID > 50709
         if (mysql_opt_tls_version != NULL) {
             mysql_options(q_ctx->conn, MYSQL_OPT_TLS_VERSION, mysql_opt_tls_version);
         }

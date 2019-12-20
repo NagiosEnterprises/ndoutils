@@ -33,4 +33,4 @@ config_output_options=2
 
 max_object_insert_count=250
 
-mysql.charset=utf8
+mysql_set_charset_name=utf8
