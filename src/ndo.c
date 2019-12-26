@@ -247,6 +247,18 @@ int nebmodule_deinit(int flags, int reason)
     free(ndo_db_name);
     free(ndo_db_host);
 
+    free(mysql_opt_ssl_ca);
+    free(mysql_opt_ssl_capath);
+    free(mysql_opt_ssl_cert);
+    free(mysql_opt_ssl_cipher);
+    free(mysql_opt_ssl_crl);
+    free(mysql_opt_ssl_crlpath);
+    free(mysql_opt_ssl_key);
+    free(mysql_opt_ssl_mode);
+    free(mysql_opt_tls_ciphersuites);
+    free(mysql_opt_tls_version);
+    free(mysql_set_charset_name);
+
     free(ndo_startup_hash_script_path);
 
     ndo_log("NDO - Shutdown complete");
@@ -868,11 +880,8 @@ void ndo_disconnect_database(ndo_query_context *q_ctx)
 {
     trace_func_void();
 
-    deinitialize_stmt_data();
+    deinitialize_stmt_data(q_ctx);
 
-    if (q_ctx->connected == TRUE) {
-        mysql_close(q_ctx->conn);
-    }
     mysql_library_end();
     trace_return_void();
 }
@@ -1429,6 +1438,10 @@ int deinitialize_stmt_data(ndo_query_context * q_ctx)
         if (q_ctx->result_strlen[i] != NULL) {
             free(q_ctx->result_strlen[i]);
         }
+    }
+
+    if (q_ctx->connected == TRUE) {
+        mysql_close(q_ctx->conn);
     }
 
     free(q_ctx);

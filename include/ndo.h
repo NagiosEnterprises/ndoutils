@@ -296,7 +296,7 @@ void * dequeue(queue_node ** head, int * type);
 /* function declarations */
 void initialize_bindings_array();
 int initialize_stmt_data();
-int deinitialize_stmt_data();
+int deinitialize_stmt_data(ndo_query_context * q_ctx);
 
 void ndo_log(char * buffer);
 void ndo_debug(int write_to_log, const char * fmt, ...);

@@ -8,7 +8,7 @@ int ndo_neb_handle_process(int type, void * d)
 
 int ndo_handle_process(ndo_query_context * q_ctx, int type, void * d)
 {
-    ndo_log(strdup("handling process(int type, void * d)"));
+    ndo_log("handling process(int type, void * d)");
     trace_func_handler(process);
 
     nebstruct_process_data * data = d;
@@ -88,7 +88,7 @@ int ndo_neb_handle_timed_event(int type, void * d)
 
 int ndo_handle_timed_event(ndo_query_context * q_ctx, int type, void * d)
 {
-    ndo_log(strdup("handling timed_event(int type, void * d)"));
+    ndo_log("handling timed_event(int type, void * d)");
     trace_func_handler(timed_event);
 
     nebstruct_timed_event_data * data = d;
@@ -173,8 +173,6 @@ int ndo_neb_handle_log(int type, void * d)
 
 int ndo_handle_log(ndo_query_context * q_ctx, int type, void * d)
 {
-    //ndo_log(strdup("handling log(int type, void * d)"));
-    return NDO_OK;
     /*
     trace_func_handler();
     */
@@ -220,7 +218,7 @@ int ndo_neb_handle_system_command(int type, void * d)
 
 int ndo_handle_system_command(ndo_query_context * q_ctx, int type, void * d)
 {
-    ndo_log(strdup("handling system_command(int type, void * d)"));
+    ndo_log("handling system_command(int type, void * d)");
     trace_func_handler(system_command);
 
     nebstruct_system_command_data * data = d;
@@ -253,7 +251,7 @@ int ndo_neb_handle_event_handler(int type, void * d)
 
 int ndo_handle_event_handler(ndo_query_context * q_ctx, int type, void * d)
 {
-    ndo_log(strdup("handling event_handler(int type, void * d)"));
+    ndo_log("handling event_handler(int type, void * d)");
     trace_func_handler(event_handler);
 
     nebstruct_event_handler_data * data = d;
@@ -304,7 +302,7 @@ int ndo_neb_handle_host_check(int type, void * d)
 
 int ndo_handle_host_check(ndo_query_context * q_ctx, int type, void * d)
 {
-    ndo_log(strdup("handling host_check(int type, void * d)"));
+    ndo_log("handling host_check(int type, void * d)");
     trace_func_handler(host_check);
 
     nebstruct_host_check_data * data = d;
@@ -358,7 +356,7 @@ int ndo_neb_handle_service_check(int type, void * d)
 
 int ndo_handle_service_check(ndo_query_context * q_ctx, int type, void * d)
 {
-    ndo_log(strdup("handling service_check(int type, void * d)"));
+    ndo_log("handling service_check(int type, void * d)");
     trace_func_handler(service_check);
 
     nebstruct_service_check_data * data = d;
@@ -418,7 +416,7 @@ int ndo_neb_handle_comment(int type, void * d)
 
 int ndo_handle_comment(ndo_query_context * q_ctx, int type, void * d)
 {
-    ndo_log(strdup("handling comment(int type, void * d)"));
+    ndo_log("handling comment(int type, void * d)");
     trace_func_handler(comment);
 
     nebstruct_comment_data * data = d;
@@ -505,7 +503,7 @@ int ndo_neb_handle_downtime(int type, void * d)
 
 int ndo_handle_downtime(ndo_query_context * q_ctx, int type, void * d)
 {
-    ndo_log(strdup("handling downtime(int type, void * d)"));
+    ndo_log("handling downtime(int type, void * d)");
     trace_func_handler(downtime);
 
     nebstruct_downtime_data * data = d;
@@ -634,7 +632,7 @@ int ndo_neb_handle_flapping(int type, void * d)
 
 int ndo_handle_flapping(ndo_query_context * q_ctx, int type, void * d)
 {
-    ndo_log(strdup("handling flapping(int type, void * d)"));
+    ndo_log("handling flapping(int type, void * d)");
     trace_func_handler(flapping);
 
     nebstruct_flapping_data * data = d;
@@ -687,7 +685,7 @@ int ndo_neb_handle_program_status(int type, void * d)
 
 int ndo_handle_program_status(ndo_query_context * q_ctx, int type, void * d)
 {
-    ndo_log(strdup("handling program_status(int type, void * d)"));
+    ndo_log("handling program_status(int type, void * d)");
     trace_func_handler(program_status);
 
     nebstruct_program_status_data * data = d;
@@ -728,7 +726,7 @@ int ndo_neb_handle_host_status(int type, void * d)
 
 int ndo_handle_host_status(ndo_query_context * q_ctx, int type, void * d)
 {
-    ndo_log(strdup("handling host_status(int type, void * d)"));
+    ndo_log("handling host_status(int type, void * d)");
     trace_func_handler(host_status);
 
     nebstruct_host_status_data * data = d;
@@ -810,7 +808,7 @@ int ndo_neb_handle_service_status(int type, void * d)
 
 int ndo_handle_service_status(ndo_query_context * q_ctx, int type, void * d)
 {
-    ndo_log(strdup("handling service_status(int type, void * d)"));
+    ndo_log("handling service_status(int type, void * d)");
     trace_func_handler(service_status);
 
     nebstruct_service_status_data * data = d;
@@ -894,7 +892,7 @@ int ndo_neb_handle_contact_status(int type, void * d)
 
 int ndo_handle_contact_status(ndo_query_context * q_ctx, int type, void * d)
 {
-    ndo_log(strdup("handling contact_status(int type, void * d)"));
+    ndo_log("handling contact_status(int type, void * d)");
     trace_func_handler(contact_status);
 
     nebstruct_contact_status_data * data = d;
@@ -937,7 +935,7 @@ int ndo_neb_handle_notification(int type, void * d)
 
 int ndo_handle_notification(ndo_query_context * q_ctx, int type, void * d)
 {
-    ndo_log(strdup("handling notification(int type, void * d)"));
+    ndo_log("handling notification(int type, void * d)");
     trace_func_handler(notification);
 
     nebstruct_notification_data * data = d;
@@ -987,7 +985,7 @@ int ndo_neb_handle_contact_notification(int type, void * d)
 
 int ndo_handle_contact_notification(ndo_query_context * q_ctx, int type, void * d)
 {
-    ndo_log(strdup("handling contact_notification(int type, void * d)"));
+    ndo_log("handling contact_notification(int type, void * d)");
     trace_func_handler(contact_notification);
 
     nebstruct_contact_notification_data * data = d;
@@ -1030,7 +1028,7 @@ int ndo_neb_handle_contact_notification_method(int type, void * d)
 
 int ndo_handle_contact_notification_method(ndo_query_context * q_ctx, int type, void * d)
 {
-    ndo_log(strdup("handling contact_notification_method(int type, void * d)"));
+    ndo_log("handling contact_notification_method(int type, void * d)");
     trace_func_handler(contact_notification_method);
 
     nebstruct_contact_notification_method_data * data = d;
@@ -1061,7 +1059,7 @@ int ndo_neb_handle_external_command(int type, void * d)
 
 int ndo_handle_external_command(ndo_query_context * q_ctx, int type, void * d)
 {
-    ndo_log(strdup("handling external_command(int type, void * d)"));
+    ndo_log("handling external_command(int type, void * d)");
     trace_func_handler(external_command);
 
     nebstruct_external_command_data * data = d;
@@ -1091,7 +1089,7 @@ int ndo_neb_handle_acknowledgement(int type, void * d)
 
 int ndo_handle_acknowledgement(ndo_query_context * q_ctx, int type, void * d)
 {
-    ndo_log(strdup("handling acknowledgement(int type, void * d)"));
+    ndo_log("handling acknowledgement(int type, void * d)");
     trace_func_handler(acknowledgement);
 
     nebstruct_acknowledgement_data * data = d;
@@ -1132,7 +1130,7 @@ int ndo_neb_handle_statechange(int type, void * d)
 
 int ndo_handle_statechange(ndo_query_context * q_ctx, int type, void * d)
 {
-    ndo_log(strdup("handling statechange(int type, void * d)"));
+    ndo_log("handling statechange(int type, void * d)");
     trace_func_handler(statechange);
 
     nebstruct_statechange_data * data = d;
@@ -1192,7 +1190,7 @@ int ndo_neb_handle_retention(int type, void * d)
 
 int ndo_handle_retention(int type, void * d)
 {
-    ndo_log(strdup("handling retention(int type, void * d)"));
+    ndo_log("handling retention(int type, void * d)");
     trace_func_handler(retention);
 
     nebstruct_retention_data * data = d;
