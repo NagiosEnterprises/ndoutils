@@ -652,7 +652,7 @@ int ndo_process_ndo_config_line(ndo_query_context *q_ctx, char * line)
         mysql_opt_ssl_key = strdup(val);
     }
 #endif
-#if MYSQL_VERSION_ID > 50635 || (MYSQL_VERSION_ID > 50654 && MYSQL_VERSION_ID < 50600)
+#if MYSQL_VERSION_ID > 50635 || (MYSQL_VERSION_ID > 50554 && MYSQL_VERSION_ID < 50600)
     if (!strcasecmp("mysql_opt_ssl_mode", key)) {
 
         mysql_opt_ssl_mode = calloc(1, sizeof(unsigned int));
