@@ -622,6 +622,9 @@ int ndo_process_ndo_config_line(ndo_query_context *q_ctx, char * line)
     }
 
     /* SSL options */
+    /* This first set of options seems to be supported for mariadb >= 10.0
+     * The other options (further below) are not supported by any mariadb wizard 
+     */
 #if MYSQL_VERSION_ID > 50635
     else if (!strcasecmp("mysql_opt_ssl_ca", key)) {
         /* file path to ca certificate */
@@ -652,7 +655,7 @@ int ndo_process_ndo_config_line(ndo_query_context *q_ctx, char * line)
         mysql_opt_ssl_key = strdup(val);
     }
 #endif
-#if MYSQL_VERSION_ID > 50635 || (MYSQL_VERSION_ID > 50554 && MYSQL_VERSION_ID < 50600)
+#if !defined(MARIADB_BASE_VERSION) && (MYSQL_VERSION_ID > 50635 || (MYSQL_VERSION_ID > 50554 && MYSQL_VERSION_ID < 50600))
     if (!strcasecmp("mysql_opt_ssl_mode", key)) {
 
         mysql_opt_ssl_mode = calloc(1, sizeof(unsigned int));
@@ -675,12 +678,12 @@ int ndo_process_ndo_config_line(ndo_query_context *q_ctx, char * line)
 #endif
     }
 #endif
-#if MYSQL_VERSION_ID > 80015
+#if !defined(MARIADB_BASE_VERSION) && (MYSQL_VERSION_ID > 80015)
     else if (!strcasecmp("mysql_opt_tls_ciphersuites", key)) {
         mysql_opt_tls_ciphersuites = strdup(val);
     }
 #endif
-#if MYSQL_VERSION_ID > 50709
+#if !defined(MARIADB_BASE_VERSION) && (MYSQL_VERSION_ID > 50709)
     else if (!strcasecmp("mysql_opt_tls_version", key)) {
         mysql_opt_tls_version = strdup(val);
     }
@@ -819,17 +822,17 @@ int ndo_initialize_database(ndo_query_context * q_ctx)
             mysql_options(q_ctx->conn, MYSQL_OPT_SSL_KEY, mysql_opt_ssl_key);
         }
 #endif
-#if MYSQL_VERSION_ID > 50635 || (MYSQL_VERSION_ID > 50554 && MYSQL_VERSION_ID < 50600)
+#if !defined(MARIADB_BASE_VERSION) && (MYSQL_VERSION_ID > 50635 || (MYSQL_VERSION_ID > 50554 && MYSQL_VERSION_ID < 50600))
         if (mysql_opt_ssl_mode != NULL) {
             mysql_options(q_ctx->conn, MYSQL_OPT_SSL_MODE, mysql_opt_ssl_mode);
         }
 #endif
-#if MYSQL_VERSION_ID > 80015
+#if !defined(MARIADB_BASE_VERSION) && (MYSQL_VERSION_ID > 80015)
         if (mysql_opt_tls_ciphersuites != NULL) {
             mysql_options(q_ctx->conn, MYSQL_OPT_TLS_CIPHERSUITES, mysql_opt_tls_ciphersuites);
         }
 #endif
-#if MYSQL_VERSION_ID > 50709
+#if !defined(MARIADB_BASE_VERSION) && (MYSQL_VERSION_ID > 50709)
         if (mysql_opt_tls_version != NULL) {
             mysql_options(q_ctx->conn, MYSQL_OPT_TLS_VERSION, mysql_opt_tls_version);
         }
