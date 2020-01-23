@@ -103,6 +103,7 @@ The configuration file can be used to specify the following settings:
     - mysql_opt_ssl_crl (>= 5.6.36)
     - mysql_opt_ssl_crlpath (>= 5.6.36)
     - mysql_opt_ssl_key (>= 5.6.36)
+    Not available on MariaDB:
     - mysql_opt_ssl_mode. This can be set to "SSL_MODE_REQUIRED" for versions >=5.6.36 or >=5.5.55. 
 For version >= 5.07.11, it can also be one of "SSL_MODE_DISABLED", "SSL_MODE_PREFERRED", "SSL_MODE_VERIFY_CA", or "SSL_MODE_VERIFY_IDENTITY".
     - mysql_opt_tls_ciphersuites (>=8.0.15)
