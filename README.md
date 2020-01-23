@@ -66,12 +66,12 @@ If you installed the configuration file from the instructions above, you can acc
 The configuration file can be used to specify the following settings:
 
 1. Database connection settings. The following settings should match the ones you used to set up the database in `db-mgmt.sh`.
-    - db_host
-    - db_name
-    - db_user
-    - db_pass
-    - db_port
-    - db_socket
+  - db_host
+  - db_name
+  - db_user
+  - db_pass
+  - db_port
+  - db_socket
 
 2. Data processing settings. The following settings determine which tables are populated with data. Each one should be set to "1" or "0".
   - process_data
