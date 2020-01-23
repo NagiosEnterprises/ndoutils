@@ -22,7 +22,7 @@ ALTER TABLE `nagios_comments` MODIFY `comment_data` varchar(255) NOT NULL defaul
 ALTER TABLE `nagios_configfiles` MODIFY `configfile_path` varchar(255) NOT NULL default '';
 
 ALTER TABLE `nagios_configfilevariables` MODIFY `varname` varchar(64) NOT NULL default '';
-ALTER TABLE `nagios_configfilevariables` MODIFY `varvalue` varchar(255) NOT NULL default '';
+ALTER TABLE `nagios_configfilevariables` MODIFY `varvalue` varchar(1024) NOT NULL default '';
 
 ALTER TABLE `nagios_conninfo` MODIFY `agent_name` varchar(32) NOT NULL default '';
 ALTER TABLE `nagios_conninfo` MODIFY `agent_version` varchar(8) NOT NULL default '';
@@ -57,11 +57,11 @@ ALTER TABLE `nagios_contact_addresses` MODIFY `address` varchar(255) NOT NULL de
 ALTER TABLE `nagios_contact_notificationcommands` MODIFY `command_args` varchar(255) NOT NULL default '';
 
 ALTER TABLE `nagios_customvariables` MODIFY `varname` varchar(64) NOT NULL default '';
-ALTER TABLE `nagios_customvariables` MODIFY `varvalue` varchar(255) NOT NULL default '';
+ALTER TABLE `nagios_customvariables` MODIFY `varvalue` varchar(1024) NOT NULL default '';
 
 ALTER TABLE `nagios_customvariablestatus` MODIFY `status_update_time` datetime NOT NULL default '1970-01-01 00:00:01';
 ALTER TABLE `nagios_customvariablestatus` MODIFY `varname` varchar(255) NOT NULL default '';
-ALTER TABLE `nagios_customvariablestatus` MODIFY `varvalue` varchar(255) NOT NULL default '';
+ALTER TABLE `nagios_customvariablestatus` MODIFY `varvalue` varchar(1024) NOT NULL default '';
 
 ALTER TABLE `nagios_dbversion` MODIFY `name` varchar(10) NOT NULL default '';
 ALTER TABLE `nagios_dbversion` MODIFY `version` varchar(10) NOT NULL default '';
@@ -159,7 +159,7 @@ ALTER TABLE `nagios_programstatus` MODIFY `global_host_event_handler` varchar(25
 ALTER TABLE `nagios_programstatus` MODIFY `global_service_event_handler` varchar(255) NOT NULL default '';
 
 ALTER TABLE `nagios_runtimevariables` MODIFY `varname` varchar(64) NOT NULL default '';
-ALTER TABLE `nagios_runtimevariables` MODIFY `varvalue` varchar(255) NOT NULL default '';
+ALTER TABLE `nagios_runtimevariables` MODIFY `varvalue` varchar(1024) NOT NULL default '';
 
 ALTER TABLE `nagios_scheduleddowntime` MODIFY `entry_time` datetime NOT NULL default '1970-01-01 00:00:01';
 ALTER TABLE `nagios_scheduleddowntime` MODIFY `author_name` varchar(64) NOT NULL default '';

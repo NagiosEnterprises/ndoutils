@@ -97,7 +97,7 @@ CREATE TABLE IF NOT EXISTS `nagios_configfilevariables` (
   `instance_id` smallint(6) NOT NULL default '0',
   `configfile_id` int(11) NOT NULL default '0',
   `varname` varchar(64) NOT NULL default '',
-  `varvalue` varchar(255) NOT NULL default '',
+  `varvalue` varchar(1024) NOT NULL default '',
   PRIMARY KEY  (`configfilevariable_id`)
 ) ENGINE=MyISAM  COMMENT='Configuration file variables';
 
@@ -249,7 +249,7 @@ CREATE TABLE IF NOT EXISTS `nagios_customvariables` (
   `config_type` smallint(6) NOT NULL default '0',
   `has_been_modified` smallint(6) NOT NULL default '0',
   `varname` varchar(255) NOT NULL default '',
-  `varvalue` varchar(255) NOT NULL default '',
+  `varvalue` varchar(1024) NOT NULL default '',
   PRIMARY KEY  (`customvariable_id`),
   UNIQUE KEY `object_id_2` (`object_id`,`config_type`,`varname`),
   KEY `varname` (`varname`)
@@ -263,7 +263,7 @@ CREATE TABLE IF NOT EXISTS `nagios_customvariablestatus` (
   `status_update_time` datetime NOT NULL default '1970-01-01 00:00:01',
   `has_been_modified` smallint(6) NOT NULL default '0',
   `varname` varchar(255) NOT NULL default '',
-  `varvalue` varchar(255) NOT NULL default '',
+  `varvalue` varchar(1024) NOT NULL default '',
   PRIMARY KEY  (`customvariablestatus_id`),
   UNIQUE KEY `object_id_2` (`object_id`,`varname`),
   KEY `varname` (`varname`)
@@ -731,7 +731,7 @@ CREATE TABLE IF NOT EXISTS `nagios_runtimevariables` (
   `runtimevariable_id` int(11) NOT NULL auto_increment,
   `instance_id` smallint(6) NOT NULL default '0',
   `varname` varchar(64) NOT NULL default '',
-  `varvalue` varchar(255) NOT NULL default '',
+  `varvalue` varchar(1024) NOT NULL default '',
   PRIMARY KEY  (`runtimevariable_id`),
   UNIQUE KEY `instance_id` (`instance_id`,`varname`)
 ) ENGINE=MyISAM  COMMENT='Runtime variables from the Nagios daemon';
