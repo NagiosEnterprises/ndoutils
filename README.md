@@ -66,54 +66,55 @@ If you installed the configuration file from the instructions above, you can acc
 The configuration file can be used to specify the following settings:
 
 1. Database connection settings. The following settings should match the ones you used to set up the database in `db-mgmt.sh`.
-    - db_host
-    - db_name
-    - db_user
-    - db_pass
-    - db_port
-    - db_socket
+  - db_host
+  - db_name
+  - db_user
+  - db_pass
+  - db_port
+  - db_socket
 
 2. Data processing settings. The following settings determine which tables are populated with data. Each one should be set to "1" or "0".
-
-    - process_data
-    - timed_event_data
-    - log_data
-    - system_command_data
-    - event_handler_data
-    - host_check_data
-    - service_check_data
-    - comment_data
-    - downtime_data
-    - flapping_data
-    - program_status_data
-    - host_status_data
-    - service_status_data
-    - contact_status_data
-    - notification_data
-    - external_command_data
-    - acknowledgement_data
-    - state_change_data
+  - process_data
+  - timed_event_data
+  - log_data
+  - system_command_data
+  - event_handler_data
+  - host_check_data
+  - service_check_data
+  - comment_data
+  - downtime_data
+  - flapping_data
+  - program_status_data
+  - host_status_data
+  - service_status_data
+  - contact_status_data
+  - notification_data
+  - external_command_data
+  - acknowledgement_data
+  - state_change_data
 
 3. Database SSL settings. These are dependent on the version of MySQL/MariaDB that you're using. See https://dev.mysql.com/doc/refman/8.0/en/mysql-options.html for more information on each specific setting. If a setting is not available for your current database, it will be ignored.
 
-    - mysql_opt_ssl_ca (>= 5.6.36)
-    - mysql_opt_ssl_capath (>= 5.6.36)
-    - mysql_opt_ssl_cert (>= 5.6.36)
-    - mysql_opt_ssl_cipher (>= 5.6.36)
-    - mysql_opt_ssl_crl (>= 5.6.36)
-    - mysql_opt_ssl_crlpath (>= 5.6.36)
-    - mysql_opt_ssl_key (>= 5.6.36)
-    - mysql_opt_ssl_mode. This can be set to "SSL_MODE_REQUIRED" for versions >=5.6.36 or >=5.5.55. 
-For version >= 5.07.11, it can also be one of "SSL_MODE_DISABLED", "SSL_MODE_PREFERRED", "SSL_MODE_VERIFY_CA", or "SSL_MODE_VERIFY_IDENTITY".
-    - mysql_opt_tls_ciphersuites (>=8.0.15)
-    - mysql_opt_tls_version (>=5.7.10)
+  - mysql_opt_ssl_ca (>= 5.6.36)
+  - mysql_opt_ssl_capath (>= 5.6.36)
+  - mysql_opt_ssl_cert (>= 5.6.36)
+  - mysql_opt_ssl_cipher (>= 5.6.36)
+  - mysql_opt_ssl_crl (>= 5.6.36)
+  - mysql_opt_ssl_crlpath (>= 5.6.36)
+  - mysql_opt_ssl_key (>= 5.6.36)
+
+Not available on MariaDB
+
+   - mysql_opt_ssl_mode. This can be set to "SSL_MODE_REQUIRED" for versions >=5.6.36 or >=5.5.55. For version >= 5.07.11, it can also be one of "SSL_MODE_DISABLED", "SSL_MODE_PREFERRED", "SSL_MODE_VERIFY_CA", or "SSL_MODE_VERIFY_IDENTITY".
+   - mysql_opt_tls_ciphersuites (>=8.0.15)
+   - mysql_opt_tls_version (>=5.7.10)
 
 
 4. Developer options. Don't touch these unless you know what you're doing.
 
-    - db_max_reconnect_attempts
-    - config_dump_options
-    - max_object_insert_count
-    - enable_startup_hash
-    - startup_hash_script_path
-    - mysql_set_charset_name
+  - db_max_reconnect_attempts
+  - config_dump_options
+  - max_object_insert_count
+  - enable_startup_hash
+  - startup_hash_script_path
+  - mysql_set_charset_name
