@@ -280,21 +280,25 @@ if [ "x$upgrade" = "xTRUE" ]; then
     # the lowest version we support is larger than the current dbversion
     # AND the current dbversion is not the same as the lowest version
     from_version=$(get_database_version)
-    if version_gt $versions[0] $(get_database_version) && [ "x$(get_database_version)" != "x${versions[0]}" ]; then
+    if version_gt $versions[0] $from_version; then
         echo "Your dbversion is $from_version, and our minimum supported upgrade version is "
         echo "Upgrade your version of NDOUtils to ${versions[0]} before attempting this upgrade"
         exit 1
     fi
 
     for ver in "${versions[@]}"; do
-        file=$basedir/upgrade-from-$ver.sql
-        if [ -f $file ]; then
-            echo " > Upgrading from version $ver ($file)"
 
-            # use_host and use_port would have already been set by this point
-            # because of extensive use of mysql_exec() func call
-            mysql -u$dbuser -p$dbpass $dbname $use_host $use_port < $file
+        if version_gt $ver $from_version || [ "x$from_version" = "x$ver" ]; then
+            file=$basedir/upgrade-from-$ver.sql
+            if [ -f $file ]; then
+                echo " > Upgrading from version $ver ($file)"
+
+                # use_host and use_port would have already been set by this point
+                # because of extensive use of mysql_exec() func call
+                mysql -u$dbuser -p$dbpass $dbname $use_host $use_port < $file
+            fi
         fi
+
     done
 
     echo " > Updating dbversion table"
