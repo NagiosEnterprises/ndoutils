@@ -674,8 +674,8 @@ CREATE TABLE IF NOT EXISTS `nagios_objects` (
   `object_id` int(11) NOT NULL auto_increment,
   `instance_id` smallint(6) NOT NULL default '0',
   `objecttype_id` smallint(6) NOT NULL default '0',
-  `name1` varchar(128) NOT NULL default '',
-  `name2` varchar(128) NOT NULL default '',
+  `name1` varchar(162) NOT NULL default '',
+  `name2` varchar(162) NOT NULL default '',
   `is_active` smallint(6) NOT NULL default '0',
   PRIMARY KEY  (`object_id`),
   UNIQUE KEY `uniq_object` (`objecttype_id`,`name1`,`name2`)
