@@ -4,7 +4,7 @@ ALTER TABLE `nagios_acknowledgements` MODIFY `entry_time` datetime NOT NULL DEFA
 ALTER TABLE `nagios_acknowledgements` MODIFY `author_name` varchar(64) NOT NULL default '';
 ALTER TABLE `nagios_acknowledgements` MODIFY `comment_data` varchar(255) NOT NULL default '';
 
-ALTER TABLE `nagios_commands` MODIFY `command_line` TEXT NOT NULL default '';
+ALTER TABLE `nagios_commands` MODIFY `command_line` TEXT NOT NULL;
 
 ALTER TABLE `nagios_commenthistory` MODIFY `entry_time` datetime NOT NULL DEFAULT '1970-01-01 00:00:01';
 ALTER TABLE `nagios_commenthistory` MODIFY `comment_time` datetime NOT NULL DEFAULT '1970-01-01 00:00:01';
@@ -77,7 +77,7 @@ ALTER TABLE `nagios_downtimehistory` MODIFY `actual_end_time` datetime NOT NULL 
 ALTER TABLE `nagios_eventhandlers` MODIFY `start_time` datetime NOT NULL default '1970-01-01 00:00:01';
 ALTER TABLE `nagios_eventhandlers` MODIFY `end_time` datetime NOT NULL default '1970-01-01 00:00:01';
 ALTER TABLE `nagios_eventhandlers` MODIFY `command_args` varchar(255) NOT NULL default '';
-ALTER TABLE `nagios_eventhandlers` MODIFY `command_line` TEXT NOT NULL default '';
+ALTER TABLE `nagios_eventhandlers` MODIFY `command_line` TEXT NOT NULL;
 ALTER TABLE `nagios_eventhandlers` MODIFY `output` varchar(255) NOT NULL default '';
 
 ALTER TABLE `nagios_externalcommands` MODIFY `entry_time` datetime NOT NULL default '1970-01-01 00:00:01';
@@ -90,9 +90,9 @@ ALTER TABLE `nagios_flappinghistory` MODIFY `comment_time` datetime NOT NULL def
 ALTER TABLE `nagios_hostchecks` MODIFY `start_time` datetime NOT NULL default '1970-01-01 00:00:01';
 ALTER TABLE `nagios_hostchecks` MODIFY `end_time` datetime NOT NULL default '1970-01-01 00:00:01';
 ALTER TABLE `nagios_hostchecks` MODIFY `command_args` varchar(255) NOT NULL default '';
-ALTER TABLE `nagios_hostchecks` MODIFY `command_line` TEXT NOT NULL default '';
+ALTER TABLE `nagios_hostchecks` MODIFY `command_line` TEXT NOT NULL;
 ALTER TABLE `nagios_hostchecks` MODIFY `output` varchar(255) NOT NULL default '';
-ALTER TABLE `nagios_hostchecks` MODIFY `perfdata` TEXT NOT NULL default '';
+ALTER TABLE `nagios_hostchecks` MODIFY `perfdata` TEXT NOT NULL;
 
 ALTER TABLE `nagios_hostgroups` MODIFY `alias` varchar(255) NOT NULL default '';
 
@@ -112,7 +112,7 @@ ALTER TABLE `nagios_hosts` MODIFY `statusmap_image` varchar(255) NOT NULL defaul
 
 ALTER TABLE `nagios_hoststatus` MODIFY `status_update_time` datetime NOT NULL default '1970-01-01 00:00:01';
 ALTER TABLE `nagios_hoststatus` MODIFY `output` varchar(255) NOT NULL default '';
-ALTER TABLE `nagios_hoststatus` MODIFY `perfdata` TEXT NOT NULL default '';
+ALTER TABLE `nagios_hoststatus` MODIFY `perfdata` TEXT NOT NULL;
 ALTER TABLE `nagios_hoststatus` MODIFY `last_check` datetime NOT NULL default '1970-01-01 00:00:01';
 ALTER TABLE `nagios_hoststatus` MODIFY `next_check` datetime NOT NULL default '1970-01-01 00:00:01';
 ALTER TABLE `nagios_hoststatus` MODIFY `last_state_change` datetime NOT NULL default '1970-01-01 00:00:01';
@@ -171,9 +171,9 @@ ALTER TABLE `nagios_scheduleddowntime` MODIFY `actual_start_time` datetime NOT N
 ALTER TABLE `nagios_servicechecks` MODIFY `start_time` datetime NOT NULL default '1970-01-01 00:00:01';
 ALTER TABLE `nagios_servicechecks` MODIFY `end_time` datetime NOT NULL default '1970-01-01 00:00:01';
 ALTER TABLE `nagios_servicechecks` MODIFY `command_args` varchar(255) NOT NULL default '';
-ALTER TABLE `nagios_servicechecks` MODIFY `command_line` TEXT NOT NULL default '';
+ALTER TABLE `nagios_servicechecks` MODIFY `command_line` TEXT NOT NULL;
 ALTER TABLE `nagios_servicechecks` MODIFY `output` varchar(255) NOT NULL default '';
-ALTER TABLE `nagios_servicechecks` MODIFY `perfdata` TEXT NOT NULL default '';
+ALTER TABLE `nagios_servicechecks` MODIFY `perfdata` TEXT NOT NULL;
 
 ALTER TABLE `nagios_servicegroups` MODIFY `alias` varchar(255) NOT NULL default '';
 
@@ -189,7 +189,7 @@ ALTER TABLE `nagios_services` MODIFY `icon_image_alt` varchar(255) NOT NULL defa
 
 ALTER TABLE `nagios_servicestatus` MODIFY `status_update_time` datetime NOT NULL default '1970-01-01 00:00:01';
 ALTER TABLE `nagios_servicestatus` MODIFY `output` varchar(255) NOT NULL default '';
-ALTER TABLE `nagios_servicestatus` MODIFY `perfdata` TEXT NOT NULL default '';
+ALTER TABLE `nagios_servicestatus` MODIFY `perfdata` TEXT NOT NULL;
 ALTER TABLE `nagios_servicestatus` MODIFY `last_check` datetime NOT NULL default '1970-01-01 00:00:01';
 ALTER TABLE `nagios_servicestatus` MODIFY `next_check` datetime NOT NULL default '1970-01-01 00:00:01';
 ALTER TABLE `nagios_servicestatus` MODIFY `last_state_change` datetime NOT NULL default '1970-01-01 00:00:01';
@@ -209,7 +209,7 @@ ALTER TABLE `nagios_statehistory` MODIFY `output` varchar(255) NOT NULL default 
 
 ALTER TABLE `nagios_systemcommands` MODIFY `start_time` datetime NOT NULL default '1970-01-01 00:00:01';
 ALTER TABLE `nagios_systemcommands` MODIFY `end_time` datetime NOT NULL default '1970-01-01 00:00:01';
-ALTER TABLE `nagios_systemcommands` MODIFY `command_line` TEXT NOT NULL default '';
+ALTER TABLE `nagios_systemcommands` MODIFY `command_line` TEXT NOT NULL;
 ALTER TABLE `nagios_systemcommands` MODIFY `output` varchar(255) NOT NULL default '';
 
 ALTER TABLE `nagios_timedeventqueue` MODIFY `queued_time` datetime NOT NULL default '1970-01-01 00:00:01';
