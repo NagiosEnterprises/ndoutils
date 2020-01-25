@@ -977,26 +977,46 @@ int ndo_write_hosts(ndo_query_context *q_ctx, int config_type)
 
         object_ids[i] = ndo_get_object_id_name1(q_ctx, TRUE, NDO_OBJECTTYPE_HOST, tmp->name);
 
-        check_command[i] = strtok(tmp->check_command, "!");
+        if (tmp->check_command == NULL) {
+            check_command[i] = NULL;
+        } else {
+            char * tmp_check_command = (char *) malloc(strlen(tmp->check_command)+1);
+            strcpy(tmp_check_command, tmp->check_command);
+
+            check_command[i] = strtok(tmp_check_command, "!");
+            if (check_command[i] != NULL) {
+                check_command_args[i] = strtok(NULL, "\0");
+                check_command_id[i] = ndo_get_object_id_name1(q_ctx, TRUE, NDO_OBJECTTYPE_COMMAND, check_command[i]);
+            }
+
+            my_free(tmp_check_command);
+        }
+
         if (check_command[i] == NULL) {
             check_command[i] = "";
             check_command_args[i] = "";
             check_command_id[i] = 0;
         }
-        else {
-            check_command_args[i] = strtok(NULL, "\0");
-            check_command_id[i] = ndo_get_object_id_name1(q_ctx, TRUE, NDO_OBJECTTYPE_COMMAND, check_command[i]);
+
+        if (tmp->event_handler == NULL) {
+            event_handler[i] = NULL;
+        } else {
+            char * tmp_event_handler = (char *) malloc(strlen(tmp->event_handler)+1);
+            strcpy(tmp_event_handler, tmp->event_handler);
+
+            event_handler[i] = strtok(tmp_event_handler, "!");
+            if (event_handler[i] != NULL) {
+                event_handler_args[i] = strtok(NULL, "\0");
+                event_handler_id[i] = ndo_get_object_id_name1(q_ctx, TRUE, NDO_OBJECTTYPE_COMMAND, event_handler[i]);
+            }
+            
+            my_free(tmp_event_handler);
         }
 
-        event_handler[i] = strtok(tmp->event_handler, "!");
         if (event_handler[i] == NULL) {
             event_handler[i] = "";
             event_handler_args[i] = "";
             event_handler_id[i] = 0;
-        }
-        else {
-            event_handler_args[i] = strtok(NULL, "\0");
-            event_handler_id[i] = ndo_get_object_id_name1(q_ctx, TRUE, NDO_OBJECTTYPE_COMMAND, event_handler[i]);
         }
 
         check_timeperiod_id[i] = ndo_get_object_id_name1(q_ctx, TRUE, NDO_OBJECTTYPE_TIMEPERIOD, tmp->check_period);
@@ -1456,26 +1476,46 @@ int ndo_write_services(ndo_query_context *q_ctx, int config_type)
         object_ids[i] = ndo_get_object_id_name2(q_ctx, TRUE, NDO_OBJECTTYPE_SERVICE, tmp->host_name, tmp->description);
         host_object_id[i] = ndo_get_object_id_name1(q_ctx, TRUE, NDO_OBJECTTYPE_HOST, tmp->host_name);
 
-        check_command[i] = strtok(tmp->check_command, "!");
+        if (tmp->check_command == NULL) {
+            check_command[i] = NULL;
+        } else {
+            char * tmp_check_command = (char *) malloc(strlen(tmp->check_command)+1);
+            strcpy(tmp_check_command, tmp->check_command);
+
+            check_command[i] = strtok(tmp_check_command, "!");
+            if (check_command[i] != NULL) {
+                check_command_args[i] = strtok(NULL, "\0");
+                check_command_id[i] = ndo_get_object_id_name1(q_ctx, TRUE, NDO_OBJECTTYPE_COMMAND, check_command[i]);
+            }
+
+            my_free(tmp_check_command);
+        }
+
         if (check_command[i] == NULL) {
             check_command[i] = "";
             check_command_args[i] = "";
             check_command_id[i] = 0;
         }
-        else {
-            check_command_args[i] = strtok(NULL, "\0");
-            check_command_id[i] = ndo_get_object_id_name1(q_ctx, TRUE, NDO_OBJECTTYPE_COMMAND, check_command[i]);
+
+        if (tmp->event_handler == NULL) {
+            event_handler[i] = NULL;
+        } else {
+            char * tmp_event_handler = (char *) malloc(strlen(tmp->event_handler)+1);
+            strcpy(tmp_event_handler, tmp->event_handler);
+
+            event_handler[i] = strtok(tmp_event_handler, "!");
+            if (event_handler[i] != NULL) {
+                event_handler_args[i] = strtok(NULL, "\0");
+                event_handler_id[i] = ndo_get_object_id_name1(q_ctx, TRUE, NDO_OBJECTTYPE_COMMAND, event_handler[i]);
+            }
+            
+            my_free(tmp_event_handler);
         }
 
-        event_handler[i] = strtok(tmp->event_handler, "!");
         if (event_handler[i] == NULL) {
             event_handler[i] = "";
             event_handler_args[i] = "";
             event_handler_id[i] = 0;
-        }
-        else {
-            event_handler_args[i] = strtok(NULL, "\0");
-            event_handler_id[i] = ndo_get_object_id_name1(q_ctx, TRUE, NDO_OBJECTTYPE_COMMAND, event_handler[i]);
         }
 
         check_timeperiod_id[i] = ndo_get_object_id_name1(q_ctx, TRUE, NDO_OBJECTTYPE_TIMEPERIOD, tmp->check_period);
