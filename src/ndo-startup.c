@@ -919,6 +919,9 @@ int ndo_write_hosts(ndo_query_context *q_ctx, int config_type)
     int check_timeperiod_id[MAX_OBJECT_INSERT] = { 0 };
     int notification_timeperiod_id[MAX_OBJECT_INSERT] = { 0 };
 
+    char * tmp_check_command[MAX_OBJECT_INSERT] = { NULL };
+    char * tmp_event_handler[MAX_OBJECT_INSERT] = { NULL };
+
     char query[MAX_SQL_BUFFER] = { 0 };
 
     char query_base[] = "INSERT INTO nagios_hosts (instance_id, config_type, host_object_id, alias, display_name, address, check_command_object_id, check_command_args, eventhandler_command_object_id, eventhandler_command_args, check_timeperiod_object_id, notification_timeperiod_object_id, failure_prediction_options, check_interval, retry_interval, max_check_attempts, first_notification_delay, notification_interval, notify_on_down, notify_on_unreachable, notify_on_recovery, notify_on_flapping, notify_on_downtime, stalk_on_up, stalk_on_down, stalk_on_unreachable, flap_detection_enabled, flap_detection_on_up, flap_detection_on_down, flap_detection_on_unreachable, low_flap_threshold, high_flap_threshold, process_performance_data, freshness_checks_enabled, freshness_threshold, passive_checks_enabled, event_handler_enabled, active_checks_enabled, retain_status_information, retain_nonstatus_information, notifications_enabled, obsess_over_host, failure_prediction_enabled, notes, notes_url, action_url, icon_image, icon_image_alt, vrml_image, statusmap_image, have_2d_coords, x_2d, y_2d, have_3d_coords, x_3d, y_3d, z_3d, importance) VALUES ";
@@ -980,16 +983,14 @@ int ndo_write_hosts(ndo_query_context *q_ctx, int config_type)
         if (tmp->check_command == NULL) {
             check_command[i] = NULL;
         } else {
-            char * tmp_check_command = (char *) malloc(strlen(tmp->check_command)+1);
-            strcpy(tmp_check_command, tmp->check_command);
+            tmp_check_command[i] = calloc(strlen(tmp->check_command)+1, sizeof(char));
+            strcpy(tmp_check_command[i], tmp->check_command);
 
-            check_command[i] = strtok(tmp_check_command, "!");
+            check_command[i] = strtok(tmp_check_command[i], "!");
             if (check_command[i] != NULL) {
                 check_command_args[i] = strtok(NULL, "\0");
                 check_command_id[i] = ndo_get_object_id_name1(q_ctx, TRUE, NDO_OBJECTTYPE_COMMAND, check_command[i]);
             }
-
-            my_free(tmp_check_command);
         }
 
         if (check_command[i] == NULL) {
@@ -1001,16 +1002,14 @@ int ndo_write_hosts(ndo_query_context *q_ctx, int config_type)
         if (tmp->event_handler == NULL) {
             event_handler[i] = NULL;
         } else {
-            char * tmp_event_handler = (char *) malloc(strlen(tmp->event_handler)+1);
-            strcpy(tmp_event_handler, tmp->event_handler);
+            tmp_event_handler[i] = calloc(strlen(tmp->event_handler)+1, sizeof(char));
+            strcpy(tmp_event_handler[i], tmp->event_handler);
 
-            event_handler[i] = strtok(tmp_event_handler, "!");
+            event_handler[i] = strtok(tmp_event_handler[i], "!");
             if (event_handler[i] != NULL) {
                 event_handler_args[i] = strtok(NULL, "\0");
                 event_handler_id[i] = ndo_get_object_id_name1(q_ctx, TRUE, NDO_OBJECTTYPE_COMMAND, event_handler[i]);
             }
-            
-            my_free(tmp_event_handler);
         }
 
         if (event_handler[i] == NULL) {
@@ -1119,6 +1118,12 @@ int ndo_write_hosts(ndo_query_context *q_ctx, int config_type)
         }
 
         tmp = tmp->next;
+    }
+
+    /* remove temp check/event data */
+    for (i = 0; i < MAX_OBJECT_INSERT; i++) {
+        my_free(tmp_check_command[i]);
+        my_free(tmp_event_handler[i]);
     }
 
     /*
@@ -1416,6 +1421,9 @@ int ndo_write_services(ndo_query_context *q_ctx, int config_type)
     int check_timeperiod_id[MAX_OBJECT_INSERT] = { 0 };
     int notification_timeperiod_id[MAX_OBJECT_INSERT] = { 0 };
 
+    char * tmp_check_command[MAX_OBJECT_INSERT] = { NULL };
+    char * tmp_event_handler[MAX_OBJECT_INSERT] = { NULL };
+
     char query[MAX_SQL_BUFFER] = { 0 };
 
     char query_base[] = "INSERT INTO nagios_services (instance_id, config_type, host_object_id, service_object_id, display_name, check_command_object_id, check_command_args, eventhandler_command_object_id, eventhandler_command_args, check_timeperiod_object_id, notification_timeperiod_object_id, failure_prediction_options, check_interval, retry_interval, max_check_attempts, first_notification_delay, notification_interval, notify_on_warning, notify_on_unknown, notify_on_critical, notify_on_recovery, notify_on_flapping, notify_on_downtime, stalk_on_ok, stalk_on_warning, stalk_on_unknown, stalk_on_critical, is_volatile, flap_detection_enabled, flap_detection_on_ok, flap_detection_on_warning, flap_detection_on_unknown, flap_detection_on_critical, low_flap_threshold, high_flap_threshold, process_performance_data, freshness_checks_enabled, freshness_threshold, passive_checks_enabled, event_handler_enabled, active_checks_enabled, retain_status_information, retain_nonstatus_information, notifications_enabled, obsess_over_service, failure_prediction_enabled, notes, notes_url, action_url, icon_image, icon_image_alt, importance) VALUES ";
@@ -1479,16 +1487,14 @@ int ndo_write_services(ndo_query_context *q_ctx, int config_type)
         if (tmp->check_command == NULL) {
             check_command[i] = NULL;
         } else {
-            char * tmp_check_command = (char *) malloc(strlen(tmp->check_command)+1);
-            strcpy(tmp_check_command, tmp->check_command);
+            tmp_check_command[i] = calloc(strlen(tmp->check_command)+1, sizeof(char));
+            strcpy(tmp_check_command[i], tmp->check_command);
 
-            check_command[i] = strtok(tmp_check_command, "!");
+            check_command[i] = strtok(tmp_check_command[i], "!");
             if (check_command[i] != NULL) {
                 check_command_args[i] = strtok(NULL, "\0");
                 check_command_id[i] = ndo_get_object_id_name1(q_ctx, TRUE, NDO_OBJECTTYPE_COMMAND, check_command[i]);
             }
-
-            my_free(tmp_check_command);
         }
 
         if (check_command[i] == NULL) {
@@ -1500,16 +1506,14 @@ int ndo_write_services(ndo_query_context *q_ctx, int config_type)
         if (tmp->event_handler == NULL) {
             event_handler[i] = NULL;
         } else {
-            char * tmp_event_handler = (char *) malloc(strlen(tmp->event_handler)+1);
-            strcpy(tmp_event_handler, tmp->event_handler);
+            tmp_event_handler[i] = calloc(strlen(tmp->event_handler)+1, sizeof(char));
+            strcpy(tmp_event_handler[i], tmp->event_handler);
 
-            event_handler[i] = strtok(tmp_event_handler, "!");
+            event_handler[i] = strtok(tmp_event_handler[i], "!");
             if (event_handler[i] != NULL) {
                 event_handler_args[i] = strtok(NULL, "\0");
                 event_handler_id[i] = ndo_get_object_id_name1(q_ctx, TRUE, NDO_OBJECTTYPE_COMMAND, event_handler[i]);
             }
-            
-            my_free(tmp_event_handler);
         }
 
         if (event_handler[i] == NULL) {
@@ -1608,6 +1612,12 @@ int ndo_write_services(ndo_query_context *q_ctx, int config_type)
         }
 
         tmp = tmp->next;
+    }
+
+    /* remove temp check/event data */
+    for (i = 0; i < MAX_OBJECT_INSERT; i++) {
+        my_free(tmp_check_command[i]);
+        my_free(tmp_event_handler[i]);
     }
 
     /*
