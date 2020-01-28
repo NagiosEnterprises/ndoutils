@@ -59,6 +59,7 @@ int ndo_empty_queue_## _type(ndo_query_context *q_ctx) \
         } \
 \
         ndo_handle_## _type(q_ctx, type, data); \
+        ndo_free_members_## _type(data); \
         free(data); \
         data = NULL; \
     } \
@@ -66,43 +67,122 @@ int ndo_empty_queue_## _type(ndo_query_context *q_ctx) \
     trace_return_ok(); \
 }
 
-
+void ndo_free_members_timed_event(nebstruct_timed_event_data *data) {
+    return;
+}
 EMPTY_QUEUE_FUNCTION(timed_event, NEBCALLBACK_TIMED_EVENT_DATA)
 
-
+void ndo_free_members_event_handler(nebstruct_event_handler_data *data) {
+    free(data->host_name);
+    free(data->service_description);
+    free(data->command_name);
+    free(data->command_args);
+    free(data->command_line);
+    free(data->output);
+}
 EMPTY_QUEUE_FUNCTION(event_handler, NEBCALLBACK_EVENT_HANDLER_DATA)
 
-
+void ndo_free_members_host_check(nebstruct_host_check_data *data) {
+    free(data->host_name);
+    free(data->command_name);
+    free(data->command_args);
+    free(data->command_line);
+    free(data->output);
+    free(data->long_output);
+    free(data->perf_data);
+}
 EMPTY_QUEUE_FUNCTION(host_check, NEBCALLBACK_HOST_CHECK_DATA)
 
-
+void ndo_free_members_service_check(nebstruct_service_check_data *data) {
+    free(data->host_name);
+    free(data->service_description);
+    free(data->command_name);
+    free(data->command_args);
+    free(data->command_line);
+}
 EMPTY_QUEUE_FUNCTION(service_check, NEBCALLBACK_SERVICE_CHECK_DATA)
 
-
+void ndo_free_members_comment(nebstruct_comment_data *data) {
+    free(data->host_name);
+    free(data->service_description);
+    free(data->author_name);
+    free(data->comment_data);
+}
 EMPTY_QUEUE_FUNCTION(comment, NEBCALLBACK_COMMENT_DATA)
 
-
+void ndo_free_members_downtime(nebstruct_downtime_data *data) {
+    free(data->host_name);
+    free(data->service_description);
+    free(data->author_name);
+    free(data->comment_data);
+}
 EMPTY_QUEUE_FUNCTION(downtime, NEBCALLBACK_DOWNTIME_DATA)
 
-
+void ndo_free_members_flapping(nebstruct_flapping_data *data) {
+    free(data->host_name);
+    free(data->service_description);
+}
 EMPTY_QUEUE_FUNCTION(flapping, NEBCALLBACK_FLAPPING_DATA)
 
-
+void ndo_free_members_host_status(nebstruct_host_status_data *data) {
+    return;
+}
 EMPTY_QUEUE_FUNCTION(host_status, NEBCALLBACK_HOST_STATUS_DATA)
 
-
+void ndo_free_members_service_status(nebstruct_service_status_data *data) {
+    return;
+}
 EMPTY_QUEUE_FUNCTION(service_status, NEBCALLBACK_SERVICE_STATUS_DATA)
 
-
+void ndo_free_members_contact_status(nebstruct_contact_status_data *data) {
+    return;
+}
 EMPTY_QUEUE_FUNCTION(contact_status, NEBCALLBACK_CONTACT_STATUS_DATA)
 
-
+void ndo_free_members_acknowledgement(nebstruct_acknowledgement_data *data) {
+    free(data->host_name);
+    free(data->service_description);
+    free(data->author_name);
+    free(data->comment_data);
+}
 EMPTY_QUEUE_FUNCTION(acknowledgement, NEBCALLBACK_ACKNOWLEDGEMENT_DATA)
 
-
+void ndo_free_members_statechange(nebstruct_statechange_data *data) {
+    free(data->host_name);
+    free(data->service_description);
+    free(data->output);
+    free(data->longoutput);
+}
 EMPTY_QUEUE_FUNCTION(statechange, NEBCALLBACK_STATE_CHANGE_DATA)
 
 
+void ndo_free_members_notification(nebstruct_notification_data *data) {
+    free(data->host_name);
+    free(data->service_description);
+    free(data->output);
+    free(data->ack_author);
+    free(data->ack_data);
+}
+
+void ndo_free_members_contact_notification(nebstruct_contact_notification_data *data) {
+    free(data->host_name);
+    free(data->service_description);
+    free(data->contact_name);
+    free(data->output);
+    free(data->ack_author);
+    free(data->ack_data);
+}
+
+void ndo_free_members_contact_notification_method(nebstruct_contact_notification_method_data *data) {
+    free(data->host_name);
+    free(data->service_description);
+    free(data->contact_name);
+    free(data->command_name);
+    free(data->command_args);
+    free(data->output);
+    free(data->ack_author);
+    free(data->ack_data);
+}
 /* so, the reason this one doesn't use the prototype is because the order of
    all three callbacks that notification encapsulates is actually very important
 
@@ -148,12 +228,15 @@ int ndo_empty_queue_notification(ndo_query_context *q_ctx)
         }
         else if (type == NEBCALLBACK_NOTIFICATION_DATA) {
             ndo_handle_notification(q_ctx, type, data);
+            ndo_free_members_notification(data);
         }
         else if (type == NEBCALLBACK_CONTACT_NOTIFICATION_DATA) {
             ndo_handle_contact_notification(q_ctx, type, data);
+            ndo_free_members_contact_notification(data);
         }
         else if (type == NEBCALLBACK_CONTACT_NOTIFICATION_METHOD_DATA) {
             ndo_handle_contact_notification_method(q_ctx, type, data);
+            ndo_free_members_contact_notification_method(data);
         }
 
         free(data);
