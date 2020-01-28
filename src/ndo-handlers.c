@@ -111,12 +111,16 @@ int ndo_handle_timed_event(ndo_query_context * q_ctx, int type, void * d)
     }
     else if (data->event_type == EVENT_SCHEDULED_DOWNTIME) {
 
-        scheduled_downtime * dwn = find_downtime(ANY_DOWNTIME, (unsigned long) data->event_data);
+        /* At the time of this comment, nagios core brokers scheduled downtime events in 
+         * broker_downtime_data (events.c: 1308, etc) as well as as broker_timed_event (events.c: 1381, etc). 
+         * Not certain about all paths, but at least one frees-and-nulls the event_data pointer.
+         */
+        if (data->event_data == NULL) {
+            return NDO_OK;
+        }
 
-        /* TODO: This should return a downtime but event_data isn't the proper downtime id
-           due to the conversion from void* to unsigned long, not sure if we can fix this, currently
-           we don't care right now just so it runs. Find downtime.c line 352, remove_event for
-           host/service downtimes causes segfault and crashes when setting the two vars below */
+        scheduled_downtime * dwn = find_downtime(ANY_DOWNTIME, *(unsigned long *) data->event_data);
+
         if (dwn == NULL) {
             return NDO_ERROR;
         }
