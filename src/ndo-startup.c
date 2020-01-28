@@ -983,8 +983,7 @@ int ndo_write_hosts(ndo_query_context *q_ctx, int config_type)
         if (tmp->check_command == NULL) {
             check_command[i] = NULL;
         } else {
-            tmp_check_command[i] = calloc(strlen(tmp->check_command)+1, sizeof(char));
-            strcpy(tmp_check_command[i], tmp->check_command);
+            tmp_check_command[i] = strdup(tmp->check_command);
 
             check_command[i] = strtok(tmp_check_command[i], "!");
             if (check_command[i] != NULL) {
@@ -1002,8 +1001,7 @@ int ndo_write_hosts(ndo_query_context *q_ctx, int config_type)
         if (tmp->event_handler == NULL) {
             event_handler[i] = NULL;
         } else {
-            tmp_event_handler[i] = calloc(strlen(tmp->event_handler)+1, sizeof(char));
-            strcpy(tmp_event_handler[i], tmp->event_handler);
+            tmp_event_handler[i] = strdup(tmp->event_handler);
 
             event_handler[i] = strtok(tmp_event_handler[i], "!");
             if (event_handler[i] != NULL) {
@@ -1487,8 +1485,7 @@ int ndo_write_services(ndo_query_context *q_ctx, int config_type)
         if (tmp->check_command == NULL) {
             check_command[i] = NULL;
         } else {
-            tmp_check_command[i] = calloc(strlen(tmp->check_command)+1, sizeof(char));
-            strcpy(tmp_check_command[i], tmp->check_command);
+            tmp_check_command[i] = strdup(tmp->check_command);
 
             check_command[i] = strtok(tmp_check_command[i], "!");
             if (check_command[i] != NULL) {
@@ -1506,8 +1503,7 @@ int ndo_write_services(ndo_query_context *q_ctx, int config_type)
         if (tmp->event_handler == NULL) {
             event_handler[i] = NULL;
         } else {
-            tmp_event_handler[i] = calloc(strlen(tmp->event_handler)+1, sizeof(char));
-            strcpy(tmp_event_handler[i], tmp->event_handler);
+            tmp_event_handler[i] = strdup(tmp->event_handler);
 
             event_handler[i] = strtok(tmp_event_handler[i], "!");
             if (event_handler[i] != NULL) {
