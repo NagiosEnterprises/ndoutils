@@ -276,6 +276,7 @@ int ndo_handle_queue_contact_notification_method(int type, void * d)
 {
     trace_func_handler(contact_notification_method);
     nebstruct_contact_notification_method_data * data = NULL;
+    nebstructcpy((void *)&data, d, sizeof(*data));
 
     /* copy data before we add to queue so it's not pointing to data that changes later */
     data->host_name = nebstrdup(data->host_name);
@@ -287,7 +288,6 @@ int ndo_handle_queue_contact_notification_method(int type, void * d)
     data->ack_author = nebstrdup(data->ack_author);
     data->ack_data = nebstrdup(data->ack_data);
 
-    nebstructcpy((void *)&data, d, sizeof(*data));
     pthread_mutex_lock(&queue_notification_mutex);
     enqueue(&nebstruct_queue_notification, data, type);
     pthread_mutex_unlock(&queue_notification_mutex);
