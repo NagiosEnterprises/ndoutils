@@ -16,7 +16,7 @@ char * get_program_version()
 
 char * get_program_modification_date()
 {
-    return "2019-08-20";
+    return "2020-01-28";
 }
 
 struct scheduled_downtime * find_downtime(int i, unsigned long l)

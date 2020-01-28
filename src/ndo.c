@@ -185,7 +185,7 @@ int nebmodule_init(int flags, char * args, void * handle)
     /* save handle passed from core */
     ndo_handle = handle;
 
-    ndo_log("NDO (c) Copyright 2009-2019 Nagios - Nagios Core Development Team");
+    ndo_log("NDO (c) Copyright 2009-2020 Nagios - Nagios Core Development Team");
 
     result = ndo_process_arguments(args);
     if (result != NDO_OK) {

@@ -59,7 +59,7 @@ void nebstructcpy(void ** dest, const void * src, size_t n)
 char * nebstrdup(char * src)
 {
     if (src == NULL) {
-        return src;
+        return NULL;
     }
     return strdup(src);
 }

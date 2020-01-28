@@ -9,7 +9,7 @@ AC_PREREQ([2.69])
 PKG_NAME="NDOUtils"
 PKG_VERSION="3.0.0"
 PKG_HOME_URL="http://www.nagios.org/"
-PKG_REL_DATE="2019"
+PKG_REL_DATE="2020"
 AC_INIT([NDOUtils], [3.0.0], [devteam@nagios.com])
 
 
