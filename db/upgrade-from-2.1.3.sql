@@ -141,10 +141,10 @@ ALTER TABLE `nagios_notifications` MODIFY `end_time` datetime NOT NULL default '
 ALTER TABLE `nagios_notifications` MODIFY `output` varchar(255) NOT NULL default '';
 
 UPDATE `nagios_objects` SET `name2` = '' WHERE `name2` IS NULL;
-ALTER TABLE `nagios_objects` MODIFY `name1` varchar(162) NOT NULL default '';
-ALTER TABLE `nagios_objects` MODIFY `name2` varchar(162) NOT NULL default '';
+ALTER TABLE `nagios_objects` MODIFY `name1` varchar(1023) NOT NULL default '';
+ALTER TABLE `nagios_objects` MODIFY `name2` varchar(1023) NOT NULL default '';
 ALTER TABLE `nagios_objects` DROP INDEX `objecttype_id`;
-ALTER TABLE `nagios_objects` ADD UNIQUE `uniq_object` (`object_id`,`name1`,`name2`);
+ALTER TABLE `nagios_objects` ADD KEY `uniq_object` (`object_id`,`name1`(162),`name2`(162));
 
 ALTER TABLE `nagios_processevents` MODIFY `event_time` datetime NOT NULL default '1970-01-01 00:00:01';
 ALTER TABLE `nagios_processevents` MODIFY `program_name` varchar(16) NOT NULL default '';
