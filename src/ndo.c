@@ -79,6 +79,8 @@ int ndo_startup_check_enabled = FALSE;
 char * ndo_startup_hash_script_path = NULL;
 int ndo_startup_skip_writing_objects = FALSE;
 
+int ndo_timing_debugging_enabled = FALSE;
+
 char *mysql_opt_ssl_ca = NULL;
 char *mysql_opt_ssl_capath = NULL;
 char *mysql_opt_ssl_cert = NULL;
@@ -527,6 +529,13 @@ int ndo_process_ndo_config_line(ndo_query_context *q_ctx, char * line)
     }
     else if (!strcmp("startup_hash_script_path", key)) {
         ndo_startup_hash_script_path = strdup(val);
+    }
+
+    /* If enabled, causes ndo to write startup timing information 
+     * to a file -- see timing.c.
+     */
+    else if (!strcmp("timing_debugging_enabled", key)) {
+        ndo_timing_debugging_enabled = atoi(val);
     }
 
     /* neb handlers */

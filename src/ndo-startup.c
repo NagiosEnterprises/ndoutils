@@ -338,7 +338,8 @@ int ndo_write_object_config(ndo_query_context *q_ctx, int config_type)
 
     ndo_writing_object_configuration = FALSE;
 
-    ndo_write_timing("ndo_write_object_config begin");
+    ndo_write_timing("ndo_write_object_config end");
+    ndo_close_timing();
 
     trace_return_ok();
 }

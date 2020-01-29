@@ -10,6 +10,7 @@
 #  define TRUE  1
 #endif
 
+extern int ndo_timing_debugging_enabled;
 char ndo_wt_file_opened = FALSE;
 FILE * ndo_wt_fp = NULL;
 
@@ -17,6 +18,9 @@ FILE * ndo_wt_fp = NULL;
 
 void ndo_write_timing(char * msg)
 {
+    if (!ndo_timing_debugging_enabled) {
+        return;
+    }
     struct timeval tv;
     gettimeofday(&tv, NULL);
 
@@ -34,6 +38,9 @@ void ndo_write_timing(char * msg)
 
 void ndo_close_timing()
 {
+    if (!ndo_timing_debugging_enabled) {
+        return;
+    }
     if (ndo_wt_fp != NULL) {
         fclose(ndo_wt_fp);
     }
