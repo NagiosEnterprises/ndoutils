@@ -125,9 +125,9 @@ distclean: clean
 devclean: distclean
 
 install: install-4x
-	$(INSTALL) -m 774 file2sock $(DESTDIR)$(BINDIR)
-	$(INSTALL) -m 774 log2ndo $(DESTDIR)$(BINDIR)
-	$(INSTALL) -m 774 sockdebug $(DESTDIR)$(BINDIR)
+	$(INSTALL) -m 755 file2sock $(DESTDIR)$(BINDIR)
+	$(INSTALL) -m 755 log2ndo $(DESTDIR)$(BINDIR)
+	$(INSTALL) -m 755 sockdebug $(DESTDIR)$(BINDIR)
 	@echo ""
 	@echo "  Hint: NDOUtils Installation against Nagios v4.x"
 	@echo "  completed."
