@@ -317,8 +317,6 @@ AC_ARG_WITH(ndo2db_user,AC_HELP_STRING([--with-ndo2db-user=<user>],[sets user na
 AC_ARG_WITH(ndo2db_group,AC_HELP_STRING([--with-ndo2db-group=<group>],[sets group name to run NDO2DB]),ndo2db_group=$withval,ndo2db_group=nagios)
 AC_SUBST(ndo2db_user)
 AC_SUBST(ndo2db_group)
-INSTALL_OPTS="-o $ndo2db_user -g $ndo2db_group"
-AC_SUBST(INSTALL_OPTS)
 
 
 dnl Does the user want to check for systemd?

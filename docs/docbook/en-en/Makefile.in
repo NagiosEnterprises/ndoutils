@@ -13,7 +13,6 @@ BINDIR=@bindir@
 LIBEXECDIR=@libexecdir@
 DATAROOTDIR=@datarootdir@
 INSTALL=@INSTALL@
-INSTALL_OPTS=@INSTALL_OPTS@
 
 
 all:
