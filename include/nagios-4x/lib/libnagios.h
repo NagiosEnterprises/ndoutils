@@ -9,7 +9,7 @@
 #include "lnag-utils.h"
 #include "fanout.h"
 #include "nsutils.h"
-/* #include "pqueue.h" */
+#include "prqueue.h"
 #include "squeue.h"
 #include "kvvec.h"
 #include "iobroker.h"
@@ -22,4 +22,5 @@
 #include "nsock.h"
 #include "nspath.h"
 #include "snprintf.h"
+#include "nwrite.h"
 #endif /* LIB_libnagios_h__ */

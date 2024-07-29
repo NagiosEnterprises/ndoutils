@@ -2,12 +2,12 @@
 #define LIBNAGIOS_SQUEUE_H_INCLUDED
 #include <sys/time.h>
 #include <time.h>
-#include "pqueue.h"
+#include "prqueue.h"
 /**
  * @file squeue.h
  * @brief Scheduling queue function declarations
  *
- * This library is based on the pqueue api, which implements a
+ * This library is based on the prqueue api, which implements a
  * priority queue based on a binary heap, providing O(lg n) times
  * for insert() and remove(), and O(1) time for peek().
  * @note There is no "find". Callers must maintain pointers to their
@@ -18,10 +18,10 @@
 
 /*
  * All opaque types here.
- * The pqueue library can be useful on its own though, so we
+ * The prqueue library can be useful on its own though, so we
  * don't block that from user view.
  */
-typedef pqueue_t squeue_t;
+typedef prqueue_t squeue_t;
 struct squeue_event;
 typedef struct squeue_event squeue_event;
 
@@ -62,7 +62,7 @@ extern squeue_t *squeue_create(unsigned int size);
 /**
  * Destroys a scheduling queue completely
  * @param[in] q The doomed queue
- * @param[in] flags Flags determining the the level of destruction
+ * @param[in] flags Flags determining the level of destruction
  */
 extern void squeue_destroy(squeue_t *q, int flags);
 

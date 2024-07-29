@@ -38,7 +38,7 @@
 
 #define MAX_USER_MACROS				256	/* maximum number of $USERx$ macros */
 
-#define MACRO_X_COUNT				157	/* size of macro_x[] array */
+#define MACRO_X_COUNT				163	/* size of macro_x[] array */
 
 NAGIOS_BEGIN_DECL
 
@@ -218,6 +218,12 @@ typedef struct nagios_macros nagios_macros;
 #define MACRO_SERVICEIMPORTANCE                 154
 #define MACRO_HOSTANDSERVICESIMPORTANCE         155
 #define MACRO_HOSTGROUPMEMBERADDRESSES          156
+#define MACRO_HOSTINFOURL                       157
+#define MACRO_SERVICEINFOURL                    158
+#define MACRO_HOSTNOTIFICATIONENABLED           159
+#define MACRO_SERVICENOTIFICATIONENABLED        160
+#define MACRO_HOSTNOTIFICATIONPERIOD            161
+#define MACRO_SERVICENOTIFICATIONPERIOD         162
 
 
 /************* MACRO CLEANING OPTIONS *****************/
@@ -275,6 +281,8 @@ int grab_host_macros_r(nagios_macros *mac, host *);
 int grab_servicegroup_macros_r(nagios_macros *mac, servicegroup *);
 int grab_hostgroup_macros_r(nagios_macros *mac, hostgroup *);
 int grab_contact_macros_r(nagios_macros *mac, contact *);
+
+int grab_argv_macros_r(nagios_macros *mac, char *check_command);
 
 int grab_macro_value_r(nagios_macros *mac, char *, char **, int *, int *);
 int grab_macrox_value_r(nagios_macros *mac, int, char *, char *, char **, int *);

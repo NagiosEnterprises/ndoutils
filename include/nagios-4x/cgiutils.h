@@ -24,6 +24,7 @@
 #include "logging.h"
 #include "objects.h"
 #include "cgiauth.h"
+#include "locations.h"
 
 NAGIOS_BEGIN_DECL
 
@@ -35,12 +36,7 @@ NAGIOS_BEGIN_DECL
 	/******************************* CGI NAMES **********************************/
 
 #define STATUS_CGI		"status.cgi"
-#ifdef LEGACY_GRAPHICAL_CGIS
 #define STATUSMAP_CGI		"statusmap.cgi"
-#else
-#define STATUSMAP_CGI		"../map.html"
-#define LEGACY_STATUSMAP_CGI		"statusmap.cgi"
-#endif
 #define STATUSWORLD_CGI	        "statuswrl.cgi"
 #define COMMAND_CGI		"cmd.cgi"
 #define EXTINFO_CGI		"extinfo.cgi"
@@ -49,22 +45,12 @@ NAGIOS_BEGIN_DECL
 #define HISTORY_CGI		"history.cgi"
 #define CONFIG_CGI              "config.cgi"
 #define OUTAGES_CGI		"outages.cgi"
-#ifdef LEGACY_GRAPHICAL_CGIS
 #define TRENDS_CGI		"trends.cgi"
-#else
-#define TRENDS_CGI		"../trends.html"
-#define LEGACY_TRENDS_CGI		"trends.cgi"
-#endif
 #define AVAIL_CGI		"avail.cgi"
 #define TAC_CGI			"tac.cgi"
 #define STATUSWML_CGI           "statuswml.cgi"
 #define TRACEROUTE_CGI		"traceroute.cgi"
-#ifdef LEGACY_GRAPHICAL_CGIS
 #define HISTOGRAM_CGI		"histogram.cgi"
-#else
-#define HISTOGRAM_CGI		"../histogram.html"
-#define LEGACY_HISTOGRAM_CGI		"histogram.cgi"
-#endif
 #define CHECKSANITY_CGI	   	"checksanity.cgi"
 #define MINISTATUS_CGI          "ministatus.cgi"
 #define SUMMARY_CGI	        "summary.cgi"
@@ -72,27 +58,29 @@ NAGIOS_BEGIN_DECL
 
 	/**************************** STYLE SHEET NAMES ******************************/
 
-#define COMMON_CSS		"common.css"
+#define COMMON_CSS         "common.css"
 
-#define SHOWLOG_CSS		"showlog.css"
-#define STATUS_CSS		"status.css"
-#define STATUSMAP_CSS		"statusmap.css"
-#define COMMAND_CSS		"cmd.css"
-#define EXTINFO_CSS		"extinfo.css"
-#define NOTIFICATIONS_CSS	"notifications.css"
-#define HISTORY_CSS		"history.css"
-#define CONFIG_CSS		"config.css"
-#define OUTAGES_CSS		"outages.css"
-#define TRENDS_CSS		"trends.css"
-#define AVAIL_CSS		"avail.css"
-#define TAC_CSS			"tac.css"
-#define HISTOGRAM_CSS		"histogram.css"
-#define CHECKSANITY_CSS		"checksanity.css"
-#define MINISTATUS_CSS          "ministatus.css"
-#define SUMMARY_CSS             "summary.css"
+#define SHOWLOG_CSS        "showlog.css"
+#define STATUS_CSS         "status.css"
+#define STATUSMAP_CSS      "statusmap.css"
+#define COMMAND_CSS        "cmd.css"
+#define EXTINFO_CSS        "extinfo.css"
+#define NOTIFICATIONS_CSS  "notifications.css"
+#define HISTORY_CSS        "history.css"
+#define CONFIG_CSS         "config.css"
+#define OUTAGES_CSS        "outages.css"
+#define TRENDS_CSS         "trends.css"
+#define AVAIL_CSS          "avail.css"
+#define TAC_CSS            "tac.css"
+#define HISTOGRAM_CSS      "histogram.css"
+#define CHECKSANITY_CSS    "checksanity.css"
+#define MINISTATUS_CSS     "ministatus.css"
+#define SUMMARY_CSS        "summary.css"
+#define NAGFUNCS_CSS       "nag_funcs.css"
 
 	/********************************* JAVASCRIPT INCLUDES **********************/
-#define JQUERY_JS		"jquery-1.7.1.min.js"
+#define JQUERY_JS          "jquery-3.7.1.min.js"
+#define NAGFUNCS_JS        "nag_funcs.js"
 
 	/********************************* ICONS ************************************/
 
@@ -437,7 +425,16 @@ typedef struct lifo_struct {
 	struct lifo_struct *next;
 	} lifo;
 
+struct nagios_extcmd {
+	const char *name;
+	int id;
+	int cmt_opt;   /* 0 = not allowed, 1 = optional, 2 = required */
+	char *default_comment;
+	};
+
 /******************************** FUNCTIONS *******************************/
+
+typedef void (*read_config_callback)(const char*, const char*);
 
 void reset_cgi_vars(void);
 void cgi_init(void (*doc_header)(int), void (*doc_footer)(void), int object_options, int status_options);
@@ -446,7 +443,7 @@ void free_memory(void);
 const char *get_cgi_config_location(void);				/* gets location of the CGI config file to read */
 const char *get_cmd_file_location(void);				/* gets location of external command file to write to */
 
-int read_cgi_config_file(const char *);
+int read_cgi_config_file(const char *, read_config_callback);
 int read_main_config_file(const char *);
 int read_all_object_configuration_data(const char *, int);
 int read_all_status_data(const char *, int);
@@ -491,6 +488,12 @@ int read_file_into_lifo(char *);				/* LIFO functions */
 void free_lifo_memory(void);
 int push_lifo(char *);
 char *pop_lifo(void);
+
+struct nagios_extcmd* extcmd_get_command_id(int);
+struct nagios_extcmd* extcmd_get_command_name(const char *);
+const char *extcmd_get_name(int);
+
+void build_subdir_path(char* path, size_t size, const char* prefix, const char* subdir);
 
 NAGIOS_END_DECL
 #endif
