@@ -35,7 +35,7 @@
 #define DEFAULT_PHYSICAL_CGIBIN_PATH		"/usr/local/nagios/sbin"
 #define DEFAULT_URL_CGIBIN_PATH			"/nagios/cgi-bin"
 #define DEFAULT_CGI_CONFIG_FILE			"/usr/local/nagios/etc/cgi.cfg"
-#define DEFAULT_LOCK_FILE			"/usr/local/nagios/var/nagios.lock"
+#define DEFAULT_LOCK_FILE			"/run/nagios.lock"
 #define DEFAULT_OBJECT_CACHE_FILE		"/usr/local/nagios/var/objects.cache"
 #define DEFAULT_PRECACHED_OBJECT_FILE		"/usr/local/nagios/var/objects.precache"
 #define DEFAULT_EVENT_BROKER_FILE		"/usr/local/nagios/var/broker.socket"

@@ -30,8 +30,14 @@
 /* Event broker integration */
 #define USE_EVENT_BROKER /**/
 
+/* NERD / radio dispatch usage */
+/* #undef ENABLE_NERD */
+
+/* check for RLIMIT_PROC */
+#define DETECT_RLIMIT_PROBLEM 1
+
 /* commands used by CGIs */
-#define TRACEROUTE_COMMAND ""
+#define TRACEROUTE_COMMAND "/usr/bin/traceroute"
 /* #undef PING_COMMAND */
 /* #undef PING_PACKETS_FIRST */
 
@@ -81,6 +87,7 @@
 #define HAVE_INITGROUPS 1
 /* #undef HAVE_GETLOADAVG */
 #define HAVE_GDIMAGECREATETRUECOLOR 1
+#define HAVE_SIGACTION 1
 
 
 
@@ -141,7 +148,7 @@
 
 #define HAVE_PWD_H 1
 #ifdef HAVE_PWD_H
-#include <pwd.h>
+#include "config_pwd.h"
 #endif
 
 #define HAVE_GRP_H 1
@@ -262,6 +269,8 @@
 #include <socket.h>
 #endif
 
+#define HAVE_SSL 1
+
 #define HAVE_NETINET_IN_H 1
 #ifdef HAVE_NETINET_IN_H
 #include <netinet/in.h>
@@ -312,6 +321,11 @@
 #include <wchar.h>
 #endif
 
+#define HAVE_SYS_PRCTL_H 1
+#ifdef HAVE_SYS_PRCTL_H
+#include <sys/prctl.h>
+#endif
+
 /* configure script should allow user to override ltdl choice, but this will do for now... */
 /* #undef USE_LTDL */
 /* #undef HAVE_LTDL_H */
@@ -322,7 +336,7 @@
 #ifdef USE_LTDL
 #include <ltdl.h>
 #else
-/* #undef HAVE_DLFCN_H */
+#define HAVE_DLFCN_H /**/
 #ifdef HAVE_DLFCN_H
 #include <dlfcn.h>
 #endif

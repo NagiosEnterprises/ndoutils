@@ -1,5 +1,6 @@
-#ifndef LIBNAGIOS_IOBROKER_H_INCLUDED
-#define LIBNAGIOS_IOBROKER_H_INCLUDED
+/* lib/iobroker.h.  Generated from iobroker.h.in by configure.  */
+#ifndef LIBNAGIOS_iobroker_h__
+#define LIBNAGIOS_iobroker_h__
 
 /**
  * @file iobroker.h
@@ -13,6 +14,10 @@
  *
  * @{
  */
+
+#define IOBROKER_USES_EPOLL 1
+/* #undef IOBROKER_USES_POLL */
+/* #undef IOBROKER_USES_SELECT */
 
 #if (_POSIX_C_SOURCE - 0) >= 200112L
 #include <poll.h>
@@ -78,7 +83,7 @@ extern int iobroker_max_usable_fds(void);
  * @param arg Argument passed to input handler on available input
  * @param handler The callback function to call when input is available
  *
- * @return 0 on succes. < 0 on errors.
+ * @return 0 on success. < 0 on errors.
  */
 extern int iobroker_register(iobroker_set *iobs, int sd, void *arg, int (*handler)(int, int, void *));
 
@@ -126,7 +131,7 @@ extern int iobroker_get_max_fds(iobroker_set *iobs);
  *
  * @param iobs The socket set to remove the socket from
  * @param sd The socket descriptor to remove
- * @return 0 on succes. < 0 on errors.
+ * @return 0 on success. < 0 on errors.
  */
 extern int iobroker_unregister(iobroker_set *iobs, int sd);
 
