@@ -2,7 +2,7 @@
 NDO Utils Changelog
 ===================
 
-2.1.5 - 2025-03-07
+2.1.5 - 2025-03-11
 ------------------
 * src/queue.c: fix format-security warnings (Michael Orlitzky)
 * config/ndo2db.cfg-sample.in: use @piddir@ for the pid file (Michael Orlitzky)
