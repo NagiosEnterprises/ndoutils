@@ -37,7 +37,7 @@ struct queue_msg
 void del_queue();
 
 /* initialize new queue or open existing */
-int get_queue_id();
+int get_queue_id(int);
 
 /* insert into queue */
 void push_into_queue(char*);
