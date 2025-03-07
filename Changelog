@@ -2,6 +2,13 @@
 NDO Utils Changelog
 ===================
 
+2.1.5 - 2025-03-07
+------------------
+* src/queue.c: fix format-security warnings (Michael Orlitzky)
+* config/ndo2db.cfg-sample.in: use @piddir@ for the pid file (Michael Orlitzky)
+* Simplify the OpenRC init script and conf file (Michael Orlitzky)
+* include/queue.h: ensure prototypes match implementations (Michael Orlitzky)
+
 2.1.4 - 2024-08-01
 ------------------
 * Made the default permissions/file ownership more secure when installing (Michael Orlitzky)
