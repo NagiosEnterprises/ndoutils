@@ -9,7 +9,7 @@
  * Copyright (c) 2005-2009 Ethan Galstad
  *
  * First Written: 05-13-2005
- * Last Modified: 2024-08-01
+ * Last Modified: 2025-03-11
  *
  * This file is part of NDOUtils.
  *
@@ -28,9 +28,9 @@
 
 #include "../include/config.h"
 
-#define SOCKDEBUG_VERSION "2.1.4"
+#define SOCKDEBUG_VERSION "2.1.5"
 #define SOCKDEBUG_NAME "SOCKDEBUG"
-#define SOCKDEBUG_DATE "2024-08-01"
+#define SOCKDEBUG_DATE "2025-03-11"
 
 
 int cleanup_socket(int,char *);
